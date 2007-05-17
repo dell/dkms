@@ -1,0 +1,127 @@
+#!/bin/sh
+#
+# dkms_autoinstaller 		A service to automatically install DKMS modules
+# 				for new kernels.
+# chkconfig: 345 04 04
+# description: An autoinstaller bootup service for DKMS
+
+function invoke_command ()
+{
+    local exitval=0
+    local exitval_file=`mktemp /tmp/dkms.XXXXXX`
+    [ -z "$verbose" ] && echo -en "$2..." >$output_loc || echo -e "$1" >$output_loc
+    if [ "$3" == background ] && [ -z "$verbose" ]; then
+	(eval $1 >/dev/null 2>&1; echo "exitval=$?" >> "$exitval_file") &
+	while [ -e "$exitval_file" ] && ! [ -s "$exitval_file" ]; do
+	    sleep 3
+	    echo -en "." >$output_loc
+	done
+	. "$exitval_file"
+    else
+	eval $1; exitval=$?
+    fi
+    [ $exitval -gt 0 ] && echo -en "(bad exit status: $exitval)" >$output_loc
+    rm -f "$exitval_file"
+    echo -en "\n" >$output_loc
+    return $exitval
+}
+
+
+# Set Variables
+output_loc="/dev/console"
+[ -n "$2" ] && kernel=$2 && output_loc="/dev/stdout" || kernel=`uname -r`
+kernelver_rpm=`rpm -qf "/lib/modules/$kernel" 2>/dev/null | grep -v "not owned by any package" | grep kernel | head -1`
+if ! arch=`rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null`; then
+    [ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && [ `ls $install_tree/$kernel/build/configs 2>/dev/null | grep -c "ia32e"` -gt 0 ] && arch="ia32e" || arch=`uname -m`
+fi
+kernel_preparation_done=""
+dkms_tree="/var/lib/dkms"
+. /etc/dkms/framework.conf 2>/dev/null
+
+# See how we were called.
+case "$1" in
+  start)
+	echo "" >$output_loc
+
+	for filename in `ls "$dkms_tree"`; do
+	    if [ -d "$dkms_tree/$filename" ] && ! [ -h "$dkms_tree/$filename" ]; then
+		modules_needing_status="$modules_needing_status $filename"
+	    fi
+	done
+
+        # Iterate over the modules
+	for module_in_tree in $modules_needing_status; do
+	    
+	    # Make sure its in the tree
+	    if [ -d "$dkms_tree/$module_in_tree" ]; then
+		
+  	        # Determine which versions to show status for
+		do_autoinstall=""
+		version_count=0
+		already_installed=""
+		already_installed_version=""
+		for filename in `ls "$dkms_tree/$module_in_tree"`; do
+		    if [ -d "$dkms_tree/$module_in_tree/$filename" ] && ! [ -h "$dkms_tree/$module_in_tree/$filename" ] && [ "$filename" != "original_module" ]; then
+			version_count=$(($version_count + 1))
+			version_in_tree="$filename"
+			
+		        # Source in its dkms.conf to see if we should autoinstall
+			AUTOINSTALL=""
+			. $dkms_tree/$module_in_tree/$version_in_tree/source/dkms.conf
+			[ `echo "$AUTOINSTALL" | grep -ic "^y"` -gt 0 ] && do_autoinstall="yes"
+
+			# Get the current state
+			current_state=`dkms status -m $module_in_tree -v $version_in_tree -k $kernel -a $arch 2>/dev/null | awk {'print $5'}`
+			[ "$current_state" == "installed" ] && already_installed="true" && already_installed_version=$version_in_tree
+		    fi
+		done
+
+		# Based on what we know, either do it or not
+		if [ -n "$already_installed" ]; then
+		    echo "$module_in_tree ($already_installed_version): Already installed on this kernel." >$output_loc
+		elif [ -z "$do_autoinstall" ]; then
+		    echo "$module_in_tree ($version_in_tree): AUTOINSTALL not set in its dkms.conf." >$output_loc
+		elif [ -n "$do_autoinstall" ] && [ "$version_count" -gt 1 ]; then
+		    echo "$module_in_tree: Multiple versions in DKMS. Unsure what to do. Resolve manually." >$output_loc
+		else
+		    echo "$module_in_tree ($version_in_tree): Installing module." >$output_loc
+		    if [ "$current_state" != "built" ] && ! [ -e /lib/modules/$kernel/build/include ]; then
+			echo "  Kernel source for $kernel not installed.  Cannot install this module." >$output_loc
+		    elif [ "$current_state" != "built" ] && [ -e /lib/modules/$kernel/build/include ]; then
+			return_status=""
+			if [ -z "$kernel_preparation_done" ]; then
+			    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel -q --no-clean-kernel >$output_loc" "." background
+			    return_status="$?"
+			    kernel_preparation_done="true"
+			else
+			    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel --no-prepare-kernel --no-clean-kernel -q >$output_loc" "." background
+			    return_status="$?"
+			fi
+			if [ "$return_status" -eq 0 ]; then
+			    invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -q >$output_loc" "." background
+			else
+			    echo "  Build failed.  Installation skipped." >$output_loc
+			fi
+		    else
+			invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -q >$output_loc" "." background
+			return_status=$?
+			if [ "$return_status" -eq 101 ]; then
+			    echo "  A newer module version than this already exists in this kernel." >$output_loc
+			    echo "  Skipping install... (you can manually install later with --force)" >$output_loc
+			elif [ "$return_status" -ne 0 ]; then
+			    echo "  Installation failed!" >$output_loc
+			fi
+		    fi
+  		fi
+	    fi
+	done
+	;;
+  stop)
+	# ignore
+	;;
+  reload)
+	exit 0
+	;;
+  *)
+	echo $"Usage: $0 {start|stop}"
+esac

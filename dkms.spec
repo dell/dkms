@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.9
+Version: 2.0.9.1
 Release: 1
 License: GPL
 Group: System Environment/Base
@@ -8,7 +8,8 @@ BuildArch: noarch
 Requires: sed gawk findutils modutils tar cpio gzip grep mktemp
 Requires: bash > 1.99
 Provides: dkms-minimal
-Source0: dkms-%version.tar.gz
+URL: http://linux.dell.com/dkms
+Source0: http://linux.dell.com/dkms/permalink/dkms-%version.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %description
@@ -101,6 +102,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Tue Dec 13 2005 Matt Domsch <Matt_Domsch@dell.com> 2.0.9.1-1
+- patch from Eric Devolder enables mkinitrd for Debian Sarge
+- include debian/ directory in upstream tarball
+
 * Thu Dec 8 2005 Matt Domsch <Matt_Domsch@dell.com> 2.0.9-1
 - fix DF28947 (remove word 'only') from a printed message
 - gzip -9 dkms.8 manpage

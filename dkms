@@ -219,6 +219,15 @@ function remake_initrd()
 	echo $"(If next boot fails, revert to the _old initrd image)"
 	invoke_command "mkinitrd -k vmlinuz-$1 -i initrd-$1" "mkinitrd" background
 	exitval="$?"
+    elif [ -e /etc/debian_version ]; then
+      	echo $"" 
+	initrd_dir="/boot"
+	echo $"Saving old initrd as $initrd_dir/initrd.img_old-$1" 
+	cp -f "$initrd_dir/initrd.img-$1" "$initrd_dir/initrd.img_old-$1"
+	echo $"Making new initrd as $initrd_dir/initrd.img-$1" 
+	echo $"(If next boot fails, revert to the _old initrd image)"
+	invoke_command "mkinitrd -o $initrd_dir/initrd.img-$1 $1" "mkinitrd" background
+	exitval="$?"
     else
 	echo $""
 	echo $"Calling mkinitrd (bad exit status 9 may occur)"
@@ -2449,7 +2458,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.9"
+	    echo $"dkms: 2.0.9.1"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

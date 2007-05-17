@@ -1,0 +1,16 @@
+Source: dkms
+Section: admin
+Priority: optional
+Maintainer: Matt Domsch <Matt_Domsch@dell.com>
+Build-Depends: debhelper (>= 4.0.0)
+Standards-Version: 3.6.1
+
+Package: dkms
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}
+ gawk, modutils, cpio, bash (>> 1.99)
+Recommends: patch, make, gcc
+Description: Dynamic Kernel Module Support Framework
+ This package contains the framework for the Dynamic
+ Kernel Module Support (DKMS) method for installing
+ module RPMS as originally developed by Dell, Inc.
