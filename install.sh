@@ -23,7 +23,7 @@ echo "Installing DKMS"
 mkdir -p /var/lib/dkms
 mkdir -p /etc/dkms
 cp -f $DIR/dkms /usr/sbin
-cp -f $DIR/dkms.8.gz /usr/share/man/man8
+gzip -c -9 dkms.8 > /usr/share/man/man8/dkms.8.gz
 cp -f $DIR/dkms_dbversion /var/lib/dkms
 cp -f $DIR/dkms_autoinstaller /etc/init.d
 cp -f $DIR/dkms_mkkerneldoth /usr/sbin

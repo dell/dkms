@@ -1,5 +1,5 @@
 .\" -*- nroff -*-
-.TH DKMS 8 "Mar 2006" "Version 2.0.11.1"
+.TH DKMS 8 "Mar 2006" "Version 2.0.14"
 .SH NAME
 dkms \- Dynamic Kernel Module Support
 .SH SYNOPSIS
@@ -66,7 +66,7 @@ a driver disk image with modules for multiple kernels, just specify multiple
 Red Hat began supporting multi-arched driver disks in RHEL3.  To force creation
 of a driver disk with arch information, specify
 .B -d redhat2
-or if you specify multiple archictectures on the command-line and use
+or if you specify multiple architectures on the command-line and use
 .B -d redhat
 , DKMS will create a version 2 driver disk.  By specifying
 .B -d redhat1
@@ -82,10 +82,13 @@ See
 for more information on the Red Hat driver
 disk standards and which files are necessary to make a driver disk.
 
+Fedora Core 5 and higher, RHEL5 and higher require DKMS version 2.0.14
+or higher to generate a proper driver disk image.
+
 For suse/UnitedLinux driver disks, /usr/share/YaST2/modules/Vendor.ycp
 will also be copied to the driver disk; no other files are needed.
-However, for these distros, you must specify a -r release (eg. for
-suse 9.1, it would be -d suse -r 9.1).
+However, for these distros, you must specify a -r release. For
+SuSE 9.1, it would be -d suse -r 9.1. For SLES9, it would be -d suse -r sles9.
 
 By default the disk image it creates is 1440 (k) in size.  This can be 
 overridden by specifying a different
@@ -175,7 +178,7 @@ The system architecture to perform the action upon.  If not specified, it assume
 the arch of the currently running system (`uname -m`).  You can specify multiple
 arch parameters on the same command line by repeating the -a argument with a 
 different arch name.  When multiple architectures are specified, there must
-be a 1:1 releationship between -k arguments to -a arguments.  DKMS will then
+be a 1:1 relationship between -k arguments to -a arguments.  DKMS will then
 assume the first -a argument aligns with the first -k kernel and so on for the
 second, third, etc.
 
@@ -283,7 +286,7 @@ passing this option will keep its internal DKMS tarball from containing any
 prebuilt modules.
 .TP
 .B --all
-This option can be used to automatically specify all relavent kernels/arches
+This option can be used to automatically specify all relevant kernels/arches
 for a module/module-version.  This is useful for things like
 .B remove
 ,
@@ -300,7 +303,7 @@ ensure that modules are compiled correctly.
 This option keeps DKMS from cleaning your kernel source tree after a
 build.
 .TP
-.B --kernelsouredir <kernel-source-directory-location>
+.B --kernelsourcedir <kernel-source-directory-location>
 Using this option you can specify the location of your kernel source
 directory.  Most likely you will not need to set this if your kernel
 source is accessible via

@@ -51,7 +51,7 @@ function show_usage ()
     echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"  
     echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel]"
     echo $"              [--binaries-only] [--source-only] [-r release (SuSE)] [--verbose]"
-    echo $"              [--size] [--spec=specfile]"
+    echo $"              [--size] [--spec=specfile] [--media=floppy|iso|tar]"
 }
 
 function readlink()
@@ -431,13 +431,19 @@ function read_conf ()
 	index=$(($index+1))
     done
 
-    # Use the generic make command if no make command has been specified
-    if [ -z "$make_command" ]; then
-	if [[ $(VER $1) < $(VER 2.6.6) ]]; then
+    # Use the generic make and make clean commands if not specified
+    if [[ $(VER $1) < $(VER 2.6.6) ]]; then
+	if [ -z "$make_command" ]; then
 	    make_command="make -C $kernel_source_dir SUBDIRS=$dkms_tree/$module/$module_version/build modules"
+	fi
+	if [ -z "$clean" ]; then
 	    clean="make -C $kernel_source_dir SUBDIRS=$dkms_tree/$module/$module_version/build clean"
-	else
+	fi
+    else
+	if [ -z "$make_command" ]; then
 	    make_command="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build"
+	fi
+	if [ -z "$clean" ]; then
 	    clean="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build clean"
 	fi
     fi
@@ -1608,6 +1614,16 @@ show_status ()
     fi
 }
 
+media_valid()
+{
+    if [ "$media" == "floppy" ] ||
+	[ "$media" == "iso"   ] ||
+	[ "$media" == "tar" ]; then
+	return 0
+    fi
+    return 1
+}
+
 make_driver_disk ()
 {
     setup_kernels_arches "mkdriverdisk"
@@ -1616,9 +1632,19 @@ make_driver_disk ()
     if [ -z "$module" ] || [ -z "$module_version" ] || [ -z "$distro" ] || [ -z "${kernelver_array[0]}" ]; then
 	echo $"" >&2
 	echo $"Error! Invalid number of parameters passed." >&2
-	echo $"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver>" >&2
+	echo $"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver> [--media floppy|iso|tar]" >&2
 	exit 1
     fi   
+
+    # default to floppy media
+    [ -z "$media" ] && media="floppy"
+    media_valid
+    if [ $? -eq 1 ]; then
+	echo $"" >&2
+	echo "$Error! Media $media is invalid." >&2
+	echo $"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver> [--media floppy|iso|tar]" >&2
+	exit 1
+    fi
 
     # Check that source symlink works
     if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
@@ -1659,6 +1685,88 @@ make_driver_disk ()
     esac
 }
 
+
+make_driver_disk_floppy()
+{
+    local image_name="$1"
+    local source_dir="$2"
+    local file
+    local fs='ext2'
+    case "$distro" in
+	redhat*)
+	    fs='vfat'
+	    ;;
+    esac
+
+    rm -f "$image_name"
+    invoke_command "dd if=/dev/zero of=$image_name bs=$(($size/20))k count=20" "making a blank floppy image" background
+    if [ "$fs" == 'vfat' ]; then
+	invoke_command "mkdosfs $image_name" "mkdosfs" background
+    elif [ "$fs" == 'ext2' ]; then
+ 	invoke_command "mke2fs $image_name" "mke2fs" background
+    fi
+
+    local mntdir=`mktemp -d $tmp_location/dkms.XXXXXX`
+    if [ -z "$mntdir" ]; then
+	echo $""
+	echo $"Error: Could not create a temporary directory, failing."
+	return
+    fi
+    invoke_command "mount -o loop -t $fs $image_name $mntdir >/dev/null 2>&1" "loopback mounting disk image"
+    [ -d "$mntdir/lost+found" ] && rmdir "$mntdir/lost+found"
+    invoke_command "cp -r $source_dir/* $mntdir/" "  copying files to floppy disk image"
+    invoke_command "umount $mntdir" "unmounting disk image"
+    rm -rf $mntdir
+}
+
+make_driver_disk_isotar()
+{
+    local type="$1"
+    local image_name="$2"
+    local source_dir="$3"
+    local file
+    if [ "$type" == "iso" ]; then
+	invoke_command "mkisofs -v -r -J -pad -V $module -o $image_name ." "mkisofs" background
+    elif [ "$type" == "tar" ]; then
+	invoke_command "tar cvf $image_name ." "tar" background
+    fi
+}
+
+make_driver_disk_media()
+{
+    echo "Copying files $2"
+
+    case "$media" in
+	floppy*)
+	    make_driver_disk_floppy "$1" "$2"
+	    ;;
+	iso*)
+	    make_driver_disk_isotar "iso" "$1" "$2"
+	    ;;
+	tar*)
+	    make_driver_disk_isotar "tar" "$1" "$2"
+	    ;;
+    esac
+}
+
+driver_disk_suffix()
+{
+    local suffix
+    case "$media" in
+	floppy*)
+	    suffix="img"
+	    ;;
+	iso*)
+	    suffix="iso"
+	    ;;
+	tar*)
+	    suffix="tar"
+	    ;;
+    esac
+    echo $suffix
+}    
+
+
 make_redhat_driver_disk() 
 {
     # kludge to allow redhat1 driver disks with BOOT kernel modules (arch i386)
@@ -1693,7 +1801,12 @@ make_redhat_driver_disk()
 	local rhdd_filename="rhdd-6.1"
     fi
 
-    temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+    cpioarchive_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+    if [ -z "$cpioarchive_dir_name" ]; then
+	echo $""
+	echo $"Error: Could not create a temporary directory, failing."
+	return
+    fi
 
     local i=0
     while [ $i -lt ${#kernelver_array[@]} ]; do
@@ -1709,7 +1822,7 @@ make_redhat_driver_disk()
 		echo $"" >&2
 		echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver_array[$i]} (${arch_array[$i]})." >&2
 		echo $"Module/version must be in built state before making a driver disk." >&2
-		rm -rf $temp_dir_name
+		rm -rf $cpioarchive_dir_name
 		exit 5
 	    fi
 	    if [ -z "$kernel_version_list" ]; then
@@ -1717,9 +1830,9 @@ make_redhat_driver_disk()
 	    else
 		kernel_version_list="$kernel_version_list-kernel${kernelver_array[$i]}-${arch_array[$i]}"
 	    fi
-	    mkdir -p $temp_dir_name/$dd_prefix
+	    mkdir -p $cpioarchive_dir_name/$dd_prefix
 	    echo "Marking ${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix..."
-	    cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$temp_dir_name/$dd_prefix/"
+	    cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$cpioarchive_dir_name/$dd_prefix/"
 	    
 	    modules_cgz_list="$dd_prefix/${dest_module_name[$count]}$module_suffix\n${modules_cgz_list}"
 	    count=$(($count+1))
@@ -1729,49 +1842,75 @@ make_redhat_driver_disk()
     done
 
     # Create directory and necessary files
-    mkdir -p "$dkms_tree/$module/$module_version/driver_disk"
-   
+    driver_disk_dir=`mktemp -d $tmp_location/dkms.XXXXXX`
+    if [ -z "$driver_disk_dir" ]; then
+	echo $""
+	echo $"Error: Could not create a temporary directory, failing."
+	return
+    fi
+
     # Copy files for the driver disk (or warn if not present)
     local files_for_driverdisk="modinfo disk-info modules.dep pcitable modules.pcimap pci.ids"
-    local files_into_driverdisk="modules.cgz $rhdd_filename"
+    # Fedora Core 5 and higher, RHEL5 and higher, strictly require: rhdd, modules.cgz, modinfo, modules.alias, modules.dep
+    # which is in effect ignoring disk-info, pcitable, modules.pcimap and pci.ids
+    # and adding modules.alias, which will be generated.
+
+    local files_into_driverdisk="modules.cgz $rhdd_filename modules.alias"
     for file in $files_for_driverdisk; do
 	if ! [ -e "$dkms_tree/$module/$module_version/source/redhat_driver_disk/$file" ]; then
 	    echo $"Warning! File: $file not found in $dkms_tree/$module/$module_version/source/redhat_driver_disk/" >&2
 	else
 	    files_into_driverdisk="$file $files_into_driverdisk"
-	    cp -f "$dkms_tree/$module/$module_version/source/redhat_driver_disk/$file" "$dkms_tree/$module/$module_version/driver_disk/" 2>/dev/null
+	    cp -f "$dkms_tree/$module/$module_version/source/redhat_driver_disk/$file" "$driver_disk_dir/" 2>/dev/null
 	fi
     done
-    echo "$module-$module_version driver disk" > "$dkms_tree/$module/$module_version/driver_disk/$rhdd_filename"
+    echo "$module-$module_version driver disk" > "$driver_disk_dir/$rhdd_filename"
 
     # Make sure the kernel_version_list is not too long
     if [ `echo $kernel_version_list | wc -m | awk {'print $1'}` -gt 200 ]; then
 	kernel_version_list="manykernels"
     fi
 
-    # Create dos disk image
-    local image_name="$module-$module_version-$kernel_version_list-dd.img"  
+    local suffix="$(driver_disk_suffix)"
+    local image_dir="$dkms_tree/$module/$module_version/driver_disk"
+    local image_name="$module-$module_version-$kernel_version_list-dd.$suffix"
     echo $""
-    echo $"Creating driver disk:"
-    cd $temp_dir_name
+    echo $"Creating driver disk on $media media:"
+    cd "$cpioarchive_dir_name"
     invoke_command "echo -e '$modules_cgz_list' | cpio -oH crc 2>/dev/null | gzip -9 > ./modules.cgz" "compressing modules.cgz" background
-    cp -f ./modules.cgz "$dkms_tree/$module/$module_version/driver_disk/"
-    cd - >/dev/null
-    rm -rf $temp_dir_name
-    cd "$dkms_tree/$module/$module_version/driver_disk/"
-    rm -f $image_name
-    invoke_command "dd if=/dev/zero of="./$image_name" bs=$(($size/20))k count=20" "making a blank floppy image" background
-    invoke_command "mkdosfs ./$image_name" "mkdosfs" background
-    mkdir ./mnt
-    invoke_command "mount -o loop -t vfat $image_name ./mnt >/dev/null 2>&1" "loopback mounting disk image"
-    for file in $files_into_driverdisk; do
-	invoke_command "cp -f ./$file ./mnt/" "  copying $file to disk image"
+    cp -f ./modules.cgz "$driver_disk_dir/"
+
+    # generate modules.alias file
+    # On 2.4 kernels and kernels with no aliases. this won't yield anything.
+    touch ./modules.alias
+    for f in $(echo -e ${modules_cgz_list}); do
+	module_wo_suffix=$(basename ${f} ${module_suffix})
+	tmp_alias="./modules.alias.${module_wo_suffix}"
+	depmod -n ${f} 2>/dev/null | grep ^alias > ${tmp_alias}
+	if [ -s ${tmp_alias} ]; then
+	    cat ${tmp_alias} >> ./modules.alias
+	else
+	    modinfo ${f} 2>/dev/null | grep ^alias: | xargs printf "%s %s ${module_wo_suffix}\n" > ${tmp_alias}
+	    if [ -s ${tmp_alias} ]; then
+		cat ${tmp_alias} >> ./modules.alias
+	    fi
+	fi
     done
-    invoke_command "umount ./mnt" "unmounting disk image"
-    rm -rf ./mnt
+    [ -e ./modules.alias ] && cp -f ./modules.alias "$driver_disk_dir/"
+
     cd - >/dev/null
+    rm -rf "$cpioarchive_dir_name"
+
+    mkdir -p "$image_dir"
+    rm -f "$image_dir/$image_name"
+
+    cd "$driver_disk_dir"
+    make_driver_disk_media "$image_dir/$image_name" "$driver_disk_dir"
+    cd - >/dev/null
+    rm -rf "$driver_disk_dir"
+
     echo $""
-    echo $"Disk image location: $dkms_tree/$module/$module_version/driver_disk/$image_name"
+    echo $"Disk image location: $image_dir/$image_name"
     echo $""
     echo $"DKMS: mkdriverdisk Completed."
 }
@@ -1786,20 +1925,16 @@ make_suse_driver_disk()
 		exit 3
 	fi
 
-	temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
-	local mntdir="$dkms_tree/$module/$module_version/driver_disk/"
-	echo $temp_dir_name
+	local driver_disk_dir=`mktemp -d $tmp_location/dkms.XXXXXX`
+	if [ -z "$driver_disk_dir" ]; then
+	    echo $""
+	    echo $"Error: Could not create a temporary directory, failing."
+	    return
+	fi
+	local suffix="$(driver_disk_suffix)"
+	local image_dir="$dkms_tree/$module/$module_version/driver_disk"
+	local image_name="$module-$module_version-$distro-$release-dd.$suffix"  
 
-	mkdir -p "$mntdir"
-	local image_name="$module-$module_version-$distro-$release-dd.img"  
-	cd "$mntdir"
-	rm -f "$image_name"
-	invoke_command "dd if=/dev/zero of="./$image_name" bs=72k count=20" "making a blank floppy image" background
-	invoke_command "mke2fs ./$image_name" "mke2fs" background
-	mkdir ./mnt 2>/dev/null
-	invoke_command "mount -o loop -t ext2 $image_name ./mnt >/dev/null 2>&1" "loopback mounting disk image"
-	rm -rf ./mnt/lost+found > /dev/null 2>&1
-	cd - >/dev/null
 	echo $""
 	echo $"Creating driver disk:"
 	
@@ -1827,13 +1962,13 @@ make_suse_driver_disk()
 			esac
 
 			echo "Marking ${kernelver_array[$i]}/${arch_array[$i]}/modules/${dest_module_name[$count]}$module_suffix..."
-			mkdir -p "$temp_dir_name/$topdir/$suse_arch-$release/install/lib/modules/${kernelver_array[$i]}${dest_module_location[$count]}"
-			cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$temp_dir_name/$topdir/$suse_arch-$release/install/lib/modules/${kernelver_array[$i]}${dest_module_location[$count]}/"
+			mkdir -p "$driver_disk_dir/$topdir/$suse_arch-$release/install/lib/modules/${kernelver_array[$i]}${dest_module_location[$count]}"
+			cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$driver_disk_dir/$topdir/$suse_arch-$release/install/lib/modules/${kernelver_array[$i]}${dest_module_location[$count]}/"
 
 			case ${kernelver_array[$i]} in
 				*-default)
-					mkdir -p "$temp_dir_name/$topdir/$suse_arch-$release/modules/"
-					cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$temp_dir_name/$topdir/$suse_arch-$release/modules/"
+					mkdir -p "$driver_disk_dir/$topdir/$suse_arch-$release/modules/"
+					cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$driver_disk_dir/$topdir/$suse_arch-$release/modules/"
 					;;
 			esac
 
@@ -1841,19 +1976,19 @@ make_suse_driver_disk()
 		done
 
 		# ---
-		for arch_release in `find $temp_dir_name/$topdir -type d -maxdepth 1 -mindepth 1 | sed "s#$temp_dir_name\/$topdir\/##"`; do
-			cd "$temp_dir_name/$topdir/$arch_release/install/"
+		for arch_release in `find $driver_disk_dir/$topdir -maxdepth 1 -mindepth 1 -type d | sed "s#$driver_disk_dir\/$topdir\/##"`; do
+			cd "$driver_disk_dir/$topdir/$arch_release/install/"
 			invoke_command "tar cvzf update.tar.gz lib/" "making update.tar.gz for $arch_release" background
 			cd - >/dev/null
 
-			mkdir -p "$mntdir/mnt/$topdir/linux/$distro/$arch_release/install"
-			mkdir -p "$mntdir/mnt/$topdir/linux/$distro/$arch_release/modules"
+			mkdir -p "$driver_disk_dir/$topdir/linux/$distro/$arch_release/install"
+			mkdir -p "$driver_disk_dir/$topdir/linux/$distro/$arch_release/modules"
 
 			echo $"  copying update.tar.gz for $arch_release to disk image..."
-			cp -f "$temp_dir_name/$topdir/$arch_release/install/update.tar.gz" "$mntdir/mnt/$topdir/linux/$distro/$arch_release/install/"
-			if [ -d "$temp_dir_name/$topdir/$arch_release/modules/" ]; then
+			cp -f "$driver_disk_dir/$topdir/$arch_release/install/update.tar.gz" "$driver_disk_dir/$topdir/linux/$distro/$arch_release/install/"
+			if [ -d "$driver_disk_dir/$topdir/$arch_release/modules/" ]; then
 				echo $"  copying kernel modules for installation kernel to disk image..."
-				cp -f "$temp_dir_name/$topdir/$arch_release/modules/*" "$mntdir/mnt/$topdir/linux/$distro/$arch_release/modules/" 2>/dev/null
+				cp -f "$driver_disk_dir/$topdir/$arch_release/modules/*" "$driver_disk_dir/$topdir/linux/$distro/$arch_release/modules/" 2>/dev/null
 			else
 				echo $"  Warning! No kernel modules found for -default kernel."
 			fi
@@ -1863,10 +1998,13 @@ make_suse_driver_disk()
 		count=$(($count+1))
 	done
 
-	invoke_command "umount $mntdir/mnt" "unmounting disk image"
-	rm -rf "$mntdir/lost+found" > /dev/null 2>&1
-	rm -rf "$mntdir/mnt"
-	rm -rf "$temp_dir_name"
+	mkdir -p "$image_dir"
+	rm -f "$image_dir/$image_name"
+	cd "$driver_disk_dir"
+	make_driver_disk_media "$image_dir/$image_name" "$driver_disk_dir"
+	cd - >/dev/null
+	rm -rf "$driver_disk_dir"
+
 
 	echo $""
    	echo $"Disk image location: $dkms_tree/$module/$module_version/driver_disk/$image_name"
@@ -2538,6 +2676,7 @@ module=""
 module_version=""
 template_kernel=""
 distro=""
+media=""
 release=""
 conf=""
 kernel_config=""
@@ -2594,6 +2733,14 @@ while [ $# -gt 0 ]; do
 		shift
 	    fi
 	    ;;
+	--media*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		media=`echo $1 | sed 's/^.*=//'`
+	    else
+		media="$2"
+		shift
+	    fi
+	    ;;
 	--release*|-r)
 	    if echo $1 | grep '=' >/dev/null ; then
 		release=`echo $1 | sed 's/^.*=//'`
@@ -2622,7 +2769,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.13"
+	    echo $"dkms: 2.0.13.1"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

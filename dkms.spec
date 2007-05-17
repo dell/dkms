@@ -1,7 +1,7 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.13
-Release: 1
+Version: 2.0.13.1
+Release: 1%{?dist}
 License: GPL
 Group: System Environment/Base
 BuildArch: noarch
@@ -9,14 +9,16 @@ Requires: sed gawk findutils modutils tar cpio gzip grep mktemp
 Requires: bash > 1.99
 Provides: dkms-minimal
 URL: http://linux.dell.com/dkms
-Source0: http://linux.dell.com/dkms/permalink/dkms-%version.tar.gz
+Source0: http://linux.dell.com/dkms/permalink/dkms-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+%ifdef %fedora
+Requires: kernel-devel
+%endif
 
 %description
 This package contains the framework for the Dynamic
 Kernel Module Support (DKMS) method for installing
-module RPMS as originally developed by the Dell
-Computer Corporation.
+module RPMS as originally developed by Dell.
 
 %prep
 
@@ -70,9 +72,7 @@ done
 echo ""
 
 %install
-if [ "$RPM_BUILD_ROOT" != "/" ]; then
-        rm -rf $RPM_BUILD_ROOT
-fi
+rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/{var/lib/dkms,/usr/sbin,usr/share/man/man8,etc/init.d,etc/dkms}
 install -m 755 dkms $RPM_BUILD_ROOT/usr/sbin/dkms
 gzip -c -9 dkms.8 > $RPM_BUILD_ROOT/usr/share/man/man8/dkms.8.gz
@@ -95,6 +95,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
 %doc %attr (-,root,root) sample.spec sample.conf AUTHORS COPYING README.dkms
 %doc %attr (-,root,root) sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
+%dir /etc/dkms
 %config(noreplace) /etc/dkms/framework.conf
 %config(noreplace) /etc/dkms/template-dkms-mkrpm.spec
 
@@ -104,6 +105,15 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Fri Jan 12 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.13.1
+- properly create driver disks for Fedora Core 6 and RHEL5
+- make .iso, .tar, and floppy .img driver disks for Red Hat and SuSE
+- set CLEAN properly even if MAKE[] isn't set.
+- fix install.sh buglet installing the manpage
+
+* Thu Jun 29 2006 Matt Domsch <Matt_Domsch@dell.com>
+- cleanups to match Fedora Extras spec file
+
 * Thu Jun 29 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.13
 - bump to 2.0.13
 
