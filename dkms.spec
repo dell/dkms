@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.2
+Version: 2.0.3
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -105,6 +105,14 @@ fi
 
 
 %changelog
+* Mon Nov 22 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.3
+- Issues regressed.  Bumped to non-testing version.
+
+* Fri Nov 19 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.2.5
+- DKMS ldtarball arch fix for changed Andreas 2.0.2 code
+- Workaround for Red Hat's new source symlink in 2.6.9
+- All 'cd -' now output to /dev/null
+
 * Sat Oct 2 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.2
 - Added --verbose which invoke_command uses
 - Fixed it so mrproper doesn't get run > 2.6.6
@@ -121,7 +129,6 @@ fi
 - patch to rewrite version comparison code
 - patch to switch to usage of case, remove use of grep -c, remove use of IFS 
 - patch to change handling of stderr
-
 
 * Fri Sep 10 2004 Gary Lerhaupt <gary_lerhaupt@dell.com>
 - Fixed remove so you can remove modules in added state
