@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.27.05
+Version: 0.28.04
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
@@ -40,6 +40,10 @@ fi
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
 
 %changelog
+* Tue May 05 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.28.04-1
+- Fixed ldtarball/mktarball to obey source_tree & dkms_tree (Reported By: Jordan Hargrave <jordan_hargrave@dell.com>)
+- Added DKMS mailing list to man page
+
 * Tue Apr 29 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.27.05-1
 - Changed NEEDED_FOR_BOOT to REMAKE_INITRD as this makes more sense
 - Redid handling of modifying modules.conf 
