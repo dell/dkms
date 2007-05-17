@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.9.2
+Version: 2.0.9.3
 Release: 1
 License: GPL
 Group: System Environment/Base
@@ -103,6 +103,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Wed Mar 15 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.9.3-1
+- add PRE_INSTALL dkms.conf directive
+
 * Tue Mar 14 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.9.2-1
 - add SuSE Kernel Module Package (mkkmp) support
 
