@@ -45,8 +45,14 @@ fi
 
 %post
 /sbin/dkms add -m %module -v %version 
-/sbin/dkms build -m %module -v %version
-/sbin/dkms install -m %module -v %version
+if [ -e /lib/modules/`uname -r`/build/include ]; then
+	/sbin/dkms build -m %module -v %version
+	/sbin/dkms install -m %module -v %version
+else
+	echo -e ""
+	echo -e "Module build for the currently running kernel was skipped since the"
+	echo -e "kernel source for this kernel does not seem to be installed."
+fi
 exit 0
 
 %preun

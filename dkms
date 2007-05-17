@@ -22,7 +22,7 @@
 function invoke_command ()
 {
     exitval=0
-    exitval_file=`mktemp /tmp/dkms.XXXXXX`
+    exitval_file=`mktemp $tmp_location/dkms.XXXXXX`
     echo -en "$2..." 
     if [ "$3" == background ]; then
 	(eval $1; echo "exitval=$?" >> "$exitval_file") &
@@ -63,7 +63,7 @@ function remake_initrd()
     if [ "$?" -eq 0 ]; then
       	echo $"" 
 	echo $"Saving old initrd as /boot/initrd-${kernel_version}_old.img" 
-	mv -f "/boot/initrd-${kernel_version}.img" "/boot/initrd-${kernel_version}_old.img"
+	cp -f "/boot/initrd-${kernel_version}.img" "/boot/initrd-${kernel_version}_old.img"
 	echo $"Making new initrd as /boot/initrd-${kernel_version}.img" 
 	invoke_command "mkinitrd -f /boot/initrd-${kernel_version}.img ${kernel_version}" "mkinitrd" background
 	echo $"If your next boot fails, edit your bootloader file and revert" 
@@ -83,14 +83,14 @@ function remake_initrd()
 function show_usage ()
 {
     echo $"Usage: $0 [action] [options]" 
-    echo $"      [action]  = { add | remove | build | install | uninstall | match" 
-    echo $"                    | mkdriverdisk | mktarball | ldtarball | status }" 
-    echo $"      [options] = [-c dkms.conf-location] [-k kernel-version] [-m module]" 
-    echo $"                  [-v module-version] [-d distro] [-q] [--force] [--all]" 
-    echo $"                  [--postadd=script-location] [--postbuild=script-location]" 
-    echo $"                  [--postinstall=script-location] [--postremove=script-location]" 
-    echo $"                  [--templatekernel=kernel] [--config=kernel-.config-location]"  
-    echo $"                  [--directive='cli-directive=cli-value']"
+    echo $"  [action]  = { add | remove | build | install | uninstall | match" 
+    echo $"               | mkdriverdisk | mktarball | ldtarball | status }" 
+    echo $"  [options] = [-c dkms.conf-location] [-k kernel-version] [-m module]" 
+    echo $"              [-v module-version] [-d distro] [-q] [--force] [--all]" 
+    echo $"              [--postadd=script-location] [--postbuild=script-location]" 
+    echo $"              [--postinstall=script-location] [--postremove=script-location]" 
+    echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"  
+    echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"  
 }
 
 function read_conf ()
@@ -119,6 +119,7 @@ function read_conf ()
 
     # Set variables supported in dkms.conf files (eg. $kernelver)
     kernelver="$kernel_version"
+    [ -z "$kernel_source_dir" ] && kernel_source_dir="/lib/modules/$kernel_version/build"
 
     # Source in the dkms.conf
     . $read_conf_file 2>/dev/null
@@ -148,7 +149,7 @@ function read_conf ()
 	built_module_name[$index]=${BUILT_MODULE_NAME[$index]}
 	built_module_location[$index]=${BUILT_MODULE_LOCATION[$index]}
 	dest_module_name[$index]=${DEST_MODULE_NAME[$index]}
-	dest_module_location[$index]=/lib/modules/$kernel_version${DEST_MODULE_LOCATION[$index]}
+	dest_module_location[$index]=${DEST_MODULE_LOCATION[$index]}
 
 	# If unset, set by defaults
 	[ -z "${built_module_name[$index]}" ] && [ "${#DEST_MODULE_LOCATION[*]}" -eq 1 ] && built_module_name[$index]=$module
@@ -449,7 +450,7 @@ function add_module ()
 function prepare_kernel()
 {
     # Set the kernel variables
-    kernel_source_dir="/lib/modules/$kernel_version/build"
+    [ -z "$kernel_source_dir" ] && kernel_source_dir="/lib/modules/$kernel_version/build"
 
     # Check that kernel-source exists
     if ! [ -e "$kernel_source_dir/include" ]; then
@@ -592,29 +593,29 @@ function install_module()
 	    echo $"Archiving it within the DKMS tree for uninstallation purposes." 
 	    mkdir -p "$dkms_tree/$module/original_module/$kernel_version/"
 	    mv -f `find $lib_tree -name ${dest_module_name[$count]}$module_suffix` "$dkms_tree/$module/original_module/$kernel_version/"
-	elif  ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -gt 1 ] && [ -e "${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" ]; then
+	elif  ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -gt 1 ] && [ -e "/lib/modules/$kernel_version${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" ]; then
 	    echo $""
 	    echo $"Found multiple original modules ${dest_module_name[$count]}$module_suffix in /lib/modules"
-	    echo $"Archiving the one in ${dest_module_location[$count]} for uninstallation purposes."
+	    echo $"Archiving the one in /lib/modules/$kernel_version${dest_module_location[$count]} for uninstallation purposes."
 	    echo $"Warning! Since multiple modules exist with the same name, problems"
 	    echo $"may arise."
 	    mkdir -p "$dkms_tree/$module/original_module/$kernel_version/"
-	    mv -f "${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" "$dkms_tree/$module/original_module/$kernel_version/"
-	elif  ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -gt 1 ] && ! [ -e "${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" ]; then
+	    mv -f "/lib/modules/$kernel_version${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" "$dkms_tree/$module/original_module/$kernel_version/"
+	elif  ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -gt 1 ] && ! [ -e "/lib/modules/$kernel_version${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" ]; then
 	    echo $""
 	    echo $"Multiple original modules ${dest_module_name[$count]}$module_suffix exist in /lib/modules"
 	    echo $"Due to this confusion, DKMS cannot archive any of them for uninstallation."
 	    echo $"Warning! Since multiple modules exist with the same name, problems"
 	    echo $"may arise."	    
 	else
-	    rm -f "${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" 2>/dev/null
+	    rm -f "/lib/modules/$kernel_version${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" 2>/dev/null
 	fi
 
         # Copy module to its location
 	echo $""
- 	echo $"Copying the new ${dest_module_name[$count]}$module_suffix for $module to ${dest_module_location[$count]}" 
-	mkdir -p ${dest_module_location[$count]}
-	cp -f "$dkms_tree/$module/$module_version/$kernel_version/module/${dest_module_name[$count]}$module_suffix" "${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+ 	echo $"Copying the new ${dest_module_name[$count]}$module_suffix for $module to /lib/modules/$kernel_version${dest_module_location[$count]}" 
+	mkdir -p /lib/modules/$kernel_version${dest_module_location[$count]}
+	cp -f "$dkms_tree/$module/$module_version/$kernel_version/module/${dest_module_name[$count]}$module_suffix" "/lib/modules/$kernel_version${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
 
 	count=$(($count + 1))
     done
@@ -665,7 +666,7 @@ function build_module()
     fi
     
     # Set the kernel variables
-    kernel_source_dir="/lib/modules/$kernel_version/build"
+    [ -z "$kernel_source_dir" ] && kernel_source_dir="/lib/modules/$kernel_version/build"
 
     # Check that source symlink works
     if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
@@ -678,9 +679,9 @@ function build_module()
     # Check that the module has not already been built for this kernel
     if [ -d "$dkms_tree/$module/$module_version/$kernel_version" ]; then
 	echo $"" >$std_err
-	echo $"Error! This module/version has already been installed on: $kernel_version" >$std_err
+	echo $"Error! This module/version has already been built on: $kernel_version" >$std_err
 	echo $"The directory: $dkms_tree/$module/$module_version/$kernel_version already" >$std_err
-	echo $"exists.  Use the dkms remove function before trying to install again." >$std_err
+	echo $"exists.  Use the dkms remove function before trying to build again." >$std_err
 	exit 3
     fi
 	
@@ -730,6 +731,7 @@ function build_module()
     echo $"DKMS make.log for $module-$module_version for kernel $kernel_version" >> "$dkms_tree/$module/$module_version/build/make.log"
     echo $"`date`" >> "$dkms_tree/$module/$module_version/build/make.log"
     invoke_command "$make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$make_command" background
+
     # Make sure all the modules built successfully
     count=0
     while [ "$count" -lt "${#built_module_name[*]}" ]; do
@@ -802,12 +804,12 @@ function do_uninstall()
 	count=0
 	while [ "$count" -lt "${#built_module_name[*]}" ]; do
 	    echo $""
-	    echo $"Deleting ${dest_module_name[$count]}$module_suffix from: ${dest_module_location[$count]}" 
-	    rm -f "${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+	    echo $"Deleting ${dest_module_name[$count]}$module_suffix from: /lib/modules/$kernel_version${dest_module_location[$count]}" 
+	    rm -f "/lib/modules/$kernel_version${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
 	    if [ -e "$dkms_tree/$module/original_module/$kernel_version/${dest_module_name[$count]}$module_suffix" ]; then
 		echo $"Archived original_module ${dest_module_name[$count]}$module_suffix found!  Reinstating it under the" 
-		echo $"directory: ${dest_module_location[$count]}" 
-		cp -f "$dkms_tree/$module/original_module/$kernel_version/${dest_module_name[$count]}$module_suffix" "${dest_module_location[$count]}/" 2>/dev/null
+		echo $"directory: /lib/modules/$kernel_version${dest_module_location[$count]}" 
+		cp -f "$dkms_tree/$module/original_module/$kernel_version/${dest_module_name[$count]}$module_suffix" "/lib/modules$kernel_version${dest_module_location[$count]}/" 2>/dev/null
 	    else
 		echo $"No original module ${dest_module_name[$count]} was found for this module on this kernel." 
 		echo $"Use the dkms install command to reinstall any previous module version." 
@@ -986,7 +988,7 @@ function remove_module ()
     done
 
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
-    if [ -z "`find $dkms_tree/$module/$module_version/* -maxdepth 1 -type d | grep -v build$ | grep -v tarball$ | grep -v driver_disk$ | grep -v rpm$`"  ]; then
+    if [ -z "`find $dkms_tree/$module/$module_version/* -maxdepth 0 -type d | grep -v build$ | grep -v tarball$ | grep -v driver_disk$ | grep -v rpm$`"  ]; then
 	echo $"" 
 	echo $"------------------------------" 
 	echo $"Deleting module version: $module_version" 
@@ -1066,22 +1068,40 @@ show_status ()
 			    fi
 			done    
 		    fi
-		    
+
+		    # Source in the dkms.conf
+		    conf="$dkms_tree/$module_in_tree/$version_in_tree/dkms.conf"
+		    read_conf $conf
+
 	            # Iterate over the kernels
 		    for kernel_in_tree in $kernels_needing_status; do
-			
+
      	                # Make sure its in the tree
 			if [ -d "$dkms_tree/$module_in_tree/$version_in_tree/$kernel_in_tree" ]; then
 			    readlink "$dkms_tree/$module_in_tree/kernel-${kernel_in_tree}"
 			    kernel_symlink="$read_link"
-			    if [ "$kernel_symlink" == "$version_in_tree/$kernel_in_tree" ]; then
-				activity_state="installed"
-			    else
-				activity_state="built"
-			    fi
 			    extra_status=""
 			    if [ -d "$dkms_tree/$module_in_tree/original_module/$kernel_in_tree" ]; then
 				extra_status=" (original_module exists)"
+			    fi
+			    if [ "$kernel_symlink" == "$version_in_tree/$kernel_in_tree" ]; then
+				activity_state="installed"
+				count=0
+				while [ "$count" -lt "${#dest_module_name[*]}" ]; do
+				    if ! `diff "$dkms_tree/$module_in_tree/$version_in_tree/$kernel_in_tree/module/${dest_module_name[$count]}$module_suffix" "/lib/modules/$kernel_in_tree${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" >/dev/null 2>&1`; then
+					extra_status="$extra_status (WARNING! Diff between built and installed module!)"
+				    fi
+				    count=$(($count+1))
+				done
+			    else
+				activity_state="built"
+				count=0
+				while [ "$count" -lt "${#dest_module_name[*]}" ]; do
+				    if ! [ -e "$dkms_tree/$module_in_tree/$version_in_tree/$kernel_in_tree/module/${dest_module_name[$count]}$module_suffix" ]; then
+					extra_status="$extra_status (WARNING! Missing some built modules!)"
+				    fi
+				    count=$(($count+1))
+				done
 			    fi
 			    status_shown="true"
 			    echo "$module_in_tree, $version_in_tree, $kernel_in_tree: $activity_state$extra_status" 
@@ -1149,7 +1169,7 @@ make_driver_disk ()
     kernel_version=`echo $kernel_version | cut -d "," --output-delimiter " " -f 1-`
     kernel_version_list=""
     modules_cgz_list=""
-    temp_dir_name=`mktemp -d /tmp/dkms.XXXXXX`
+    temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
     for kernel in $kernel_version; do 
 	count=0
 	while [ "$count" -lt "${#dest_module_name[*]}" ]; do
@@ -1179,11 +1199,11 @@ make_driver_disk ()
     files_for_driverdisk="module-info disk-info modules.dep pcitable"
     files_into_driverdisk="modules.cgz"
     for file in $files_for_driverdisk; do
-	if ! [ -e "$dkms_tree/$module/$module_version/source/$file" ]; then
-	    echo $"Warning! File: $file not found in $dkms_tree/$module/$module_version/source/" >$std_err
+	if ! [ -e "$dkms_tree/$module/$module_version/source/redhat_driver_disk/$file" ]; then
+	    echo $"Warning! File: $file not found in $dkms_tree/$module/$module_version/source/redhat_driver_disk/" >$std_err
 	else
 	    files_into_driverdisk="$file $files_into_driverdisk"
-	    cp -f "$dkms_tree/$module/$module_version/source/$file" "$dkms_tree/$module/$module_version/driver_disk/" 2>/dev/null
+	    cp -f "$dkms_tree/$module/$module_version/source/redhat_driver_disk/$file" "$dkms_tree/$module/$module_version/driver_disk/" 2>/dev/null
 	fi
     done
     touch "$dkms_tree/$module/$module_version/driver_disk/rhdd-6.1"
@@ -1251,6 +1271,16 @@ make_tarball()
 	exit 4
     fi
 
+    # Read the conf file
+    read_conf
+    if [ "$?" -ne 0 ]; then
+	echo $"" >$std_err
+	echo $"Error! Bad conf file." >$std_err
+	echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
+	echo $"a valid dkms.conf file." >$std_err
+	exit 5
+    fi
+
     # If they specified a kernel(s), make sure everything is sane
     kernel_version=`echo $kernel_version | cut -d "," --output-delimiter " " -f 1-`
     for kernel in $kernel_version; do
@@ -1258,42 +1288,53 @@ make_tarball()
 	    echo $"" >$std_err
 	    echo $"Error! The kernel $kernel does not have modules built for" >$std_err
 	    echo $"$module $module_version.  Cannot create archive." >$std_err
-	    exit 5
+	    exit 6
 	fi
     done
 
-    # Create the base list of things to archive
-    files_in_tree=`find $dkms_tree/$module/$module_version -type f -maxdepth 1`
-    things_to_archive="$source_tree/$module-$module_version $files_in_tree $dkms_tree/$module/$module_version/source"
+    # Create a temp directory and populate it
+    temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+    mkdir -p $temp_dir_name/dkms_source_tree
+    mkdir -p $temp_dir_name/dkms_main_tree
+
+    # Copy the source_tree
     echo $""
     echo $"Marking $source_tree/$module-$module_version for archiving..."
+    cp -rf $source_tree/$module-$module_version/* $temp_dir_name/dkms_source_tree
+    
+    # Get the base-level files
+    cp `find $dkms_tree/$module/$module_version -type f -maxdepth 1` $temp_dir_name/dkms_main_tree/
 
     # Determine the kernel_versions to put in the tarball
     kernel_version_list=""
     for kernel in $built_for_kernels; do
 	if [ -z "$kernel_version" ] || [ `echo "$kernel_version" | grep -c "$kernel\b"` -gt 0 ]; then
-	    things_to_archive="$things_to_archive $dkms_tree/$module/$module_version/$kernel"
 	    if [ -z "$kernel_version_list" ]; then
 		kernel_version_list="kernel$kernel"
 	    else
 		kernel_version_list="$kernel_version_list-kernel$kernel"
 	    fi
 	    echo $"Marking kernel $kernel for archiving..."
+	    cp -rf "$dkms_tree/$module/$module_version/$kernel" $temp_dir_name/dkms_main_tree/
 	fi
     done
 
     # Make the tarball
-    tar -czf $module-$module_version-$kernel_version_list.dkms.tar.gz $things_to_archive 2>/dev/null
+    cd $temp_dir_name
+    tar -czf $temp_dir_name/$module-$module_version-$kernel_version_list.dkms.tar.gz ./* 2>/dev/null
+    cd -
     if [ "$?" -eq 0 ]; then
 	mkdir -p $dkms_tree/$module/$module_version/tarball
-	mv -f $module-$module_version-$kernel_version_list.dkms.tar.gz $dkms_tree/$module/$module_version/tarball/
+	mv -f $temp_dir_name/$module-$module_version-$kernel_version_list.dkms.tar.gz $dkms_tree/$module/$module_version/tarball/
 	echo $""
 	echo $"Tarball location: $dkms_tree/$module/$module_version/tarball/$module-$module_version-$kernel_version_list.dkms.tar.gz"
 	echo $""
 	echo $"Done."
+	rm -rf $temp_dir_name
     else
 	echo $"" >$std_err
 	echo $"Error! Failed to make tarball." >$std_err
+	rm -rf $temp_dir_name
 	exit 6
     fi
 }
@@ -1301,63 +1342,74 @@ make_tarball()
 load_tarball()
 {
     # Error out of --config was not set with the tarball location
-    if [ -z "$kernel_config" ]; then
+    if [ -z "$archive_location" ]; then
 	echo $"" >$std_err
 	echo $"Error! Invalid number of parameters passed." >$std_err
-	echo $"Usage: ldtarball [--config=tarball-location]" >$std_err
+	echo $"Usage: ldtarball [--archive=tarball-location]" >$std_err
 	exit 1	
     fi
 
-    # Error out if $kernel_config does not exist
-    if ! [ -e "$kernel_config" ]; then
+    # Error out if $archive_location does not exist
+    if ! [ -e "$archive_location" ]; then
 	echo $"" >$std_err
-	echo $"Error! Cannot locate $kernel_config." >$std_err
+	echo $"Error! Cannot locate $archive_location." >$std_err
 	echo $"File does not exist." >$std_err
 	exit 2
     fi
 
     # Figure out what kind of archive it is (tar.gz, tar, tar.bz, etc)
     tar_options=""
-    if `gzip -t $kernel_config 2>/dev/null`; then
+    if `gzip -t $archive_location 2>/dev/null`; then
 	tar_options="${tar_options}z"
     fi
-    if `bzip2 -t $kernel_config 2>/dev/null`; then
+    if `bzip2 -t $archive_location 2>/dev/null`; then
 	tar_options="${tar_options}j"
     fi
 
-    # Untar it into /tmp
-    temp_dir_name=`mktemp -d /tmp/dkms.XXXXXX`
-    tar -${tar_options}xf $kernel_config -C $temp_dir_name 
+    # Untar it into $tmp_location
+    temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+    tar -${tar_options}xf $archive_location -C $temp_dir_name 
 
-    # Figure out tar_dkms_tree
-    for file_named_source in `tar -${tar_options}tf $kernel_config | grep "source$"`; do
-	if [ -h "$temp_dir_name/$file_named_source" ]; then
-	    chopped_tar_dkms_tree=`echo $file_named_source | sed 's/\(.*\)\/.*\/.*\/source/\1/'`
-	    tar_dkms_tree="/$chopped_tar_dkms_tree"
-	fi
-    done
-
-    # Figure out which module and module-version we're loading
-    module=`tar -${tar_options}tf $kernel_config | grep "$chopped_tar_dkms_tree" | head -1 | sed 's/var\/dkms\///' | sed 's/\/.*//'`
-    module_version=`tar -${tar_options}tf $kernel_config | grep "$chopped_tar_dkms_tree" | head -1 | sed "s/var\/dkms\/$module\///" | sed 's/\/.*//'`
-    
     # Make sure its a sane tarball
-    if [ -z "$module" ] || [ -z "$module_version" ]; then
-	echo $"" >$std_err
-	echo $"Error! Tarball does not appear to be correctly formed." >$std_err
-	echo $"Could not decipher which module/module_version it contained." >$std_err
-	rm -rf $temp_dir_name
-	exit 3
+    PACKAGE_NAME=""
+    PACKAGE_VERSION=""
+    is_from_mktarball=""
+    if ! [ -d "$temp_dir_name/dkms_source_tree" ]; then
+	conf=`find $temp_dir_name/ -name dkms.conf 2>/dev/null | head -1`
+	if [ -z "$conf" ]; then
+	    echo $"" >$std_err
+	    echo $"Error! Tarball does not appear to be a correctly formed" >$std_err
+	    echo $"DKMS archive. No dkms.conf found within it." >$std_err
+	    rm -rf $temp_dir_name
+	    exit 3
+	fi
+	read_conf "$conf"
+	if [ "$?" -ne 0 ]; then
+	    echo $"" >$std_err
+	    echo $"Error! Bad conf file." >$std_err
+	    echo $"File: $conf does not represent a valid dkms.conf file" >$std_err
+	    rm -rf $temp_dir_name
+	    exit 4
+	fi
+	tarball_source_tree_name=`echo $conf | sed "s#$temp_dir_name\/##" | sed 's/dkms.conf//' | sed 's/\/$//'`
+    else
+	. $temp_dir_name/dkms_source_tree/dkms.conf 2>/dev/null
+	if [ -z "$PACKAGE_NAME" ] || [ -z "$PACKAGE_VERSION" ] || ! [ -d "$temp_dir_name/dkms_main_tree" ]; then
+	    echo $"" >$std_err
+	    echo $"Error! Tarball does not appear to be a correctly formed" >$std_err
+	    echo $"DKMS archive." >$std_err
+	    rm -rf $temp_dir_name
+	    exit 5
+	fi
+	is_from_mktarball="true"
+	tarball_source_tree_name="dkms_source_tree"
     fi
+    module="$PACKAGE_NAME"
+    module_version="$PACKAGE_VERSION"
 
     echo $""
     echo $"Loading tarball for module: $module / version: $module_version"
     echo $""
-
-    # Determine the source location in the tarball
-    readlink "$temp_dir_name/$chopped_tar_dkms_tree/$module/$module_version/source"
-    tar_source_location="$read_link"
-    tar_source_tree=`echo $tar_source_location | sed 's/\/$//' | sed 's/\(.*\)\/.*/\1/'`
 
     # Load the source from the tarball
     if [ "`dkms status -m $module -v $module_version 2>/dev/null`" != "" ] && [ -z "$force" ]; then
@@ -1366,15 +1418,24 @@ load_tarball()
 	echo $"Loading $source_tree/$module-$module_version..."
 	rm -rf $source_tree/$module-$module_version
 	mkdir -p $source_tree/$module-$module_version
-	cp -rf $temp_dir_name/$tar_source_tree/$module-$module_version/* $source_tree/$module-$module_version
+	cp -rf $temp_dir_name/$tarball_source_tree_name/* $source_tree/$module-$module_version
     fi
 
     mkdir -p $dkms_tree/$module/$module_version
 
-    # Load config files & scripts
-    files_to_load=`find $temp_dir_name/$chopped_tar_dkms_tree/$module/$module_version -type f -maxdepth 1`
+    # Create a list of config files & scripts to load
+    files_to_load=""
+    if [ -n "$is_from_mktarball" ]; then
+	files_to_load=`find $temp_dir_name/dkms_main_tree -type f -maxdepth 1 2>/dev/null`
+    else
+	for file in dkms.conf post_add post_build post_install post_remove; do
+	    [ -e "$temp_dir_name/$tarball_source_tree_name/$file" ] && files_to_load="$temp_dir_name/$tarball_source_tree_name/$file $files_to_load"
+	done
+    fi
+
+    # Load the list
     for filename in $files_to_load; do
-	dkms_file_location="$dkms_tree`echo $filename | sed "s#$temp_dir_name##" | sed "s#$tar_dkms_tree##"`"
+	dkms_file_location="$dkms_tree/$module/$module_version/`echo $filename | sed 's/.*\///'`"
 	if [ -e "$dkms_file_location" ] && [ -z "$force" ]; then
 	    echo $"Warning! $dkms_file_location already exists.  Skipping..."
 	else
@@ -1384,9 +1445,9 @@ load_tarball()
     done
 
     # Load kernel directories
-    dirs_to_load=`find $temp_dir_name/$chopped_tar_dkms_tree/$module/$module_version -type d -maxdepth 1 -mindepth 1`
+    dirs_to_load=`find $temp_dir_name/dkms_main_tree -type d -maxdepth 1 -mindepth 1 2>/dev/null`
     for directory in $dirs_to_load; do
-	dkms_dir_location="$dkms_tree`echo $directory | sed "s#$temp_dir_name##" | sed "s#$tar_dkms_tree##"`"
+	dkms_dir_location="$dkms_tree/$module/$module_version/`echo $directory | sed 's/.*\///'`"
 	if [ -d "$dkms_dir_location" ] && [ -z "$force" ]; then
 	    echo $"Warning! $dkms_dir_location already exists.  Skipping..."
 	else
@@ -1398,8 +1459,13 @@ load_tarball()
     done
     
     # Create source symlink
-    rm -f "$dkms_tree/$module/$module_version/source"
-    ln -s "$source_tree/$module-$module_version" "$dkms_tree/$module/$module_version/source"
+    if [ -h "$dkms_tree/$module/$module_version/source" ] && [ -z "$force" ]; then
+	echo $"Warning! $dkms_tree/$module/$module_version/source already exists.  Skipping..."
+    else
+	echo $"Creating $dkms_tree/$module/$module_version/source symlink..."
+	rm -f "$dkms_tree/$module/$module_version/source"
+	ln -s "$source_tree/$module-$module_version" "$dkms_tree/$module/$module_version/source"
+    fi
     
     # Clean up /tmp
     rm -rf $temp_dir_name
@@ -1519,6 +1585,7 @@ run_match ()
 current_kernel=`uname -r`
 dkms_tree="/var/dkms"
 source_tree="/usr/src"
+tmp_location="/tmp"
 dkms_frameworkconf="/etc/dkms_framework.conf"
 
 # Source in /etc/dkms_framework.conf
@@ -1536,6 +1603,8 @@ post_build=""
 post_remove=""
 post_install=""
 kernel_config=""
+archive_location=""
+kernel_source_dir=""
 action=""
 force=""
 no_prepare_kernel=""
@@ -1604,7 +1673,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.38.03"
+	    echo $"dkms: 0.39.17"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
@@ -1672,6 +1741,22 @@ while [ $# -gt 0 ]; do
 		kernel_config=`echo $1 | sed 's/^.*=//'`
             else
                 kernel_config="$2"
+                shift
+            fi
+	    ;;
+	--archive*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		archive_location=`echo $1 | sed 's/^.*=//'`
+            else
+                archive_location="$2"
+                shift
+            fi
+	    ;;
+	--kernelsourcedir*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		kernel_source_dir=`echo $1 | sed 's/^.*=//'`
+            else
+                kernel_source_dir="$2"
                 shift
             fi
 	    ;;

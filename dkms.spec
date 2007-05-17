@@ -1,11 +1,12 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.38.03
+Version: 0.39.17
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
 Packager: Gary Lerhaupt <gary_lerhaupt@dell.com>
 Group: System Environment/Base
+BuildArch: noarch
 Requires: gcc bash sed gawk findutils tar cpio gzip grep mktemp
 Source: dkms-%version.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root/
@@ -49,6 +50,26 @@ fi
 /sbin/chkconfig dkms_autoinstaller on
 
 %changelog
+* Tue Sep 30 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.39.17-1
+- Added diff checking in status command in case modules are overwritten by someone else
+- Fixed already built error message in build_module
+- Changed build-arch to noarch
+- Updated sample.spec
+- Change dest_module_location to not get prefaced by /lib/modules/$kernel_version
+- When saving old initrd, copy it instead of moving it in case new one doesn't build
+- Only create source symlink during loadtarball if --force or if it doesn't exist
+- Decide to completely remove during remove_module after doing find with maxdepth of 0 not 1
+
+* Mon Sep 29 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.39.08-1
+- Reworked mktarball format to remove dependence on /var/dkms and /usr/src
+- Reworked ldtarball to match new tarball format
+- Ldtarball now uses --archive=tarball-location flag instead of --config flag
+- Ldtarball can now load any old source tarball as long as it contains a good dkms.conf
+- Added --kernelsourcedir cli option to provide alternate location for kernel source
+- Driver disk files are now looked for in /redhat_driver_disk
+- Added $tmp_location specifiable in /etc/dkms_framework.conf to specify your /tmp dir (default /tmp)
+- Updated man page
+
 * Thu Sep 25 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.38.03-1
 - Fixed tmp_dir_name typo in ldtarball
 - Fixed mkdriverdisk to correctly create kernel/module structure
