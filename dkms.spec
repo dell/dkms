@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 1.08
+Version: 1.09
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -55,6 +55,20 @@ fi
 
 
 %changelog
+* Fri Apr 30 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.09-1
+- If module build exit status is bad, die accordingly
+- 2.6 kernel prep changes (not quite there yet, still broken)
+
+* Thu Apr 29 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.08.06-1
+- Added BUILD_EXCLUSIVE_KERNEL & BUILD_EXCLUSIVE_ARCH directives for dkms.conf
+- Tweaked dkms_autoinstaller to more gracefully handle a build failure
+
+* Tue Apr 27 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.08.02-1
+- Got rid of make clean warning if not present
+
+* Tue Apr 20 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.08.01-1
+- Fixed error message when compiling with --no-prepare-kernel
+
 * Tue Apr 13 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.08-1
 - Fixed the format of rhdd-6.1 for Red Hat driver disks
 - Update man page with new white paper info

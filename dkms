@@ -114,12 +114,16 @@ function read_conf ()
     MAKE=""
     CLEAN=""
     REMAKE_INITRD=""
+    remake_initrd=""
     PACKAGE_NAME=""
     PACKAGE_VERSION=""
     POST_ADD=""
     POST_BUILD=""
     POST_INSTALL=""
     POST_REMOVE=""
+    BUILD_EXCLUSIVE_KERNEL=""
+    BUILD_EXCLUSIVE_ARCH=""
+    build_exclude=""
 
     # Clear arrays
     unset MAKE
@@ -235,6 +239,7 @@ function read_conf ()
     # Use the generic make command if kernel >= 2.5
     if [ -n "$gt2dot4" ]; then
 	make_command="make -C /lib/modules/$kernel_version/build SUBDIRS=$dkms_tree/$module/$module_version/build modules"
+	[ -d "$kernel_source_dir" ] && ! [ -h "$kernel_source_dir" ] && make_command="make -C /lib/modules/$kernel_version/build M=$dkms_tree/$module/$module_version/build"
     fi
     
     # Set modules_conf_array
@@ -257,6 +262,11 @@ function read_conf ()
 
     # Set remake_initrd
     [ `echo "$REMAKE_INITRD" | grep -ic "^y"` -gt 0 ] && remake_initrd="yes"
+
+    # Set build_exclude
+    [ -n "$BUILD_EXCLUSIVE_KERNEL" ] && [ `echo $kernel_version | egrep -c "$BUILD_EXCLUSIVE_KERNEL"` -eq 0 ] && build_exclude="yes"
+    [ -n "$BUILD_EXCLUSIVE_ARCH" ] && [ `echo $arch_used | egrep -c "$BUILD_EXCLUSIVE_ARCH"` -eq 0 ] && build_exclude="yes"
+
 
     # Fail if no make command
     if [ -z "$make_command" ]; then
@@ -282,11 +292,8 @@ function read_conf ()
 	return_value=1
     fi
 
-    # Warn if no clean command
-    if [ -z "$clean" ]; then
-	echo $"dkms.conf: Warning.  No 'CLEAN' directive specified. Assuming: make clean" >$std_err
-	clean="make clean"
-    fi
+    # Set clean 
+    [ -z "$clean" ] && clean="make clean"
 
     return $return_value
 }
@@ -587,6 +594,7 @@ function prepare_kernel()
 	    cp -f "$kernel_config" .config
 	fi
 
+	[ -n "$gt2dot4" ] && invoke_command "make KERNELRELEASE=$kernel_version prepare-all >/dev/null 2>&1" "make prepare-all" background
 	invoke_command "make KERNELRELEASE=$kernel_version oldconfig >/dev/null 2>&1" "make oldconfig" background
 	[ -z "$gt2dot4" ] && invoke_command "make KERNELRELEASE=$kernel_version dep >/dev/null 2>&1" "make dep" background
     fi
@@ -788,6 +796,14 @@ function build_module()
 	exit 4
     fi
 
+    # Error out if build_exclude is set
+    if [ -n "$build_exclude" ]; then
+	echo "" >$std_err
+	echo "Error!  The dkms.conf for this module includes a BUILD_EXCLUSIVE directive which" >$std_err
+	echo "does not match this kernel/arch.  This indicates that it should not be built." >$std_err
+	exit 9
+    fi
+
     # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
     if [ `ls $dkms_tree/$module/$module_version/source | wc -l | awk {'print $1'}` -lt 2 ]; then
 	echo "" >$std_err
@@ -796,9 +812,15 @@ function build_module()
 	exit 8
     fi
     
+    should_prepare="$1"
+    [ -n "$gt2dot4" ] && [ -d "$kernel_source_dir" ] && ! [ -h "$kernel_source_dir" ] && should_prepare="no-prepare-kernel"
+
     # Prepare the kernel for the module build
-    if [ "$1" != "no-prepare-kernel" ]; then
+    if [ "$should_prepare" != "no-prepare-kernel" ]; then
 	prepare_kernel
+    elif [ -n "$gt2dot4" ]; then
+	echo $""
+	echo $"Kernel preparation unnecessary for this kernel.  Skipping..."
     fi
     
     # Set up temporary build directory for build
@@ -834,6 +856,15 @@ function build_module()
     the_make_command=`echo $make_command | sed "s/^make/make KERNELRELEASE=$kernel_version/"`
     invoke_command "$the_make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$the_make_command" background
 
+    # Make sure good return status
+    if [ "$?" -ne 0 ]; then
+	echo $"" >$std_err
+	echo $"Error! Bad return status from module build for kernel: $kernel_version" >$std_err
+	echo $"Consult the make.log in the build directory" >$std_err
+	echo $"$dkms_tree/$module/$module_version/build/ for more information." >$std_err
+	exit 10
+    fi	
+
     # Make sure all the modules built successfully
     count=0
     while [ "$count" -lt "${#built_module_name[*]}" ]; do
@@ -850,7 +881,7 @@ function build_module()
 
     # Build success, so create DKMS structure for a built module
     mkdir -p "$dkms_tree/$module/$module_version/$kernel_version/log"
-    cp -f "$kernel_config" "$dkms_tree/$module/$module_version/$kernel_version/log/"  
+    [ -n "$kernel_config" ] && cp -f "$kernel_config" "$dkms_tree/$module/$module_version/$kernel_version/log/"  
     mv -f "$dkms_tree/$module/$module_version/build/make.log" "$dkms_tree/$module/$module_version/$kernel_version/log/make.log" 2>/dev/null   
 
     # Save a copy of the new module
@@ -872,7 +903,7 @@ function build_module()
     cd "$dkms_tree/$module/$module_version/build"
     invoke_command "$clean >/dev/null 2>&1" "cleaning build area" background
     cd -
-    if [ "$1" != "no-prepare-kernel" ] && [ -z $no_clean_kernel ]; then
+    if [ "$should_prepare" != "no-prepare-kernel" ] && [ -z $no_clean_kernel ]; then
 	cd "$kernel_source_dir"
 	[ -z "$kerneldoth_contents" ] && invoke_command "make mrproper >/dev/null 2>&1" "cleaning kernel tree (make mrproper)" background
 	[ -n "$config_contents" ] && echo "$config_contents" > .config
@@ -1834,7 +1865,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 1.08"
+	    echo $"dkms: 1.09"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
