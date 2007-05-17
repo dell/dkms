@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.9.1
+Version: 2.0.9.2
 Release: 1
 License: GPL
 Group: System Environment/Base
@@ -93,6 +93,7 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0755,root,root) /usr/sbin/dkms_mkkerneldoth
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
 %doc %attr (-,root,root) sample.spec sample.conf AUTHORS COPYING
+%doc %attr (-,root,root) sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
 %config(noreplace) /etc/dkms/framework.conf
 %config(noreplace) /etc/dkms/template-dkms-mkrpm.spec
 
@@ -102,6 +103,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Tue Mar 14 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.9.2-1
+- add SuSE Kernel Module Package (mkkmp) support
+
 * Tue Dec 13 2005 Matt Domsch <Matt_Domsch@dell.com> 2.0.9.1-1
 - patch from Eric Devolder enables mkinitrd for Debian Sarge
 - include debian/ directory in upstream tarball

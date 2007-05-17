@@ -1,6 +1,8 @@
 #!/bin/bash
 #
-#  Copyright (C) 2003 Dell Computer Corporation <gary_lerhaupt@dell.com>
+#  Dynamic Kernel Module Support (DKMS) <dkms-devel@dell.com>
+#  Copyright (C) 2003-2006 Dell, Inc.
+#  by Gary Lerhaupt and Matt Domsch
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,8 +18,6 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-#  Dynamic Kernel Module Support (DKMS)
-#  by Gary Lerhaupt <gary_lerhaupt@dell.com>
 
 function invoke_command ()
 {
@@ -44,14 +44,14 @@ function show_usage ()
 {
     echo $"Usage: $0 [action] [options]" 
     echo $"  [action]  = { add | remove | build | install | uninstall | match" 
-    echo $"               | mkdriverdisk | mktarball | ldtarball | mkrpm | status }" 
+    echo $"               | mkdriverdisk | mktarball | ldtarball | mkrpm | mkkmp | status }"
     echo $"  [options] = [-m module] [-v module-version] [-k kernel-version] [-a arch]" 
     echo $"              [-d distro] [-c dkms.conf-location] [-q] [--force] [--all]" 
     echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"  
     echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"  
     echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel]"
     echo $"              [--binaries-only] [--source-only] [-r release (SuSE)] [--verbose]"
-    echo $"              [--size]"
+    echo $"              [--size] [--spec=specfile]"
 }
 
 function readlink()
@@ -131,7 +131,7 @@ function setup_kernels_arches ()
 
     # Check that the actions supports multiple kernels
     case "$1" in
-    add | build | install | match | uninstall)
+    add | build | install | match | uninstall | mkkmp )
 	if [ ${#kernelver_array[@]} -gt 1 ]; then
 	    echo $"" >&2
 	    echo $"Error! The action $1 does not support multiple kernel version" >&2
@@ -403,8 +403,13 @@ function read_conf ()
 	case "${DEST_MODULE_LOCATION[$index]}" in
 	    /kernel*)
 		;;
+	    /updates*)
+		;;
+	    /extra*)
+		;;
 	    *)
-		echo $"dkms.conf: Error! Directive 'DEST_MODULE_LOCATION' does not begin with '/kernel' in record #$index.">&2
+		echo $"dkms.conf: Error! Directive 'DEST_MODULE_LOCATION' does not begin with">&2
+		echo $"'/kernel', '/updates', or '/extra' in record #$index.">&2
 		return_value=1
 		;;
 	esac
@@ -1056,7 +1061,7 @@ function install_module()
 }
 
 
-function build_module()
+function prepare_build()
 {
     setup_kernels_arches "build"
     set_kernel_source_dir "${kernelver_array[0]}"
@@ -1127,8 +1132,6 @@ function build_module()
     fi
 
     cd "$dkms_tree/$module/$module_version/build"
-    echo $"" 
-    echo $"Building module:" 
 
     # Apply any patches
     local index=0
@@ -1148,8 +1151,14 @@ function build_module()
 	fi
 	index=$(($index+1))
     done
+}
 
-    # Build
+function do_build()
+{
+    local base_dir="$dkms_tree/$module/$module_version/${kernelver_array[0]}/${arch_array[0]}"
+    echo $""
+    echo $"Building module:"
+
     invoke_command "$clean" "cleaning build area" background
     echo $"DKMS make.log for $module-$module_version for kernel ${kernelver_array[0]} (${arch_array[0]})" >> "$dkms_tree/$module/$module_version/build/make.log"
     echo $"`date`" >> "$dkms_tree/$module/$module_version/build/make.log"
@@ -1207,7 +1216,10 @@ function build_module()
 	echo $"Running the post_build script:" 
 	$dkms_tree/$module/$module_version/source/$post_build
     fi
-    
+}
+
+function clean_build()
+{
     # Run the clean commands
     cd "$dkms_tree/$module/$module_version/build"
     invoke_command "$clean" "cleaning build area" background
@@ -1228,9 +1240,15 @@ function build_module()
 
     # Clean the build directory
     rm -rf "$dkms_tree/$module/$module_version/build/*"
+}
 
-    echo $"" 
-    echo $"DKMS: build Completed." 
+function build_module()
+{
+    prepare_build
+    do_build
+    clean_build
+    echo $""
+    echo $"DKMS: build Completed."
 }
 
 function do_uninstall()
@@ -2336,6 +2354,105 @@ make_rpm()
     fi
 }
 
+function make_kmp_srpm()
+{
+    local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+    trap 'rm -rf $temp_dir_name' EXIT HUP TERM
+    mkdir -p $temp_dir_name/{BUILD,RPMS,SRPMS,SPECS,SOURCES}
+    pushd "$dkms_tree/$module/$module_version" > /dev/null 2>&1
+    # want to change name of the top-level of the tarball
+    # from build to $module-$module_version
+    cp -lr build ${module}-${module_version}
+    tar cvjf $temp_dir_name/SOURCES/${module}-${module_version}.tar.bz2 ${module}-${module_version} > /dev/null 2>&1
+    rm -rf ${module}-${module_version}
+    popd > /dev/null 2>&1
+    pushd "$temp_dir_name" > /dev/null 2>&1
+    invoke_command "rpmbuild --define \"_topdir ${temp_dir_name}\" -bs ${SPECFILE} > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
+    grep ^Wrote $temp_dir_name/rpmbuild.log > /dev/null 2>&1
+    local RC="$?"
+    if [ "${RC}" -eq 0 ]; then
+	local kmp_basedir="$dkms_tree/$module/$module_version/rpm"
+	mkdir -p $kmp_basedir
+	RPMS=`LANG=C cp -va ${temp_dir_name}/SRPMS/* $kmp_basedir | awk '{print $NF}'`
+    else
+	echo $"rpmbuild error log:"
+	cat $temp_dir_name/rpmbuild.log
+    fi
+    popd > /dev/null 2>&1
+    rm -rf $temp_dir_name
+    trap > /dev/null 2>&1
+    return ${RC}
+}
+
+
+function make_kmp()
+{
+    setup_kernels_arches "mkkmp"
+
+    # Error if $module_version is set but $module is not
+    if [ -z "$module" ] || [ -z "$module_version" ]; then
+        echo $"" >&2
+        echo $"Error! Invalid number of parameters passed." >&2
+        echo $"Usage: mkrpm -m <module> -v <module-version>" >&2
+        exit 1
+    fi
+
+    # Check that source symlink works
+    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
+        echo $"" >&2
+        echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
+        echo $"Build cannot continue without the proper tree." >&2
+        exit 2
+    fi
+
+    # Make sure that its installed in the first place
+    if ! [ -d "$dkms_tree/$module/$module_version" ]; then
+        echo $"" >&2
+        echo $"Error! The module/version combo: $module-$module_version" >&2
+        echo $"is not located in the DKMS tree." >&2
+        exit 3
+    fi
+
+    # Read the conf file
+    read_conf "${kernelver_array[0]}" "${arch_array[0]}"
+    if [ "$?" -ne 0 ]; then
+        echo $"" >&2
+        echo $"Error! Bad conf file." >&2
+        echo $"Your dkms.conf is not valid." >&2
+        exit 4
+    fi
+
+    echo $""
+    if [ -n "$specfile" -a -e "$dkms_tree/$module/$module_version/source/$specfile" ]; then
+	echo $"Using $dkms_tree/$module/$module_version/source/$specfile"
+	SPECFILE="$dkms_tree/$module/$module_version/source/$specfile"
+    elif [ -e "$dkms_tree/$module/$module_version/source/$module-kmp.spec" ]; then
+	echo $"Using $dkms_tree/$module/$module_version/source/$module-kmp.spec"
+	SPECFILE="$dkms_tree/$module/$module_version/source/$module-kmp.spec"
+    else
+	echo $"" >&2
+	echo $"Cannot find a suitable spec file which is needed by" >&2
+	echo $"DKMS in order use mkkmp.  Please specify --spec=specfile." >&2
+	exit 5
+    fi
+
+    prepare_build
+    make_kmp_srpm
+    RC=$?
+    clean_build
+
+    if [ "$RC" -eq 0 ]; then
+	echo $""
+	echo $"KMP SRPM location: $RPMS"
+	echo $""
+        echo $"DKMS: mkkmp Completed."
+    else
+	echo $"" >&2
+	echo $"Error! There was a problem creating your KMP source rpm." >&2
+	exit 7
+    fi
+}
+
 #############################
 ####                     #### 
 #### Program Starts Here ####
@@ -2391,6 +2508,7 @@ all=""
 module_suffix=""
 rpm_safe_upgrade=""
 size="1440";
+specfile=""
 unset directive_array
 unset kernelver_array
 unset arch_array
@@ -2458,7 +2576,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.9.1"
+	    echo $"dkms: 2.0.9.2"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
@@ -2558,6 +2676,14 @@ while [ $# -gt 0 ]; do
                 shift
             fi
 	    ;;
+	--spec*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		specfile=`echo $1 | sed 's/^.*=//'`
+            else
+                specfile="$2"
+                shift
+            fi
+            ;;
 	-*|--*)
 	    echo $"" >&2
 	    echo $"Error!  Unknown option: $1" >&2
@@ -2625,6 +2751,9 @@ for action_to_run in $action; do
 	    ;;	
 	mkrpm)
 	    make_rpm
+	    ;;
+	mkkmp)
+	    make_kmp
 	    ;;
 	ldtarball)
 	    # Make sure they're root if we're using --force
