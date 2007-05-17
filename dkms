@@ -854,10 +854,10 @@ function build_module()
     cp -rf "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
 
     # Run the pre_build script
-    if [ -n "$pre_build" ] && [ -x "$dkms_tree/$module/$module_version/source/$pre_build" ]; then
+    if [ -n "$pre_build" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$pre_build" | sed 's/ .*//'` ]; then
 	echo $"" 
 	echo $"Running the pre_build script:" 
-	"$dkms_tree/$module/$module_version/source/$pre_build" 
+	$dkms_tree/$module/$module_version/source/$pre_build
     fi
 
     cd "$dkms_tree/$module/$module_version/build"
@@ -1909,7 +1909,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 1.11"
+	    echo $"dkms: 1.11.1"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
