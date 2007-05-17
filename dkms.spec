@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 1.05
+Version: 1.06
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -55,7 +55,10 @@ fi
 
 
 %changelog
-* Mon Feb 09 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.04-1
+* Thu Mar 25 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.06-1
+- Added a fix to keep the driver disk filename from being so long that it breaks
+
+* Mon Feb 09 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.05-1
 - Added a fix to resolve RHEL21 depmod errors when an obsolete reference is found
 
 * Thu Jan 15 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.02-1
