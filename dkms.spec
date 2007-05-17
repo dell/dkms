@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.14
+Version: 2.0.14.1
 Release: 1%{?dist}
 License: GPL
 Group: System Environment/Base
@@ -105,6 +105,13 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Fri Feb 23 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.14.1
+- After upgrading from older DKMS versions to 2.0.14, any previously
+  installed modules wouldn't show status properly, and wouldn't
+  uninstall properly, due to the new policy of using /extras/ and
+  /updates/.  Needed to take that into account and look in both places.
+- SuSE puts weak-modules in /usr/lib/module-init-tools not /sbin.
+
 * Thu Feb 22 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.14
 - RHEL5 weak module status report fixed
 

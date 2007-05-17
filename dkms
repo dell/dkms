@@ -999,12 +999,23 @@ function prepare_kernel()
 
 function list_each_installed_module ()
 {
-    # $1 = kernel version
+    # $1 = module
+    # $2 = kernel version
+    # $3 = arch
     local count=0
+    local real_dest_module_location
     while [ "$count" -lt "${#built_module_name[@]}" ]; do
-	echo "$install_tree/$1${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+	real_dest_module_location="$(find_actual_dest_module_location $1 $count $2 $3)"
+	echo "$install_tree/$2${real_dest_module_location}/${dest_module_name[$count]}$module_suffix"
 	count=$(($count + 1))
     done
+}
+
+function set_weak_modules()
+{
+    weak_modules='/bin/true'
+    [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
+    [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 }
 
 function install_module()
@@ -1090,13 +1101,14 @@ function install_module()
 	local module_count=`find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f | wc -l | awk {'print $1'}`
 	echo $" - Original module"
 	if ! [ -L "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}" ]; then
-	    local archive_pref1="$lib_tree/updates/${dest_module_name[$count]}$module_suffix"
-	    local archive_pref2="$lib_tree${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
-	    local archive_pref3=""
-	    [ "$module_count" -eq 1 ] && archive_pref3="`find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f`"
+	    local archive_pref1="$lib_tree/extra/${dest_module_name[$count]}$module_suffix"
+	    local archive_pref2="$lib_tree/updates/${dest_module_name[$count]}$module_suffix"
+	    local archive_pref3="$lib_tree${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+	    local archive_pref4=""
+	    [ "$module_count" -eq 1 ] && archive_pref4="`find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f`"
 	    local original_module=""
 	    local found_orginal=""
-	    for original_module in $archive_pref1 $archive_pref2 $archive_pref3; do
+	    for original_module in $archive_pref1 $archive_pref2 $archive_pref3 $archive_pref4; do
 		if [ -f "$original_module" ]; then
 		    echo $"   - Found $original_module"
 		    echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/"
@@ -1141,15 +1153,16 @@ function install_module()
 	count=$(($count + 1))
     done
 
-    # add to kabi-tracking
-    if [ -x /sbin/weak-modules ]; then
-	echo $"Adding any weak-modules"
-	list_each_installed_module "${kernelver_array[0]}" | /sbin/weak-modules --add-modules
-    fi
-    
     # Create the kernel-<kernelver> symlink to designate this version as active
     rm -f "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}" 2>/dev/null
     ln -s "$module_version/${kernelver_array[0]}/${arch_array[0]}" "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}" 2>/dev/null
+
+    # add to kabi-tracking
+    set_weak_modules
+    if [ -n "${weak_modules}" ]; then
+	echo $"Adding any weak-modules"
+	list_each_installed_module "$module" "${kernelver_array[0]}" "${arch_array[0]}" | ${weak_modules} --add-modules
+    fi
 
     # Run the post_install script
     if [ -n "$post_install" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$post_install" | sed 's/ .*//'` ]; then
@@ -1392,6 +1405,44 @@ function build_module()
     echo $"DKMS: build Completed."
 }
 
+function possible_dest_module_locations()
+{
+    # $1 = count
+    # There are two places an installed module may really be:
+    # 1) "$install_tree/$kernelver/${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+    # 2) "$install_tree/$kernelver/${DEST_MODULE_LOCATION[$count]}/${dest_module_name[$count]}$module_suffix"
+    # override_dest_module_location() is what controls whether or not they're the same.
+    
+    local location
+    location[0]="${DEST_MODULE_LOCATION[$count]}"
+    [ "${location[0]}" != "${dest_module_location[$count]}" ] && \
+	location[1]="${dest_module_location[$count]}"
+
+    echo "${location[0]} ${location[1]}"
+}
+
+function find_actual_dest_module_location()
+{
+    local module="$1"
+    local count="$2"
+    local kernelver="$3"
+    local arch="$4"
+    local locations="$(possible_dest_module_locations $count)"
+    local l
+    local dkms_owned
+    local installed
+    dkms_owned="${dkms_tree}/${module}/kernel-${kernelver}-${arch}/module/${dest_module_name[$count]}${module_suffix}"
+
+    for l in $locations; do
+	installed="${install_tree}/${kernelver}${l}/${dest_module_name[${count}]}${module_suffix}"
+	if [ -f "${installed}" ] && diff "${dkms_owned}" "${installed}" > /dev/null 2>&1; then
+	    echo "${l}"
+	    return 0
+	fi
+    done
+
+}
+
 function do_uninstall()
 {
     # $1 = kernel version
@@ -1410,22 +1461,32 @@ function do_uninstall()
     local was_active=""
     readlink "$dkms_tree/$module/kernel-$1-$2"
     local kernel_symlink="$read_link"
+    local real_dest_module_location
     if [ "$kernel_symlink" == "$module_version/$1/$2" ]; then
 	was_active="true"
 	echo $"" 
 	echo $"Status: Before uninstall, this module version was ACTIVE on this kernel."
+	# remove kabi-tracking if last instance removed
+	set_weak_modules
+	if [ -n "${weak_modules}" ] && 
+	    [ `$0 status -m $module -v $module_version | grep -v "installed-weak" | grep -c "installed"` -eq 1 ]; then
+	    echo $"Removing any linked weak-modules"
+	    list_each_installed_module "$module" "$1" "$2" | ${weak_modules} --remove-modules
+	fi
+
 	count=0
 	while [ "$count" -lt "${#built_module_name[@]}" ]; do
+	    real_dest_module_location="$(find_actual_dest_module_location $module $count $1 $2)"
 	    echo $""
 	    echo $"${dest_module_name[$count]}$module_suffix:"
 	    echo $" - Uninstallation"
-	    echo $"   - Deleting from: $install_tree/$1${dest_module_location[$count]}/" 
-	    rm -f "$install_tree/$1${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+	    echo $"   - Deleting from: $install_tree/$1${real_dest_module_location}/" 
+	    rm -f "$install_tree/$1${real_dest_module_location}/${dest_module_name[$count]}$module_suffix"
 	    echo $" - Original module"
 	    if [ -e "$dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix" ]; then
 		echo $"   - Archived original module found in the DKMS tree" 
-		echo $"   - Moving it to: $install_tree/$1${dest_module_location[$count]}/" 
-		mv -f "$dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix" "$install_tree/$1${dest_module_location[$count]}/" 2>/dev/null
+		echo $"   - Moving it to: $install_tree/$1${real_dest_module_location}/" 
+		mv -f "$dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix" "$install_tree/$1${real_dest_module_location}/" 2>/dev/null
 	    else
 		echo $"   - No original module was found for this module on this kernel." 
 		echo $"   - Use the dkms install command to reinstall any previous module version." 
@@ -1440,12 +1501,6 @@ function do_uninstall()
 	    fi
 	    count=$(($count+1))
 	done
-	# remove kabi-tracking if last instance removed
-	if [ -x /sbin/weak-modules ] && 
-	    [ `$0 status -m $module -v $module_version | grep -c "installed"` -eq 1 ]; then
-	    echo $"Removing any linked weak-modules"
-	    list_each_installed_module "$1" | /sbin/weak-modules --remove-modules
-	fi
 	rm -f "$dkms_tree/$module/kernel-$1-$2"
     else
 	echo $"" 
@@ -1692,7 +1747,7 @@ function do_status_weak ()
     # recognize weak modules.  These are in $kern/weak-updates but are symlinks to another $kern/extra file.
 
     for installedkern in $(find "$install_tree" -maxdepth 1 -mindepth 1 -type d 2>/dev/null); do
-	for ko in $(find "$installedkern/weak-updates" -type l); do
+	for ko in $(find "$installedkern/weak-updates" -type l 2>/dev/null); do
 	    installedkernver=$(basename $installedkern)
 	    basename_ko=$(basename $ko)
 	    readlink $ko
@@ -1775,12 +1830,16 @@ do_status ()
 	    read_conf "$kern" "$arch" "$conf"
 	    [ -d "$dkms_tree/$mod/original_module/$kern/$arch" ] && extra_status="(original_module exists)"
 	    local count=0
+	    local real_dest_module_location
 	    while [ "$count" -lt "${#dest_module_name[@]}" ]; do
 		tree_mod="$dkms_tree/$mod/$ver/$kern/$arch/module/${dest_module_name[$count]}$module_suffix"
 		if ! [ -e "$tree_mod" ]; then
 		    extra_status="$extra_status (WARNING! Missing some built modules!)"	
-		elif [ "$state" == "installed" ] && ! diff -q "$tree_mod" "$install_tree/$kern${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" >/dev/null 2>&1; then
-		    extra_status="$extra_status (WARNING! Diff between built and installed module!)"
+		elif [ "$state" == "installed" ]; then
+		    real_dest_module_location="$(find_actual_dest_module_location $mod $count $kern $arch)"
+		    if ! diff -q "$tree_mod" "$install_tree/$kern${real_dest_module_location}/${dest_module_name[$count]}$module_suffix" >/dev/null 2>&1; then
+			extra_status="$extra_status (WARNING! Diff between built and installed module!)"
+		    fi
 		fi
 		count=$(($count+1))
 	    done
@@ -2961,7 +3020,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.14"
+	    echo $"dkms: 2.0.14.1"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
