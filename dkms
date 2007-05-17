@@ -243,6 +243,74 @@ function remake_initrd()
     return $exitval
 }
 
+
+function distro_version()
+{
+# What distribution are we running?
+    dist=unknown
+    [ ! -e /bin/rpm ] && echo "$dist" && return
+    WHATPROVIDES_REDHAT_RELEASE=$(rpm -q --whatprovides redhat-release)
+    if [ $? -eq 0 ]; then
+	if $(echo "${WHATPROVIDES_REDHAT_RELEASE}" | grep redhat-release > /dev/null 2>&1) ; then
+	    REDHAT_RELEASE=1
+	elif (echo "${WHATPROVIDES_REDHAT_RELEASE}" | grep centos-release > /dev/null 2>&1) ; then
+	    CENTOS_RELEASE=1
+	elif $(echo "${WHATPROVIDES_REDHAT_RELEASE}" | grep fedora-release > /dev/null 2>&1) ; then
+	    FEDORA_RELEASE=1
+	fi
+    fi
+
+    WHATPROVIDES_SLES_RELEASE=$(rpm -q --whatprovides sles-release)
+    if [ $? -eq 0 ]; then
+	SLES_RELEASE=1
+    fi
+
+    WHATPROVIDES_SUSE_RELEASE=$(rpm -q --whatprovides suse-release)
+    if [ $? -eq 0 ]; then
+	SUSE_RELEASE=1
+    fi
+
+    if [ -n "${FEDORA_RELEASE}" ]; then
+	VER=$(rpm -q --qf "%{version}\n" ${WHATPROVIDES_REDHAT_RELEASE})
+	dist=fc${VER}
+    elif [ -n "${REDHAT_RELEASE}" ]; then
+	VER=$(rpm -q --qf "%{version}\n" ${WHATPROVIDES_REDHAT_RELEASE})
+        # format is 3AS, 4AS, 5Desktop...
+	VER=$(echo "${VER}" | sed -e 's/^\([[:digit:]]*\).*/\1/g')
+	dist=el${VER}
+    elif [ -n "${CENTOS_RELEASE}" ]; then
+	VER=$(rpm -q --qf "%{version}\n" ${WHATPROVIDES_REDHAT_RELEASE})
+        # format is 3, 4, ...
+	dist=el${VER}
+    elif [ -n "${SLES_RELEASE}" ]; then
+	VER=$(rpm -q --qf "%{version}\n" ${WHATPROVIDES_SLES_RELEASE})
+	dist=sles${VER}
+    elif [ -n "${SUSE_RELEASE}" ]; then
+	VER=$(rpm -q --qf "%{version}\n" ${WHATPROVIDES_SUSE_RELEASE})
+	dist=suse${VER}
+    fi
+    echo "$dist"
+}
+
+function override_dest_module_location()
+{
+    local orig_location="$1"
+    case "$running_distribution" in
+	fc[12345]) break ;;
+        el[1234]) break ;;
+	sles[123456789]) break ;;
+	suse[123456789]) break ;;
+	suse10\.[01]) break ;;
+	fc*) echo "/extra" && return ;;
+	el*) echo "/extra" && return ;;
+	sles*) echo "/updates" && return ;;
+	suse*) echo "/updates" && return ;;
+	*);;
+    esac
+    echo "$orig_location"
+}
+
+
 function read_conf ()
 {
     # $1 kernel version (required)
@@ -395,14 +463,16 @@ function read_conf ()
 		;;
 	esac
 
-        # Fail if no DEST_MODULE_LOCATION 
-	if [ -z "${DEST_MODULE_LOCATION[$index]}" ]; then
+	# Override location for specific kernels
+	dest_module_location[$index]="$(override_dest_module_location ${dest_module_location[$index]})"
+	
+	# Fail if no DEST_MODULE_LOCATION and no override provided
+	if [ -z "${dest_module_location[$index]}" ]; then
 	    echo $"dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified for record #$index.">&2
 	    return_value=1
 	fi
-	
         # Fail if bad DEST_MODULE_LOCATION
-	case "${DEST_MODULE_LOCATION[$index]}" in
+	case "${dest_module_location[$index]}" in
 	    /kernel*)
 		;;
 	    /updates*)
@@ -597,7 +667,12 @@ function moduleconfig_add ()
 	    if [ -n "${modules_conf_alias_type[$index]}" ] && \
 	       ! grep -q "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}\b" $moduleconfig && \
 	       [ "${modules_conf_obsolete_only[$index]}" != "yes" ]; then
-		alias_number=$(( `grep "alias ${modules_conf_alias_type[$index]}" $moduleconfig | awk '{print $2}' | sed "s/${modules_conf_alias_type[$index]}//" | sort -n | tail -n 1` + 1 ))
+		aliases=$(awk '/^alias ${modules_conf_alias_type[$index]}/ {print $2}' $moduleconfig)
+		if [ -n "$aliases" ]; then
+			alias_number=$(($(echo aliases | sed "s/${modules_conf_alias_type[$index]}//" | sort -n | tail -n 1) + 1))
+		else
+			alias_number=0
+		fi
 		echo -e "alias ${modules_conf_alias_type[$index]}${alias_number} ${dest_module_name[$index]}" >> $moduleconfig
 		echo $"$moduleconfig: added alias reference for '${dest_module_name[$index]}'"
 	    fi
@@ -1004,17 +1079,17 @@ function install_module()
     while [ "$count" -lt ${#built_module_name[@]} ]; do
 	echo $""
 	echo $"${dest_module_name[$count]}$module_suffix:"
-	local module_count=`find $lib_tree -name ${dest_module_name[$count]}$module_suffix | wc -l | awk {'print $1'}`
+	local module_count=`find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f | wc -l | awk {'print $1'}`
 	echo $" - Original module"
 	if ! [ -L "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}" ]; then
 	    local archive_pref1="$lib_tree/updates/${dest_module_name[$count]}$module_suffix"
 	    local archive_pref2="$lib_tree${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
 	    local archive_pref3=""
-	    [ "$module_count" -eq 1 ] && archive_pref3="`find $lib_tree -name ${dest_module_name[$count]}$module_suffix`"
+	    [ "$module_count" -eq 1 ] && archive_pref3="`find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f`"
 	    local original_module=""
 	    local found_orginal=""
 	    for original_module in $archive_pref1 $archive_pref2 $archive_pref3; do
-		if [ -e "$original_module" ]; then
+		if [ -f "$original_module" ]; then
 		    echo $"   - Found $original_module"
 		    echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/"
 		    echo $"   - Archiving for uninstallation purposes"
@@ -1041,7 +1116,7 @@ function install_module()
 	    echo $"   - $module_count named ${dest_module_name[$count]}$module_suffix in $lib_tree/"
 	    echo $"   - All instances of this module will now be stored for reference purposes ONLY"
 	    echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/collisions/"
-	    for module_dup in `find $lib_tree -name ${dest_module_name[$count]}$module_suffix`; do
+	    for module_dup in `find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f`; do
 		dup_tree=`echo $module_dup | sed "s#^$lib_tree##" | sed "s#${dest_module_name[$count]}$module_suffix##"`
 		echo $"     - Stored $module_dup"
 		mkdir -p "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/collisions/$dup_tree"
@@ -1536,6 +1611,62 @@ function remove_module ()
     fi
 }
 
+function do_status_weak ()
+{
+    # these are the requested mod/ver/kern/arch fields
+    local r_mod="$1"; shift
+    local r_ver="$1"; shift
+    local r_kern="$1"; shift
+    local r_arch="$1"; shift
+    local installedkern
+    local ko
+    local basename_ko
+    local installed_ko
+    local tree_ver
+    local tree_kern
+    local tree_arch
+    local f
+    local done=0
+    local depth=1
+    [ -z "$r_mod" ] && depth=2
+    # recognize weak modules.  These are in $kern/weak-updates but are symlinks to another $kern/extra file.
+
+    for installedkern in $(find "$install_tree" -maxdepth 1 -mindepth 1 -type d); do
+	for ko in $(find "$installedkern/weak-updates" -type l); do
+	    [ ${done} -eq 1 ] && break
+	    installedkernver=$(basename $installedkern)
+	    basename_ko=$(basename $ko)
+	    readlink $ko
+	    installed_ko="$read_link"
+	    if [ ! -e "$installed_ko" ]; then
+		# dangling symlink, ouch, but is somebody else's problem so ignore it
+		continue
+	    fi
+	    # is $installed_ko in /var/lib/dkms as installed?  Find which module has it
+	    for f in $(find $dkms_tree/$r_mod -maxdepth $depth -mindepth $depth -name kernel-\* -type l 2>/dev/null); do
+		if [ -z "$r_mod" ]; then
+		    mod=$(find $dkms_tree -maxdepth $depth -mindepth $depth -name kernel-\* -type l |\
+		    awk -F / '{print $(NF-1)}' | head -1)
+		else
+		    mod="$r_mod"
+		fi
+		readlink "$f"
+		tree_ver=$(echo "$read_link" | awk -F / '{print $1}')
+		tree_kern=$(echo "$read_link" | awk -F / '{print $2}')
+		tree_arch=$(echo "$read_link" | awk -F / '{print $3}')
+		if diff $dkms_tree/$mod/$tree_ver/$tree_kern/$tree_arch/module/$basename_ko  \
+		    $installed_ko >/dev/null 2>&1; then
+		    [ "$r_mod" == "$mod" -o -z "$r_mod" ] && [ "$r_ver" == "$tree_ver" -o -z "$r_ver" ] && \
+			[ "$r_kern" == "$installedkernver" -o -z "$r_kern" ] && [ "$r_arch" == "$tree_arch" -o -z "$r_arch" ] && \
+			echo "$mod, $tree_ver, $installedkernver, $tree_arch: installed-weak from $tree_kern" && \
+			done=1
+		fi
+	    done
+        done
+    done
+}
+
+
 do_status () 
 {
     local mod="$1"; shift
@@ -1576,7 +1707,7 @@ do_status ()
 	    readlink "$dkms_tree/$mod/kernel-$kern-$arch"
 	    [ "$read_link" == "$ver/$kern/$arch" ] && state="installed"
 	fi
-	
+
 	if [ "$state" == "built" ] || [ "$state" == "installed" ]; then
 	    set_module_suffix "$kern"
 	    local extra_status=""
@@ -1606,9 +1737,11 @@ show_status ()
     local j=0
     if [ ${#kernelver_array[@]} -eq 0 ]; then
 	do_status "$module" "$module_version" "${kernelver_array[0]}" "${arch_array[0]}" 0
+	do_status_weak "$module" "$module_version" "${kernelver_array[0]}" "${arch_array[0]}"
     else
 	while [ $j -lt ${#kernelver_array[@]} ]; do
 	    do_status "$module" "$module_version" "${kernelver_array[$j]}" "${arch_array[$j]}" 0
+	    do_status_weak "$module" "$module_version" "${kernelver_array[$j]}" "${arch_array[$j]}"
 	    j=$(($j + 1))
 	done
     fi
@@ -2667,6 +2800,7 @@ install_tree="/lib/modules"
 tmp_location="/tmp"
 verbose=""
 dkms_frameworkconf="/etc/dkms/framework.conf"
+running_distribution="$(distro_version)"
 
 # Source in /etc/dkms_framework.conf
 . $dkms_frameworkconf 2>/dev/null
@@ -2769,7 +2903,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.13.1"
+	    echo $"dkms: 2.0.13.2"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

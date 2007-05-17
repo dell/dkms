@@ -71,8 +71,10 @@ case "$1" in
 			[ `echo "$AUTOINSTALL" | grep -ic "^y"` -gt 0 ] && do_autoinstall="yes"
 
 			# Get the current state
-			current_state=`dkms status -m $module_in_tree -v $version_in_tree -k $kernel -a $arch 2>/dev/null | awk {'print $5'}`
-			[ "$current_state" == "installed" ] && already_installed="true" && already_installed_version=$version_in_tree
+			# a mod can be both built and installed-weak (stupid, but could be)
+			# but installed-weak comes last, so use tail
+			current_state=`dkms status -m $module_in_tree -v $version_in_tree -k $kernel -a $arch 2>/dev/null | awk {'print $5'} | tail -n 1`
+			[ "$current_state" == "installed" -o "$current_state" == "installed-weak" ] && already_installed="true" && already_installed_version=$version_in_tree
 		    fi
 		done
 

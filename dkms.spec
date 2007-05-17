@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.13.1
+Version: 2.0.13.2
 Release: 1%{?dist}
 License: GPL
 Group: System Environment/Base
@@ -11,9 +11,9 @@ Provides: dkms-minimal
 URL: http://linux.dell.com/dkms
 Source0: http://linux.dell.com/dkms/permalink/dkms-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-%ifdef %fedora
-Requires: kernel-devel
-%endif
+#%ifdef %fedora
+#Requires: kernel-devel
+#%endif
 
 %description
 This package contains the framework for the Dynamic
@@ -105,7 +105,17 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
-* Fri Jan 12 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.13.1
+* Mon Feb 19 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.13.2
+- RHEL5 weak module recognition with new state installed-weak
+- autoinstaller recognizes installed-weak and doesn't rebuild
+- RHEL5 and SLES10 and higher weak module code expects modules to go
+  into /lib/modules/$kern/{extra,updates} respectively, so force that.
+
+* Mon Feb 5 2007 Matt Domsch <Matt_Domsch@dell.com>
+- patch from http://qa.mandriva.com/show_bug.cgi?id=27985 assigns new
+  modprobe.conf alias ordinals starting at zero.
+
+* Fri Jan 12 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.13.1
 - properly create driver disks for Fedora Core 6 and RHEL5
 - make .iso, .tar, and floppy .img driver disks for Red Hat and SuSE
 - set CLEAN properly even if MAKE[] isn't set.
