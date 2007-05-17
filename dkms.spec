@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.30.17
+Version: 0.31.04
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
@@ -39,9 +39,16 @@ fi
 %attr(0755,root,root) /sbin/dkms
 %attr(0755,root,root) /var/dkms
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
+%doc %attr(0644,root,root) sample.spec AUTHORS COPYING
 %config(noreplace) /etc/dkms_framework.conf
 
 %changelog
+* Tue Jun 03 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.31.04-1
+- Modified the Red Hat prep routine to be smaller and more robust (including summit support)
+- Added sample.spec to the sources for /usr/share/doc
+- If you save a .config before make mrproper, return it right afterwards
+- Updated the man page
+
 * Fri May 30 2003 Gary Lerhaupt <gary_lerahupt@dell.com> 0.30.17-1
 - Added a remake_initrd function to keep SuSE from doing wrong things
 - If you know the correct right steps for rebuilding SuSE initrds, please let me know!

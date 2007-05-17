@@ -409,6 +409,7 @@ function prepare_kernel()
     if [ -d "$kernel_source_dir/configs" ]; then
 	echo $"Running Red Hat preparation routine"
 	invoke_command "make mrproper >/dev/null 2>&1" "make mrproper" background
+	[ -n "$config_contents" ] && echo "$config_contents" > .config
 
         # Fix Makefile up so that EXTRAVERSION matches the kernel_version extraversion
 	echo $"editing kernel Makefile"
@@ -420,20 +421,18 @@ function prepare_kernel()
 
         # If kernel_config is not set, look in default spot for .config (./configs/kernel-...)
 	if [ -z "$kernel_config" ]; then
-	    if [ `echo $kernel_version | grep smp` ]; then
-		kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-smp.config"
-	    elif [ `echo $kernel_version | grep ent` ]; then
-		kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-enterprise.config"
-	    elif [ `echo $kernel_version | grep bigmem` ]; then
-		kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-bigmem.config"
-	    elif [ `echo $kernel_version | grep BOOT` ]; then
-		kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-i386-BOOT.config"
-	    else
-		kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`.config"
-	    fi
+	    arch_used=`uname -m`
+	    kernel_trunc=`echo $kernel_version | sed 's/-.*//'`
+	    for config_type in debug summit smp enterprise bigmem BOOT; do
+		if [ `echo "$kernel_version" | grep "$config_type"` ]; then
+		    [ "$config_type" == "BOOT" ] && arch_used="i386"
+		    kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$arch_used-$config_type.config"
+		fi
+	    done
+	    [ -z "$kernel_config" ] && kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$arch_used.config"
 	fi
 	echo $"using $kernel_config"
-	cp "$kernel_config" .config
+	cp -f "$kernel_config" .config
 
 	invoke_command "make oldconfig >/dev/null 2>&1" "make oldconfig" background
 	invoke_command "make dep >/dev/null 2>&1" "make dep" background
@@ -441,8 +440,9 @@ function prepare_kernel()
 	echo $"Running UnitedLinux preparation routine"
 	kernel_config="/boot/vmlinuz.config"
 	invoke_command "make mrproper >/dev/null 2>&1" "make mrproper" background
+	[ -n "$config_contents" ] && echo "$config_contents" > .config
 	invoke_command "cp /boot/vmlinuz.version.h include/linux/version.h" "using /boot/vmlinux.version.h" 
-	invoke_command "cp $kernel_config .config" "using $kernel_config" 
+	invoke_command "cp -f $kernel_config .config" "using $kernel_config" 
 	invoke_command "make cloneconfig >/dev/null 2>&1" "make cloneconfig" background
 	invoke_command "make CONFIG_MODVERSIONS=1 dep >/dev/null 2>&1" "make CONFIG_MODVERSIONS=1 dep" background
     else
@@ -693,9 +693,7 @@ function build_module()
     if [ "$1" != "no-prepare-kernel" ]; then
 	cd "$kernel_source_dir"
 	invoke_command "make mrproper >/dev/null 2>&1" "cleaning kernel tree (make mrproper)" background
-	if [ -n "$config_contents" ]; then
-	    echo "$config_contents" > .config
-	fi
+	[ -n "$config_contents" ] && echo "$config_contents" > .config
 	cd -
     fi
 
@@ -1507,7 +1505,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.30.17"
+	    echo $"dkms: 0.31.04"
 	    exit 0
 	    ;;
 	--force)
