@@ -55,7 +55,7 @@ function show_usage ()
     echo $"      [action]  = { add | remove | build | install | uninstall | match" >$std_err
     echo $"                    | mkdriverdisk | mktarball | ldtarball | status }" >$std_err
     echo $"      [options] = [-c dkms.conf-location] [-k kernel-version]" >$std_err
-    echo $"                  [-m module] [-v module-version] [-d distro ] [-q] [--force]" >$std_err
+    echo $"                  [-m module] [-v module-version] [-d distro] [-q] [--force]" >$std_err
     echo $"                  [--postadd=script-location] [--postbuild=script-location]" >$std_err
     echo $"                  [--postinstall=script-location] [--postremove=script-location]" >$std_err
     echo $"                  [--templatekernel=kernel] [--config=kernel-.config-location]" >$std_err 
@@ -1394,7 +1394,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.28.04"
+	    echo $"dkms: 0.28.05"
 	    exit 0
 	    ;;
 	--force)
