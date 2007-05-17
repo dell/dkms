@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.44.05
+Version: 0.45.01
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -53,6 +53,10 @@ fi
 /sbin/chkconfig dkms_autoinstaller on
 
 %changelog
+* Fri Nov 07 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.45.01-1
+- Added kernel config prepping for hugemem kernel (thanks Amit Bhutani)
+- modules.conf only now gets changed during install or uninstall of active module
+
 * Tue Nov 03 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.44.05-1
 - Changed MODULES_CONF_ALIAS_TYPE to an array in dkms.conf
 - Added MODULES_CONF_OBSOLETES array in dkms.conf

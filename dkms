@@ -523,7 +523,7 @@ function prepare_kernel()
 	if [ -z "$kernel_config" ] && [ -d "$kernel_source_dir/configs" ]; then
 	    arch_used=`uname -m`
 	    kernel_trunc=`echo $kernel_version | sed 's/-.*//'`
-	    for config_type in debug summit smp enterprise bigmem BOOT; do
+	    for config_type in debug summit smp enterprise bigmem hugemem BOOT; do
 		if [ `echo "$kernel_version" | grep "$config_type"` ]; then
 		    [ "$config_type" == "BOOT" ] && arch_used="i386"
 		    kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$arch_used-$config_type.config"
@@ -561,7 +561,7 @@ function prepare_kernel()
 	if [ -z "$kernel_config" ] && [ -d "$kernel_source_dir/configs" ]; then
 	    arch_used=`uname -m`
 	    kernel_trunc=`echo $kernel_version | sed 's/-.*//'`
-	    for config_type in debug summit smp enterprise bigmem BOOT; do
+	    for config_type in debug summit smp enterprise bigmem hugemem BOOT; do
 		if [ `echo "$kernel_version" | grep "$config_type"` ]; then
 		    [ "$config_type" == "BOOT" ] && arch_used="i386"
 		    kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$arch_used-$config_type.config"
@@ -931,13 +931,9 @@ function do_uninstall()
 	    echo $"WARNING! WARNING! WARNING!"
 	    echo $"There was a problem remaking your initrd.  You must manually remake it"
 	    echo $"before booting into this kernel."
-	    echo $"WARNING! WARNING! WARNING!"
 	    echo $""
 	fi
     fi
-
-    # Make sure modules.conf still has entries if they got removed above
-    modulesconf_modify "add"
 
     # Delete the original_module if nothing for this kernel is installed anymore
     if [ -d "$dkms_tree/$module/original_module/$kernel_version" ] && [ -n "$was_active" ]; then
@@ -948,6 +944,10 @@ function do_uninstall()
     if [ `find "$dkms_tree/$module/original_module" -path "$dkms_tree/$module/original_module/*" 2>/dev/null | wc -l | awk '{print $1}'` -eq 0 ]; then
 	rm -rf "$dkms_tree/$module/original_module" 2>/dev/null
     fi
+
+    # Re-add entries to modules.conf if this module/version is still installed on another kernel
+    # But only do this if it was just ACTIVE on the kernel we just uninstalled from
+    [ -n "$was_active" ] && [ `dkms status -m $module -v $module_version | grep -c "installed"` -gt 0 ] && modulesconf_modify "add"
     
     echo $"" 
     echo $"DKMS: Uninstall Completed." 
@@ -1111,8 +1111,7 @@ function remove_module ()
     if [ `ls "$dkms_tree/$module" | wc -w | awk '{print $1}'` -eq 0 ]; then
 	rm -rf "$dkms_tree/$module" 2>/dev/null
        
-	# Its now safe to completely remove references in modules.conf
-	modulesconf_modify "delete"
+	# Its now safe to completely remove references in /etc/sysconfig/kernel for SuSE
 	etc_sysconfig_kernel_modify "delete"
     fi
 }
@@ -1794,7 +1793,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.44.05"
+	    echo $"dkms: 0.45.01"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
