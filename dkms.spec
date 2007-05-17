@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.6.2
+Version: 2.0.7
 Release: 1
 License: GPL
 Group: System Environment/Base
@@ -101,6 +101,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Sun Oct 19 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.7
+- Repackaged 2.0.6.2 as 2.0.7 
+
 * Sun Oct 19 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.6.2
 - Updated dkms_mkkerneldoth to know about VMWare kernel
 
