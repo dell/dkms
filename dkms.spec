@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.6
+Version: 2.0.6.1
 Release: 1
 License: GPL
 Group: System Environment/Base
@@ -101,6 +101,12 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Sun Oct 19 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.6.2
+- Updated dkms_mkkerneldoth to know about VMWare kernel
+
+* Sun Oct 9 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.6.1
+- Changed root check on ldtarball to only care about root if it sees --force
+
 * Fri Sep 2 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.6
 - renamed 2.0.5.9 to 2.0.6
 

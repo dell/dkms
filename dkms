@@ -2424,7 +2424,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.6"
+	    echo $"dkms: 2.0.6.1"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
@@ -2593,9 +2593,9 @@ for action_to_run in $action; do
 	    make_rpm
 	    ;;
 	ldtarball)
-	    # Make sure they're root
-	    if [ `id -u` -ne 0 ]; then
-		echo $"You must be root to use this command." >&2
+	    # Make sure they're root if we're using --force
+	    if [ `id -u` -ne 0 ] && [ "$force" == "true" ]; then
+		echo $"You must be root to use this command with the --force option." >&2
 		exit 1
 	    fi
 	    load_tarball

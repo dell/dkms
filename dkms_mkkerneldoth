@@ -44,7 +44,7 @@ while [ $# -gt 0 ]; do
 done
 
 
-KERNEL_TYPE=`echo ${kernel_version} | sed 's_^.*\(BOOT\|smp\|enterprise\|bigmem\|hugemem\|debug\)$_-\1_;t;s_.*__;'`
+KERNEL_TYPE=`echo ${kernel_version} | sed 's_^.*\(BOOT\|smp\|enterprise\|bigmem\|hugemem\|debug\|vmnix\)$_-\1_;t;s_.*__;'`
 KERNEL_RELEASE=`echo ${kernel_version} | sed 's|BOOT\|smp\|enterprise\|bigmem\|hugemem\|debug||g'`
 
 if [ -n "${target_arch}" ]; then
@@ -61,6 +61,7 @@ if [ -n "$KERNEL_ARCH" ]; then
   HUGEMEM='0'
   BOOT='0'
   DEBUG='0'
+  VMNIX='0'
   case "$KERNEL_TYPE" in
   -BOOT)
 	  BOOT='1'
@@ -72,6 +73,7 @@ if [ -n "$KERNEL_ARCH" ]; then
   -enterprise) ENTERPRISE='1';;
   -bigmem) BIGMEM='1';;
   -hugemem) HUGEMEM='1';;
+  -vmnix) VMNIX='1';;
   *) UP='1';;
   esac
   cat > ${output_file} << EOF
@@ -113,6 +115,9 @@ if [ -n "$KERNEL_ARCH" ]; then
 #define __BOOT_KERNEL_DEBUG $DEBUG
 #endif
 
+#ifndef __BOOT_KERNEL_VMNIX
+#define __BOOT_KERNEL_VMNIX $VMNIX
+#endif 
 #endif
 EOF
 fi
