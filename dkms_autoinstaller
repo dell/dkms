@@ -2,34 +2,29 @@
 #
 # dkms_autoinstaller 		A service to automatically install DKMS modules
 # 				for new kernels.
-# chkconfig: 345 08 08
+# chkconfig: 345 04 04
 # description: An autoinstaller bootup service for DKMS
 
 function invoke_command ()
 {
     exitval=0
-    rm -f .tmp_exitval
-    if [ -e .tmp_exitval ]; then
-	echo $"invoke_command could not run!" >$std_err
-	exit 1
-    fi
+    exitval_file=`mktemp /tmp/dkms.XXXXXX`
     echo -en "$2..." >/dev/console
     if [ "$3" == background ]; then
-	(eval $1; echo "exitval=$?" >> .tmp_exitval) &
-	while ! [ -e .tmp_exitval ]
-	  do
-	  sleep 3
-	  echo -en "." >/dev/console
+	(eval $1; echo "exitval=$?" >> "$exitval_file") &
+	while [ -e "$exitval_file" ] && ! [ -s "$exitval_file" ]; do
+	    sleep 3
+	    echo -en "." >/dev/console
 	done
-	. .tmp_exitval
-	rm .tmp_exitval
+	. "$exitval_file"
     else
 	eval $1; exitval=$?
     fi
     if [ $exitval -gt 0 ]; then
-	echo -en "(bad exit status: $exitval)" >/dev/console 
-	script_location=`dirname $0`
-	echo $1 >> $script_location/.invoke_command.log
+	echo -en "(bad exit status: $exitval)" >/dev/console
+	echo $1 >> "$exitval_file"
+    else
+	rm -f "$exitval_file"
     fi
     echo -en "\n" >/dev/console
     return $exitval

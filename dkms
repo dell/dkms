@@ -22,28 +22,23 @@
 function invoke_command ()
 {
     exitval=0
-    rm -f .tmp_exitval
-    if [ -e .tmp_exitval ]; then
-	echo $"invoke_command could not run!" >$std_err
-	exit 1
-    fi
+    exitval_file=`mktemp /tmp/dkms.XXXXXX`
     echo -en "$2..." 
     if [ "$3" == background ]; then
-	(eval $1; echo "exitval=$?" >> .tmp_exitval) &
-	while ! [ -e .tmp_exitval ]
-	  do
-	  sleep 3
-	  echo -en "." 
+	(eval $1; echo "exitval=$?" >> "$exitval_file") &
+	while [ -e "$exitval_file" ] && ! [ -s "$exitval_file" ]; do
+	    sleep 3
+	    echo -en "." 
 	done
-	. .tmp_exitval
-	rm .tmp_exitval
+	. "$exitval_file"
     else
 	eval $1; exitval=$?
     fi
     if [ $exitval -gt 0 ]; then
 	echo -en "(bad exit status: $exitval)" 
-	script_location=`dirname $0`
-	echo $1 >> $script_location/.invoke_command.log
+	echo $1 >> "$exitval_file"
+    else
+	rm -f "$exitval_file"
     fi
     echo -en "\n" 
     return $exitval
@@ -128,19 +123,6 @@ function read_conf ()
     # Source in the dkms.conf
     . $read_conf_file 2>/dev/null
 
-    # Get the correct make command
-    for make_subdirective in `grep "^MAKE_" "$read_conf_file" | sed 's/MAKE_//' | sed 's/=.*//'`; do
-	if [ `echo "$kernel_version" | grep -c "$make_subdirective"` -gt 0 ]; then
-	    subdirective_to_use="MAKE_$make_subdirective"
-	    MAKE="${!subdirective_to_use}"
-	fi
-    done
-
-    # Use the generic make command if kernel >= 2.5
-    if [ -n "$gt2dot4" ]; then
-	MAKE="make -C /lib/modules/$kernel_version/build SUBDIRS=$dkms_tree/$module/$module_version/build modules"
-    fi
-
     # Source in the directive_array
     IFS='
 '
@@ -153,7 +135,6 @@ function read_conf ()
     unset IFS
 
     # Set variables
-    make_command="$MAKE"
     clean="$CLEAN"
     remake_initrd="$REMAKE_INITRD"
     modules_conf_alias_type="$MODULES_CONF_ALIAS_TYPE"
@@ -205,32 +186,40 @@ function read_conf ()
 	    return_value=1
 	fi
 
-	index=$((index+1))
+	index=$(($index+1))
     done
+
+    # Get the correct make command
+    index=1
+    make_command="${MAKE[0]}"
+    while [ "$index" -lt "${#MAKE[*]}" ]; do
+	if [ -n "${MAKE[$index]}" ] && [ -n "${MAKE_MATCH[$index]}" ] && [ `echo $kernel_version | egrep -c "${MAKE_MATCH[$index]}"` -gt 0 ]; then
+	    make_command="${MAKE[$index]}"
+	fi
+	index=$(($index+1))
+    done
+
+    # Use the generic make command if kernel >= 2.5
+    if [ -n "$gt2dot4" ]; then
+	make_command="make -C /lib/modules/$kernel_version/build SUBDIRS=$dkms_tree/$module/$module_version/build modules"
+    fi
     
     # Set modules_conf_array
     index=0
-    var_to_check="MODULES_CONF$index"
-    while [ -n "${!var_to_check}" ]; do
-	modules_conf_array[$index]=${!var_to_check}
-	index=$((index+1))
-	var_to_check="MODULES_CONF$index"
+    while [ "$index" -lt "${#MODULES_CONF[*]}" ]; do
+	[ -n "${MODULES_CONF[$index]}" ] && modules_conf_array[$index]="${MODULES_CONF[$index]}"
+	index=$(($index+1))
     done
 
     # Set patch_array (including kernel specific patches)
     index=0
-    var_to_check="PATCH$index"
-    while [ -n "${!var_to_check}" ]; do
-	patch_array[$index]="${!var_to_check}"
-	index=$((index+1))
-	var_to_check="PATCH$index"
-    done
-    for patch_subdirective in `grep "^PATCH_" "$read_conf_file" | sed 's/PATCH_//' | sed 's/=.*//'`; do
-	if [ `echo "$kernel_version" | grep -c "$patch_subdirective"` -gt 0 ]; then
-	    subdirective_to_use="PATCH_$patch_subdirective"
-	    patch_array[$index]="${!subdirective_to_use}"
-	    index=$((index+1))
+    count=0
+    while [ "$index" -lt "${#PATCH[*]}" ]; do
+	if [ -z "${PATCH_MATCH[$index]}" ] || [ `echo $kernel_version | egrep -c "${PATCH_MATCH[$index]}"` -gt 0 ]; then
+	    patch_array[$count]="${PATCH[$index]}"
+	    count=$(($count+1))
 	fi
+	index=$(($index+1))
     done
 
     # Set remake_initrd
@@ -291,7 +280,7 @@ function modulesconf_modify ()
 	    if [ -n "${modules_conf_array[$index]}" ] && [ `grep -c "${modules_conf_array[$index]}" "/etc/modules.conf"` -eq 0 ]; then
 		echo -e "${modules_conf_array[$index]}" >> /etc/modules.conf
 	    fi	    
-	    index=$((index+1))
+	    index=$(($index+1))
 	done
 
     # Remove modules_conf entries from /etc/modules.conf
@@ -314,7 +303,7 @@ function modulesconf_modify ()
 		grep -v "${modules_conf_array[$index]}" "/etc/modules.conf" > /etc/modules.new
 		mv -f /etc/modules.new /etc/modules.conf
 	    fi	    
-	    index=$((index+1))
+	    index=$(($index+1))
 	done
     fi
 }
@@ -621,7 +610,7 @@ function install_module()
 	mkdir -p ${dest_module_location[$count]}
 	cp -f "$dkms_tree/$module/$module_version/$kernel_version/module/${dest_module_name[$count]}$module_suffix" "${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
 
-	count=$((count + 1))
+	count=$(($count + 1))
     done
     
     # Create the kernel-<kernelver> symlink to designate this version as active
@@ -727,7 +716,7 @@ function build_module()
 	    echo $"Check $dkms_tree/$module/$module_version/build/ for more information." >$std_err
 	    exit 6
 	fi
-	index=$((index+1))
+	index=$(($index+1))
     done
 
     # Build
@@ -745,7 +734,7 @@ function build_module()
 	    echo $"$dkms_tree/$module/$module_version/build/ for more information." >$std_err
 	    exit 7
 	fi
-	count=$((count+1))
+	count=$(($count+1))
     done
     cd -
 
@@ -759,7 +748,7 @@ function build_module()
     count=0
     while [ "$count" -lt "${#built_module_name[*]}" ]; do
 	cp -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix" "$dkms_tree/$module/$module_version/$kernel_version/module/${dest_module_name[$count]}$module_suffix" >/dev/null
-	count=$((count+1))
+	count=$(($count+1))
     done
 
     # Run the post_build script
@@ -820,7 +809,7 @@ function do_uninstall()
 	        # Remove modules_conf entries from /etc/modules.conf
 		modulesconf_modify "delete"
 	    fi
-	    count=$((count+1))
+	    count=$(($count+1))
 	done
 	rm -f "$dkms_tree/$module/kernel-$kernel_version"
     else
@@ -1184,7 +1173,7 @@ make_driver_disk ()
     count=0
     while [ "$count" -lt "${#dest_module_name[*]}" ]; do
 	modules_cgz_list="$dkms_tree/$module/$module_version/$kernel_version/module/${dest_module_name[$count]}$module_suffix\n${modules_cgz_list}"
-	count=$((count+1))
+	count=$(($count+1))
     done
 
     # Create dos disk image
@@ -1594,7 +1583,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.36.05"
+	    echo $"dkms: 0.37.04"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

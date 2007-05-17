@@ -1,12 +1,12 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.36.05
+Version: 0.37.04
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
 Packager: Gary Lerhaupt <gary_lerhaupt@dell.com>
 Group: System Environment/Base
-Requires: gcc bash sed gawk findutils tar cpio gzip grep
+Requires: gcc bash sed gawk findutils tar cpio gzip grep mktemp
 Source: dkms-%version.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root/
 
@@ -49,6 +49,19 @@ fi
 /sbin/chkconfig dkms_autoinstaller on
 
 %changelog
+* Tue Sep 23 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.37.04-1
+- Changed PATCH to array based system (added PATCH_MATCH array)
+- PATCHes can now be matched against regular expressions, not just substrings
+- Changed MODULES_CONF to array based system
+- CHANGED MAKE to array based system (added MAKE_MATCH array)
+- MAKEs can now be matched against regular expressions, not just substrings.
+- Updated man page
+
+* Mon Sep 22 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.36.10-1
+- Changed autoinstaller bootup priority from 08 to 04
+- Changed invoke_command routine to use mktemp for better security
+- Changed invoke_command in dkms_autoinstaller too
+
 * Fri Sep 19 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.36.05-1
 - Continued bug testing and fixing new features
 
