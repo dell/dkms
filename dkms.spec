@@ -1,14 +1,15 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 1.12
+Version: 2.0.0
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
 Packager: Gary Lerhaupt <gary_lerhaupt@dell.com>
 Group: System Environment/Base
 BuildArch: noarch
-Requires: gcc sed gawk findutils tar cpio gzip grep mktemp
+Requires: sed gawk findutils modutils tar cpio gzip grep mktemp
 Requires: bash > 1.99
+Provides: dkms-minimal
 Source: dkms-%version.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root/
 
@@ -22,15 +23,63 @@ Computer Corporation.
 
 %setup -q
 
+%triggerpostun -- dkms < 1.90.00-1
+for dir in `find /var/dkms -type d -maxdepth 1 -mindepth 1`; do
+	mv -f $dir /var/lib/dkms
+done
+[ -e /etc/dkms_framework.conf ] && ! [ -e /etc/dkms/framework.conf ] && mkdir /etc/dkms && cp /etc/dkms_framework.conf /etc/dkms/framework.conf
+arch_used=""
+[ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && [ `ls /lib/modules/`uname -r`/build/configs 2>/dev/null | grep -c "ia32e"` -gt 0 ] && arch_used="ia32e" || arch_used=`uname -m`
+echo ""
+echo "ALERT! ALERT! ALERT!"
+echo ""
+echo "You are using a version of DKMS which does not support multiple system"
+echo "architectures.  Your DKMS tree will now be modified to add this support."
+echo ""
+echo "The upgrade will assume all built modules are for arch: $arch_used"
+current_kernel=`uname -r`
+dkms_tree="/var/lib/dkms"
+source_tree="/usr/src"
+tmp_location="/tmp"
+dkms_frameworkconf="/etc/dkms/framework.conf"
+. $dkms_frameworkconf 2>/dev/null
+echo ""
+echo "Fixing directories."
+for directory in `find $dkms_tree -type d -name "module" -mindepth 3 -maxdepth 4`; do
+	dir_to_fix=`echo $directory | sed 's#/module$##'`
+	echo "Creating $dir_to_fix/$arch_used..."
+	mkdir $dir_to_fix/$arch_used
+	mv -f $dir_to_fix/* $dir_to_fix/$arch_used 2>/dev/null 
+done
+echo ""
+echo "Fixing symlinks."	
+for symlink in `find $dkms_tree -type l -name "kernel*" -mindepth 2 -maxdepth 2`; do
+	symlink_kernelname=`echo $symlink | sed 's#.*/kernel-##'`
+	dir_of_symlink=`echo $symlink | sed 's#/kernel-.*$##'`
+	cd $dir_of_symlink
+        read_link="$symlink"
+        while [ -L "$read_link" ]; do
+            read_link=`ls -l $read_link | sed 's/.*-> //'`
+        done
+	if [ `echo $read_link | sed 's#/# #g' | wc -w | awk {'print $1'}` -lt 3 ]; then
+		echo "Updating $symlink..."
+		ln -sf $read_link/$arch_used kernel-$symlink_kernelname-$arch_used
+		rm -f $symlink
+	fi
+	cd -
+done
+echo ""
+
 %install
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
         rm -rf $RPM_BUILD_ROOT
 fi
-mkdir -p $RPM_BUILD_ROOT/{var/dkms,/usr/sbin,usr/share/man/man8,etc,etc/init.d}
+mkdir -p $RPM_BUILD_ROOT/{var/lib/dkms,/usr/sbin,usr/share/man/man8,etc/init.d,etc/dkms}
 install -m 755 dkms $RPM_BUILD_ROOT/usr/sbin/dkms
 install -m 644 dkms.8.gz $RPM_BUILD_ROOT/usr/share/man/man8
-install -m 644 dkms_framework.conf  $RPM_BUILD_ROOT/etc/dkms_framework.conf
-install -m 644 dkms_dbversion $RPM_BUILD_ROOT/var/dkms/dkms_dbversion
+install -m 644 dkms_framework.conf  $RPM_BUILD_ROOT/etc/dkms/framework.conf
+install -m 644 template-dkms-mkrpm.spec $RPM_BUILD_ROOT/etc/dkms
+install -m 644 dkms_dbversion $RPM_BUILD_ROOT/var/lib/dkms/dkms_dbversion
 install -m 755 dkms_autoinstaller $RPM_BUILD_ROOT/etc/init.d/dkms_autoinstaller
 install -m 755 dkms_mkkerneldoth $RPM_BUILD_ROOT/usr/sbin/dkms_mkkerneldoth
 
@@ -42,12 +91,13 @@ fi
 %files
 %defattr(-,root,root)
 %attr(0755,root,root) /usr/sbin/dkms
-%attr(0755,root,root) /var/dkms
+%attr(0755,root,root) /var/lib/dkms
 %attr(0755,root,root) /etc/init.d/dkms_autoinstaller
 %attr(0755,root,root) /usr/sbin/dkms_mkkerneldoth
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
 %doc %attr (-,root,root) sample.spec sample.conf AUTHORS COPYING
-%config(noreplace) /etc/dkms_framework.conf
+%config(noreplace) /etc/dkms/framework.conf
+%config(noreplace) /etc/dkms/template-dkms-mkrpm.spec
 
 %post
 [ -e /sbin/dkms ] && mv -f /sbin/dkms /sbin/dkms.old 2>/dev/null
@@ -55,11 +105,160 @@ fi
 
 
 %changelog
-* Fri Jun 04 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.12-1
-- PRE and POST scripts can now take arguments
+* Thu Aug 26 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.0-1
+- Output to stderr is now >> and not >
+- Added kludge to allow redhat1 driver disks with BOOT kernel modules
+- Allow cross arch building on 2.6 if --kernelsourcedir is passed
+- Generic make commands now respect --kernelsourcedir
+- Bumped dkms_dbversion to 2.0.0
 
-* Mon Jun 01 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.11-1
-- Added PRE_BUILD dkms.conf directive
+* Thu Aug 19 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.96.02-1
+- Fixed suse driver disks for i386
+
+* Thu Aug 12 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.96.01-1
+- Look for /etc/SuSEconfig also to know if its a SuSE box
+- If no make command, set the clean command
+
+* Wed Aug 11 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.95.32-1
+- Added suse mkdriverdisk support
+- Updated man page
+
+* Tue Aug 10 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.95.25-1
+- Added provides: dkms-minimal for Mandrake
+- Added -r, --release for use in SuSE driver disks
+
+* Fri Aug 06 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.95.24-1
+- Fixed kernelsourcedir error message.
+- dkms_autoinstaller now excepts a kernel parameter
+
+* Tue Jul 27 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.95.19-1
+- Created a set_kernel_source_dir function to remove dup code
+
+* Mon Jul 26 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.95.18-1
+- Added John Hull's SuSE support patches (mkinitrd, config prep)
+
+* Fri Jul 23 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.95.11-1
+- Split modulesconf_modify to separate add and remove functions
+- Added support for /etc/modprobe.conf
+
+* Thu Jul 15 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.95.10-1
+- Remove coreutils as a dependency to avoid RH21 error.
+
+* Wed Jul 14 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.95.09-1
+- DKMS ldtarball now check dbversion and wont load future tarballs
+
+* Mon Jul 12 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.95.06-1
+- Buchan Milne's Mandrake prep support patch
+- Buchan Milne's macro additions to template-dkms-mkrpm.spec
+- Buchan Milne's typo corrections in mkrpm
+- Buchan Milne's change to how mkrpm works (mktarball happen in rpm prep)
+
+* Tue Jul 06 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.94.16-1
+- Added a dependency on modutils for usage of modinfo
+- Added version sanity check
+- dkms_autoinstaller now check for sanity of version
+- Changed conversion algorithm for /var/dkms to /var/lib/dkms
+- Changed all warning to get to stderr
+- set_module_suffix doesn't use version_checker because its too slow
+
+* Thu Jul 01 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.94.06-1
+- Reworked version checking to handle non-digit characters
+- Added coreutils as a dependency
+- Create a tempdir in mkdriverdisk, whoops (thanks Charles Duffy)
+
+* Wed Jun 30 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.94.03-1
+- dkms_dbversion belongs in /var/lib/dkms (thanks Thomas Palmieri)
+- Added a version checking subroutine
+- Removed gt2dot4 variable in favor of kernel version checking
+- MAKE is no longer required.  If none specified, it uses a default.
+
+* Thu Jun 24 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.94.01-1
+- Buchan Milne's optimization of the arch detection code
+
+* Wed Jun 23 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.93.14-1
+- Fixed bug when find finds more than one thing (thanks Paul Howarth)
+- Changed arch detection code to first try RPM which always will get it right (thanks Vladimir Simonov)
+
+* Tue Jun 22 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.93.12-1
+- Initial mkrpm is working
+- Added --source-only option to mktarball
+- mkrpm handles --source-only
+- Updated manpage
+
+* Fri Jun 17 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.93.04-1
+- Started adding mkrpm
+
+* Wed Jun 16 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.93.01-1
+- Fixed dkms_autoinstaller bugs (thanks Vladimir Simonov)
+- Fixed paths in the tarball's install.sh
+
+* Tue Jun 15 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.92.33-1
+- kernelver/arch handling for mktarball
+
+* Mon Jun 14 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.92.26-1
+- Added support for RH v2 driver disks (they support multiple arches)
+
+* Fri Jun 11 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.92.24-1
+- Continue rework of kernelver/arch handling
+- Added PATH fix (thanks Andrey Ulanov <andrey.ulanov@acronis.com>)
+- config_contents should not be local (thanks Andrey Ulanov)
+- If no config in /configs, just use .config (thanks Andrey Ulanov)
+- match now pays attention to --kernelsourcedir
+
+* Wed Jun 09 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.92.06-1
+- Started coding new kernelver arch CLI handling
+
+* Mon Jun 07 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.92.04-1
+- Added STRIP[] directive.  By default dkms now runs strip -g on all built modules.
+- Fix set_module_suffix in dkms build
+- Changed /etc/dkms_framework.conf to /etc/dkms/framework.conf
+- Added reload into dkms_autoinstaller to limit Mandrake error messages
+- Moved /var/dkms to /var/lib/dkms !!!!!!!!!!!!!!!!
+
+* Fri Jun 04 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.92.01-1
+- PRE_BUILD, POST_BUILD, POST_ADD, etc all now allow their scripts to accept parameters
+
+* Thu Jun 03 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.91.18-1
+- Added --installtree option to specify different install location besides /lib/modules
+- Took Charles Duffy's advice and removed brackets on error messages
+
+* Wed Jun 02 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.91.14-1
+- Added set_module_suffix function
+
+* Tue Jun 01 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.91.12-1
+- Added a PRE_BUILD dkms.conf directive.
+
+* Thu May 27 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.91.11-1
+- Added build time check for gcc and make if there is a build failure
+- You can now specify --archive to mktarball to control the naming of the made tarball (thanks Vladimir Simonov)
+
+* Wed May 26 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.91.07-1
+- Removed rpm dependency on gcc (thanks Vladimir Simonov)
+- Re-implemented dkms status recursively
+
+* Mon May 24 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.91.01-1
+- Added local variable declarations to local variables
+
+* Fri May 21 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.90.46-1
+- Vladimir Simonov's invoke_command improvements for keeping /tmp clean
+
+* Thu May 20 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.90.45-1
+- Pass --targetarch to dkms_mkkerneldoth (thanks to Vladimir Simonov <validimir.simonov@acronis.com>)
+- Moved arch detection into a function called detect_arch
+
+* Wed May 19 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.90.44-1
+- Bug fixes on arch support
+- Updated man page
+
+* Tue May 18 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.90.32-1
+- Completing arch awareness and transition scripts
+- Created upgrade_dkms_archify.sh to update DKMS trees for arch support
+
+* Mon May 17 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.90.06-1
+- Continued adding arch awareness
+
+* Thu May 13 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.90.01-1
+- Started adding arch awareness into the DKMS tree
 
 * Fri May 07 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.10-1
 - bumped the revision
