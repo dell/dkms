@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.23.18
+Version: 0.23.19
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
@@ -37,6 +37,9 @@ fi
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
 
 %changelog
+* Wed Mar 19 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.23.19-1
+- Fixed archiving of original modules (Reported by: Kris Jordan <kris@sagebrushnetworks.com>)
+
 * Wed Mar 12 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.23.18-1
 - Added kernel specific patching ability
 

@@ -408,7 +408,7 @@ function install_module()
 
     # Save the original_module if one exists, none have been saved before, and this is the first module for this kernel
     for module_name in $module_name_list; do
-	if ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ]; then
+	if ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ -e "$location/$module_name" ]; then
 	    echo $"" 
 	    echo $"Found an original module $module_name in /lib/modules/" 
 	    echo $"Archiving it within the DKMS tree for uninstallation purposes." 
@@ -1068,7 +1068,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.23.18"
+	    echo $"dkms: 0.23.19"
 	    exit 0
 	    ;;
 	--postadd*)
