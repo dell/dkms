@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.14.1
+Version: 2.0.15
 Release: 1%{?dist}
 License: GPL
 Group: System Environment/Base
@@ -105,6 +105,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Feb 26 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.15
+- release with no changes
+
 * Fri Feb 23 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.14.1
 - After upgrading from older DKMS versions to 2.0.14, any previously
   installed modules wouldn't show status properly, and wouldn't
