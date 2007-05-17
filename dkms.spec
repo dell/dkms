@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.4
+Version: 2.0.5
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -105,6 +105,19 @@ fi
 
 
 %changelog
+* Tue Jan 25 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.5
+- Repackaged as 2.0.5
+
+* Mon Jan 17 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.4.3
+- Allow MAKE_MATCH[0] to decide if MAKE[0] will be used
+- Add Taroon check in template-dkms-mkrpm.spec for ia32e detection
+
+* Mon Dec 20 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.4.2
+- John Hull's patch for no SuSE 2.6 kernel preparation
+
+* Wed Dec 15 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.4.1
+- Red Hat driver disks can now have modules.pcimap and pci.ids files
+
 * Mon Dec 13 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.4
 - bumped revision
 

@@ -97,9 +97,7 @@ function set_module_suffix ()
 function set_kernel_source_dir ()
 {
     # $1 = the kernel to base the directory on
-    if [ -z "$kernel_source_dir" ] && [ -d "$install_tree/$1/source" ]; then
-        kernel_source_dir="$install_tree/$1/source"
-    elif [ -z "$kernel_source_dir" ] && [ -d "$install_tree/$1/build" ]; then
+    if [ -z "$kernel_source_dir" ] && [ -d "$install_tree/$1/build" ]; then
         kernel_source_dir="$install_tree/$1/build"
     fi
 }
@@ -395,8 +393,8 @@ function read_conf ()
     done
 
     # Get the correct make command
-    index=1
-    make_command="${MAKE[0]}"
+    index=0
+    [ -z "${MAKE_MATCH[0]}" ] && make_command="${MAKE[0]}"
     while [ "$index" -lt ${#MAKE[@]} ]; do
 	if [ -n "${MAKE[$index]}" ] && \
 	    [ -n "${MAKE_MATCH[$index]}" ] && \
@@ -743,18 +741,8 @@ function prepare_kernel()
 	return
     fi
 
-    safe_source_symlink=""
-    if [ -h "$kernel_source_dir" ]; then
-        readlink $kernel_source_dir
-        [ "$read_link" == "build" ] && safe_source_symlink="true"
-    else
-        safe_source_symlink="true"
-    fi
-
-
-    if [[ ! ( $(VER $1) < $(VER 2.6.6) ) && \
+    if [[ (! ( $(VER $1) < $(VER 2.6.5) ) || (-d /etc/SuSEconfig)) && \
        -d "$kernel_source_dir" && \
-       -n "$safe_source_symlink" && \
        -z "$ksourcedir_fromcli" ]]; then
 	echo $""
 	echo $"Kernel preparation unnecessary for this kernel.  Skipping..."
@@ -1651,7 +1639,7 @@ make_redhat_driver_disk()
     mkdir -p "$dkms_tree/$module/$module_version/driver_disk"
    
     # Copy files for the driver disk (or warn if not present)
-    local files_for_driverdisk="modinfo disk-info modules.dep pcitable"
+    local files_for_driverdisk="modinfo disk-info modules.dep pcitable modules.pcimap pci.ids"
     local files_into_driverdisk="modules.cgz $rhdd_filename"
     for file in $files_for_driverdisk; do
 	if ! [ -e "$dkms_tree/$module/$module_version/source/redhat_driver_disk/$file" ]; then
@@ -2417,7 +2405,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.4"
+	    echo $"dkms: 2.0.5"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
