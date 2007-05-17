@@ -94,7 +94,7 @@ case "$1" in
 			    return_status="$?"
 			    kernel_preparation_done="true"
 			else
-			    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel --no-prepare-kernel -q >$output_loc" "." background
+			    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel --no-prepare-kernel --no-clean-kernel -q >$output_loc" "." background
 			    return_status="$?"
 			fi
 			if [ "$return_status" -eq 0 ]; then
