@@ -1,17 +1,15 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.5
+Version: 2.0.5.8
 Release: 1
-Vendor: Dell Computer Corporation
 License: GPL
-Packager: Gary Lerhaupt <gary_lerhaupt@dell.com>
 Group: System Environment/Base
 BuildArch: noarch
 Requires: sed gawk findutils modutils tar cpio gzip grep mktemp
 Requires: bash > 1.99
 Provides: dkms-minimal
-Source: dkms-%version.tar.gz
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root/
+Source0: dkms-%version.tar.gz
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %description
 This package contains the framework for the Dynamic
@@ -84,9 +82,7 @@ install -m 755 dkms_autoinstaller $RPM_BUILD_ROOT/etc/init.d/dkms_autoinstaller
 install -m 755 dkms_mkkerneldoth $RPM_BUILD_ROOT/usr/sbin/dkms_mkkerneldoth
 
 %clean 
-if [ "$RPM_BUILD_ROOT" != "/" ]; then
-        rm -rf $RPM_BUILD_ROOT
-fi
+rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
@@ -105,6 +101,30 @@ fi
 
 
 %changelog
+* Mon Jul 18 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.5.8
+- DKMS install now moves out original modules, does not copy them out
+
+* Tue Jun 7 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.5.7
+- Get rid of grep error when looking for RH file on non RH distro (Matt Domsch)
+
+* Wed May 11 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.5.6
+- handle obsolete modules in /etc/sysconfig/kernel
+
+* Fri Apr 29 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.5.5
+- dkms remove now properly removes modules_conf_aliases (thanks Matthew Melvin)
+
+* Wed Apr 20 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.5.4
+- Mktarball fails if it can't find dkms_dbversion
+
+* Tue Mar 15 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.5.3
+- More spec cleanups
+
+* Mon Mar 14 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.5.2
+- Tweaked spec to follow http://fedoraproject.org/wiki/PackagingGuidelines
+
+* Thu Mar 03 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.5.1
+- Added --size for alternate driver disk image sizes
+
 * Tue Jan 25 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.5
 - Repackaged as 2.0.5
 

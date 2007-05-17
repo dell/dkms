@@ -51,6 +51,7 @@ function show_usage ()
     echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"  
     echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel]"
     echo $"              [--binaries-only] [--source-only] [-r release (SuSE)] [--verbose]"
+    echo $"              [--size]"
 }
 
 function readlink()
@@ -530,6 +531,14 @@ function moduleconfig_add ()
 			rm -f $temp_dir_name/moduleconfig.new 2>/dev/null
 			echo $"$moduleconfig: obsolete alias '$obsolete_module' changed to '${dest_module_name[$index]}'"
 		    fi
+                    if [ -e /etc/sysconfig/kernel ]; then
+                       sed -e "s/\(INITRD_MODULES.*\)$obsolete_module\b\(.*\)/\1${dest_module_name[$index]}\2/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
+                       if ! diff $temp_dir_name/kernel.new /etc/sysconfig/kernel >/dev/null 2>&1; then
+                           cp -fp $temp_dir_name/kernel.new /etc/sysconfig/kernel 2>/dev/null
+                           rm -f $temp_dir_name/kernel.new 2>/dev/null
+                           echo $"/etc/sysconfig/kernel: obsolete alias '$obsolete_module' changed to '${dest_module_name[$index]}'"
+                       fi
+                    fi
 		done
 	    fi
 	    
@@ -592,7 +601,7 @@ function moduleconfig_remove ()
 		    mv -f $temp_dir_name/moduleconfig.new $moduleconfig
 		    echo $"$moduleconfig: alias for '${dest_module_name[$index]}' changed back to '$conf_replacement'"
 		elif [ -z "$conf_replacement" ]; then
-		    grep -v "alias ${modules_conf_alias_type}[0-9]* ${dest_module_name[$index]}" $moduleconfig > $temp_dir_name/moduleconfig.new
+		    grep -v "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}" $moduleconfig > $temp_dir_name/moduleconfig.new
 		    mv -f $temp_dir_name/moduleconfig.new $moduleconfig
 		    echo $"$moduleconfig: removed alias for '${dest_module_name[$index]}'"
 		fi
@@ -933,7 +942,7 @@ function install_module()
 		    echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/"
 		    echo $"   - Archiving for uninstallation purposes"
 		    mkdir -p "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}"
-		    cp -f "$original_module" "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/"
+		    mv -f "$original_module" "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/"
 		    found_original="yes"
 		    break
 		fi
@@ -1667,7 +1676,7 @@ make_redhat_driver_disk()
     rm -rf $temp_dir_name
     cd "$dkms_tree/$module/$module_version/driver_disk/"
     rm -f $image_name
-    invoke_command "dd if=/dev/zero of="./$image_name" bs=72k count=20" "making a blank floppy image" background
+    invoke_command "dd if=/dev/zero of="./$image_name" bs=$(($size/20))k count=20" "making a blank floppy image" background
     invoke_command "mkdosfs ./$image_name" "mkdosfs" background
     mkdir ./mnt
     invoke_command "mount -o loop -t vfat $image_name ./mnt >/dev/null 2>&1" "loopback mounting disk image"
@@ -1740,7 +1749,7 @@ make_suse_driver_disk()
 
     cd "$dkms_tree/$module/$module_version/driver_disk/"
     rm -f $image_name
-    invoke_command "dd if=/dev/zero of="./$image_name" bs=72k count=20" "making a blank floppy image" background
+    invoke_command "dd if=/dev/zero of="./$image_name" bs=$(($size/20))k count=20" "making a blank floppy image" background
     invoke_command "mke2fs ./$image_name" "mke2fs" background
     mkdir ./mnt 2>/dev/null
     invoke_command "mount -o loop -t ext2 $image_name ./mnt >/dev/null 2>&1" "loopback mounting disk image"
@@ -1793,6 +1802,14 @@ make_tarball()
 	echo $"Error! The module/version combo: $module-$module_version" >&2
 	echo $"is not located in the DKMS tree." >&2
 	exit 3
+    fi
+
+    # Check for dkms_dbversion
+    if ! [ -e "$dkms_tree/dkms_dbversion" ]; then
+	echo $"" >&2
+	echo $"Error!  Could not find the file $dkms_tree/dkms_dbversion." >&2
+	echo $"This file and its contents are necessary for creating a tarball." >&2
+	exit 10
     fi
 
     # Error out if archive_location is set and contains a "/" in it
@@ -2338,6 +2355,7 @@ source_only=""
 all=""
 module_suffix=""
 rpm_safe_upgrade=""
+size="1440";
 unset directive_array
 unset kernelver_array
 unset arch_array
@@ -2405,7 +2423,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.5"
+	    echo $"dkms: 2.0.5.8"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
@@ -2477,6 +2495,14 @@ while [ $# -gt 0 ]; do
 		arch_array[${#arch_array[@]}]=`echo $1 | sed 's/^.*=//'`
             else
 		arch_array[${#arch_array[@]}]="$2"
+                shift
+            fi
+            ;;
+	--size*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		size=`echo $1 | sed 's/^.*=//'`
+            else
+		size="$2"
                 shift
             fi
             ;;
