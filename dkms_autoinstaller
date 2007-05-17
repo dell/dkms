@@ -65,7 +65,7 @@ case "$1" in
 			
 		        # Source in its dkms.conf to see if we should autoinstall
 			AUTOINSTALL=""
-			. $dkms_tree/$module_in_tree/$version_in_tree/dkms.conf
+			. $dkms_tree/$module_in_tree/$version_in_tree/source/dkms.conf
 			[ `echo "$AUTOINSTALL" | grep -ic "^y"` -gt 0 ] && do_autoinstall="yes"
 
 			# Get the current state

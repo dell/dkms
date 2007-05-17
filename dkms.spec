@@ -1,13 +1,14 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.40.11
+Version: 0.40.14
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
 Packager: Gary Lerhaupt <gary_lerhaupt@dell.com>
 Group: System Environment/Base
 BuildArch: noarch
-Requires: gcc bash sed gawk findutils tar cpio gzip grep mktemp
+Requires: gcc sed gawk findutils tar cpio gzip grep mktemp
+Requires: bash > 1.99
 Source: dkms-%version.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root/
 
@@ -50,6 +51,12 @@ fi
 /sbin/chkconfig dkms_autoinstaller on
 
 %changelog
+* Tue Oct 14 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.40.14-1
+- Unset all arrays before using them.  duh.
+
+* Tue Oct 07 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.40.12-1
+- Fixed bug in autoinstaller where it wasn't looking for dkms.conf through source symlink
+
 * Thu Oct 02 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.40.11-1
 - Added --rpm_safe_upgrade flag
 - Updated the man page and sample.spec

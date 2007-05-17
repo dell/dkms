@@ -110,14 +110,27 @@ function read_conf ()
     MODULES_CONF_ALIAS_TYPE=""
     PACKAGE_NAME=""
     PACKAGE_VERSION=""
-    BUILT_MODULE_NAME=""
-    BUILT_MODULE_LOCATION=""
-    DEST_MODULE_NAME=""
-    DEST_MODULE_LOCATION=""
     POST_ADD=""
     POST_BUILD=""
     POST_INSTALL=""
     POST_REMOVE=""
+
+    # Clear arrays
+    unset MAKE
+    unset MAKE_MATCH
+    unset MODULES_CONF
+    unset modules_conf_array
+    unset PATCH
+    unset PATCH_MATCH
+    unset patch_array
+    unset BUILT_MODULE_NAME
+    unset built_module_name
+    unset BUILT_MODULE_LOCATION
+    unset built_module_location
+    unset DEST_MODULE_NAME
+    unset dest_module_name
+    unset DEST_MODULE_LOCATION
+    unset dest_module_location
 
     # Set variables supported in dkms.conf files (eg. $kernelver)
     kernelver="$kernel_version"
@@ -1569,9 +1582,7 @@ gt2dot4=""
 module_suffix=""
 rpm_safe_upgrade=""
 std_err="/dev/stderr"
-
-# Set up arrays
-declare -a directive_array
+unset directive_array
 
 # Parse command line arguments
 action_flag=""
@@ -1629,7 +1640,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.40.11"
+	    echo $"dkms: 0.40.14"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
