@@ -9,9 +9,9 @@ function invoke_command ()
 {
     local exitval=0
     local exitval_file=`mktemp /tmp/dkms.XXXXXX`
-    echo -en "$2..."  >$output_loc
-    if [ "$3" == background ]; then
-	(eval $1; echo "exitval=$?" >> "$exitval_file") &
+    [ -z "$verbose" ] && echo -en "$2..." >$output_loc || echo -e "$1" >$output_loc
+    if [ "$3" == background ] && [ -z "$verbose" ]; then
+	(eval $1 >/dev/null 2>&1; echo "exitval=$?" >> "$exitval_file") &
 	while [ -e "$exitval_file" ] && ! [ -s "$exitval_file" ]; do
 	    sleep 3
 	    echo -en "." >$output_loc
@@ -30,7 +30,7 @@ function invoke_command ()
 # Set Variables
 output_loc="/dev/console"
 [ -n "$2" ] && kernel=$2 && output_loc="/dev/stdout" || kernel=`uname -r`
-if ! arch=`rpm -qf --queryformat "%{ARCH}" "/lib/modules/$kernel" 2>/dev/null`; then
+if ! arch=`rpm -qf --queryformat "%{ARCH}" "/lib/modules/$kernel" 2>/dev/null | head -n1`; then
     [ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && [ `ls $install_tree/$kernel/build/configs 2>/dev/null | grep -c "ia32e"` -gt 0 ] && arch="ia32e" || arch=`uname -m`
 fi
 kernel_preparation_done=""
@@ -79,7 +79,7 @@ case "$1" in
 		if [ -n "$already_installed" ]; then
 		    echo "$module_in_tree ($already_installed_version): Already installed on this kernel." >$output_loc
 		elif [ -z "$do_autoinstall" ]; then
-		    echo "$module_in_tree ($version_in_tree): AUTOINSTALL not set in its dkms.conf.  Module ignored." >$output_loc
+		    echo "$module_in_tree ($version_in_tree): AUTOINSTALL not set in its dkms.conf." >$output_loc
 		elif [ -n "$do_autoinstall" ] && [ "$version_count" -gt 1 ]; then
 		    echo "$module_in_tree: Multiple versions in DKMS. Unsure what to do. Resolve manually." >$output_loc
 		else

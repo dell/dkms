@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.0
+Version: 2.0.2
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -105,6 +105,30 @@ fi
 
 
 %changelog
+* Sat Oct 2 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.2
+- Added --verbose which invoke_command uses
+- Fixed it so mrproper doesn't get run > 2.6.6
+
+* Tue Sep 28 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.1.2-1
+- Charles Duffy's fix for multiple rpms owning /lib/modules/kernel...
+- Andreas Gruenbacher's removal of IFS usage 
+- Andreas Gruenbacher's reorganizing prepare check into prepare_kernel
+- Andreas Gruenbacher's patch to cut down on line length by using $base_dir
+- fixed $base_dir so it gets set after setup_kernels_arches
+
+* Sun Sep 12 2004 Andreas Gruenbacher <agruen@suse.de>
+- patch to remove tick usage
+- patch to rewrite version comparison code
+- patch to switch to usage of case, remove use of grep -c, remove use of IFS 
+- patch to change handling of stderr
+
+
+* Fri Sep 10 2004 Gary Lerhaupt <gary_lerhaupt@dell.com>
+- Fixed remove so you can remove modules in added state
+
+* Thu Sep 9 2004 Gary Lerhaupt <gary_lerhaupt@dell.com>
+- Removed "module ignored" message from dkms_autoinstaller
+
 * Thu Aug 26 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.0-1
 - Output to stderr is now >> and not >
 - Added kludge to allow redhat1 driver disks with BOOT kernel modules
