@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.11
+Version: 2.0.11.1
 Release: 1
 License: GPL
 Group: System Environment/Base
@@ -93,7 +93,7 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0755,root,root) /etc/init.d/dkms_autoinstaller
 %attr(0755,root,root) /usr/sbin/dkms_mkkerneldoth
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
-%doc %attr (-,root,root) sample.spec sample.conf AUTHORS COPYING
+%doc %attr (-,root,root) sample.spec sample.conf AUTHORS COPYING README.dkms
 %doc %attr (-,root,root) sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
 %config(noreplace) /etc/dkms/framework.conf
 %config(noreplace) /etc/dkms/template-dkms-mkrpm.spec
@@ -104,6 +104,12 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Wed Jun 14 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.11.1-1
+- fix version comparison for all 2.6 kernels
+
+* Mon Apr 10 2006 Matt Domsch <Matt_Domsch@dell.com>
+- add README.dkms to %doc
+
 * Wed Mar 29 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.11-1
 - use -n <val> to all head and tail calls
 

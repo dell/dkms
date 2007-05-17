@@ -1,5 +1,5 @@
 .\" -*- nroff -*-
-.TH DKMS 8 "Mar 2006" "Version 2.0.10"
+.TH DKMS 8 "Mar 2006" "Version 2.0.11.1"
 .SH NAME
 dkms \- Dynamic Kernel Module Support
 .SH SYNOPSIS
@@ -82,9 +82,10 @@ See
 for more information on the Red Hat driver
 disk standards and which files are necessary to make a driver disk.
 
-For suse/UnitedLinux driver disks, there are no necessary additional files
-needed to construct the disk.  However, for these distros, you must specify
-a -r release (eg. for suse 9.1, it would be -d suse -r 9.1).
+For suse/UnitedLinux driver disks, /usr/share/YaST2/modules/Vendor.ycp
+will also be copied to the driver disk; no other files are needed.
+However, for these distros, you must specify a -r release (eg. for
+suse 9.1, it would be -d suse -r 9.1).
 
 By default the disk image it creates is 1440 (k) in size.  This can be 
 overridden by specifying a different
