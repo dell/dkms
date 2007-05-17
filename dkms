@@ -456,8 +456,8 @@ function prepare_kernel()
 	[ -n "$config_contents" ] && echo "$config_contents" > .config
 	invoke_command "cp /boot/vmlinuz.version.h include/linux/version.h" "using /boot/vmlinux.version.h" 
 	invoke_command "cp -f $kernel_config .config" "using $kernel_config" 
-	invoke_command "make cloneconfig KERNELVERSION=$kernel_version >/dev/null 2>&1" "make cloneconfig" background
-	invoke_command "make CONFIG_MODVERSIONS=1 KERNELVERSION=$kernel_version dep >/dev/null 2>&1" "make CONFIG_MODVERSIONS=1 dep" background
+	invoke_command "make KERNELRELEASE=$kernel_version cloneconfig >/dev/null 2>&1" "make cloneconfig" background
+	invoke_command "make CONFIG_MODVERSIONS=1 KERNELRELEASE=$kernel_version dep >/dev/null 2>&1" "make CONFIG_MODVERSIONS=1 dep" background
     elif `grep -q rhconfig.h $kernel_source_dir/include/linux/modversions.h 2>/dev/null`; then
 	echo $"Running Red Hat preparation routine"
 	invoke_command "make clean >/dev/null 2>&1" "make clean" background
@@ -493,7 +493,7 @@ function prepare_kernel()
 	    mv -f $kernel_source_dir/tmp_include_depends.new $kernel_source_dir/tmp_include_depends
 	fi
 
-	invoke_command "make oldconfig KERNELVERSION=$kernel_version >/dev/null 2>&1" "make oldconfig" background
+	invoke_command "make KERNELRELEASE=$kernel_version oldconfig >/dev/null 2>&1" "make oldconfig" background
 	kerneldoth_contents=`cat /boot/kernel.h 2>/dev/null`
 	invoke_command "dkms_mkkerneldoth --kernelver $kernel_version --output /boot/kernel.h" "running dkms_mkkerneldoth" background
     else 
@@ -525,8 +525,8 @@ function prepare_kernel()
 	    cp -f "$kernel_config" .config
 	fi
 
-	invoke_command "make oldconfig KERNELVERSION=$kernel_version >/dev/null 2>&1" "make oldconfig" background
-	[ -z "$gt2dot4" ] && invoke_command "make dep KERNELVERSION=$kernel_version >/dev/null 2>&1" "make dep" background
+	invoke_command "make KERNELRELEASE=$kernel_version oldconfig >/dev/null 2>&1" "make oldconfig" background
+	[ -z "$gt2dot4" ] && invoke_command "make KERNELRELEASE=$kernel_version dep >/dev/null 2>&1" "make dep" background
     fi
     cd -
 }
@@ -740,7 +740,8 @@ function build_module()
     invoke_command "$clean >/dev/null 2>&1" "cleaning build area" background
     echo $"DKMS make.log for $module-$module_version for kernel $kernel_version" >> "$dkms_tree/$module/$module_version/build/make.log"
     echo $"`date`" >> "$dkms_tree/$module/$module_version/build/make.log"
-    invoke_command "$make_command KERNELVERSION=$kernel_version >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$make_command" background
+    the_make_command=`echo $make_command | sed "s/^make/make KERNELRELEASE=$kernel_version/"`
+    invoke_command "$the_make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$the_make_command" background
 
     # Make sure all the modules built successfully
     count=0
@@ -1666,7 +1667,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.41.10"
+	    echo $"dkms: 0.41.11"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

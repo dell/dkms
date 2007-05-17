@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.41.10
+Version: 0.41.11
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -53,6 +53,10 @@ fi
 /sbin/chkconfig dkms_autoinstaller on
 
 %changelog
+* Wed Oct 29 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.41.11-1
+- Removed paths from dkms calls in sample.spec
+- Fixed typo of KERNELRELEASE
+
 * Wed Oct 29 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.41.10-1
 - Added Red Hat specific kernel prep to avoid make dep (Thanks Matt Domsch)
 - Added dkms_mkkerneldoth script to support RH kernel prep

@@ -83,8 +83,8 @@ fi
 # Add it (build and install it for currently running kernel if not a BOOT kernel)
 /sbin/dkms add -m %module -v %version --rpm_safe_upgrade
 if [ `uname -r | grep -c "BOOT"` -eq 0 ] && [ -e /lib/modules/`uname -r`/build/include ]; then
-	/sbin/dkms build -m %module -v %version
-	/sbin/dkms install -m %module -v %version
+	dkms build -m %module -v %version
+	dkms install -m %module -v %version
 elif [ `uname -r | grep -c "BOOT"` -gt 0 ]; then
 	echo -e ""
 	echo -e "Module build for the currently running kernel was skipped since you"
@@ -100,20 +100,20 @@ for kernel_name in 2.4.9-e.3; do
 	if [ `uname -r | grep -c "$kernel_name"` -gt 0 ]; then
 		echo -e ""
 		echo -e "Loading/Installing pre-built modules for $kernel_name."
-		/sbin/dkms ldtarball --archive=/usr/src/%module-%version/megaraid2-2.00.9-kernel${kernel_name}-all.tgz >/dev/null 
-		/sbin/dkms install -m %module -v %version -k ${kernel_name} >/dev/null 2>&1
-		/sbin/dkms install -m %module -v %version -k ${kernel_name}smp >/dev/null 2>&1
-		/sbin/dkms install -m %module -v %version -k ${kernel_name}enterprise >/dev/null 2>&1
+		dkms ldtarball --archive=/usr/src/%module-%version/megaraid2-2.00.9-kernel${kernel_name}-all.tgz >/dev/null 
+		dkms install -m %module -v %version -k ${kernel_name} >/dev/null 2>&1
+		dkms install -m %module -v %version -k ${kernel_name}smp >/dev/null 2>&1
+		dkms install -m %module -v %version -k ${kernel_name}enterprise >/dev/null 2>&1
 	fi	
 done
 for kernel_name in 2.4.20-9 2.4.20-16.9; do 
 	if [ `uname -r | grep -c "$kernel_name"` -gt 0 ]; then
 		echo -e ""
 		echo -e "Loading/Installing pre-built modules for $kernel_name."
-		/sbin/dkms ldtarball --archive=/usr/src/%module-%version/megaraid2-2.00.9-kernel${kernel_name}-all.tgz >/dev/null 
-		/sbin/dkms install -m %module -v %version -k ${kernel_name} >/dev/null 2>&1
-		/sbin/dkms install -m %module -v %version -k ${kernel_name}smp >/dev/null 2>&1
-		/sbin/dkms install -m %module -v %version -k ${kernel_name}bigmem >/dev/null 2>&1
+		dkms ldtarball --archive=/usr/src/%module-%version/megaraid2-2.00.9-kernel${kernel_name}-all.tgz >/dev/null 
+		dkms install -m %module -v %version -k ${kernel_name} >/dev/null 2>&1
+		dkms install -m %module -v %version -k ${kernel_name}smp >/dev/null 2>&1
+		dkms install -m %module -v %version -k ${kernel_name}bigmem >/dev/null 2>&1
 	fi
 done
 exit 0
@@ -122,5 +122,5 @@ exit 0
 %preun
 echo -e
 echo -e "Uninstall of megaraid2 module (version %version) beginning:"
-/sbin/dkms remove -m %module -v %version --all --rpm_safe_upgrade
+dkms remove -m %module -v %version --all --rpm_safe_upgrade
 exit 0
