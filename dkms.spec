@@ -1,12 +1,12 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.28.05
+Version: 0.29.09
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
 Packager: Gary Lerhaupt <gary_lerhaupt@dell.com>
 Group: System Environment/Base
-Requires: gcc bash sed gawk findutils tar
+Requires: gcc bash sed gawk findutils tar cpio gzip grep
 Source: dkms-%version.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root/
 
@@ -24,9 +24,10 @@ Computer Corporation.
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
         rm -rf $RPM_BUILD_ROOT
 fi
-mkdir -p $RPM_BUILD_ROOT/{var/dkms,sbin,usr/share/man/man8}
+mkdir -p $RPM_BUILD_ROOT/{var/dkms,sbin,usr/share/man/man8,etc}
 install -m 755 dkms $RPM_BUILD_ROOT/sbin/dkms
 install -m 644 dkms.8.gz $RPM_BUILD_ROOT/usr/share/man/man8
+install -m 644 dkms_framework.conf  $RPM_BUILD_ROOT/etc/dkms_framework.conf
 
 %clean 
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
@@ -38,8 +39,20 @@ fi
 %attr(0755,root,root) /sbin/dkms
 %attr(0755,root,root) /var/dkms
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
+%config(noreplace) /etc/dkms_framework.conf
 
 %changelog
+* Tue May 20 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.29.09-1
+- On remove, to remove all kernel versions you must now specify --all
+- Added grep, cpio and gzip to the Requires of the RPM
+- Added cleaning kernel tree (make mrproper) after last build completes
+- Before prepare kernel, the current .config is stored in memory to be restored later
+- Added a verbose warning to the status command to remind people it only shows DKMS modules
+- Added /etc/dkms_framwork.conf for controlling source_tree and dkms_tree
+- Added the undocumented --dkmstree and --sourcetree options for cli control of these vars
+- When looking for original modules, dkms now employs the find command to expand search past $location
+- Updated man page
+
 * Wed May 14 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.28.05-1
 - Fixed a typo in the man page.
 

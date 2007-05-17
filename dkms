@@ -54,8 +54,8 @@ function show_usage ()
     echo $"Usage: $0 [action] [options]" >$std_err
     echo $"      [action]  = { add | remove | build | install | uninstall | match" >$std_err
     echo $"                    | mkdriverdisk | mktarball | ldtarball | status }" >$std_err
-    echo $"      [options] = [-c dkms.conf-location] [-k kernel-version]" >$std_err
-    echo $"                  [-m module] [-v module-version] [-d distro] [-q] [--force]" >$std_err
+    echo $"      [options] = [-c dkms.conf-location] [-k kernel-version] [-m module]" >$std_err
+    echo $"                  [-v module-version] [-d distro] [-q] [--force] [--all]" >$std_err
     echo $"                  [--postadd=script-location] [--postbuild=script-location]" >$std_err
     echo $"                  [--postinstall=script-location] [--postremove=script-location]" >$std_err
     echo $"                  [--templatekernel=kernel] [--config=kernel-.config-location]" >$std_err 
@@ -354,6 +354,8 @@ function prepare_kernel()
     echo $"Preparing kernel $kernel_version for module build:" 
     echo $"(This is not compiling a kernel, only just preparing kernel symbols)" 
     cd $kernel_source_dir
+    config_contents=`cat .config 2>/dev/null`
+    [ -n "$config_contents" ] && echo $"storing current .config to be restored when complete"
     invoke_command "make mrproper >/dev/null 2>&1" "make mrproper" background
 
     # Fix Makefile up so that EXTRAVERSION matches the kernel_version extraversion
@@ -440,15 +442,31 @@ function install_module()
     fi
 
     # Save the original_module if one exists, none have been saved before, and this is the first module for this kernel
+    lib_tree="/lib/modules/$kernel_version"
     for module_name in $module_name_list; do
 	module_name_before=`echo $module_name | sed 's/:.*//'`
 	module_name_after=`echo $module_name | sed 's/.*://'`
-	if ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ -e "$location/$module_name_after" ]; then
+	module_count=`find $lib_tree -name $module_name_after | wc -l | awk {'print $1'}`
+	if ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -eq 1 ]; then
 	    echo $"" 
 	    echo $"Found an original module $module_name_after in /lib/modules/" 
 	    echo $"Archiving it within the DKMS tree for uninstallation purposes." 
 	    mkdir -p "$dkms_tree/$module/original_module/$kernel_version/"
+	    mv -f `find $lib_tree -name $module_name_after` "$dkms_tree/$module/original_module/$kernel_version/"
+	elif  ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -gt 1 ] && [ -e "$location/$module_name_after" ]; then
+	    echo $""
+	    echo $"Found multiple original modules $module_name_after in /lib/modules"
+	    echo $"Archiving the one in in $LOCATION for uninstallation purposes."
+	    echo $"Warning! Since multiple modules exist with the same name, problems"
+	    echo $"may arise."
+	    mkdir -p "$dkms_tree/$module/original_module/$kernel_version/"
 	    mv -f "$location/$module_name_after" "$dkms_tree/$module/original_module/$kernel_version/"
+	elif  ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -gt 1 ] && ! [ -e "$location/$module_name_after" ]; then
+	    echo $""
+	    echo $"Multiple original modules $module_name_after exist in /lib/modules"
+	    echo $"Due to this confusion, DKMS cannot archive any of them for uninstallation."
+	    echo $"Warning! Since multiple modules exist with the same name, problems"
+	    echo $"may arise."	    
 	else
 	    rm -f "$location/$module_name_after" 2>/dev/null
 	fi
@@ -576,7 +594,7 @@ function build_module()
     done
 
     # Build
-    invoke_command "$clean >/dev/null 2>&1" "cleaning" background
+    invoke_command "$clean >/dev/null 2>&1" "cleaning build area" background
     echo $"DKMS make.log for $module-$module_version for kernel $kernel_version" >> "$dkms_tree/$module/$module_version/build/make.log"
     echo $"`date`" >> "$dkms_tree/$module/$module_version/build/make.log"
     invoke_command "$make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$make_command" background
@@ -613,8 +631,18 @@ function build_module()
 	"$dkms_tree/$module/$module_version/post_build" 
     fi
     
-    # Run the clean command
-    invoke_command "$clean >/dev/null 2>&1" "cleaning" background
+    # Run the clean commands
+    cd "$dkms_tree/$module/$module_version/build"
+    invoke_command "$clean >/dev/null 2>&1" "cleaning build area" background
+    cd -
+    if [ "$1" != "no-prepare-kernel" ]; then
+	cd "$kernel_source_dir"
+	invoke_command "make mrproper >/dev/null 2>&1" "cleaning kernel tree (make mrproper)" background
+	if [ -n "$config_contents" ]; then
+	    echo "$config_contents" > .config
+	fi
+	cd -
+    fi
 
     # Clean the build directory
     rm -rf "$dkms_tree/$module/$module_version"/build/*
@@ -761,12 +789,20 @@ function uninstall_module ()
 function remove_module ()
 {
     # Check that the right arguments were passed
-    if [ -z "$module" ] || [ -z "$module_version" ]; then
+    if [ -z "$module" ] || [ -z "$module_version" ] || $([ -z "$kernel_version" ] && [ -z "$all" ]); then
 	echo $"" >$std_err
 	echo $"Error! Invalid number of parameters passed." >$std_err
-	echo $"Usage: remove [-m module] [-v module-version]" >$std_err
+	echo $"Usage: remove [-m module] [-v module-version] --all" >$std_err
 	echo $"   or: remove [-m module] [-v module-version] [-k kernel-version]" >$std_err
 	exit 1
+    fi
+
+    # Check that kernel_version and all aren't both set simultaneously
+    if [ -n "$kernel_version" ] && [ -n "$all" ]; then
+	echo $"" >$std_err
+	echo $"Error!  There is confusion over what to remove." >$std_err
+	echo $"You cannot set both --all and specify a kernel-version." >$std_err
+	exit 2
     fi
 
     # Check that $module is in the dkms tree
@@ -774,7 +810,7 @@ function remove_module ()
 	echo $"" >$std_err
 	echo $"Error! There are no instances of module: $module" >$std_err
 	echo $"$module_version located in the DKMS tree." >$std_err
-	exit 2
+	exit 3
     fi
 
     # If $kernel_version is set, make sure its there first before removing
@@ -782,7 +818,7 @@ function remove_module ()
 	echo $"" >$std_err
 	echo $"Error! There is no instance of $module $module_version" >$std_err
 	echo $"for kernel $kernel_version located in the DKMS tree." >$std_err
-	exit 3
+	exit 4
     fi
 
     # Read the conf file
@@ -792,7 +828,7 @@ function remove_module ()
 	echo $"Error! Bad conf file." >$std_err
 	echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
 	echo $"a valid dkms.conf file." >$std_err
-	exit 4
+	exit 5
     fi
 
     # If kernel_version is unset, remove all installations of $module_version, otherwise just one kernel
@@ -813,7 +849,7 @@ function remove_module ()
 		echo $"Error! Bad conf file." >$std_err
 		echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
 		echo $"a valid dkms.conf file." >$std_err
-		exit 4
+		exit 6
 	    fi
 	    do_uninstall
 	    
@@ -856,6 +892,7 @@ show_status ()
     fi
 
     # Determine which modules to show status for
+    status_shown=""
     if [ -n "$module" ]; then
 	modules_needing_status="$module"
     else
@@ -920,12 +957,14 @@ show_status ()
 			    if [ -e "$dkms_tree/$module_in_tree/$version_in_tree/$kernel_in_tree/driver_disk/$module_in_tree-$version_in_tree-$kernel_in_tree-dd.img" ]; then
 				extra_status="$extra_status (driver_disk exists)"
 			    fi
+			    status_shown="true"
 			    echo "$module_in_tree, $version_in_tree, $kernel_in_tree: $activity_state$extra_status" 
 			fi
 			
 		    done
 
 		    if [ "$kernels_needing_status" == "" ]; then
+			status_shown="true"
 			echo "$module_in_tree, $version_in_tree: added" 
 		    fi
 		    
@@ -936,6 +975,12 @@ show_status ()
 	fi
 	
     done
+    
+    if [ -z "$status_shown" ]; then
+	echo $"" >$std_err
+	echo $"Nothing found within the DKMS tree for this status command." >$std_err
+	echo $"If your modules were not installed with DKMS, they will not show up here." >$std_err
+    fi
 }
 
 make_driver_disk ()
@@ -1304,6 +1349,14 @@ run_match ()
 
     # Return the IFS to its old state
     unset IFS
+
+    # Clean up the kernel tree
+    cd "/lib/modules/$kernel_version/build"
+    invoke_command "make mrproper >/dev/null 2>&1" "Cleaning kernel tree (make mrproper)" background
+    if [ -n "$config_contents" ]; then
+	echo "$config_contents" > .config
+    fi
+    cd -
     
     # Done
     echo $"" 
@@ -1320,7 +1373,10 @@ run_match ()
 current_kernel=`uname -r`
 dkms_tree="/var/dkms"
 source_tree="/usr/src"
-dkms_conf="/etc/dkms.conf"
+dkms_frameworkconf="/etc/dkms_framework.conf"
+
+# Source in /etc/dkms_framework.conf
+. /etc/dkms_framework.conf 2>/dev/null
 
 # Clear out command line argument variables
 module=""
@@ -1336,6 +1392,7 @@ post_install=""
 kernel_config=""
 action=""
 force=""
+all=""
 std_err="/dev/stderr"
 
 # Parse command line arguments
@@ -1394,12 +1451,31 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.28.05"
+	    echo $"dkms: 0.29.09"
 	    exit 0
 	    ;;
 	--force)
 	    force="true"
 	    ;;
+	--all)
+	    all="true"
+	    ;;
+	--dkmstree*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		dkms_tree=`echo $1 | sed 's/^.*=//'`
+            else
+                dkms_tree="$2"
+                shift
+            fi
+            ;;
+	--sourcetree*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		source_tree=`echo $1 | sed 's/^.*=//'`
+            else
+                source_tree="$2"
+                shift
+            fi
+            ;;
 	--postadd*)
 	    if echo $1 | grep '=' >/dev/null ; then
 		post_add=`echo $1 | sed 's/^.*=//'`
