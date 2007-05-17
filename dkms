@@ -961,7 +961,7 @@ function remove_module ()
     # If kernel_version is unset, remove all installations of $module_version, otherwise just one kernel
     kernel_list=""
     if [ -z "$kernel_version" ]; then
-	kernel_list="`ls $dkms_tree/$module/$module_version | grep -v "build\b" | grep -v "tarball\b" | grep -v "rpm\b"`"
+	kernel_list="`ls $dkms_tree/$module/$module_version | grep -v "build\b" | grep -v "tarball\b" | grep -v "driver_disk\b" | grep -v "rpm\b"`"
     else
 	kernel_list="$kernel_version"
     fi
@@ -986,7 +986,7 @@ function remove_module ()
     done
 
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
-    if [ -z "`find $dkms_tree/$module/$module_version/* -maxdepth 1 -type d | grep -v build$ | grep -v tarball$ | grep -v rpm$`"  ]; then
+    if [ -z "`find $dkms_tree/$module/$module_version/* -maxdepth 1 -type d | grep -v build$ | grep -v tarball$ | grep -v driver_disk$ | grep -v rpm$`"  ]; then
 	echo $"" 
 	echo $"------------------------------" 
 	echo $"Deleting module version: $module_version" 
@@ -1060,7 +1060,7 @@ show_status ()
 		    if [ -n "$kernel_version" ]; then
 			kernels_needing_status="$kernel_version"
 		    else
-			for filename in `ls $dkms_tree/$module_in_tree/$version_in_tree | grep -v "build\b" | grep -v "tarball\b" | grep -v "rpm\b"`; do
+			for filename in `ls $dkms_tree/$module_in_tree/$version_in_tree | grep -v "build\b" | grep -v "tarball\b" | grep -v "driver_disk\b" | grep -v "rpm\b"`; do
 			    if [ -d "$dkms_tree/$module_in_tree/$version_in_tree/$filename" ] && ! [ -h "$dkms_tree/$module_in_tree/$version_in_tree/$filename" ]; then
 				kernels_needing_status="$kernels_needing_status $filename"
 			    fi
@@ -1082,9 +1082,6 @@ show_status ()
 			    extra_status=""
 			    if [ -d "$dkms_tree/$module_in_tree/original_module/$kernel_in_tree" ]; then
 				extra_status=" (original_module exists)"
-			    fi
-			    if [ -e "$dkms_tree/$module_in_tree/$version_in_tree/$kernel_in_tree/driver_disk/$module_in_tree-$version_in_tree-$kernel_in_tree-dd.img" ]; then
-				extra_status="$extra_status (driver_disk exists)"
 			    fi
 			    status_shown="true"
 			    echo "$module_in_tree, $version_in_tree, $kernel_in_tree: $activity_state$extra_status" 
@@ -1148,47 +1145,60 @@ make_driver_disk ()
 	exit 4
     fi
 
-    # Warn if non-sane kernel version
-    if [ `echo $kernel_version | grep -c "BOOT"` -ne 1 ]; then
-	echo $"" >$std_err
-	echo $"Warning! Kernel version is not the BOOT variant of this kernel." >$std_err
-    fi
-
-    if ! [ `$0 status -m "$module" -v "$module_version" -k "$kernel_version" | grep -c '[: built,: installed]'` -gt 0 ]; then
-	build_module
-    fi
+    # Create a list of modules to put into modules.cgz (make sure they exist too)
+    kernel_version=`echo $kernel_version | cut -d "," --output-delimiter " " -f 1-`
+    kernel_version_list=""
+    modules_cgz_list=""
+    temp_dir_name=`mktemp -d /tmp/dkms.XXXXXX`
+    for kernel in $kernel_version; do 
+	count=0
+	while [ "$count" -lt "${#dest_module_name[*]}" ]; do
+	    if ! [ -e "$dkms_tree/$module/$module_version/$kernel/module/${dest_module_name[$count]}$module_suffix" ]; then
+		echo $"" >$std_err
+		echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel $kernel." >$std_err
+		echo $"Module/version must be in built state before making a driver disk." >$std_err
+		rm -rf $temp_dir_name
+		exit 5
+	    fi
+	    if [ -z "$kernel_version_list" ]; then
+		kernel_version_list="kernel$kernel"
+	    else
+		kernel_version_list="$kernel_version_list-kernel$kernel"
+	    fi
+	    mkdir -p $temp_dir_name/$kernel
+	    cp "$dkms_tree/$module/$module_version/$kernel/module/${dest_module_name[$count]}$module_suffix" "$temp_dir_name/$kernel/"
+	    modules_cgz_list="$kernel/${dest_module_name[$count]}$module_suffix\n${modules_cgz_list}"
+	    count=$(($count+1))
+	done
+    done
 
     # Create directory and necessary files
-    mkdir -p "$dkms_tree/$module/$module_version/$kernel_version/driver_disk"
+    mkdir -p "$dkms_tree/$module/$module_version/driver_disk"
    
     # Copy files for the driver disk (or warn if not present)
-    files_for_driverdisk="module-info disk-info modules.dep pcitable rhdd-6.1"
+    files_for_driverdisk="module-info disk-info modules.dep pcitable"
     files_into_driverdisk="modules.cgz"
     for file in $files_for_driverdisk; do
 	if ! [ -e "$dkms_tree/$module/$module_version/source/$file" ]; then
-	    echo $"" >$std_err
 	    echo $"Warning! File: $file not found in $dkms_tree/$module/$module_version/source/" >$std_err
 	else
 	    files_into_driverdisk="$file $files_into_driverdisk"
-	    cp -f "$dkms_tree/$module/$module_version/source/$file" "$dkms_tree/$module/$module_version/$kernel_version/driver_disk/" 2>/dev/null
+	    cp -f "$dkms_tree/$module/$module_version/source/$file" "$dkms_tree/$module/$module_version/driver_disk/" 2>/dev/null
 	fi
     done
-
-    # Create a list of modules to put into modules.cgz
-    modules_cgz_list=""
-    count=0
-    while [ "$count" -lt "${#dest_module_name[*]}" ]; do
-	modules_cgz_list="$dkms_tree/$module/$module_version/$kernel_version/module/${dest_module_name[$count]}$module_suffix\n${modules_cgz_list}"
-	count=$(($count+1))
-    done
+    touch "$dkms_tree/$module/$module_version/driver_disk/rhdd-6.1"
 
     # Create dos disk image
-    image_name="$module-$module_version-$kernel_version-dd.img"  
-    cd "$dkms_tree/$module/$module_version/$kernel_version/driver_disk/"
-    rm -f $image_name
+    image_name="$module-$module_version-$kernel_version_list-dd.img"  
     echo $""
     echo $"Creating driver disk:"
+    cd $temp_dir_name
     invoke_command "echo -e '$modules_cgz_list' | cpio -oH crc 2>/dev/null | gzip -9 > ./modules.cgz" "compressing modules.cgz" background
+    cp -f ./modules.cgz "$dkms_tree/$module/$module_version/driver_disk/"
+    cd -
+    rm -rf $temp_dir_name
+    cd "$dkms_tree/$module/$module_version/driver_disk/"
+    rm -f $image_name
     invoke_command "dd if=/dev/zero of="./$image_name" bs=72k count=20 >/dev/null 2>&1" "making a blank floppy image" background
     invoke_command "mkdosfs ./$image_name >/dev/null 2>&1" "mkdosfs" background
     mkdir ./mnt
@@ -1200,7 +1210,7 @@ make_driver_disk ()
     rm -rf ./mnt
     cd -
     echo $""
-    echo $"Disk image location: $dkms_tree/$module/$module_version/$kernel_version/driver_disk/$image_name"
+    echo $"Disk image location: $dkms_tree/$module/$module_version/driver_disk/$image_name"
     echo $""
     echo $"Done."
 }
@@ -1241,6 +1251,17 @@ make_tarball()
 	exit 4
     fi
 
+    # If they specified a kernel(s), make sure everything is sane
+    kernel_version=`echo $kernel_version | cut -d "," --output-delimiter " " -f 1-`
+    for kernel in $kernel_version; do
+	if [ `echo "$built_for_kernels" | grep -c "$kernel$"` -eq 0 ]; then
+	    echo $"" >$std_err
+	    echo $"Error! The kernel $kernel does not have modules built for" >$std_err
+	    echo $"$module $module_version.  Cannot create archive." >$std_err
+	    exit 5
+	fi
+    done
+
     # Create the base list of things to archive
     files_in_tree=`find $dkms_tree/$module/$module_version -type f -maxdepth 1`
     things_to_archive="$source_tree/$module-$module_version $files_in_tree $dkms_tree/$module/$module_version/source"
@@ -1248,7 +1269,6 @@ make_tarball()
     echo $"Marking $source_tree/$module-$module_version for archiving..."
 
     # Determine the kernel_versions to put in the tarball
-    kernel_version=`echo $kernel_version | cut -d "," --output-delimiter " " -f 1-`
     kernel_version_list=""
     for kernel in $built_for_kernels; do
 	if [ -z "$kernel_version" ] || [ `echo "$kernel_version" | grep -c "$kernel\b"` -gt 0 ]; then
@@ -1259,16 +1279,6 @@ make_tarball()
 		kernel_version_list="$kernel_version_list-kernel$kernel"
 	    fi
 	    echo $"Marking kernel $kernel for archiving..."
-	fi
-    done
-
-    # If they specified a kernel(s), make sure everything is sane
-    for kernel in $kernel_version; do
-	if [ `echo "$built_for_kernels" | grep -c "$kernel\b"` -eq 0 ]; then
-	    echo $"" >$std_err
-	    echo $"Error! The kernel $kernel does not have modules built for" >$std_err
-	    echo $"$module $module_version.  Cannot create archive." >$std_err
-	    exit 5
 	fi
     done
 
@@ -1321,7 +1331,7 @@ load_tarball()
 
     # Figure out tar_dkms_tree
     for file_named_source in `tar -${tar_options}tf $kernel_config | grep "source$"`; do
-	if [ -h "$tmp_dir_name/$file_named_source" ]; then
+	if [ -h "$temp_dir_name/$file_named_source" ]; then
 	    chopped_tar_dkms_tree=`echo $file_named_source | sed 's/\(.*\)\/.*\/.*\/source/\1/'`
 	    tar_dkms_tree="/$chopped_tar_dkms_tree"
 	fi
@@ -1336,6 +1346,7 @@ load_tarball()
 	echo $"" >$std_err
 	echo $"Error! Tarball does not appear to be correctly formed." >$std_err
 	echo $"Could not decipher which module/module_version it contained." >$std_err
+	rm -rf $temp_dir_name
 	exit 3
     fi
 
@@ -1593,7 +1604,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.37.10"
+	    echo $"dkms: 0.38.03"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

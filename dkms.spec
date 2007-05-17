@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.37.10
+Version: 0.38.03
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -49,6 +49,15 @@ fi
 /sbin/chkconfig dkms_autoinstaller on
 
 %changelog
+* Thu Sep 25 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.38.03-1
+- Fixed tmp_dir_name typo in ldtarball
+- Fixed mkdriverdisk to correctly create kernel/module structure
+- Don't expect a rhdd-6.1 file for RH driver disk, dkms will create it
+- Remove mkdriverdisk warning on non BOOT kernels
+- Moved driver_disk directory location to underneath $module_version
+- mkdriverdisk can now accept multiple kernel versions
+- Updated man page with info about $dkms_tree and $source_tree as dkms.conf variables
+
 * Wed Sep 24 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.37.10-1
 - Don't allow installs of modules onto non-existant kernels
 - Suppressed stderr on some commands
