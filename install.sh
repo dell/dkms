@@ -23,7 +23,7 @@ mkdir -p /var/dkms
 cp -f $DIR/dkms /usr/sbin
 cp -f $DIR/dkms.8.gz /usr/share/man/man8
 cp -f $DIR/dkms_dbversion /var/dkms
-cp -f $DIR/dkms_autoinstaller /etc/rc.d/init.d
+cp -f $DIR/dkms_autoinstaller /etc/init.d
 cp -f $DIR/dkms_mkkerneldoth /usr/sbin
 chkconfig dkms_autoinstaller on
 if ! [ -e /etc/dkms_framework.conf ]; then
@@ -31,4 +31,4 @@ if ! [ -e /etc/dkms_framework.conf ]; then
 fi
 chmod 755 /usr/sbin/dkms
 chmod 755 /usr/sbin/dkms_mkkerneldoth
-[ -e /sbin/dkms ] && mv /sbin/dkms /sbin/dkms.old
+[ -e /sbin/dkms ] && mv /sbin/dkms /sbin/dkms.old 2>/dev/null

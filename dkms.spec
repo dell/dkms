@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.45.01
+Version: 0.46.04
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -26,12 +26,12 @@ Computer Corporation.
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
         rm -rf $RPM_BUILD_ROOT
 fi
-mkdir -p $RPM_BUILD_ROOT/{var/dkms,/usr/sbin,usr/share/man/man8,etc,etc/rc.d/init.d}
+mkdir -p $RPM_BUILD_ROOT/{var/dkms,/usr/sbin,usr/share/man/man8,etc,etc/init.d}
 install -m 755 dkms $RPM_BUILD_ROOT/usr/sbin/dkms
 install -m 644 dkms.8.gz $RPM_BUILD_ROOT/usr/share/man/man8
 install -m 644 dkms_framework.conf  $RPM_BUILD_ROOT/etc/dkms_framework.conf
 install -m 644 dkms_dbversion $RPM_BUILD_ROOT/var/dkms/dkms_dbversion
-install -m 755 dkms_autoinstaller $RPM_BUILD_ROOT/etc/rc.d/init.d/dkms_autoinstaller
+install -m 755 dkms_autoinstaller $RPM_BUILD_ROOT/etc/init.d/dkms_autoinstaller
 install -m 755 dkms_mkkerneldoth $RPM_BUILD_ROOT/usr/sbin/dkms_mkkerneldoth
 
 %clean 
@@ -43,16 +43,27 @@ fi
 %defattr(-,root,root)
 %attr(0755,root,root) /usr/sbin/dkms
 %attr(0755,root,root) /var/dkms
-%attr(0755,root,root) /etc/rc.d/init.d/dkms_autoinstaller
+%attr(0755,root,root) /etc/init.d/dkms_autoinstaller
 %attr(0755,root,root) /usr/sbin/dkms_mkkerneldoth
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
 %doc %attr(0644,root,root) sample.spec sample.conf AUTHORS COPYING
 %config(noreplace) /etc/dkms_framework.conf
 
 %post
+[ -e /sbin/dkms ] && mv -f /sbin/dkms /sbin/dkms.old 2>/dev/null
 /sbin/chkconfig dkms_autoinstaller on
 
+
 %changelog
+* Tue Nov 18 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.46.04-1
+- Binary only tarballs now contain a copy of dkms.conf so that they can be force loaded
+
+* Mon Nov 17 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.45.03-1
+- Updated man page, recommended rpm naming: <module>-<version>-<rpmversion>dkms.noarch.rpm
+
+* Thu Nov 13 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.45.02-1
+- dkms_autoinstaller is now installed to /etc/init.d for cross-distro happiness
+
 * Fri Nov 07 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.45.01-1
 - Added kernel config prepping for hugemem kernel (thanks Amit Bhutani)
 - modules.conf only now gets changed during install or uninstall of active module

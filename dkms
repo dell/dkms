@@ -460,7 +460,8 @@ function add_module ()
     if [ "$?" -ne 0 ]; then
 	echo $"" >$std_err
 	echo $"Error! Bad conf file." >$std_err
-	echo $"File: $conf does not represent a valid dkms.conf file" >$std_err
+	echo $"File: $conf" >$std_err
+	echo $"does not represent a valid dkms.conf file." >$std_err
 	exit 8
     fi
     
@@ -623,8 +624,7 @@ function install_module()
     if [ "$?" -ne 0 ]; then
 	echo $"" >$std_err
 	echo $"Error! Bad conf file." >$std_err
-	echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" $std_err
-	echo $"a valid dkms.conf file." >$std_err
+	echo $"Your dkms.conf is not valid." $std_err
 	exit 3
     fi
 
@@ -779,9 +779,16 @@ function build_module()
     if [ "$?" -ne 0 ]; then
 	echo $"" >$std_err
 	echo $"Error! Bad conf file." >$std_err
-	echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" >$std_err
-	echo $"a valid dkms.conf file." >$std_err
+	echo $"Your dkms.conf is not valid." >$std_err
 	exit 4
+    fi
+
+    # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
+    if [ `ls $dkms_tree/$module/$module_version/source | wc -l | awk {'print $1'}` -lt 2 ]; then
+	echo "" >$std_err
+	echo $"Error! The directory $dkms_tree/$module/$module_version/source/" >$std_err
+	echo $"does not appear to have module source located within it.  Build halted." >$std_err
+	exit 8
     fi
     
     # Prepare the kernel for the module build
@@ -990,8 +997,7 @@ function uninstall_module ()
     if [ "$?" -ne 0 ]; then
 	echo $"" >$std_err
 	echo $"Error! Bad conf file." >$std_err
-	echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" >$std_err
-	echo $"a valid dkms.conf file." >$std_err
+	echo $"Your dkms.conf is not valid." >$std_err
 	exit 4
     fi
 
@@ -1085,8 +1091,7 @@ function remove_module ()
 	    if [ "$?" -ne 0 ]; then
 		echo $"" >$std_err
 		echo $"Error! Bad conf file." >$std_err
-		echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" >$std_err
-		echo $"a valid dkms.conf file." >$std_err
+		echo $"Your dkms.conf is not valid." >$std_err
 		exit 6
 	    fi
 	    do_uninstall
@@ -1268,8 +1273,7 @@ make_driver_disk ()
     if [ "$?" -ne 0 ]; then
 	echo $"" >$std_err
 	echo $"Error! Bad conf file." >$std_err
-	echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" >$std_err
-	echo $"a valid dkms.conf file." >$std_err
+	echo $"Your dkms.conf is not valid." >$std_err
 	exit 4
     fi
 
@@ -1384,8 +1388,7 @@ make_tarball()
     if [ "$?" -ne 0 ]; then
 	echo $"" >$std_err
 	echo $"Error! Bad conf file." >$std_err
-	echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" >$std_err
-	echo $"a valid dkms.conf file." >$std_err
+	echo $"Your dkms.conf is not valid." >$std_err
 	exit 5
     fi
 
@@ -1416,6 +1419,8 @@ make_tarball()
 	mkdir $temp_dir_name/dkms_binaries_only
 	echo "$module" > $temp_dir_name/dkms_binaries_only/PACKAGE_NAME
 	echo "$module_version" > $temp_dir_name/dkms_binaries_only/PACKAGE_VERSION
+	[ -z "$conf" ] && conf="$dkms_tree/$module/$module_version/source/dkms.conf"
+	cp -f $conf $temp_dir_name/dkms_binaries_only/ 2>/dev/null
     fi
 
     # Determine the kernel_versions to put in the tarball
@@ -1516,13 +1521,35 @@ load_tarball()
 	    rm -rf $temp_dir_name
 	    exit 5
 	fi
-	if [ "`dkms status -m $PACKAGE_NAME -v $PACKAGE_VERSION 2>/dev/null`" == "" ]; then
+	if [ "`dkms status -m $PACKAGE_NAME -v $PACKAGE_VERSION 2>/dev/null`" == "" ] && [ -z "$force" ]; then
 	    echo $"" >$std_err
-	    echo $"Error! Tarball is a DKMS binaries-only archive, but your DMKS tree" >$std_err
+	    echo $"Error! Tarball is a DKMS binaries-only archive, but your DKMS tree" >$std_err
 	    echo $"does not have the source installed for $PACKAGE_NAME-$PACKAGE_VERSION." >$std_err
 	    echo $"To load a DKMS binaries-only archive, you must already have the module" >$std_err
-	    echo $"source in your DMKS tree." >$std_err
+	    echo $"source in your DKMS tree." >$std_err
+	    echo $"" >$std_err
+	    echo $"This can be overridden by using --force, but this is not recommended since" >$std_err
+	    echo $"it will eliminate your ability to actually build for this module." >$std_err
 	    exit 6
+	elif [ "`dkms status -m $PACKAGE_NAME -v $PACKAGE_VERSION 2>/dev/null`" == "" ] && [ -n "$force" ]; then
+	    if [ -e "$temp_dir_name/dkms_binaries_only/dkms.conf" ]; then
+		echo $""
+		echo $"Binaries-only DKMS tarball to be loaded for $PACKAGE_NAME-$PACKAGE_VERSION"
+		echo $"even though source for this module is not added to the DKMS tree.  This"
+		echo $"will allow you to install the pre-built binaries contained within this"
+		echo $"tarball, but will prevent you from building new modules for other kernels."
+		echo $""
+		echo $"Creating $source_tree/$PACKAGE_NAME-$PACKAGE_VERSION..."
+		rm -rf $source_tree/$PACKAGE_NAME-$PACKAGE_VERSION
+		mkdir -p $source_tree/$PACKAGE_NAME-$PACKAGE_VERSION
+		echo $"Copying dkms.conf to $source_tree/$PACKAGE_NAME-$PACKAGE_VERSION..."
+		cp -rf $temp_dir_name/dkms_binaries_only/dkms.conf $source_tree/$PACKAGE_NAME-$PACKAGE_VERSION
+	    else
+		echo $"" >$std_err
+		echo $"Binaries-only DKMS tarball does not seem to contain a dkms.conf file for" >$std_err
+		echo $"this module.  Unable to load this tarball into the DKMS tree." >$std_err
+		exit 7
+	    fi
 	fi
 	is_from_make_tarball="true"
 	is_binaries_only="true"
@@ -1533,7 +1560,7 @@ load_tarball()
 	    echo $"Error! Tarball does not appear to be a correctly formed" >$std_err
 	    echo $"DKMS archive." >$std_err
 	    rm -rf $temp_dir_name
-	    exit 7
+	    exit 8
 	fi
 	is_from_mktarball="true"
 	tarball_source_tree_name="dkms_source_tree"
@@ -1793,7 +1820,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.45.01"
+	    echo $"dkms: 0.46.04"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
