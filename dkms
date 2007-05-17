@@ -652,20 +652,33 @@ function moduleconfig_remove ()
     rm -rf $temp_dir_name
 }
 
+# Does string word exist as a word in string list?
+# returns 0 if word present, 1 if word not present
+function is_word_in_list ()
+{
+    for l in $2; do
+	[ "$1" = "${l}" ] && return 0
+    done
+    return 1
+}
+
 function etc_sysconfig_kernel_modify ()
 {
     # Make a temp directory to store files
     local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
 
     if [ -e "/etc/sysconfig/kernel" ] && [ -n "$remake_initrd" ]; then
-
         # Make /etc/sysconfig/kernel changes as necessary
 	if [ "$1" == "add" ]; then
-	    etc_sysconfig_kernel_modify "delete"
+	    unset INITRD_MODULES
+	    eval `grep ^INITRD_MODULES= /etc/sysconfig/kernel`
 	    for module_name_after in "${dest_module_name[@]}"; do
-		sed -e "s/INITRD_MODULES=\"\(.*\)\"/INITRD_MODULES=\"\1 $module_name_after\"/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
-		mv $temp_dir_name/kernel.new /etc/sysconfig/kernel
+		if ! is_word_in_list "${module_name_after}" "${INITRD_MODULES}"; then
+		    sed -e "s/INITRD_MODULES=\"\(.*\)\"/INITRD_MODULES=\"\1 $module_name_after\"/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
+		    mv $temp_dir_name/kernel.new /etc/sysconfig/kernel
+		fi
 	    done
+	    unset INITRD_MODULES
 	
         # Remove /etc/sysconfig/kernel entries
 	elif [ "$1" == "delete" ]; then
@@ -2590,7 +2603,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.10"
+	    echo $"dkms: 2.0.10.1"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

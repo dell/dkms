@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.10
+Version: 2.0.10.1
 Release: 1
 License: GPL
 Group: System Environment/Base
@@ -75,7 +75,8 @@ if [ "$RPM_BUILD_ROOT" != "/" ]; then
 fi
 mkdir -p $RPM_BUILD_ROOT/{var/lib/dkms,/usr/sbin,usr/share/man/man8,etc/init.d,etc/dkms}
 install -m 755 dkms $RPM_BUILD_ROOT/usr/sbin/dkms
-install -m 644 dkms.8.gz $RPM_BUILD_ROOT/usr/share/man/man8
+gzip -c -9 dkms.8 > $RPM_BUILD_ROOT/usr/share/man/man8/dkms.8.gz
+chmod 644 $RPM_BUILD_ROOT/usr/share/man/man8/dkms.8.gz
 install -m 644 dkms_framework.conf  $RPM_BUILD_ROOT/etc/dkms/framework.conf
 install -m 644 template-dkms-mkrpm.spec $RPM_BUILD_ROOT/etc/dkms
 install -m 644 dkms_dbversion $RPM_BUILD_ROOT/var/lib/dkms/dkms_dbversion
@@ -103,6 +104,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Tue Mar 28 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.10.1-1
+- fix munging of /etc/sysconfig/kernel INITRD_MODULES= line
+  so it doesn't move already-present entries to the end
+
 * Thu Mar 16 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.10-1
 - bump to 2.0.10
 
