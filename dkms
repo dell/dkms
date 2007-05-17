@@ -1353,13 +1353,21 @@ make_tarball()
 
     # Create a temp directory and populate it
     temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
-    mkdir -p $temp_dir_name/dkms_source_tree
     mkdir -p $temp_dir_name/dkms_main_tree
 
-    # Copy the source_tree
-    echo $""
-    echo $"Marking $source_tree/$module-$module_version for archiving..."
-    cp -rf $source_tree/$module-$module_version/* $temp_dir_name/dkms_source_tree
+    # Copy the source_tree or make special binaries-only structure
+    if [ -z "$binaries_only" ]; then
+	echo $""
+	echo $"Marking $source_tree/$module-$module_version for archiving..."
+	mkdir -p $temp_dir_name/dkms_source_tree
+	cp -rf $source_tree/$module-$module_version/* $temp_dir_name/dkms_source_tree
+    else
+	echo $""
+	echo $"Binaries only specified.  Creating special tarball structure to accomodate."
+	mkdir $temp_dir_name/dkms_binaries_only
+	echo "$module" > $temp_dir_name/dkms_binaries_only/PACKAGE_NAME
+	echo "$module_version" > $temp_dir_name/dkms_binaries_only/PACKAGE_VERSION
+    fi
 
     # Determine the kernel_versions to put in the tarball
     kernel_version_list=""
@@ -1430,7 +1438,8 @@ load_tarball()
     PACKAGE_NAME=""
     PACKAGE_VERSION=""
     is_from_mktarball=""
-    if ! [ -d "$temp_dir_name/dkms_source_tree" ]; then
+    is_binaries_only=""
+    if ! [ -d "$temp_dir_name/dkms_main_tree" ]; then
 	conf=`find $temp_dir_name/ -name dkms.conf 2>/dev/null | head -1`
 	if [ -z "$conf" ]; then
 	    echo $"" >$std_err
@@ -1448,18 +1457,46 @@ load_tarball()
 	    exit 4
 	fi
 	tarball_source_tree_name=`echo $conf | sed "s#$temp_dir_name\/##" | sed 's/dkms.conf//' | sed 's/\/$//'`
-    else
-	. $temp_dir_name/dkms_source_tree/dkms.conf 2>/dev/null
-	if [ -z "$PACKAGE_NAME" ] || [ -z "$PACKAGE_VERSION" ] || ! [ -d "$temp_dir_name/dkms_main_tree" ]; then
+    elif ! [ -d "$temp_dir_name/dkms_source_tree" ] && [ -d "$temp_dir_name/dkms_binaries_only" ]; then
+	PACKAGE_NAME=`cat $temp_dir_name/dkms_binaries_only/PACKAGE_NAME 2>/dev/null`
+	PACKAGE_VERSION=`cat $temp_dir_name/dkms_binaries_only/PACKAGE_VERSION 2>/dev/null`
+	if [ -z "$PACKAGE_NAME" ] || [ -z "$PACKAGE_VERSION" ]; then
 	    echo $"" >$std_err
 	    echo $"Error! Tarball does not appear to be a correctly formed" >$std_err
 	    echo $"DKMS archive." >$std_err
 	    rm -rf $temp_dir_name
 	    exit 5
 	fi
+	if [ "`dkms status -m $PACKAGE_NAME -v $PACKAGE_VERSION 2>/dev/null`" == "" ]; then
+	    echo $"" >$std_err
+	    echo $"Error! Tarball is a DKMS binaries-only archive, but your DMKS tree" >$std_err
+	    echo $"does not have the source installed for $PACKAGE_NAME-$PACKAGE_VERSION." >$std_err
+	    echo $"To load a DKMS binaries-only archive, you must already have the module" >$std_err
+	    echo $"source in your DMKS tree." >$std_err
+	    exit 6
+	fi
+	is_from_make_tarball="true"
+	is_binaries_only="true"
+    elif [ -d "$temp_dir_name/dkms_source_tree" ]; then
+	. $temp_dir_name/dkms_source_tree/dkms.conf 2>/dev/null
+	if [ -z "$PACKAGE_NAME" ] || [ -z "$PACKAGE_VERSION" ]; then
+	    echo $"" >$std_err
+	    echo $"Error! Tarball does not appear to be a correctly formed" >$std_err
+	    echo $"DKMS archive." >$std_err
+	    rm -rf $temp_dir_name
+	    exit 7
+	fi
 	is_from_mktarball="true"
 	tarball_source_tree_name="dkms_source_tree"
+    else
+	echo $"" >$std_err
+	echo $"Error! Tarball does not appear to be a correctly formed" >$std_err
+	echo $"DKMS archive." >$std_err
+	rm -rf $temp_dir_name
+	exit 8
     fi
+
+    # Make sure we got what we needed from the tarball
     module="$PACKAGE_NAME"
     module_version="$PACKAGE_VERSION"
 
@@ -1468,16 +1505,18 @@ load_tarball()
     echo $""
 
     # Load the source from the tarball
-    if [ "`dkms status -m $module -v $module_version 2>/dev/null`" != "" ] && [ -z "$force" ]; then
-	echo $"Warning! Source for $module-$module_version already exists.  Skipping..."
-    else
-	echo $"Loading $source_tree/$module-$module_version..."
-	rm -rf $source_tree/$module-$module_version
-	mkdir -p $source_tree/$module-$module_version
-	cp -rf $temp_dir_name/$tarball_source_tree_name/* $source_tree/$module-$module_version
-    fi
+    if [ -z "$is_binaries_only" ]; then
+	if [ "`dkms status -m $module -v $module_version 2>/dev/null`" != "" ] && [ -z "$force" ]; then
+	    echo $"Warning! Source for $module-$module_version already exists.  Skipping..."
+	else
+	    echo $"Loading $source_tree/$module-$module_version..."
+	    rm -rf $source_tree/$module-$module_version
+	    mkdir -p $source_tree/$module-$module_version
+	    cp -rf $temp_dir_name/$tarball_source_tree_name/* $source_tree/$module-$module_version
+	fi
 
-    mkdir -p $dkms_tree/$module/$module_version
+	mkdir -p $dkms_tree/$module/$module_version
+    fi
 
     # Load kernel directories
     dirs_to_load=`find $temp_dir_name/dkms_main_tree -type d -maxdepth 1 -mindepth 1 2>/dev/null`
@@ -1641,6 +1680,7 @@ action=""
 force=""
 no_prepare_kernel=""
 no_clean_kernel=""
+binaries_only=""
 all=""
 gt2dot4=""
 module_suffix=""
@@ -1704,7 +1744,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.41.15"
+	    echo $"dkms: 0.42.03"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
@@ -1712,6 +1752,9 @@ while [ $# -gt 0 ]; do
 	    ;;
 	--no-clean-kernel)
 	    no_clean_kernel="no-clean-kernel"
+	    ;;
+	--binaries-only)
+	    binaries_only="binaries-only"
 	    ;;
 	--force)
 	    force="true"

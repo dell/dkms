@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.41.15
+Version: 0.42.03
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -53,6 +53,10 @@ fi
 /sbin/chkconfig dkms_autoinstaller on
 
 %changelog
+* Fri Oct 31 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.42.03-1
+- Added --binaries-only option to mktarball
+- Updated man page
+
 * Thu Oct 30 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.41.15-1
 - If depmod or mkinitrd fail during install, automatically go back to built state
 - Warn heavily if mkinitrd fails during uninstall
