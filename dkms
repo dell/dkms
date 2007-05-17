@@ -87,15 +87,15 @@ function remake_initrd()
 
 function show_usage ()
 {
-    echo $"Usage: $0 [action] [options]" >$std_err
-    echo $"      [action]  = { add | remove | build | install | uninstall | match" >$std_err
-    echo $"                    | mkdriverdisk | mktarball | ldtarball | status }" >$std_err
-    echo $"      [options] = [-c dkms.conf-location] [-k kernel-version] [-m module]" >$std_err
-    echo $"                  [-v module-version] [-d distro] [-q] [--force] [--all]" >$std_err
-    echo $"                  [--postadd=script-location] [--postbuild=script-location]" >$std_err
-    echo $"                  [--postinstall=script-location] [--postremove=script-location]" >$std_err
-    echo $"                  [--templatekernel=kernel] [--config=kernel-.config-location]" >$std_err 
-    echo $"                  [--directive='cli-directive=cli-value']" >$std_err
+    echo $"Usage: $0 [action] [options]" 
+    echo $"      [action]  = { add | remove | build | install | uninstall | match" 
+    echo $"                    | mkdriverdisk | mktarball | ldtarball | status }" 
+    echo $"      [options] = [-c dkms.conf-location] [-k kernel-version] [-m module]" 
+    echo $"                  [-v module-version] [-d distro] [-q] [--force] [--all]" 
+    echo $"                  [--postadd=script-location] [--postbuild=script-location]" 
+    echo $"                  [--postinstall=script-location] [--postremove=script-location]" 
+    echo $"                  [--templatekernel=kernel] [--config=kernel-.config-location]"  
+    echo $"                  [--directive='cli-directive=cli-value']"
 }
 
 function read_conf ()
@@ -724,7 +724,7 @@ function build_module()
     cd "$dkms_tree/$module/$module_version/build"
     invoke_command "$clean >/dev/null 2>&1" "cleaning build area" background
     cd -
-    if [ "$1" != "no-prepare-kernel" ]; then
+    if [ "$1" != "no-prepare-kernel" ] && [ -z $no_clean_kernel ]; then
 	cd "$kernel_source_dir"
 	invoke_command "make mrproper >/dev/null 2>&1" "cleaning kernel tree (make mrproper)" background
 	[ -n "$config_contents" ] && echo "$config_contents" > .config
@@ -1478,6 +1478,8 @@ post_install=""
 kernel_config=""
 action=""
 force=""
+no_prepare_kernel=""
+no_clean_kernel=""
 all=""
 gt2dot4=""
 std_err="/dev/stderr"
@@ -1542,8 +1544,14 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.33.02"
+	    echo $"dkms: 0.34.10"
 	    exit 0
+	    ;;
+	--no-prepare-kernel)
+	    no_prepare_kernel="no-prepare-kernel"
+	    ;;
+	--no-clean-kernel)
+	    no_clean_kernel="no-clean-kernel"
 	    ;;
 	--force)
 	    force="true"
@@ -1655,7 +1663,7 @@ case "$action" in
 	remove_module
 	;;
     build)
-	build_module
+	build_module $no_prepare_kernel
 	;;
     install)
         # Make sure they're root

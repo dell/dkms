@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.33.02
+Version: 0.34.10
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
@@ -24,11 +24,12 @@ Computer Corporation.
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
         rm -rf $RPM_BUILD_ROOT
 fi
-mkdir -p $RPM_BUILD_ROOT/{var/dkms,sbin,usr/share/man/man8,etc}
+mkdir -p $RPM_BUILD_ROOT/{var/dkms,sbin,usr/share/man/man8,etc,etc/rc.d/init.d}
 install -m 755 dkms $RPM_BUILD_ROOT/sbin/dkms
 install -m 644 dkms.8.gz $RPM_BUILD_ROOT/usr/share/man/man8
 install -m 644 dkms_framework.conf  $RPM_BUILD_ROOT/etc/dkms_framework.conf
 install -m 644 dkms_dbversion $RPM_BUILD_ROOT/var/dkms/dkms_dbversion
+install -m 755 dkms_autoinstaller $RPM_BUILD_ROOT/etc/rc.d/init.d/dkms_autoinstaller
 
 %clean 
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
@@ -39,11 +40,24 @@ fi
 %defattr(-,root,root)
 %attr(0755,root,root) /sbin/dkms
 %attr(0755,root,root) /var/dkms
+%attr(0755,root,root) /etc/rc.d/init.d/dkms_autoinstaller
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
 %doc %attr(0644,root,root) sample.spec AUTHORS COPYING
 %config(noreplace) /etc/dkms_framework.conf
 
+%post
+/sbin/chkconfig dkms_autoinstaller on
+
 %changelog
+* Mon Sep 08 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.34.10-1
+- Continued adding autoinstall stuff
+- Updated man page
+
+* Fri Sep 05 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.34.01-1
+- Added dkms_autoinstaller service (builds module on boot if AUTOINSTALL="yes" in dkms.conf)
+- DKMS usage no longer sent to std_err
+- Added --no-prepare-kernel cli option
+
 * Fri Aug 08 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.33.02-1
 - Fixed quote bugs in match (Reported by: John Hull <john_hull@dell.com>) 
 - Added Fred Treasure to the AUTHORS list
