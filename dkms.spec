@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.39.17
+Version: 0.40.11
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -43,13 +43,26 @@ fi
 %attr(0755,root,root) /var/dkms
 %attr(0755,root,root) /etc/rc.d/init.d/dkms_autoinstaller
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
-%doc %attr(0644,root,root) sample.spec AUTHORS COPYING
+%doc %attr(0644,root,root) sample.spec sample.conf AUTHORS COPYING
 %config(noreplace) /etc/dkms_framework.conf
 
 %post
 /sbin/chkconfig dkms_autoinstaller on
 
 %changelog
+* Thu Oct 02 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.40.11-1
+- Added --rpm_safe_upgrade flag
+- Updated the man page and sample.spec
+
+* Wed Oct 01 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.40.05-1
+- No longer copy dkms.conf into /var/dkms tree, just go to the source_tree so as to reduce duplication
+- Got rid of --post-add, --post-build, --post-install and --post-remove
+- Replaced the above with DKMS directives POST_ADD, POST_BUILD, POST_INSTALL, POST_REMOVE
+- Fixed ldtarball and mktarball to no longer look for these duplicate files
+- Added a sample.conf for /usr/share/doc
+- Updated dkms_dbversion to 1.01 from 1.00 due to these changes
+- Update the man page
+
 * Tue Sep 30 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.39.17-1
 - Added diff checking in status command in case modules are overwritten by someone else
 - Fixed already built error message in build_module

@@ -85,10 +85,8 @@ function show_usage ()
     echo $"Usage: $0 [action] [options]" 
     echo $"  [action]  = { add | remove | build | install | uninstall | match" 
     echo $"               | mkdriverdisk | mktarball | ldtarball | status }" 
-    echo $"  [options] = [-c dkms.conf-location] [-k kernel-version] [-m module]" 
-    echo $"              [-v module-version] [-d distro] [-q] [--force] [--all]" 
-    echo $"              [--postadd=script-location] [--postbuild=script-location]" 
-    echo $"              [--postinstall=script-location] [--postremove=script-location]" 
+    echo $"  [options] = [-k kernel-version] [-m module] [-v module-version]" 
+    echo $"              [-d distro] [-c dkms.conf-location] [-q] [--force] [--all]" 
     echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"  
     echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"  
 }
@@ -102,7 +100,7 @@ function read_conf ()
     elif [ -n "$conf" ]; then
 	read_conf_file="$conf"
     else
-	read_conf_file="$dkms_tree/$module/$module_version/dkms.conf"
+	read_conf_file="$dkms_tree/$module/$module_version/source/dkms.conf"
     fi
 
     # Clear variables
@@ -116,6 +114,10 @@ function read_conf ()
     BUILT_MODULE_LOCATION=""
     DEST_MODULE_NAME=""
     DEST_MODULE_LOCATION=""
+    POST_ADD=""
+    POST_BUILD=""
+    POST_INSTALL=""
+    POST_REMOVE=""
 
     # Set variables supported in dkms.conf files (eg. $kernelver)
     kernelver="$kernel_version"
@@ -140,6 +142,10 @@ function read_conf ()
     modules_conf_alias_type="$MODULES_CONF_ALIAS_TYPE"
     package_name="$PACKAGE_NAME"
     package_version="$PACKAGE_VERSION"
+    post_add="$POST_ADD"
+    post_build="$POST_BUILD"
+    post_install="$POST_INSTALL"
+    post_remove="$POST_REMOVE"
 
     # Set module naming/location arrays
     index=0
@@ -341,7 +347,7 @@ function add_module ()
     if [ -z "$module" ] || [ -z "$module_version" ]; then
 	echo $"" >$std_err
 	echo $"Error! Invalid number of arguments passed." >$std_err
-	echo $"Usage: add [-m module] [-v module-version] [-c dkms.conf-location]" >$std_err
+	echo $"Usage: add [-m module] [-v module-version]" >$std_err
 	exit 1
     fi
 
@@ -355,6 +361,14 @@ function add_module ()
 	echo $"Error! Could not find module source directory." >$std_err
 	echo $"Directory: $source_tree/$module-$module_version does not exist." >$std_err
 	exit 2
+    fi
+
+    # Do stuff for --rpm_safe_upgrade
+    if [ -n "$rpm_safe_upgrade" ]; then
+	pppid=`cat /proc/$PPID/status | grep PPid: | awk {'print $2'}`
+	temp_dir_name=`mktemp $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.XXXXXX 2>/dev/null`
+	echo "$module-$module_version" >> $temp_dir_name
+	ps -o lstart --no-headers -p $pppid 2>/dev/null >> $temp_dir_name
     fi
 
     # Check that this module-version hasn't already been added
@@ -372,30 +386,6 @@ function add_module ()
 	echo $"File: $conf does not exist." >$std_err
 	exit 4
     fi
-    if [ -n "$post_add" ] && ! [ -e "$post_add" ]; then
-	echo $"" >$std_err
-	echo $"Error! Could not locate postadd script." >$std_err
-	echo $"File: $post_add does not exist." >$std_err
-	exit 5
-    fi
-    if [ -n "$post_build" ] && ! [ -e "$post_build" ]; then
-	echo $"" >$std_err
-	echo $"Error! Could not locate postbuild script." >$std_err
-	echo $"File: $post_build does not exist." >$std_err
-	exit 5
-    fi
-    if [ -n "$post_install" ] && ! [ -e "$post_install" ]; then
-	echo $"" >$std_err
-	echo $"Error! Could not locate postinstall script." >$std_err
-	echo $"File: $post_install does not exist." >$std_err
-	exit 6
-    fi
-    if [ -n "$post_remove" ] && ! [ -e "$post_remove" ]; then
-	echo $"" >$std_err
-	echo $"Error! Could not locate postremove script." >$std_err
-	echo $"File: $post_remove does not exist." >$std_err
-	exit 7
-    fi
 
     # Check the conf file for sanity
     read_conf "$conf"
@@ -407,44 +397,21 @@ function add_module ()
     fi
     
     # Create the necessary dkms tree structure
+    echo $""
+    echo $"Creating symlink $dkms_tree/$module/$module_version/source ->"
+    echo $"                 $source_tree/$module-$module_version"
     mkdir -p "$dkms_tree/$module/$module_version/build"
     ln -s "$source_tree/$module-$module_version" "$dkms_tree/$module/$module_version/source"
-    
-    # Copy the dkms.conf file
-    echo $"Copying $conf to: $dkms_tree/$module/$module_version/dkms.conf" 
-    cp -f "$conf" "$dkms_tree/$module/$module_version/dkms.conf"
-    
-    # Copy any other scripts as necessary
-    if [ -n "$post_add" ]; then
-	echo $"Copying $post_add to: $dkms_tree/$module/$module_version/post_add" 
-	cp -f "$post_add" "$dkms_tree/$module/$module_version/post_add"
-	chmod u+x "$dkms_tree/$module/$module_version/post_add"
-    fi
-    if [ -n "$post_build" ]; then
-	echo $"Copying $post_build to: $dkms_tree/$module/$module_version/post_build" 
-	cp -f "$post_build" "$dkms_tree/$module/$module_version/post_build"
-	chmod u+x "$dkms_tree/$module/$module_version/post_build"
-    fi
-    if [ -n "$post_install" ]; then
-	echo $"Copying $post_install to: $dkms_tree/$module/$module_version/post_install" 
-	cp -f "$post_install" "$dkms_tree/$module/$module_version/post_install"
-	chmod u+x "$dkms_tree/$module/$module_version/post_install"
-    fi
-    if [ -n "$post_remove" ]; then
-	echo $"Copying $post_remove to: $dkms_tree/$module/$module_version/post_remove" 
-	cp -f "$post_remove" "$dkms_tree/$module/$module_version/post_remove"
-	chmod u+x "$dkms_tree/$module/$module_version/post_remove"
-    fi
-
+   
     # Run the post_add script
-    if [ -x "$dkms_tree/$module/$module_version/post_add" ]; then
+    if [ -n "$post_add" ] && [ -x "$dkms_tree/$module/$module_version/source/$post_add" ]; then
 	echo $"" 
 	echo $"Running the post_add script:" 
-	"$dkms_tree/$module/$module_version/post_add" 
+	"$dkms_tree/$module/$module_version/source/$post_add" 
     fi
     
     echo $"" 
-    echo $"Add Completed." 
+    echo $"DKMS: Add Completed." 
 }
 
 function prepare_kernel()
@@ -557,7 +524,7 @@ function install_module()
     if [ "$?" -ne 0 ]; then
 	echo $"" >$std_err
 	echo $"Error! Bad conf file." >$std_err
-	echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" $std_err
+	echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" $std_err
 	echo $"a valid dkms.conf file." >$std_err
 	exit 3
     fi
@@ -565,7 +532,7 @@ function install_module()
     # Make sure the $module_name_after exists
     for module_name_after in ${dest_module_name[*]}; do
 	if ! [ -e "$dkms_tree/$module/$module_version/$kernel_version/module/$module_name_after$module_suffix" ]; then
-	    echo $"" >$std_err
+    echo $"" >$std_err
 	    echo $"Error! Could not locate $module_name_after$module_suffix for module $module in the DKMS tree." >$std_err
 	    echo $"You must run a dkms build for kernel $kernel_version first." >$std_err
 	    exit 4
@@ -625,10 +592,10 @@ function install_module()
     ln -s "$module_version/$kernel_version" "$dkms_tree/$module/kernel-$kernel_version" 2>/dev/null
 
     # Run the post_install script
-    if [ -x "$dkms_tree/$module/$module_version/post_install" ]; then
+    if [ -n "$post_install" ] && [ -x "$dkms_tree/$module/$module_version/source/$post_install" ]; then
 	echo $"" 
 	echo $"Running the post_install script:" 
-	"$dkms_tree/$module/$module_version/post_install" 
+	"$dkms_tree/$module/$module_version/source/$post_install" 
     fi
 
     # Make modules.conf changes as necessary
@@ -646,7 +613,7 @@ function install_module()
     fi
      
     echo $"" 
-    echo $"Install Completed." 
+    echo $"DKMS: Install Completed." 
 }
 
 
@@ -690,7 +657,7 @@ function build_module()
     if [ "$?" -ne 0 ]; then
 	echo $"" >$std_err
 	echo $"Error! Bad conf file." >$std_err
-	echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
+	echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" >$std_err
 	echo $"a valid dkms.conf file." >$std_err
 	exit 4
     fi
@@ -760,10 +727,10 @@ function build_module()
     done
 
     # Run the post_build script
-    if [ -x "$dkms_tree/$module/$module_version/post_build" ]; then
+    if [ -n "$post_build" ] && [ -x "$dkms_tree/$module/$module_version/source/$post_build" ]; then
 	echo $"" 
 	echo $"Running the post_build script:" 
-	"$dkms_tree/$module/$module_version/post_build" 
+	"$dkms_tree/$module/$module_version/source/$post_build" 
     fi
     
     # Run the clean commands
@@ -781,7 +748,7 @@ function build_module()
     rm -rf "$dkms_tree/$module/$module_version/build/*"
 
     echo $"" 
-    echo $"Build Completed." 
+    echo $"DKMS: Build Completed." 
 }
 
 function do_uninstall()
@@ -826,10 +793,10 @@ function do_uninstall()
     fi
 
     # Run the post_remove script
-    if [ -x "$dkms_tree/$module/$module_version/post_remove" ]; then
+    if [ -n "$post_remove" ] && [ -x "$dkms_tree/$module/$module_version/source/$post_remove" ]; then
 	echo $"" 
 	echo $"Running the post_remove script:" 
-	"$dkms_tree/$module/$module_version/post_remove" 
+	"$dkms_tree/$module/$module_version/source/$post_remove" 
     fi
 
     # Run depmod if System.map-<kernel_version> exists
@@ -857,7 +824,7 @@ function do_uninstall()
     fi
     
     echo $"" 
-    echo $"Uninstall finished." 
+    echo $"DKMS: Uninstall Completed." 
 }
 
 function uninstall_module ()
@@ -897,7 +864,7 @@ function uninstall_module ()
     if [ "$?" -ne 0 ]; then
 	echo $"" >$std_err
 	echo $"Error! Bad conf file." >$std_err
-	echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
+	echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" >$std_err
 	echo $"a valid dkms.conf file." >$std_err
 	exit 4
     fi
@@ -950,12 +917,28 @@ function remove_module ()
 	exit 4
     fi
 
+    # Do --rpm_safe_upgrade check (exit out and don't do remove if inter-release RPM upgrade scenario occurs)
+    if [ -n "$rpm_safe_upgrade" ]; then
+	pppid=`cat /proc/$PPID/status | grep PPid: | awk {'print $2'}`
+	time_stamp=`ps -o lstart --no-headers -p $pppid 2>/dev/null`
+	for lock_file in `ls $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.* 2>/dev/null`; do
+	    lock_head=`head -1 $lock_file 2>/dev/null`
+	    lock_tail=`tail -1 $lock_file 2>/dev/null`
+	    if [ "$lock_head" == "$module-$module_version" ] && [ "$lock_tail" == "$time_stamp" ] && [ -n "$time_stamp" ]; then
+		echo $""
+		echo $"DKMS: Remove cancelled because --rpm_safe_upgrade scenario detected."
+		rm -f $lock_file
+		exit 0
+	    fi
+	done
+    fi
+
     # Read the conf file
     read_conf
     if [ "$?" -ne 0 ]; then
 	echo $"" >$std_err
 	echo $"Error! Bad conf file." >$std_err
-	echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
+	echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" >$std_err
 	echo $"a valid dkms.conf file." >$std_err
 	exit 5
     fi
@@ -976,7 +959,7 @@ function remove_module ()
 	    if [ "$?" -ne 0 ]; then
 		echo $"" >$std_err
 		echo $"Error! Bad conf file." >$std_err
-		echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
+		echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" >$std_err
 		echo $"a valid dkms.conf file." >$std_err
 		exit 6
 	    fi
@@ -1070,7 +1053,7 @@ show_status ()
 		    fi
 
 		    # Source in the dkms.conf
-		    conf="$dkms_tree/$module_in_tree/$version_in_tree/dkms.conf"
+		    conf="$dkms_tree/$module_in_tree/$version_in_tree/source/dkms.conf"
 		    read_conf $conf
 
 	            # Iterate over the kernels
@@ -1160,7 +1143,7 @@ make_driver_disk ()
     if [ "$?" -ne 0 ]; then
 	echo $"" >$std_err
 	echo $"Error! Bad conf file." >$std_err
-	echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
+	echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" >$std_err
 	echo $"a valid dkms.conf file." >$std_err
 	exit 4
     fi
@@ -1276,7 +1259,7 @@ make_tarball()
     if [ "$?" -ne 0 ]; then
 	echo $"" >$std_err
 	echo $"Error! Bad conf file." >$std_err
-	echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
+	echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" >$std_err
 	echo $"a valid dkms.conf file." >$std_err
 	exit 5
     fi
@@ -1301,9 +1284,6 @@ make_tarball()
     echo $""
     echo $"Marking $source_tree/$module-$module_version for archiving..."
     cp -rf $source_tree/$module-$module_version/* $temp_dir_name/dkms_source_tree
-    
-    # Get the base-level files
-    cp `find $dkms_tree/$module/$module_version -type f -maxdepth 1` $temp_dir_name/dkms_main_tree/
 
     # Determine the kernel_versions to put in the tarball
     kernel_version_list=""
@@ -1422,27 +1402,6 @@ load_tarball()
     fi
 
     mkdir -p $dkms_tree/$module/$module_version
-
-    # Create a list of config files & scripts to load
-    files_to_load=""
-    if [ -n "$is_from_mktarball" ]; then
-	files_to_load=`find $temp_dir_name/dkms_main_tree -type f -maxdepth 1 2>/dev/null`
-    else
-	for file in dkms.conf post_add post_build post_install post_remove; do
-	    [ -e "$temp_dir_name/$tarball_source_tree_name/$file" ] && files_to_load="$temp_dir_name/$tarball_source_tree_name/$file $files_to_load"
-	done
-    fi
-
-    # Load the list
-    for filename in $files_to_load; do
-	dkms_file_location="$dkms_tree/$module/$module_version/`echo $filename | sed 's/.*\///'`"
-	if [ -e "$dkms_file_location" ] && [ -z "$force" ]; then
-	    echo $"Warning! $dkms_file_location already exists.  Skipping..."
-	else
-	    cp -f $filename $dkms_file_location
-	    echo "Loading $dkms_file_location..."
-	fi
-    done
 
     # Load kernel directories
     dirs_to_load=`find $temp_dir_name/dkms_main_tree -type d -maxdepth 1 -mindepth 1 2>/dev/null`
@@ -1598,10 +1557,6 @@ kernel_version=""
 template_kernel=""
 distro=""
 conf=""
-post_add=""
-post_build=""
-post_remove=""
-post_install=""
 kernel_config=""
 archive_location=""
 kernel_source_dir=""
@@ -1612,6 +1567,7 @@ no_clean_kernel=""
 all=""
 gt2dot4=""
 module_suffix=""
+rpm_safe_upgrade=""
 std_err="/dev/stderr"
 
 # Set up arrays
@@ -1673,7 +1629,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.39.17"
+	    echo $"dkms: 0.40.11"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
@@ -1688,6 +1644,9 @@ while [ $# -gt 0 ]; do
 	--all)
 	    all="true"
 	    ;;
+	--rpm_safe_upgrade)
+	    rpm_safe_upgrade="true"
+	    ;;
 	--dkmstree*)
 	    if echo $1 | grep '=' >/dev/null ; then
 		dkms_tree=`echo $1 | sed 's/^.*=//'`
@@ -1701,38 +1660,6 @@ while [ $# -gt 0 ]; do
 		source_tree=`echo $1 | sed 's/^.*=//'`
             else
                 source_tree="$2"
-                shift
-            fi
-            ;;
-	--postadd*)
-	    if echo $1 | grep '=' >/dev/null ; then
-		post_add=`echo $1 | sed 's/^.*=//'`
-            else
-                post_add="$2"
-                shift
-            fi
-            ;;
-	--postbuild*)
-	    if echo $1 | grep '=' >/dev/null ; then
-		post_build=`echo $1 | sed 's/^.*=//'`
-            else
-                post_build="$2"
-                shift
-            fi
-            ;;
-	--postremove*)
-	    if echo $1 | grep '=' >/dev/null ; then
-		post_remove=`echo $1 | sed 's/^.*=//'`
-            else
-                post_remove="$2"
-                shift
-            fi
-            ;;
-	--postinstall*)
-	    if echo $1 | grep '=' >/dev/null ; then
-		post_install=`echo $1 | sed 's/^.*=//'`
-            else
-                post_install="$2"
                 shift
             fi
             ;;
