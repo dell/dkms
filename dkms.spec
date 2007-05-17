@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.8.3
+Version: 2.0.9
 Release: 1
 License: GPL
 Group: System Environment/Base
@@ -101,6 +101,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Dec 8 2005 Matt Domsch <Matt_Domsch@dell.com> 2.0.9-1
+- fix DF28947 (remove word 'only') from a printed message
+- gzip -9 dkms.8 manpage
+
 * Wed Dec 7 2005 Matt Domsch <Matt_Domsch@dell.com> 2.0.8.3
 - look to DKMS_DIRECTIVE* environment variables to override dkms.conf settings
 - don't create/remove (unused) /var/lock/subsys/dkms files in autoinstaller

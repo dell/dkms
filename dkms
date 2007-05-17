@@ -772,7 +772,7 @@ function prepare_kernel()
     # Prepare kernel for module build
     echo $"" 
     echo $"Preparing kernel $1 for module build:" 
-    echo $"(This is not compiling a kernel, only just preparing kernel symbols)" 
+    echo $"(This is not compiling a kernel, just preparing kernel symbols)" 
     cd $kernel_source_dir
     config_contents=`cat .config 2>/dev/null`
     [ -n "$config_contents" ] && echo $"Storing current .config to be restored when complete"
@@ -2449,7 +2449,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.8.3"
+	    echo $"dkms: 2.0.9"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
