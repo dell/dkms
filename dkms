@@ -490,10 +490,10 @@ function add_module ()
     ln -s "$source_tree/$module-$module_version" "$dkms_tree/$module/$module_version/source"
    
     # Run the post_add script
-    if [ -n "$post_add" ] && [ -x "$dkms_tree/$module/$module_version/source/$post_add" ]; then
+    if [ -n "$post_add" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$post_add" | sed 's/ .*//'` ]; then
 	echo $"" 
 	echo $"Running the post_add script:" 
-	"$dkms_tree/$module/$module_version/source/$post_add" 
+	$dkms_tree/$module/$module_version/source/$post_add
     fi
     
     echo $"" 
@@ -728,10 +728,10 @@ function install_module()
     ln -s "$module_version/$kernel_version" "$dkms_tree/$module/kernel-$kernel_version" 2>/dev/null
 
     # Run the post_install script
-    if [ -n "$post_install" ] && [ -x "$dkms_tree/$module/$module_version/source/$post_install" ]; then
+    if [ -n "$post_install" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$post_install" | sed 's/ .*//'` ]; then
 	echo $""
 	echo $"Running post_install:"  
-	"$dkms_tree/$module/$module_version/source/$post_install" 
+	$dkms_tree/$module/$module_version/source/$post_install
     fi
 
     # Make modules.conf changes as necessary
@@ -927,10 +927,10 @@ function build_module()
     done
 
     # Run the post_build script
-    if [ -n "$post_build" ] && [ -x "$dkms_tree/$module/$module_version/source/$post_build" ]; then
+    if [ -n "$post_build" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$post_build" | sed 's/ .*//'` ]; then
 	echo $"" 
 	echo $"Running the post_build script:" 
-	"$dkms_tree/$module/$module_version/source/$post_build" 
+	$dkms_tree/$module/$module_version/source/$post_build 
     fi
     
     # Run the clean commands
@@ -997,10 +997,10 @@ function do_uninstall()
     fi
 
     # Run the post_remove script
-    if [ -n "$post_remove" ] && [ -x "$dkms_tree/$module/$module_version/source/$post_remove" ]; then
+    if [ -n "$post_remove" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$post_remove" | sed 's/ .*//'` ]; then
 	echo $"" 
 	echo $"Running the post_remove script:" 
-	"$dkms_tree/$module/$module_version/source/$post_remove" 
+	$dkms_tree/$module/$module_version/source/$post_remove
     fi
     
     # Do remake_initrd things (remake initrd)
@@ -1909,7 +1909,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 1.11.1"
+	    echo $"dkms: 1.12"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
