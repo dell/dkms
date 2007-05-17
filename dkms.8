@@ -1,5 +1,5 @@
 .\" -*- nroff -*-
-.TH DKMS 8 "Mar 2006" "Version 2.0.14"
+.TH DKMS 8 "Feb 2007" "Version 2.0.14"
 .SH NAME
 dkms \- Dynamic Kernel Module Support
 .SH SYNOPSIS
@@ -94,6 +94,20 @@ By default the disk image it creates is 1440 (k) in size.  This can be
 overridden by specifying a different
 .B --size ####
 which should should be given as a number in kilobytes divisible by 20.
+
+You may have more content than will fit on a floppy.  Therefore, DKMS
+can now generate image files of different types.
+.B --media=floppy (default)
+to generate a floppy disk image, or
+.B --media=iso
+to generate a CD-ROM ISO file, or
+.B --media=tar
+to generate a tar file.
+
+You may copy the floppy or ISO image file to a USB key to be used with
+OS installer.
+
+
 .TP
 .B mktarball
 Creates a tarball archive for the specified module/version of all files
@@ -152,7 +166,8 @@ It uses the .spec file specified by
 else
 .I $module-kmp.spec
 as the basis for the RPM.  The generated source RPM may then be built using SuSE's build.rpm or
-Fedora's mock chroot environments.
+Fedora/RHEL's mock chroot environments.  See http://kerneldrivers.org/ for
+more details on KMPs.
 .TP 
 .B status        
 Returns the current status of modules, versions and kernels within
@@ -835,6 +850,9 @@ Gary Lerhaupt
 dkms-devel@dell.com
 .I http://lists.us.dell.com/mailman/listinfo/dkms-devel
 .SH REFERENCES
+Kernel Module Packages
+.I http://kerneldrivers.org
+
 Novell Kernel Module Packages
 .I http://www.suse.de/~agruen/KMPM
 

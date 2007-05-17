@@ -243,7 +243,6 @@ function remake_initrd()
     return $exitval
 }
 
-
 function distro_version()
 {
 # What distribution are we running?
@@ -309,7 +308,6 @@ function override_dest_module_location()
     esac
     echo "$orig_location"
 }
-
 
 function read_conf ()
 {
@@ -1009,7 +1007,6 @@ function list_each_installed_module ()
     done
 }
 
-
 function install_module()
 {
     setup_kernels_arches "install"
@@ -1146,9 +1143,8 @@ function install_module()
 
     # add to kabi-tracking
     if [ -x /sbin/weak-modules ]; then
-	echo -n "list_each_installed_module = "
-	list_each_installed_module
-	list_each_installed_module "${kernelver_array[0]}" | /sbin/weak-modules --add-modules --verbose 
+	echo $"Adding any weak-modules"
+	list_each_installed_module "${kernelver_array[0]}" | /sbin/weak-modules --add-modules
     fi
     
     # Create the kernel-<kernelver> symlink to designate this version as active
@@ -1447,7 +1443,8 @@ function do_uninstall()
 	# remove kabi-tracking if last instance removed
 	if [ -x /sbin/weak-modules ] && 
 	    [ `$0 status -m $module -v $module_version | grep -c "installed"` -eq 1 ]; then
-	    list_each_installed_module "$1" | /sbin/weak-modules --remove-modules --verbose
+	    echo $"Removing any linked weak-modules"
+	    list_each_installed_module "$1" | /sbin/weak-modules --remove-modules
 	fi
 	rm -f "$dkms_tree/$module/kernel-$1-$2"
     else
@@ -1730,7 +1727,6 @@ function do_status_weak ()
     print_string_array
 }
 
-
 do_status () 
 {
     local mod="$1"; shift
@@ -1962,7 +1958,6 @@ driver_disk_suffix()
     esac
     echo $suffix
 }    
-
 
 make_redhat_driver_disk() 
 {
@@ -2201,7 +2196,6 @@ make_suse_driver_disk()
 	make_driver_disk_media "$image_dir/$image_name" "$driver_disk_dir"
 	cd - >/dev/null
 	rm -rf "$driver_disk_dir"
-
 
 	echo $""
    	echo $"Disk image location: $dkms_tree/$module/$module_version/driver_disk/$image_name"
@@ -2967,7 +2961,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.13.3"
+	    echo $"dkms: 2.0.14"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
