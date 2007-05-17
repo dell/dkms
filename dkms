@@ -238,8 +238,9 @@ function read_conf ()
 
     # Use the generic make command if kernel >= 2.5
     if [ -n "$gt2dot4" ]; then
-	make_command="make -C /lib/modules/$kernel_version/build SUBDIRS=$dkms_tree/$module/$module_version/build modules"
-	[ -d "$kernel_source_dir" ] && ! [ -h "$kernel_source_dir" ] && make_command="make -C /lib/modules/$kernel_version/build M=$dkms_tree/$module/$module_version/build"
+	#make_command="make -C /lib/modules/$kernel_version/build SUBDIRS=$dkms_tree/$module/$module_version/build modules"
+	#[ -d "$kernel_source_dir" ] && ! [ -h "$kernel_source_dir" ] && make_command="make -C /lib/modules/$kernel_version/build M=$dkms_tree/$module/$module_version/build"
+	make_command="make -C /lib/modules/$kernel_version/build M=$dkms_tree/$module/$module_version/build"
     fi
     
     # Set modules_conf_array
@@ -594,7 +595,7 @@ function prepare_kernel()
 	    cp -f "$kernel_config" .config
 	fi
 
-	[ -n "$gt2dot4" ] && invoke_command "make KERNELRELEASE=$kernel_version prepare-all >/dev/null 2>&1" "make prepare-all" background
+	[ -n "$gt2dot4" ] && invoke_command "make KERNELRELEASE=$kernel_version modules_prepare >/dev/null 2>&1" "make prepare-all" background
 	invoke_command "make KERNELRELEASE=$kernel_version oldconfig >/dev/null 2>&1" "make oldconfig" background
 	[ -z "$gt2dot4" ] && invoke_command "make KERNELRELEASE=$kernel_version dep >/dev/null 2>&1" "make dep" background
     fi
@@ -665,34 +666,55 @@ function install_module()
     lib_tree="/lib/modules/$kernel_version"
     count=0
     while [ "$count" -lt "${#built_module_name[*]}" ]; do
+	echo $""
+	echo $"${dest_module_name[$count]}$module_suffix:"
 	module_count=`find $lib_tree -name ${dest_module_name[$count]}$module_suffix | wc -l | awk {'print $1'}`
-	if ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -eq 1 ]; then
-	    echo $"" 
-	    echo $"Found an original module ${dest_module_name[$count]}$module_suffix in /lib/modules/" 
-	    echo $"Archiving it within the DKMS tree for uninstallation purposes." 
-	    mkdir -p "$dkms_tree/$module/original_module/$kernel_version/"
-	    mv -f `find $lib_tree -name ${dest_module_name[$count]}$module_suffix` "$dkms_tree/$module/original_module/$kernel_version/"
-	elif  ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -gt 1 ] && [ -e "/lib/modules/$kernel_version${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" ]; then
-	    echo $""
-	    echo $"Found multiple original modules ${dest_module_name[$count]}$module_suffix in /lib/modules"
-	    echo $"Archiving the one in /lib/modules/$kernel_version${dest_module_location[$count]} for uninstallation purposes."
-	    echo $"Warning! Since multiple modules exist with the same name, problems"
-	    echo $"may arise."
-	    mkdir -p "$dkms_tree/$module/original_module/$kernel_version/"
-	    mv -f "/lib/modules/$kernel_version${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" "$dkms_tree/$module/original_module/$kernel_version/"
-	elif  ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -gt 1 ] && ! [ -e "/lib/modules/$kernel_version${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" ]; then
-	    echo $""
-	    echo $"Multiple original modules ${dest_module_name[$count]}$module_suffix exist in /lib/modules"
-	    echo $"Due to this confusion, DKMS cannot archive any of them for uninstallation."
-	    echo $"Warning! Since multiple modules exist with the same name, problems"
-	    echo $"may arise."	    
+	echo $" - Original module"
+	if ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ]; then
+	    archive_pref1="$lib_tree/updates/${dest_module_name[$count]}$module_suffix"
+	    archive_pref2="$lib_tree${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+	    [ "$module_count" -eq 1 ] && archive_pref3="`find $lib_tree -name ${dest_module_name[$count]}$module_suffix`"
+	    original_module=""
+	    found_orginal=""
+	    for original_module in $archive_pref1 $archive_pref2 $archive_pref3; do
+		if [ -e "$original_module" ]; then
+		    echo $"   - Found $original_module"
+		    echo $"   - Storing in $dkms_tree/$module/original_module/$kernel_version/"
+		    echo $"   - Archiving for uninstallation purposes"
+		    mkdir -p "$dkms_tree/$module/original_module/$kernel_version/"
+		    cp -f "$original_module" "$dkms_tree/$module/original_module/$kernel_version/"
+		    found_original="yes"
+		    break
+		fi
+	    done
+	    if [ -z "$found_original" ] && [ "$module_count" -gt 1 ]; then
+		echo $"   - Multiple original modules exist but DKMS does not know which to pick"
+		echo $"   - Due to the confusion, none will be considered during a later uninstall"
+	    elif [ -z "$found_original" ]; then
+		echo $"   - No original module exists within this kernel"
+	    fi
+	elif [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ -e "$dkms_tree/$module/original_module/$kernel_version/${dest_module_name[$count]}$module_suffix" ]; then
+	    echo $"   - An original module was already stored during a previous install"
 	else
-	    rm -f "/lib/modules/$kernel_version${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" 2>/dev/null
+	    echo $"   - This kernel never originally had a module by this name"
+	fi
+	    
+	if [ "$module_count" -gt 1 ]; then
+	    echo $" - Multiple same named modules!"
+	    echo $"   - $module_count named ${dest_module_name[$count]}$module_suffix in $lib_tree/"
+	    echo $"   - All instances of this module will now be stored for reference purposes ONLY"
+	    echo $"   - Storing in $dkms_tree/$module/original_module/$kernel_version/collisions/"
+	    for module_dup in `find $lib_tree -name ${dest_module_name[$count]}$module_suffix`; do
+		dup_tree=`echo $module_dup | sed "s#^$lib_tree##" | sed "s#${dest_module_name[$count]}$module_suffix##"`
+		echo $"     - Stored $module_dup"
+		mkdir -p "$dkms_tree/$module/original_module/$kernel_version/collisions/$dup_tree"
+		mv -f $module_dup "$dkms_tree/$module/original_module/$kernel_version/collisions/$dup_tree"
+	    done
 	fi
 
         # Copy module to its location
-	echo $""
- 	echo $"Copying the new ${dest_module_name[$count]}$module_suffix for $module to /lib/modules/$kernel_version${dest_module_location[$count]}" 
+	echo $" - Installation"
+ 	echo $"   - Installing to /lib/modules/$kernel_version${dest_module_location[$count]}/" 
 	mkdir -p /lib/modules/$kernel_version${dest_module_location[$count]}
 	cp -f "$dkms_tree/$module/$module_version/$kernel_version/module/${dest_module_name[$count]}$module_suffix" "/lib/modules/$kernel_version${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
 
@@ -705,12 +727,13 @@ function install_module()
 
     # Run the post_install script
     if [ -n "$post_install" ] && [ -x "$dkms_tree/$module/$module_version/source/$post_install" ]; then
-	echo $"" 
-	echo $"Running the post_install script:" 
+	echo $""
+	echo $"Running post_install:"  
 	"$dkms_tree/$module/$module_version/source/$post_install" 
     fi
 
     # Make modules.conf changes as necessary
+    echo $""
     modulesconf_modify "add"
     etc_sysconfig_kernel_modify "add"
 
@@ -722,6 +745,7 @@ function install_module()
 	    count=0
 	    while [ "$count" -lt "${#built_module_name[*]}" ]; do
 		if [ `echo "$unresolved_symbols" | grep -c "${dest_module_name[$count]}$module_suffix$"` -gt 0 ]; then
+		    echo $""
 		    echo $"Problems with depmod detected.  Automatically uninstalling this module."
 		    sleep 2
 		    do_uninstall
@@ -938,18 +962,21 @@ function do_uninstall()
 	count=0
 	while [ "$count" -lt "${#built_module_name[*]}" ]; do
 	    echo $""
-	    echo $"Deleting ${dest_module_name[$count]}$module_suffix from: /lib/modules/$kernel_version${dest_module_location[$count]}" 
+	    echo $"${dest_module_name[$count]}$module_suffix:"
+	    echo $" - Uninstallation"
+	    echo $"   - Deleting from: /lib/modules/$kernel_version${dest_module_location[$count]}/" 
 	    rm -f "/lib/modules/$kernel_version${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+	    echo $" - Original module"
 	    if [ -e "$dkms_tree/$module/original_module/$kernel_version/${dest_module_name[$count]}$module_suffix" ]; then
-		echo $"Archived original_module ${dest_module_name[$count]}$module_suffix found!  Reinstating it under the" 
-		echo $"directory: /lib/modules/$kernel_version${dest_module_location[$count]}" 
-		cp -f "$dkms_tree/$module/original_module/$kernel_version/${dest_module_name[$count]}$module_suffix" "/lib/modules/$kernel_version${dest_module_location[$count]}/" 2>/dev/null
+		echo $"   - Archived original module found in the DKMS tree" 
+		echo $"   - Moving it to: /lib/modules/$kernel_version${dest_module_location[$count]}/" 
+		mv -f "$dkms_tree/$module/original_module/$kernel_version/${dest_module_name[$count]}$module_suffix" "/lib/modules/$kernel_version${dest_module_location[$count]}/" 2>/dev/null
 	    else
-		echo $"No original module ${dest_module_name[$count]} was found for this module on this kernel." 
-		echo $"Use the dkms install command to reinstall any previous module version." 
+		echo $"   - No original module was found for this module on this kernel." 
+		echo $"   - Use the dkms install command to reinstall any previous module version." 
 		
 	        # Remove modules_conf entries from /etc/modules.conf if remake_initrd is set or if this is last instance removed
-		[ -n "$remake_initrd" ] || [ `dkms status -m $module -v $module_version | grep -c "installed"` -eq 1 ] && modulesconf_modify "delete"
+		[ -n "$remake_initrd" ] || [ `dkms status -m $module -v $module_version | grep -c "installed"` -eq 1 ] && echo $"" && modulesconf_modify "delete"
 	    fi
 	    count=$(($count+1))
 	done
@@ -979,10 +1006,15 @@ function do_uninstall()
     fi
 
     # Delete the original_module if nothing for this kernel is installed anymore
-    if [ -d "$dkms_tree/$module/original_module/$kernel_version" ] && [ -n "$was_active" ]; then
+    if [ -n "$was_active" ] && [ -d "$dkms_tree/$module/original_module/$kernel_version" ] && ! [ -d "$dkms_tree/$module/original_module/$kernel_version/collisions" ]; then
 	echo $"" 
 	echo $"Removing original_module from DKMS tree for kernel $kernel_version" 
 	rm -rf "$dkms_tree/$module/original_module/$kernel_version" 2>/dev/null
+    elif [ -n "$was_active" ] && [ -d "$dkms_tree/$module/original_module/$kernel_version/collisions" ]; then
+	echo $""
+	echo $"Keeping directory $dkms_tree/$module/original_module/$kernel_version/collisions/"
+	echo $"for your reference purposes.  Your kernel originally contained multiple"
+	echo $"same-named modules and this directory is now where these are located."
     fi
     if [ `find "$dkms_tree/$module/original_module" -path "$dkms_tree/$module/original_module/*" 2>/dev/null | wc -l | awk '{print $1}'` -eq 0 ]; then
 	rm -rf "$dkms_tree/$module/original_module" 2>/dev/null
@@ -1172,6 +1204,9 @@ show_status ()
 
     # Determine which modules to show status for
     status_shown=""
+    modules_needing_status=""
+    versions_needing_status=""
+    kernels_needing_status=""
     if [ -n "$module" ]; then
 	modules_needing_status="$module"
     else
@@ -1230,7 +1265,7 @@ show_status ()
 			    readlink "$dkms_tree/$module_in_tree/kernel-${kernel_in_tree}"
 			    kernel_symlink="$read_link"
 			    extra_status=""
-			    if [ -d "$dkms_tree/$module_in_tree/original_module/$kernel_in_tree" ]; then
+			    if [ -n "`find "$dkms_tree/$module_in_tree/original_module/$kernel_in_tree/" -type f -maxdepth 1 2>/dev/null`" ]; then
 				extra_status=" (original_module exists)"
 			    fi
 			    if [ "$kernel_symlink" == "$version_in_tree/$kernel_in_tree" ]; then
@@ -1483,13 +1518,13 @@ make_tarball()
     if [ `echo $kernel_version_list | wc -m | awk {'print $1'}` -gt 200 ]; then
 	kernel_version_list="manykernels"
     fi
-    tar -czf $temp_dir_name/$module-$module_version-$kernel_version_list.dkms.tar.gz ./* 2>/dev/null
+    tar -czf $temp_dir_name/$module-$module_version-$kernel_version_list.$arch_used.dkms.tar.gz ./* 2>/dev/null
     cd -
     if [ "$?" -eq 0 ]; then
 	mkdir -p $dkms_tree/$module/$module_version/tarball
-	mv -f $temp_dir_name/$module-$module_version-$kernel_version_list.dkms.tar.gz $dkms_tree/$module/$module_version/tarball/
+	mv -f $temp_dir_name/$module-$module_version-$kernel_version_list.$arch_used.dkms.tar.gz $dkms_tree/$module/$module_version/tarball/
 	echo $""
-	echo $"Tarball location: $dkms_tree/$module/$module_version/tarball/$module-$module_version-$kernel_version_list.dkms.tar.gz"
+	echo $"Tarball location: $dkms_tree/$module/$module_version/tarball/$module-$module_version-$kernel_version_list.$arch_used.dkms.tar.gz"
 	echo $""
 	echo $"Done."
 	rm -rf $temp_dir_name
@@ -1810,7 +1845,6 @@ std_err="/dev/stderr"
 unset directive_array
 
 # Parse command line arguments
-action_flag=""
 while [ $# -gt 0 ]; do
     case $1 in
 	--module*|-m)
@@ -1865,7 +1899,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 1.09"
+	    echo $"dkms: 1.10"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
@@ -1941,14 +1975,7 @@ while [ $# -gt 0 ]; do
 	    exit 2
 	    ;;
 	*)
-	    if [ -n "$action_flag" ]; then
-		echo $"" >&2
-		echo $"Error!  Multiple actions specified: $action, $1" >&2
-		show_usage
-		exit 3
-	    fi
-	    action_flag="set"
-	    action="$1"
+	    action="$action $1"
 	    ;;
     esac
     shift
@@ -1958,82 +1985,84 @@ done
 kernel_test="$kernel_version"
 [ -z "$kernel_test" ] && kernel_test=`uname -r`
 [ `echo "$kernel_test" | cut -d "." -f 1-1` -gt 1 ] && [ `echo "$kernel_test" | cut -d "." -f 2-2` -gt 4 ] && gt2dot4="true"
-[ -z "$gt2dot4" ] && module_suffix=".o"
-[ -n "$gt2dot4" ] && module_suffix=".ko"
+[ -z "$gt2dot4" ] && module_suffix=".o" || module_suffix=".ko"
 
 # Set the arch_used (hack to get ia32e when needed)
 [ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && [ `ls /lib/modules/$kernel_test/build/configs 2>/dev/null | grep -c "ia32e"` -gt 0 ] && arch_used="ia32e" || arch_used=`uname -m`
 
 # Run the specified action
-case "$action" in
-    add)
-	add_module
-	;;
-    remove)
-	# Make sure they're root
-	if [ `id -u` -ne 0 ]; then
-	    echo $"You must be root to use this command." >$std_err
-	    exit 1
-	fi
-	remove_module
-	;;
-    build)
-	build_module $no_prepare_kernel
-	;;
-    install)
-        # Make sure they're root
-	if [ `id -u` -ne 0 ]; then
-	    echo $"You must be root to use this command." >$std_err
-	    exit 1
-	fi
-	install_module
-	;;
-    match)
-	# Make sure they're root
-	if [ `id -u` -ne 0 ]; then
-	    echo $"You must be root to use this command." >$std_err
-	    exit 1
-	fi
-	run_match
-	;;
-    uninstall)
-	# Make sure they're root
-	if [ `id -u` -ne 0 ]; then
-	    echo $"You must be root to use this command." >$std_err
-	    exit 1
-	fi
-	uninstall_module
-	;;
-    mkdriverdisk)
-	# Make sure they're root
-	if [ `id -u` -ne 0 ]; then
-	    echo $"You must be root to use this command." >$std_err
-	    exit 1
-	fi
-	make_driver_disk
-	;;	
-    mktarball)
-	make_tarball
-	;;	
-    ldtarball)
-	# Make sure they're root
-	if [ `id -u` -ne 0 ]; then
-	    echo $"You must be root to use this command." >$std_err
-	    exit 1
-	fi
-	load_tarball
-	;;
-    status)
-	show_status
-	;;
-    "")
-	echo "" >&2
-	echo $"Error! No action was specified.">$std_err
-	show_usage
-	;;
-    *)
-	echo "" >&2
-	echo $"Error! Unknown action specified: $action" >$std_err
-	show_usage
-	;;
-esac
+#for action_to_run in `echo $action | sed 's/,/ /g'`; do
+for action_to_run in $action; do
+    case "$action_to_run" in
+	add)
+	    add_module
+	    ;;
+	remove)
+	    # Make sure they're root
+	    if [ `id -u` -ne 0 ]; then
+		echo $"You must be root to use this command." >$std_err
+		exit 1
+	    fi
+	    remove_module
+	    ;;
+	build)
+	    build_module $no_prepare_kernel
+	    ;;
+	install)
+            # Make sure they're root
+	    if [ `id -u` -ne 0 ]; then
+		echo $"You must be root to use this command." >$std_err
+		exit 1
+	    fi
+	    install_module
+	    ;;
+	match)
+	    # Make sure they're root
+	    if [ `id -u` -ne 0 ]; then
+		echo $"You must be root to use this command." >$std_err
+		exit 1
+	    fi
+	    run_match
+	    ;;
+	uninstall)
+	    # Make sure they're root
+	    if [ `id -u` -ne 0 ]; then
+		echo $"You must be root to use this command." >$std_err
+		exit 1
+	    fi
+	    uninstall_module
+	    ;;
+	mkdriverdisk)
+	    # Make sure they're root
+	    if [ `id -u` -ne 0 ]; then
+		echo $"You must be root to use this command." >$std_err
+		exit 1
+	    fi
+	    make_driver_disk
+	    ;;	
+	mktarball)
+	    make_tarball
+	    ;;	
+	ldtarball)
+	    # Make sure they're root
+	    if [ `id -u` -ne 0 ]; then
+		echo $"You must be root to use this command." >$std_err
+		exit 1
+	    fi
+	    load_tarball
+	    ;;
+	status)
+	    show_status
+	    ;;
+	"")
+	    echo "" >&2
+	    echo $"Error! No action was specified.">$std_err
+	    show_usage
+	    ;;
+	*)
+	    echo "" >&2
+	    echo $"Error! Unknown action specified: $action_to_run" >$std_err
+	    show_usage
+	    ;;
+    esac
+done

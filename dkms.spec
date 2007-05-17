@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 1.09
+Version: 1.10
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -55,6 +55,22 @@ fi
 
 
 %changelog
+* Fri May 07 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.10-1
+- bumped the revision
+
+* Thu May 06 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.09.21-1
+- Improved readability of install and uninstall text to the screen
+- You can now specify multiple actions in the same command
+
+* Wed May 05 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.09.05-1
+- Added arch_used as part of the filename of a tarball created by mktarball
+- If multiple original modules exist in a single kernel, the one in /updates is preferred
+- Changed multiple original module handling to move out and store all collisions
+
+* Mon May 03 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.09.01-1
+- Changed 2.6 prep prepare-all target usage to make modules_prepare
+- Changed 2.6 make command to always use M= as this is fixed in 2.6.6-rc3-bk5
+
 * Fri Apr 30 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.09-1
 - If module build exit status is bad, die accordingly
 - 2.6 kernel prep changes (not quite there yet, still broken)
