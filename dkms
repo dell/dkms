@@ -112,7 +112,6 @@ function read_conf ()
     MAKE=""
     CLEAN=""
     REMAKE_INITRD=""
-    MODULES_CONF_ALIAS_TYPE=""
     PACKAGE_NAME=""
     PACKAGE_VERSION=""
     POST_ADD=""
@@ -136,6 +135,10 @@ function read_conf ()
     unset dest_module_name
     unset DEST_MODULE_LOCATION
     unset dest_module_location
+    unset MODULES_CONF_OBSOLETES
+    unset modules_conf_obsoletes
+    unset MODULES_CONF_ALIAS_TYPE
+    unset modules_conf_alias_type
 
     # Set variables supported in dkms.conf files (eg. $kernelver)
     kernelver="$kernel_version"
@@ -157,7 +160,6 @@ function read_conf ()
 
     # Set variables
     clean="$CLEAN"
-    modules_conf_alias_type="$MODULES_CONF_ALIAS_TYPE"
     package_name="$PACKAGE_NAME"
     package_version="$PACKAGE_VERSION"
     post_add="$POST_ADD"
@@ -174,6 +176,8 @@ function read_conf ()
 	built_module_location[$index]=${BUILT_MODULE_LOCATION[$index]}
 	dest_module_name[$index]=${DEST_MODULE_NAME[$index]}
 	dest_module_location[$index]=${DEST_MODULE_LOCATION[$index]}
+	modules_conf_obsoletes[$index]=${MODULES_CONF_OBSOLETES[$index]}
+	modules_conf_alias_type[$index]=${MODULES_CONF_ALIAS_TYPE[$index]}
 
 	# If unset, set by defaults
 	[ -z "${built_module_name[$index]}" ] && [ "${#DEST_MODULE_LOCATION[*]}" -eq 1 ] && built_module_name[$index]=$module
@@ -284,21 +288,41 @@ function read_conf ()
 
 function modulesconf_modify ()
 {
+    # Make a temp directory to store files
+    temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+
     # Make modules.conf changes as necessary
     if [ "$1" == "add" ]; then
 
 	# Add aliases
-	if [ -n "$modules_conf_alias_type" ]; then
-	    for module_name_after in ${dest_module_name[*]}; do
-		if [ `grep -c "alias ${modules_conf_alias_type}[0-9]* $module_name_after\b" /etc/modules.conf` -eq 0 ]; then
-		    next_alias_number=$(( `grep "alias $modules_conf_alias_type" /etc/modules.conf | awk '{print $2}' | sed "s/$modules_conf_alias_type//" | sort -n | tail -1` + 1 ))
-		    echo -e "alias ${modules_conf_alias_type}${next_alias_number} $module_name_after" >> /etc/modules.conf
-		fi
-	    done
-	fi
+	index=0
+	while [ $index -lt ${#dest_module_name[*]} ]; do
 
+  	    # Replace obsolete references in /etc/modules.conf with the new module name
+	    if [ -n "${modules_conf_obsoletes[$index]}" ]; then
+		for obsolete_module in `echo ${modules_conf_obsoletes[$index]} | tr ',' '\n'`; do
+		    sed "s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) $obsolete_module$/\1 ${dest_module_name[$index]}/g" /etc/modules.conf > $temp_dir_name/modules.new
+		    if ! `diff /etc/modules.conf $temp_dir_name/modules.new >/dev/null 2>&1`; then 
+			mv -f $temp_dir_name/modules.new /etc/modules.conf
+			echo $"Obsolete alias '$obsolete_module' changed to '${dest_module_name[$index]}' in /etc/modules.conf"
+		    fi
+		done
+	    fi
+	    
+	    # Only add it if it can't be found already in /etc/modules.conf
+	    if [ -n "${modules_conf_alias_type[$index]}" ] && [ `grep -c "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}\b" /etc/modules.conf` -eq 0 ]; then
+		alias_number=$(( `grep "alias ${modules_conf_alias_type[$index]}" /etc/modules.conf | awk '{print $2}' | sed "s/${modules_conf_alias_type[$index]}//" | sort -n | tail -1` + 1 ))
+		echo -e "alias ${modules_conf_alias_type[$index]}${alias_number} ${dest_module_name[$index]}" >> /etc/modules.conf
+		echo $"Alias reference for '${dest_module_name[$index]}' added to /etc/modules.conf"
+	    fi
+
+	    index=$(($index+1))
+
+	done
+	
 	# Add anything else
 	index=0
+	[ -n "$modules_conf_array" ] && echo $"Adding static entries for this module into /etc/modules.conf"
 	while [ $index -lt ${#modules_conf_array[*]} ]; do
 	    if [ -n "${modules_conf_array[$index]}" ] && [ `grep -c "${modules_conf_array[$index]}" "/etc/modules.conf"` -eq 0 ]; then
 		echo -e "${modules_conf_array[$index]}" >> /etc/modules.conf
@@ -309,48 +333,74 @@ function modulesconf_modify ()
     # Remove modules_conf entries from /etc/modules.conf
     elif [ "$1" == "delete" ]; then
 
-	# Remove aliases (maybe)
-	if [ -n "$modules_conf_alias_type" ]; then
-	    for module_name_after in ${dest_module_name[*]}; do
-		if [ `find /lib/modules/$kernel_version/ -name "$module_name_after.*" 2>/dev/null | wc -l | awk '{print $1}'` -eq 0 ]; then
-		    grep -v "alias ${modules_conf_alias_type}[0-9]* $module_name_after" /etc/modules.conf > /etc/modules.new
-		    mv -f /etc/modules.new /etc/modules.conf
-		fi
-	    done
-	fi
-
-	# Remove everything else
 	index=0
+	while [ $index -lt ${#dest_module_name[*]} ]; do
+
+	    # Remove/Replace aliases (maybe)
+	    if [ -n "${modules_conf_alias_type[$index]}" ] && [ `find /lib/modules/$kernel_version/ -name "${dest_module_name[$index]}.*" 2>/dev/null | wc -l | awk '{print $1}'` -eq 0 ]; then
+
+		conf_replacement=""
+		for obsolete_module in `echo ${modules_conf_obsoletes[$index]} | tr ',' '\n'`; do
+		    if [ `find /lib/modules/$kernel_version/ -name "$obsolete_module.*" 2>/dev/null | wc -l | awk '{print $1}'` -gt 0 ] && [ -z "$conf_replacement" ]; then
+			conf_replacement=$obsolete_module
+		    fi
+		done
+		
+		if [ -n "$conf_replacement" ]; then
+		    sed "s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) ${dest_module_name[$index]}$/\1 $conf_replacement/g" /etc/modules.conf > $temp_dir_name/modules.new
+		    echo $"Alias for '${dest_module_name[$index]}' changed back to '$conf_replacement' in /etc/modules.conf"
+		else
+		    grep -v "alias ${modules_conf_alias_type}[0-9]* ${dest_module_name[$index]}" /etc/modules.conf > $temp_dir_name/modules.new
+		    echo $"Alias for '${dest_module_name[$index]}' removed from /etc/modules.conf"
+		fi
+		mv -f $temp_dir_name/modules.new /etc/modules.conf
+	    fi
+
+	    index=$(($index+1))
+	done
+
+	# Remove static conf entries
+	index=0
+	[ -n "$modules_conf_array" ] && echo $"Removing static entries for this module from /etc/modules.conf"
 	while [ $index -lt ${#modules_conf_array[*]} ]; do
 	    if [ -n "${modules_conf_array[$index]}" ]; then
-		grep -v "${modules_conf_array[$index]}" "/etc/modules.conf" > /etc/modules.new
-		mv -f /etc/modules.new /etc/modules.conf
+		grep -v "${modules_conf_array[$index]}" "/etc/modules.conf" > $temp_dir_name/modules.new
+		mv -f $temp_dir_name/modules.new /etc/modules.conf
 	    fi	    
 	    index=$(($index+1))
 	done
     fi
+
+    # Delete the temp dir
+    rm -rf $temp_dir_name
 }
 
 function etc_sysconfig_kernel_modify ()
 {
+    # Make a temp directory to store files
+    temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+
     if [ -e "/etc/sysconfig/kernel" ] && [ -n "$remake_initrd" ]; then
 
         # Make /etc/sysconfig/kernel changes as necessary
 	if [ "$1" == "add" ]; then
 	    etc_sysconfig_kernel_modify "delete"
 	    for module_name_after in ${dest_module_name[*]}; do
-		sed -e "s/INITRD_MODULES=\"\(.*\)\"/INITRD_MODULES=\"\1 $module_name_after\"/" /etc/sysconfig/kernel > /etc/sysconfig/kernel.new
-		mv /etc/sysconfig/kernel.new /etc/sysconfig/kernel
+		sed -e "s/INITRD_MODULES=\"\(.*\)\"/INITRD_MODULES=\"\1 $module_name_after\"/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
+		mv $temp_dir_name/kernel.new /etc/sysconfig/kernel
 	    done
 	
         # Remove /etc/sysconfig/kernel entries
 	elif [ "$1" == "delete" ]; then
 	    for module_name_after in ${dest_module_name[*]}; do
-		sed -e "s/\(INITRD_MODULES.*\)$module_name_after\b\(.*\)/\1\2/" /etc/sysconfig/kernel > /etc/sysconfig/kernel.new
-		mv /etc/sysconfig/kernel.new /etc/sysconfig/kernel
+		sed -e "s/\(INITRD_MODULES.*\)$module_name_after\b\(.*\)/\1\2/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
+		mv $temp_dir_name/kernel.new /etc/sysconfig/kernel
 	    done
 	fi
     fi
+
+    # Delete the temp dir
+    rm -rf $temp_dir_name
 }
 
 function add_module ()
@@ -494,7 +544,7 @@ function prepare_kernel()
 	fi
 
 	# Hack to workaround broken tmp_include_depends for Red Hat
-	if `grep -q "/usr/src/build" $kernel_source_dir/tmp_include_depends`; then
+	if `grep -q "/usr/src/build" $kernel_source_dir/tmp_include_depends 2>/dev/null`; then
 	    sed 's/\/usr\/src\/build\/.*\/install//g' $kernel_source_dir/tmp_include_depends > $kernel_source_dir/tmp_include_depends.new
 	    mv -f $kernel_source_dir/tmp_include_depends.new $kernel_source_dir/tmp_include_depends
 	fi
@@ -1744,7 +1794,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.42.03"
+	    echo $"dkms: 0.44.05"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

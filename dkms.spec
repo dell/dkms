@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.42.03
+Version: 0.44.05
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -53,6 +53,12 @@ fi
 /sbin/chkconfig dkms_autoinstaller on
 
 %changelog
+* Tue Nov 03 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.44.05-1
+- Changed MODULES_CONF_ALIAS_TYPE to an array in dkms.conf
+- Added MODULES_CONF_OBSOLETES array in dkms.conf
+- Reworked modules_conf_modify to make use of OBSOLETES logic
+- Updated man page
+
 * Fri Oct 31 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.42.03-1
 - Added --binaries-only option to mktarball
 - Updated man page
