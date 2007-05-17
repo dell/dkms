@@ -295,16 +295,16 @@ function override_dest_module_location()
 {
     local orig_location="$1"
     case "$running_distribution" in
-	fc[12345]) break ;;
-        el[1234]) break ;;
-	sles[123456789]) break ;;
-	suse[123456789]) break ;;
-	suse10\.[01]) break ;;
+	fc[12345]) ;;
+        el[1234]) ;;
+	sles[123456789]) ;;
+	suse[123456789]) ;;
+	suse10\.[01]) ;;
 	fc*) echo "/extra" && return ;;
 	el*) echo "/extra" && return ;;
 	sles*) echo "/updates" && return ;;
 	suse*) echo "/updates" && return ;;
-	*);;
+	*) ;;
     esac
     echo "$orig_location"
 }
@@ -1013,7 +1013,7 @@ function list_each_installed_module ()
 
 function set_weak_modules()
 {
-    weak_modules='/bin/true'
+    weak_modules=''
     [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
     [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 }
@@ -3020,7 +3020,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.15"
+	    echo $"dkms: 2.0.16"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

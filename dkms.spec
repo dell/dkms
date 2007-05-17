@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.15
+Version: 2.0.16
 Release: 1%{?dist}
 License: GPL
 Group: System Environment/Base
@@ -105,6 +105,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Tue Feb 27 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.16
+- fix override_dest_module_location() for historical distro versions
+- don't run weak-modules if it doesn't exist
+
 * Mon Feb 26 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.15
 - release with no changes
 
