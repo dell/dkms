@@ -64,7 +64,7 @@ function remake_initrd()
     if [ "$?" -eq 0 ]; then
       	echo $"" 
 	initrd_dir="/boot"
-	[ `uname -m` == "ia64" ] && [ -d "/boot/efi/efi/redhat" ] && initrd_dir="/boot/efi/efi/redhat"
+	[ "$arch_used" == "ia64" ] && [ -d "/boot/efi/efi/redhat" ] && initrd_dir="/boot/efi/efi/redhat"
 	echo $"Saving old initrd as $initrd_dir/initrd-${kernel_version}_old.img" 
 	cp -f "$initrd_dir/initrd-${kernel_version}.img" "$initrd_dir/initrd-${kernel_version}_old.img"
 	echo $"Making new initrd as $initrd_dir/initrd-${kernel_version}.img" 
@@ -529,7 +529,6 @@ function prepare_kernel()
 
         # If kernel_config is not set, look in default spot for .config (./configs/kernel-...)
 	if [ -z "$kernel_config" ] && [ -d "$kernel_source_dir/configs" ]; then
-	    arch_used=`uname -m`
 	    kernel_trunc=`echo $kernel_version | sed 's/-.*//'`
 	    for config_type in debug summit smp enterprise bigmem hugemem BOOT; do
 		if [ `echo "$kernel_version" | grep "$config_type"` ]; then
@@ -567,7 +566,6 @@ function prepare_kernel()
 
         # If kernel_config is not set, look in default spot for .config (./configs/kernel-...)
 	if [ -z "$kernel_config" ] && [ -d "$kernel_source_dir/configs" ]; then
-	    arch_used=`uname -m`
 	    kernel_trunc=`echo $kernel_version | sed 's/-.*//'`
 	    for config_type in debug summit smp enterprise bigmem hugemem BOOT; do
 		if [ `echo "$kernel_version" | grep "$config_type"` ]; then
@@ -1776,6 +1774,7 @@ all=""
 gt2dot4=""
 module_suffix=""
 rpm_safe_upgrade=""
+arch_used=""
 std_err="/dev/stderr"
 unset directive_array
 
@@ -1835,7 +1834,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 1.06"
+	    echo $"dkms: 1.07"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
@@ -1924,21 +1923,18 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-# Set some variables
+# Test kernel variant to know module_suffix
 kernel_test="$kernel_version"
 [ -z "$kernel_test" ] && kernel_test=`uname -r`
 [ `echo "$kernel_test" | cut -d "." -f 1-1` -gt 1 ] && [ `echo "$kernel_test" | cut -d "." -f 2-2` -gt 4 ] && gt2dot4="true"
 [ -z "$gt2dot4" ] && module_suffix=".o"
 [ -n "$gt2dot4" ] && module_suffix=".ko"
 
+# Set the arch_used (hack to get ia32e when needed)
+[ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && [ `ls /lib/modules/$kernel_test/build/configs 2>/dev/null | grep -c "ia32e"` -gt 0 ] && arch_used="ia32e" || arch_used=`uname -m`
+
 # Run the specified action
 case "$action" in
-    start)
-        # ignore
-	;;
-    stop)
-	# ignore
-	;;
     add)
 	add_module
 	;;
