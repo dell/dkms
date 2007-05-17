@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.12.1
+Version: 2.0.13
 Release: 1
 License: GPL
 Group: System Environment/Base
@@ -104,6 +104,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Thu Jun 29 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.13
+- bump to 2.0.13
+
 * Wed Jun 28 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.12.1-1
 - fix version comparison awk pattern matching invocation and a line continuation
 
