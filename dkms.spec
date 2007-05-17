@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.13.2
+Version: 2.0.13.3
 Release: 1%{?dist}
 License: GPL
 Group: System Environment/Base
@@ -95,9 +95,11 @@ rm -rf $RPM_BUILD_ROOT
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
 %doc %attr (-,root,root) sample.spec sample.conf AUTHORS COPYING README.dkms
 %doc %attr (-,root,root) sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
+%doc %attr (-,root,root) sample-rhel-5-mkkmp.spec
 %dir /etc/dkms
 %config(noreplace) /etc/dkms/framework.conf
 %config(noreplace) /etc/dkms/template-dkms-mkrpm.spec
+%config(noreplace) /etc/dkms/kmodtool
 
 %post
 [ -e /sbin/dkms ] && mv -f /sbin/dkms /sbin/dkms.old 2>/dev/null

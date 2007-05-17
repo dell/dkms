@@ -999,6 +999,17 @@ function prepare_kernel()
     cd - >/dev/null
 }
 
+function list_each_installed_module ()
+{
+    # $1 = kernel version
+    local count=0
+    while [ "$count" -lt "${#built_module_name[@]}" ]; do
+	echo "$install_tree/$1${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+	count=$(($count + 1))
+    done
+}
+
+
 function install_module()
 {
     setup_kernels_arches "install"
@@ -1132,6 +1143,13 @@ function install_module()
 
 	count=$(($count + 1))
     done
+
+    # add to kabi-tracking
+    if [ -x /sbin/weak-modules ]; then
+	echo -n "list_each_installed_module = "
+	list_each_installed_module
+	list_each_installed_module "${kernelver_array[0]}" | /sbin/weak-modules --add-modules --verbose 
+    fi
     
     # Create the kernel-<kernelver> symlink to designate this version as active
     rm -f "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}" 2>/dev/null
@@ -1426,6 +1444,11 @@ function do_uninstall()
 	    fi
 	    count=$(($count+1))
 	done
+	# remove kabi-tracking if last instance removed
+	if [ -x /sbin/weak-modules ] && 
+	    [ `$0 status -m $module -v $module_version | grep -c "installed"` -eq 1 ]; then
+	    list_each_installed_module "$1" | /sbin/weak-modules --remove-modules --verbose
+	fi
 	rm -f "$dkms_tree/$module/kernel-$1-$2"
     else
 	echo $"" 
@@ -1611,6 +1634,47 @@ function remove_module ()
     fi
 }
 
+function find_module_from_ko()
+{
+    local depth="$1"
+    local basename_ko="$2"
+    local kernellink
+    
+    for kernellink in $(find $dkms_tree -maxdepth $depth -mindepth $depth -name kernel-\* -type l); do
+	module=$(echo "$kernellink" | awk -F / '{print $(NF-1)}')
+	[ -e "$kernellink/module/${basename_ko}" ] && echo "$module"
+    done
+    echo ""
+}
+
+# be careful.  string_array is global
+declare -a string_array
+function add_string_to_array_unique()
+{
+    # string="$1"
+    local count=0
+    local found=0
+    while [ "$count" -lt "${#string_array[@]}" ]; do
+	if [ "$1" == "${string_array[$count]}" ]; then
+	    found=1
+	    break
+	fi
+	count=$(($count + 1))
+    done
+    if [ "${found}" -eq 0 ]; then
+	string_array[${#string_array[@]}]="$1"
+    fi
+}
+
+function print_string_array()
+{
+    local count=0
+    while [ "$count" -lt "${#string_array[@]}" ]; do
+	echo "${string_array[$count]}"
+	count=$(($count + 1))
+    done
+}
+
 function do_status_weak ()
 {
     # these are the requested mod/ver/kern/arch fields
@@ -1626,14 +1690,12 @@ function do_status_weak ()
     local tree_kern
     local tree_arch
     local f
-    local done=0
     local depth=1
     [ -z "$r_mod" ] && depth=2
     # recognize weak modules.  These are in $kern/weak-updates but are symlinks to another $kern/extra file.
 
-    for installedkern in $(find "$install_tree" -maxdepth 1 -mindepth 1 -type d); do
+    for installedkern in $(find "$install_tree" -maxdepth 1 -mindepth 1 -type d 2>/dev/null); do
 	for ko in $(find "$installedkern/weak-updates" -type l); do
-	    [ ${done} -eq 1 ] && break
 	    installedkernver=$(basename $installedkern)
 	    basename_ko=$(basename $ko)
 	    readlink $ko
@@ -1645,8 +1707,7 @@ function do_status_weak ()
 	    # is $installed_ko in /var/lib/dkms as installed?  Find which module has it
 	    for f in $(find $dkms_tree/$r_mod -maxdepth $depth -mindepth $depth -name kernel-\* -type l 2>/dev/null); do
 		if [ -z "$r_mod" ]; then
-		    mod=$(find $dkms_tree -maxdepth $depth -mindepth $depth -name kernel-\* -type l |\
-		    awk -F / '{print $(NF-1)}' | head -1)
+		    mod=$(find_module_from_ko "$depth" "$basename_ko")
 		else
 		    mod="$r_mod"
 		fi
@@ -1656,14 +1717,17 @@ function do_status_weak ()
 		tree_arch=$(echo "$read_link" | awk -F / '{print $3}')
 		if diff $dkms_tree/$mod/$tree_ver/$tree_kern/$tree_arch/module/$basename_ko  \
 		    $installed_ko >/dev/null 2>&1; then
-		    [ "$r_mod" == "$mod" -o -z "$r_mod" ] && [ "$r_ver" == "$tree_ver" -o -z "$r_ver" ] && \
-			[ "$r_kern" == "$installedkernver" -o -z "$r_kern" ] && [ "$r_arch" == "$tree_arch" -o -z "$r_arch" ] && \
-			echo "$mod, $tree_ver, $installedkernver, $tree_arch: installed-weak from $tree_kern" && \
-			done=1
+		    if [ "$r_mod" == "$mod" -o -z "$r_mod" ] && \
+			[ "$r_ver" == "$tree_ver" -o -z "$r_ver" ] && \
+			[ "$r_kern" == "$installedkernver" -o -z "$r_kern" ] && \
+			[ "$r_arch" == "$tree_arch" -o -z "$r_arch" ]; then
+			add_string_to_array_unique "$mod, $tree_ver, $installedkernver, $tree_arch: installed-weak from $tree_kern"
+		    fi
 		fi
 	    done
         done
     done
+    print_string_array
 }
 
 
@@ -2684,7 +2748,7 @@ function make_kmp_srpm()
     rm -rf ${module}-${module_version}
     popd > /dev/null 2>&1
     pushd "$temp_dir_name" > /dev/null 2>&1
-    invoke_command "rpmbuild --define \"_topdir ${temp_dir_name}\" -bs ${SPECFILE} > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
+    invoke_command "rpmbuild --define \"_topdir ${temp_dir_name}\" --target=${arch_array[0]} -bs ${SPECFILE} > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
     grep ^Wrote $temp_dir_name/rpmbuild.log > /dev/null 2>&1
     local RC="$?"
     if [ "${RC}" -eq 0 ]; then
@@ -2903,7 +2967,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.13.2"
+	    echo $"dkms: 2.0.13.3"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

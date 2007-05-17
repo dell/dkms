@@ -34,6 +34,9 @@ fi
 if ! [ -e /etc/dkms/template-dkms-mkrpm.spec ]; then
 	cp -f $DIR/template-dkms-mkrpm.spec /etc/dkms
 fi
+if ! [ -e /etc/dkms/kmodtool ]; then
+	cp -f $DIR/kmodtool /etc/dkms
+fi
 chmod 755 /usr/sbin/dkms
 chmod 755 /usr/sbin/dkms_mkkerneldoth
 [ -e /sbin/dkms ] && mv /sbin/dkms /sbin/dkms.old 2>/dev/null
