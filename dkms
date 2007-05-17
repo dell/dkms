@@ -112,13 +112,15 @@ function read_conf ()
 
     # Clear variables
     MAKE=""
-    LOCATION=""
     CLEAN=""
-    MODULE_NAME=""
     REMAKE_INITRD=""
     MODULES_CONF_ALIAS_TYPE=""
     PACKAGE_NAME=""
     PACKAGE_VERSION=""
+    BUILT_MODULE_NAME=""
+    BUILT_MODULE_LOCATION=""
+    DEST_MODULE_NAME=""
+    DEST_MODULE_LOCATION=""
 
     # Set variables supported in dkms.conf files (eg. $kernelver)
     kernelver="$kernel_version"
@@ -152,13 +154,59 @@ function read_conf ()
 
     # Set variables
     make_command="$MAKE"
-    location="/lib/modules/$kernel_version$LOCATION"
     clean="$CLEAN"
-    module_name_list="$MODULE_NAME"
     remake_initrd="$REMAKE_INITRD"
     modules_conf_alias_type="$MODULES_CONF_ALIAS_TYPE"
     package_name="$PACKAGE_NAME"
     package_version="$PACKAGE_VERSION"
+
+    # Set module naming/location arrays
+    index=0
+    array_size=`echo -e "${#BUILT_MODULE_NAME[*]}\n${#BUILT_MODULE_LOCATION[*]}\n${#DEST_MODULE_NAME[*]}\n${#DEST_MODULE_LOCATION[*]}\n" | sort -n | tail -1`
+    while [ "$index" -lt "$array_size" ]; do
+	# Set values
+	built_module_name[$index]=${BUILT_MODULE_NAME[$index]}
+	built_module_location[$index]=${BUILT_MODULE_LOCATION[$index]}
+	dest_module_name[$index]=${DEST_MODULE_NAME[$index]}
+	dest_module_location[$index]=/lib/modules/$kernel_version${DEST_MODULE_LOCATION[$index]}
+
+	# If unset, set by defaults
+	[ -z "${built_module_name[$index]}" ] && [ "${#DEST_MODULE_LOCATION[*]}" -eq 1 ] && built_module_name[$index]=$module
+	[ -z "${dest_module_name[$index]}" ] && dest_module_name[$index]=${built_module_name[$index]}
+	[ -n "${built_module_location[$index]}" ] && [ `echo ${built_module_location[$index]} | grep -c "\/$"` -eq 0 ] && built_module_location[$index]="${built_module_location[$index]}/"
+
+	# FAIL if no built_module_name
+	if [ -z "${built_module_name[$index]}" ]; then
+	    echo $"dkms.conf: Error! No 'BUILT_MODULE_NAME' directive specified for record #$index." >$std_err
+	    return_value=1
+	fi
+
+	# FAIL if built_module_name has .o or .ko in it
+	if [ `echo "${built_module_name[$index]}" | grep -c "\.k\?o$"` -gt 0 ]; then
+	    echo $"dkms.conf: Error! 'BUILT_MODULE_NAME' directive includes phrase '.o' or '.ko' in record #$index." >$std_err
+	    return_value=1
+	fi
+
+	# FAIL if dest_module_name has .o or .ko in it
+	if [ `echo "${dest_module_name[$index]}" | grep -c "\.k\?o$"` -gt 0 ]; then
+	    echo $"dkms.conf: Error! 'DEST_MODULE_NAME' directive includes phrase '.o' or '.ko' in record #$index." >$std_err
+	    return_value=1
+	fi
+	
+        # Fail if no DEST_MODULE_LOCATION 
+	if [ -z "${DEST_MODULE_LOCATION[$index]}" ]; then
+	    echo $"dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified for record #$index.">$std_err
+	    return_value=1
+	fi
+	
+        # Fail if bad DEST_MODULE_LOCATION
+	if [ `echo "${DEST_MODULE_LOCATION[$index]}" | grep -c "^/kernel"` -eq 0 ]; then
+	    echo $"dkms.conf: Error! Directive 'DEST_MODULE_LOCATION' does not begin with '/kernel' in record #$index.">$std_err
+	    return_value=1
+	fi
+
+	index=$((index+1))
+    done
     
     # Set modules_conf_array
     index=0
@@ -185,15 +233,9 @@ function read_conf ()
 	fi
     done
 
-    # Set default values
-    if [ -z "$module_name_list" ]; then
-	module_name_list="$module"
-    fi
-    if [ `echo "$remake_initrd" | grep -ic "^y"` -gt 0 ]; then
-	remake_initrd="yes"
-    else
-	remake_initrd=""
-    fi
+    # Set remake_initrd
+    remake_initrd=""
+    [ `echo "$remake_initrd" | grep -ic "^y"` -gt 0 ] && remake_initrd="yes"
 
     # Fail if no make command
     if [ -z "$make_command" ]; then
@@ -201,15 +243,9 @@ function read_conf ()
 	return_value=1
     fi
 
-    # Fail if no location command
-    if [ -z "$LOCATION" ]; then
-	echo $"dkms.conf: Error! No 'LOCATION' directive specified.">$std_err
-	return_value=1
-    fi
-
-    # Fail if bad location command
-    if [ `echo "$LOCATION" | grep -c "^/kernel"` -eq 0 ]; then
-	echo $"dkms.conf: Error! Directive 'LOCATION' does not begin with '/kernel'.">$std_err
+    # Fail if absolutely no DEST_MODULE_LOCATION
+    if [ "${#dest_module_location[*]}" -eq 0 ]; then
+	echo $"dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified." >$std_err
 	return_value=1
     fi
 
@@ -241,8 +277,7 @@ function modulesconf_modify ()
 
 	# Add aliases
 	if [ -n "$modules_conf_alias_type" ]; then
-	    for module_name in $module_name_list; do
-		module_name_after=`echo $module_name | sed 's/.*://' | sed 's/\..*//'`
+	    for module_name_after in ${dest_module_name[*]}; do
 		if [ `grep -c "alias ${modules_conf_alias_type}[0-9]* $module_name_after\b" /etc/modules.conf` -eq 0 ]; then
 		    next_alias_number=$(( `grep "alias $modules_conf_alias_type" /etc/modules.conf | awk '{print $2}' | sed "s/$modules_conf_alias_type//" | sort -n | tail -1` + 1 ))
 		    echo -e "alias ${modules_conf_alias_type}${next_alias_number} $module_name_after" >> /etc/modules.conf
@@ -264,8 +299,7 @@ function modulesconf_modify ()
 
 	# Remove aliases (maybe)
 	if [ -n "$modules_conf_alias_type" ]; then
-	    for module_name in $module_name_list; do
-		module_name_after=`echo $module_name | sed 's/.*://' | sed 's/\..*//'`
+	    for module_name_after in ${dest_module_name[*]}; do
 		if [ `find /lib/modules/$kernel_version/ -name "$module_name_after.*" | wc -l | awk '{print $1}'` -eq 0 ]; then
 		    grep -v "alias ${modules_conf_alias_type}[0-9]* $module_name_after" /etc/modules.conf > /etc/modules.new
 		    mv -f /etc/modules.new /etc/modules.conf
@@ -292,16 +326,14 @@ function etc_sysconfig_kernel_modify ()
         # Make /etc/sysconfig/kernel changes as necessary
 	if [ "$1" == "add" ]; then
 	    etc_sysconfig_kernel_modify "delete"
-	    for module_name in $module_name_list; do
-		module_name_after=`echo $module_name | sed 's/.*://' | sed 's/\..*//'`
+	    for module_name_after in ${dest_module_name[*]}; do
 		sed -e "s/INITRD_MODULES=\"\(.*\)\"/INITRD_MODULES=\"\1 $module_name_after\"/" /etc/sysconfig/kernel > /etc/sysconfig/kernel.new
 		mv /etc/sysconfig/kernel.new /etc/sysconfig/kernel
 	    done
 	
         # Remove /etc/sysconfig/kernel entries
 	elif [ "$1" == "delete" ]; then
-	    for module_name in $module_name_list; do
-		module_name_after=`echo $module_name | sed 's/.*://' | sed 's/\..*//'`
+	    for module_name_after in ${dest_module_name[*]}; do
 		sed -e "s/\(INITRD_MODULES.*\)$module_name_after\b\(.*\)/\1\2/" /etc/sysconfig/kernel > /etc/sysconfig/kernel.new
 		mv /etc/sysconfig/kernel.new /etc/sysconfig/kernel
 	    done
@@ -534,12 +566,11 @@ function install_module()
 	exit 3
     fi
 
-    # Make sure the $module_name exists
-    for module_name in $module_name_list; do
-	module_name_after=`echo $module_name | sed 's/.*://'`
-	if ! [ -e "$dkms_tree/$module/$module_version/$kernel_version/module/$module_name_after" ]; then
+    # Make sure the $module_name_after exists
+    for module_name_after in ${dest_module_name[*]}; do
+	if ! [ -e "$dkms_tree/$module/$module_version/$kernel_version/module/$module_name_after$module_suffix" ]; then
 	    echo $"" >$std_err
-	    echo $"Error! Could not locate $module_name_after for module $module in the DKMS tree." >$std_err
+	    echo $"Error! Could not locate $module_name_after$module_suffix for module $module in the DKMS tree." >$std_err
 	    echo $"You must run a dkms build for kernel $kernel_version first." >$std_err
 	    exit 4
 	fi
@@ -557,39 +588,40 @@ function install_module()
 
     # Save the original_module if one exists, none have been saved before, and this is the first module for this kernel
     lib_tree="/lib/modules/$kernel_version"
-    for module_name in $module_name_list; do
-	module_name_before=`echo $module_name | sed 's/:.*//'`
-	module_name_after=`echo $module_name | sed 's/.*://'`
-	module_count=`find $lib_tree -name $module_name_after | wc -l | awk {'print $1'}`
+    count=0
+    while [ "$count" -lt "${#built_module_name[*]}" ]; do
+	module_count=`find $lib_tree -name ${dest_module_name[$count]}$module_suffix | wc -l | awk {'print $1'}`
 	if ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -eq 1 ]; then
 	    echo $"" 
-	    echo $"Found an original module $module_name_after in /lib/modules/" 
+	    echo $"Found an original module ${dest_module_name[$count]}$module_suffix in /lib/modules/" 
 	    echo $"Archiving it within the DKMS tree for uninstallation purposes." 
 	    mkdir -p "$dkms_tree/$module/original_module/$kernel_version/"
-	    mv -f `find $lib_tree -name $module_name_after` "$dkms_tree/$module/original_module/$kernel_version/"
-	elif  ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -gt 1 ] && [ -e "$location/$module_name_after" ]; then
+	    mv -f `find $lib_tree -name ${dest_module_name[$count]}$module_suffix` "$dkms_tree/$module/original_module/$kernel_version/"
+	elif  ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -gt 1 ] && [ -e "${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" ]; then
 	    echo $""
-	    echo $"Found multiple original modules $module_name_after in /lib/modules"
-	    echo $"Archiving the one in in $LOCATION for uninstallation purposes."
+	    echo $"Found multiple original modules ${dest_module_name[$count]}$module_suffix in /lib/modules"
+	    echo $"Archiving the one in ${dest_module_location[$count]} for uninstallation purposes."
 	    echo $"Warning! Since multiple modules exist with the same name, problems"
 	    echo $"may arise."
 	    mkdir -p "$dkms_tree/$module/original_module/$kernel_version/"
-	    mv -f "$location/$module_name_after" "$dkms_tree/$module/original_module/$kernel_version/"
-	elif  ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -gt 1 ] && ! [ -e "$location/$module_name_after" ]; then
+	    mv -f "${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" "$dkms_tree/$module/original_module/$kernel_version/"
+	elif  ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ "$module_count" -gt 1 ] && ! [ -e "${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" ]; then
 	    echo $""
-	    echo $"Multiple original modules $module_name_after exist in /lib/modules"
+	    echo $"Multiple original modules ${dest_module_name[$count]}$module_suffix exist in /lib/modules"
 	    echo $"Due to this confusion, DKMS cannot archive any of them for uninstallation."
 	    echo $"Warning! Since multiple modules exist with the same name, problems"
 	    echo $"may arise."	    
 	else
-	    rm -f "$location/$module_name_after" 2>/dev/null
+	    rm -f "${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix" 2>/dev/null
 	fi
 
         # Copy module to its location
 	echo $""
- 	echo $"Copying the new $module_name_after for $module to $location" 
-	mkdir -p $location
-	cp -f "$dkms_tree/$module/$module_version/$kernel_version/module/$module_name_after" "$location/$module_name_after"
+ 	echo $"Copying the new ${dest_module_name[$count]}$module_suffix for $module to ${dest_module_location[$count]}" 
+	mkdir -p ${dest_module_location[$count]}
+	cp -f "$dkms_tree/$module/$module_version/$kernel_version/module/${dest_module_name[$count]}$module_suffix" "${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+
+	count=$((count + 1))
     done
     
     # Create the kernel-<kernelver> symlink to designate this version as active
@@ -704,15 +736,16 @@ function build_module()
     echo $"`date`" >> "$dkms_tree/$module/$module_version/build/make.log"
     invoke_command "$make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$make_command" background
     # Make sure all the modules built successfully
-    for module_name in $module_name_list; do
-	module_name_before=`echo $module_name | sed 's/:.*//'`
-	if ! [ -e "$module_name_before" ]; then
+    count=0
+    while [ "$count" -lt "${#built_module_name[*]}" ]; do
+	if ! [ -e "${built_module_location[$count]}${built_module_name[$count]}$module_suffix" ]; then
 	    echo $"" >$std_err
-	    echo $"Error!  Module build failed for kernel: $kernel_version" >$std_err
+	    echo $"Error!  Module build ${built_module_name[$count]}$module_suffix failed for kernel: $kernel_version" >$std_err
 	    echo $"Consult the make.log in the build directory" >$std_err
 	    echo $"$dkms_tree/$module/$module_version/build/ for more information." >$std_err
 	    exit 7
 	fi
+	count=$((count+1))
     done
     cd -
 
@@ -723,10 +756,10 @@ function build_module()
 
     # Save a copy of the new module
     mkdir "$dkms_tree/$module/$module_version/$kernel_version/module" >/dev/null
-    for module_name in $module_name_list; do
-	module_name_before=`echo $module_name | sed 's/:.*//'`
-	module_name_after=`echo $module_name | sed 's/.*://'`
-	cp -f "$dkms_tree/$module/$module_version/build/$module_name_before" "$dkms_tree/$module/$module_version/$kernel_version/module/$module_name_after" >/dev/null
+    count=0
+    while [ "$count" -lt "${#built_module_name[*]}" ]; do
+	cp -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix" "$dkms_tree/$module/$module_version/$kernel_version/module/${dest_module_name[$count]}$module_suffix" >/dev/null
+	count=$((count+1))
     done
 
     # Run the post_build script
@@ -771,23 +804,23 @@ function do_uninstall()
 	was_active="true"
 	echo $"" 
 	echo $"Status: Before uninstall, this module version was ACTIVE on this kernel."
-	for module_name in $module_name_list; do
-	    module_name_before=`echo $module_name | sed 's/:.*//'`
-	    module_name_after=`echo $module_name | sed 's/.*://'`
+	count=0
+	while [ "$count" -lt "${#built_module_name[*]}" ]; do
 	    echo $""
-	    echo $"Deleting $module_name_after from: $location" 
-	    rm -f "$location/$module_name_after"
-	    if [ -e "$dkms_tree/$module/original_module/$kernel_version/$module_name_after" ]; then
-		echo $"Archived original_module $module_name_after found!  Reinstating it under the" 
-		echo $"directory: $location" 
-		cp -f "$dkms_tree/$module/original_module/$kernel_version/$module_name_after" "$location/" 2>/dev/null
+	    echo $"Deleting ${dest_module_name[$count]}$module_suffix from: ${dest_module_location[$count]}" 
+	    rm -f "${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+	    if [ -e "$dkms_tree/$module/original_module/$kernel_version/${dest_module_name[$count]}$module_suffix" ]; then
+		echo $"Archived original_module ${dest_module_name[$count]}$module_suffix found!  Reinstating it under the" 
+		echo $"directory: ${dest_module_location[$count]}" 
+		cp -f "$dkms_tree/$module/original_module/$kernel_version/${dest_module_name[$count]}$module_suffix" "${dest_module_location[$count]}/" 2>/dev/null
 	    else
-		echo $"No original module $module_name_after was found for this module on this kernel." 
+		echo $"No original module ${dest_module_name[$count]} was found for this module on this kernel." 
 		echo $"Use the dkms install command to reinstall any previous module version." 
 		
 	        # Remove modules_conf entries from /etc/modules.conf
 		modulesconf_modify "delete"
 	    fi
+	    count=$((count+1))
 	done
 	rm -f "$dkms_tree/$module/kernel-$kernel_version"
     else
@@ -1148,9 +1181,10 @@ make_driver_disk ()
 
     # Create a list of modules to put into modules.cgz
     modules_cgz_list=""
-    for module_name in $module_name_list; do
-	module_name_after=`echo $module_name | sed 's/.*://'`
-	modules_cgz_list="$dkms_tree/$module/$module_version/$kernel_version/module/$module_name_after\n${modules_cgz_list}"
+    count=0
+    while [ "$count" -lt "${#dest_module_name[*]}" ]; do
+	modules_cgz_list="$dkms_tree/$module/$module_version/$kernel_version/module/${dest_module_name[$count]}$module_suffix\n${modules_cgz_list}"
+	count=$((count+1))
     done
 
     # Create dos disk image
@@ -1498,6 +1532,7 @@ no_prepare_kernel=""
 no_clean_kernel=""
 all=""
 gt2dot4=""
+module_suffix=""
 std_err="/dev/stderr"
 
 # Set up arrays
@@ -1530,7 +1565,6 @@ while [ $# -gt 0 ]; do
                 kernel_version="$2"
                 shift
             fi
-	    [ `echo $kernel_version | cut -d "." -f 1-1` -gt 1 ] && [ `echo $kernel_version | cut -d "." -f 2-2` -gt 4 ] && gt2dot4="true"
             ;;
 	--distro*|-d)
 	    if echo $1 | grep '=' >/dev/null ; then
@@ -1560,7 +1594,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.35.01"
+	    echo $"dkms: 0.36.05"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
@@ -1658,6 +1692,13 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+# Set some variables
+kernel_test="$kernel_version"
+[ -z "$kernel_test" ] && kernel_test=`uname -r`
+[ `echo "$kernel_test" | cut -d "." -f 1-1` -gt 1 ] && [ `echo "$kernel_test" | cut -d "." -f 2-2` -gt 4 ] && gt2dot4="true"
+[ -z "$gt2dot4" ] && module_suffix=".o"
+[ -n "$gt2dot4" ] && module_suffix=".ko"
 
 # Run the specified action
 case "$action" in

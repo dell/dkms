@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.35.01
+Version: 0.36.05
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
@@ -49,8 +49,20 @@ fi
 /sbin/chkconfig dkms_autoinstaller on
 
 %changelog
-* Wed Sep 10 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.35.01-1
+* Fri Sep 19 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.36.05-1
+- Continued bug testing and fixing new features
+
+* Wed Sep 17 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.36.02-1
+- Got rid of MODULE_NAME: replaced with BUILT_MODULE_NAME, DEST_MODULE_NAME arrays
+- Got rid of LOCATION: replaced with BUILT_MODULE_LOCATION, DEST_MODULE_LOCATION arrays
+- Update man page
+
+* Tue Sep 16 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.36.01-1
+- Fixed the setting of the gt2dot4 variable
+
+* Wed Sep 10 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.35.02-1
 - Added PACKAGE_NAME, PACKAGE_VERSION requirements to dkms.conf for gmodconfig use
+- Fixed creation of /var/dkms before cp of dkms_dbversion in install.sh
 
 * Mon Sep 08 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.34.10-1
 - Continued adding autoinstall stuff

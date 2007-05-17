@@ -16,7 +16,10 @@ if [ "$USERID" -ne 0 ]; then
 	exit 1
 fi
 
+
+
 echo "Installing DKMS"
+mkdir -p /var/dkms
 cp -f $DIR/dkms /sbin
 cp -f $DIR/dkms.8.gz /usr/share/man/man8
 cp -f $DIR/dkms_dbversion /var/dkms/
@@ -25,6 +28,5 @@ chkconfig dkms_autoinstaller on
 if ! [ -e /etc/dkms_framework.conf ]; then
 	cp -f $DIR/dkms_framework.conf /etc/dkms_framework.conf
 fi
-mkdir -p /var/dkms
 chmod 755 /sbin/dkms
 
