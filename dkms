@@ -521,14 +521,14 @@ function check_version_sanity ()
 	    # there are 2 possible srcversion checksums
 	    # one in the 'srcversion' tag alone (preferred)
 	    # and one following the version field in the 'version' tag (deprecated)
-	    local kernels_ver_checksum=`modinfo $kernels_module | awk /^srcversion:/ {print $2}`
-	    local dkms_ver_checksum=`modinfo $dkms_module | awk /^srcversion:/ {print $2}`
+	    local kernels_ver_checksum=`modinfo $kernels_module | awk '/^srcversion:/ {print $2}'`
+	    local dkms_ver_checksum=`modinfo $dkms_module | awk '/^srcversion:/ {print $2}'`
 	    if [ -z "$kernels_ver_checksum" -a -z "$dkms_ver_checksum" ]; then
 		kernels_ver_checksum=`echo $kernels_ver_string | awk {'print $3'}`
 		dkms_ver_checksum=`echo $dkms_ver_string | awk {'print $3'}`
 	    fi
 	    
-	    if [ -n "$kernels_ver_checksum" -a -n "$dkms_ver_checksum" -a
+	    if [ -n "$kernels_ver_checksum" -a -n "$dkms_ver_checksum" -a \
 		    "$kernels_ver_checksum" == "$dkms_ver_checksum" -a -z "$force" ]; then
 		echo $"" >&2
 		echo $"Good news! Module version $dkms_ver_value for ${dest_module_name[$count]}$module_suffix" >&2
@@ -2622,7 +2622,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.12"
+	    echo $"dkms: 2.0.12.1"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
