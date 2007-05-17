@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 1.07
+Version: 1.08
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -55,6 +55,10 @@ fi
 
 
 %changelog
+* Tue Apr 13 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.08-1
+- Fixed the format of rhdd-6.1 for Red Hat driver disks
+- Update man page with new white paper info
+
 * Thu Apr 1 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.07-1
 - Added work-around to recognize ia32e kernel config instead of x86_64
 - Got rid of start and stop functions which were no-ops anyway

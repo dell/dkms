@@ -1323,7 +1323,7 @@ make_driver_disk ()
 	    cp -f "$dkms_tree/$module/$module_version/source/redhat_driver_disk/$file" "$dkms_tree/$module/$module_version/driver_disk/" 2>/dev/null
 	fi
     done
-    touch "$dkms_tree/$module/$module_version/driver_disk/rhdd-6.1"
+    echo "$module-$module_version driver disk" > "$dkms_tree/$module/$module_version/driver_disk/rhdd-6.1"
 
     # Make sure the kernel_version_list is not too long
     if [ `echo $kernel_version_list | wc -m | awk {'print $1'}` -gt 200 ]; then
@@ -1834,7 +1834,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 1.07"
+	    echo $"dkms: 1.08"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
