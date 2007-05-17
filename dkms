@@ -73,15 +73,15 @@ function remake_initrd()
 	invoke_command "mkinitrd -f /boot/initrd-${kernel_version}.img ${kernel_version}" "mkinitrd" background
 	echo $"If your next boot fails, edit your bootloader file and revert" 
 	echo $"to the _old initrd image." 
-	
-        # Rerun lilo if necessary
-	if ! [ -e /boot/grub/grub.conf ] && [ -e /etc/lilo.conf ]; then
-	    invoke_command "/sbin/lilo" "Updating lilo"
-	fi
     else
 	echo $""
-	echo $"You will need to manually remake your initrd so that this"
-	echo $"kernel has access to these changes during boot-up."
+	echo $"Calling mkinitrd (bad exit status 9 may occur)"
+	invoke_command "mkinitrd >/dev/null 2>&1" "mkinitrd" background
+    fi
+
+    # Rerun lilo if necessary
+    if ! [ -e /boot/grub/grub.conf ] && [ -e /etc/lilo.conf ]; then
+	invoke_command "/sbin/lilo" "Updating lilo"
     fi
 }
 
@@ -131,6 +131,11 @@ function read_conf ()
 	    MAKE="${!subdirective_to_use}"
 	fi
     done
+
+    # Use the generic make command if kernel >= 2.5
+    if [ -n "$gt2dot4" ]; then
+	MAKE="make -C /lib/modules/$kernel_version/build SUBDIRS=$dkms_tree/$module/$module_version/build modules"
+    fi
 
     # Source in the directive_array
     IFS='
@@ -238,10 +243,8 @@ function modulesconf_modify ()
 	    index=$((index+1))
 	done
 
-    fi
-
     # Remove modules_conf entries from /etc/modules.conf
-    if [ "$1" == "delete" ]; then
+    elif [ "$1" == "delete" ]; then
 
 	# Remove aliases (maybe)
 	if [ -n "$modules_conf_alias_type" ]; then
@@ -263,6 +266,30 @@ function modulesconf_modify ()
 	    fi	    
 	    index=$((index+1))
 	done
+    fi
+}
+
+function etc_sysconfig_kernel_modify ()
+{
+    if [ -e "/etc/sysconfig/kernel" ] && [ -n "$remake_initrd" ]; then
+
+        # Make /etc/sysconfig/kernel changes as necessary
+	if [ "$1" == "add" ]; then
+	    etc_sysconfig_kernel_modify "delete"
+	    for module_name in $module_name_list; do
+		module_name_after=`echo $module_name | sed 's/.*://' | sed 's/\..*//'`
+		sed -e "s/INITRD_MODULES=\"\(.*\)\"/INITRD_MODULES=\"\1 $module_name_after\"/" /etc/sysconfig/kernel > /etc/sysconfig/kernel.new
+		mv /etc/sysconfig/kernel.new /etc/sysconfig/kernel
+	    done
+	
+        # Remove /etc/sysconfig/kernel entries
+	elif [ "$1" == "delete" ]; then
+	    for module_name in $module_name_list; do
+		module_name_after=`echo $module_name | sed 's/.*://' | sed 's/\..*//'`
+		sed -e "s/\(INITRD_MODULES.*\)$module_name_after\b\(.*\)/\1\2/" /etc/sysconfig/kernel > /etc/sysconfig/kernel.new
+		mv /etc/sysconfig/kernel.new /etc/sysconfig/kernel
+	    done
+	fi
     fi
 }
 
@@ -405,9 +432,18 @@ function prepare_kernel()
     config_contents=`cat .config 2>/dev/null`
     [ -n "$config_contents" ] && echo $"Storing current .config to be restored when complete"
     
-    # Do RedHat or UnitedLinux preparation
-    if [ -d "$kernel_source_dir/configs" ]; then
-	echo $"Running Red Hat preparation routine"
+    # Do preparation
+    if [ -f /boot/vmlinuz.version.h ]; then
+	echo $"Running UnitedLinux preparation routine"
+	kernel_config="/boot/vmlinuz.config"
+	invoke_command "make mrproper >/dev/null 2>&1" "make mrproper" background
+	[ -n "$config_contents" ] && echo "$config_contents" > .config
+	invoke_command "cp /boot/vmlinuz.version.h include/linux/version.h" "using /boot/vmlinux.version.h" 
+	invoke_command "cp -f $kernel_config .config" "using $kernel_config" 
+	invoke_command "make cloneconfig >/dev/null 2>&1" "make cloneconfig" background
+	invoke_command "make CONFIG_MODVERSIONS=1 dep >/dev/null 2>&1" "make CONFIG_MODVERSIONS=1 dep" background
+    else 
+	echo $"Running Red Hat/Generic preparation routine"
 	invoke_command "make mrproper >/dev/null 2>&1" "make mrproper" background
 	[ -n "$config_contents" ] && echo "$config_contents" > .config
 
@@ -420,7 +456,7 @@ function prepare_kernel()
 	mv -f Makefile.new Makefile
 
         # If kernel_config is not set, look in default spot for .config (./configs/kernel-...)
-	if [ -z "$kernel_config" ]; then
+	if [ -z "$kernel_config" ] && [ -d "$kernel_source_dir/configs" ]; then
 	    arch_used=`uname -m`
 	    kernel_trunc=`echo $kernel_version | sed 's/-.*//'`
 	    for config_type in debug summit smp enterprise bigmem BOOT; do
@@ -431,23 +467,20 @@ function prepare_kernel()
 	    done
 	    [ -z "$kernel_config" ] && kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$arch_used.config"
 	fi
-	echo $"using $kernel_config"
-	cp -f "$kernel_config" .config
+	
+	# Warn if no config, otherwise use it
+	if [ -z "$kernel_config" ]; then
+	    echo $""
+	    echo $"Warning! Cannot find a .config file to prepare your kernel with."
+	    echo $"Try using the --config option to specify where one can be found."
+	    echo $"Your build will likely fail because of this."
+	else
+	    echo $"using $kernel_config"
+	    cp -f "$kernel_config" .config
+	fi
 
 	invoke_command "make oldconfig >/dev/null 2>&1" "make oldconfig" background
-	invoke_command "make dep >/dev/null 2>&1" "make dep" background
-    elif [ -f /boot/vmlinuz.version.h ]; then
-	echo $"Running UnitedLinux preparation routine"
-	kernel_config="/boot/vmlinuz.config"
-	invoke_command "make mrproper >/dev/null 2>&1" "make mrproper" background
-	[ -n "$config_contents" ] && echo "$config_contents" > .config
-	invoke_command "cp /boot/vmlinuz.version.h include/linux/version.h" "using /boot/vmlinux.version.h" 
-	invoke_command "cp -f $kernel_config .config" "using $kernel_config" 
-	invoke_command "make cloneconfig >/dev/null 2>&1" "make cloneconfig" background
-	invoke_command "make CONFIG_MODVERSIONS=1 dep >/dev/null 2>&1" "make CONFIG_MODVERSIONS=1 dep" background
-    else
-	echo $"Warning! DKMS does not recognize how to prepare your kernel."
-	echo $"Currently, only Red Hat and UnitedLinux prep routines are implemented."
+	[ -z "$gt2dot4" ] && invoke_command "make dep >/dev/null 2>&1" "make dep" background
     fi
     cd -
 }
@@ -556,6 +589,7 @@ function install_module()
 
     # Make modules.conf changes as necessary
     modulesconf_modify "add"
+    etc_sysconfig_kernel_modify "add"
 
     # Run depmod if System.map-<kernel_version> exists
     if [ -e "/boot/System.map-$kernel_version" ]; then
@@ -924,6 +958,7 @@ function remove_module ()
        
 	# Its now safe to completely remove references in modules.conf
 	modulesconf_modify "delete"
+	etc_sysconfig_kernel_modify "delete"
     fi
 }
 
@@ -1444,6 +1479,7 @@ kernel_config=""
 action=""
 force=""
 all=""
+gt2dot4=""
 std_err="/dev/stderr"
 
 # Set up arrays
@@ -1476,6 +1512,7 @@ while [ $# -gt 0 ]; do
                 kernel_version="$2"
                 shift
             fi
+	    [ `echo $kernel_version | cut -d "." -f 1-1` -gt 1 ] && [ `echo $kernel_version | cut -d "." -f 2-2` -gt 4 ] && gt2dot4="true"
             ;;
 	--distro*|-d)
 	    if echo $1 | grep '=' >/dev/null ; then
@@ -1505,7 +1542,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.31.04"
+	    echo $"dkms: 0.32.04"
 	    exit 0
 	    ;;
 	--force)

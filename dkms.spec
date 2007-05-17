@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.31.04
+Version: 0.32.04
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
@@ -43,6 +43,12 @@ fi
 %config(noreplace) /etc/dkms_framework.conf
 
 %changelog
+* Thu Jul 03 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.32.04-1
+- Added mkinitrd support for SuSE (etc_sysconfig_kernel_modify)
+- Added generic make command for kernel >2.4 (make -C <path-to-kernel-source> SUBDIRS=<build dir> modules)
+- Fixed kernel prepare to do Red Hat/Generic by default
+- Only do make dep if < 2.5
+
 * Tue Jun 03 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.31.04-1
 - Modified the Red Hat prep routine to be smaller and more robust (including summit support)
 - Added sample.spec to the sources for /usr/share/doc
