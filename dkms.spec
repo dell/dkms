@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.8
+Version: 2.0.8.2
 Release: 1
 License: GPL
 Group: System Environment/Base
@@ -101,6 +101,13 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Nov 7 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.8.2
+- Multi driver suse driver disk support (thanks to Sreenivas.Bagalkote@engenio.com)
+- Cleanup tempdir when ldtarball fails
+
+* Mon Nov 7 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.8.1
+- mkrpm now is built with -ba, not -bb (creates source RPM)
+
 * Fri Nov 4 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.8
 - In dkms_autoinstaller added -no-clean-kernel to builds of multiple modules to avoid mrproper 
 

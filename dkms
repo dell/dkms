@@ -1695,86 +1695,100 @@ make_redhat_driver_disk()
 
 make_suse_driver_disk()
 {
-    if [ -z "$release" ]; then
-	echo $"" >&2
-	echo $"Error! Invalid number of parameters passed for suse/UnitedLinux driver disk." >&2
-	echo $"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver>" >&2
-	echo $"                    -r <release-number>" >&2
-	exit 3
-    fi
+	if [ -z "$release" ]; then
+		echo $"" >&2
+		echo $"Error! Invalid number of parameters passed for suse/UnitedLinux driver disk." >&2
+		echo $"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver>" >&2
+		echo $"                    -r <release-number>" >&2
+		exit 3
+	fi
 
-    temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+	temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+	local mntdir="$dkms_tree/$module/$module_version/driver_disk/"
+	echo $temp_dir_name
 
-    local i=0
-    while [ $i -lt ${#kernelver_array[@]} ]; do
-	set_module_suffix "${kernelver_array[$i]}"
+	mkdir -p "$mntdir"
+	local image_name="$module-$module_version-$distro-$release-dd.img"  
+	cd "$mntdir"
+	rm -f "$image_name"
+	invoke_command "dd if=/dev/zero of="./$image_name" bs=72k count=20" "making a blank floppy image" background
+	invoke_command "mke2fs ./$image_name" "mke2fs" background
+	mkdir ./mnt 2>/dev/null
+	invoke_command "mount -o loop -t ext2 $image_name ./mnt >/dev/null 2>&1" "loopback mounting disk image"
+	rm -rf ./mnt/lost+found > /dev/null 2>&1
+	cd - >/dev/null
+	echo $""
+	echo $"Creating driver disk:"
+	
 	local count=0
 	while [ "$count" -lt "${#dest_module_name[@]}" ]; do
-	    if ! [ -e "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" ]; then
-		echo $"" >&2
-		echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver_array[$i]} (${arch_array[$i]})." >&2
-		echo $"Module/version must be in built state before making a driver disk." >&2
-		rm -rf $temp_dir_name
-		exit 5
-	    fi
-	    suse_arch=${arch_array[$i]}
-	    case $suse_arch in
-		i?86)
-		    suse_arch=i386
-		    ;;
-	    esac
-	    echo "Marking ${kernelver_array[$i]}/${arch_array[$i]}/modules/${dest_module_name[$count]}$module_suffix..."
-	    mkdir -p "$temp_dir_name/$suse_arch-$release/install/lib/modules/${kernelver_array[$i]}${dest_module_location[$count]}"
-	    cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$temp_dir_name/$suse_arch-$release/install/lib/modules/${kernelver_array[$i]}${dest_module_location[$count]}/"
-	    case ${kernelver_array[$i]} in
-		*-default)
-		    mkdir -p "$temp_dir_name/$suse_arch-$release/modules/"
-		    cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$temp_dir_name/$suse_arch-$release/modules/"
-		    ;;
-	    esac
-	    count=$(($count+1))
+
+		local i=0
+		local topdir=`printf "%02d" $(($count+1))`
+    		while [ "$i" -lt "${#kernelver_array[@]}" ]; do
+			set_module_suffix "${kernelver_array[$i]}"
+
+			if ! [ -e "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" ]; then
+				echo $"" >&2
+				echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver_array[$i]} (${arch_array[$i]})." >&2
+				echo $"Module/version must be in built state before making a driver disk." >&2
+				rm -rf $temp_dir_name
+				exit 5
+			fi
+
+			suse_arch=${arch_array[$i]}
+			case $suse_arch in
+				i?86)
+					suse_arch=i386
+					;;
+			esac
+
+			echo "Marking ${kernelver_array[$i]}/${arch_array[$i]}/modules/${dest_module_name[$count]}$module_suffix..."
+			mkdir -p "$temp_dir_name/$topdir/$suse_arch-$release/install/lib/modules/${kernelver_array[$i]}${dest_module_location[$count]}"
+			cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$temp_dir_name/$topdir/$suse_arch-$release/install/lib/modules/${kernelver_array[$i]}${dest_module_location[$count]}/"
+
+			case ${kernelver_array[$i]} in
+				*-default)
+					mkdir -p "$temp_dir_name/$topdir/$suse_arch-$release/modules/"
+					cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$temp_dir_name/$topdir/$suse_arch-$release/modules/"
+					;;
+			esac
+
+			i=$(($i+1))
+		done
+
+		# ---
+		for arch_release in `find $temp_dir_name/$topdir -type d -maxdepth 1 -mindepth 1 | sed "s#$temp_dir_name\/$topdir\/##"`; do
+			cd "$temp_dir_name/$topdir/$arch_release/install/"
+			invoke_command "tar cvzf update.tar.gz lib/" "making update.tar.gz for $arch_release" background
+			cd - >/dev/null
+
+			mkdir -p "$mntdir/mnt/$topdir/linux/$distro/$arch_release/install"
+			mkdir -p "$mntdir/mnt/$topdir/linux/$distro/$arch_release/modules"
+
+			echo $"  copying update.tar.gz for $arch_release to disk image..."
+			cp -f "$temp_dir_name/$topdir/$arch_release/install/update.tar.gz" "$mntdir/mnt/$topdir/linux/$distro/$arch_release/install/"
+			if [ -d "$temp_dir_name/$topdir/$arch_release/modules/" ]; then
+				echo $"  copying kernel modules for installation kernel to disk image..."
+				cp -f "$temp_dir_name/$topdir/$arch_release/modules/*" "$mntdir/mnt/$topdir/linux/$distro/$arch_release/modules/" 2>/dev/null
+			else
+				echo $"  Warning! No kernel modules found for -default kernel."
+			fi
+		done
+
+		# ---
+		count=$(($count+1))
 	done
-	i=$(($i + 1))
-    done
 
-    mkdir -p "$dkms_tree/$module/$module_version/driver_disk"
-    local image_name="$module-$module_version-$distro-$release-dd.img"  
-    echo $""
-    echo $"Creating driver disk:"
+	invoke_command "umount $mntdir/mnt" "unmounting disk image"
+	rm -rf "$mntdir/lost+found" > /dev/null 2>&1
+	rm -rf "$mntdir/mnt"
+	rm -rf "$temp_dir_name"
 
-    for arch_release in `find $temp_dir_name -type d -maxdepth 1 -mindepth 1 | sed "s#$temp_dir_name\/##"`; do
-	cd $temp_dir_name/$arch_release/install/
-	invoke_command "tar cvzf update.tar.gz lib/" "making update.tar.gz for $arch_release" background
-	cd - >/dev/null
-    done
-
-    cd "$dkms_tree/$module/$module_version/driver_disk/"
-    rm -f $image_name
-    invoke_command "dd if=/dev/zero of="./$image_name" bs=$(($size/20))k count=20" "making a blank floppy image" background
-    invoke_command "mke2fs ./$image_name" "mke2fs" background
-    mkdir ./mnt 2>/dev/null
-    invoke_command "mount -o loop -t ext2 $image_name ./mnt >/dev/null 2>&1" "loopback mounting disk image"
-    mkdir -p ./mnt/linux/$distro
-    for arch_release in `find $temp_dir_name -type d -maxdepth 1 -mindepth 1 | sed "s#$temp_dir_name\/##"`; do
-	mkdir -p ./mnt/linux/$distro/$arch_release/install
-	mkdir -p ./mnt/linux/$distro/$arch_release/modules
-	echo $"  copying update.tar.gz for $arch_release to disk image..."
-	cp -f $temp_dir_name/$arch_release/install/update.tar.gz ./mnt/linux/$distro/$arch_release/install/
-	if [ -d $temp_dir_name/$arch_release/modules/ ]; then
-	    echo $"  copying kernel modules for installation kernel to disk image..."
-	    cp -f $temp_dir_name/$arch_release/modules/* ./mnt/linux/$distro/$arch_release/modules/ 2>/dev/null
-	else
-	    echo $"  warning! no kernel modules found for -default kernel."
-	fi
-    done
-    invoke_command "umount ./mnt" "unmounting disk image"
-    rm -rf ./mnt
-    rm -rf $temp_dir_name
-    cd - >/dev/null
-    echo $""
-    echo $"Disk image location: $dkms_tree/$module/$module_version/driver_disk/$image_name"
-    echo $""
-    echo $"DKMS: mkdriverdisk Completed."
+	echo $""
+   	echo $"Disk image location: $dkms_tree/$module/$module_version/driver_disk/$image_name"
+	echo $""
+	echo $"DKMS: mkdriverdisk Completed."
 }
 
 make_tarball()
@@ -2005,6 +2019,7 @@ load_tarball()
 	    echo $"" >&2
 	    echo $"This can be overridden by using --force, but this is not recommended since" >&2
 	    echo $"it will eliminate your ability to actually build for this module." >&2
+            rm -rf $temp_dir_name
 	    exit 6
 	elif [ "`$0 status -m $PACKAGE_NAME -v $PACKAGE_VERSION 2>/dev/null`" == "" ] && [ -n "$force" ]; then
 	    if [ -e "$temp_dir_name/dkms_binaries_only/dkms.conf" ]; then
@@ -2289,7 +2304,7 @@ make_rpm()
 	    i=$(($i + 1))
 	done
     fi
-    RPMS=`invoke_command "rpmbuild --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" -bb $SPECFILE 2>&1|grep ^Wrote" "rpmbuild"`
+    RPMS=`invoke_command "rpmbuild --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" -ba $SPECFILE 2>&1|grep ^Wrote" "rpmbuild"`
     if [ "$?" -eq 0 ]; then
 	echo $"" 
 	echo $"$RPMS"
@@ -2424,7 +2439,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.8"
+	    echo $"dkms: 2.0.8.2"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
