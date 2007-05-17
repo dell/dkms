@@ -1,14 +1,13 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.25.14
+Version: 0.27.05
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
 Packager: Gary Lerhaupt <gary_lerhaupt@dell.com>
 Group: System Environment/Base
-Requires: gcc bash sed gawk findutils
-Source0: dkms
-Source1: dkms.8.gz
+Requires: gcc bash sed gawk findutils tar
+Source: dkms-%version.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root/
 
 %description
@@ -17,13 +16,17 @@ Kernel Module Support (DKMS) method for installing
 module RPMS as originally developed by the Dell
 Computer Corporation.
 
+%prep
+
+%setup -q
+
 %install
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
         rm -rf $RPM_BUILD_ROOT
 fi
 mkdir -p $RPM_BUILD_ROOT/{var/dkms,sbin,usr/share/man/man8}
-install -m 755 %{SOURCE0} $RPM_BUILD_ROOT/sbin/dkms
-install -m 644 $RPM_SOURCE_DIR/dkms.8.gz $RPM_BUILD_ROOT/usr/share/man/man8
+install -m 755 dkms $RPM_BUILD_ROOT/sbin/dkms
+install -m 644 dkms.8.gz $RPM_BUILD_ROOT/usr/share/man/man8
 
 %clean 
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
@@ -37,6 +40,20 @@ fi
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
 
 %changelog
+* Tue Apr 29 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.27.05-1
+- Changed NEEDED_FOR_BOOT to REMAKE_INITRD as this makes more sense
+- Redid handling of modifying modules.conf 
+- Added MODULE_CONF_ALIAS_TYPE to specs
+
+* Mon Apr 28 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.26.12-1
+- Started adding ldtarball support
+- added the --force option
+- Update man page
+
+* Thu Apr 24 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.26.05-1
+- Started adding mktarball support
+- Fixed up the spec file to use the tarball
+
 * Tue Mar 25 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.25.14-1
 - Continued integrating mkdriverdisk
 - Updated man page

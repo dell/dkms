@@ -53,9 +53,9 @@ function show_usage ()
 {
     echo $"Usage: $0 [action] [options]" >$std_err
     echo $"      [action]  = { add | remove | build | install | uninstall | match" >$std_err
-    echo $"                    | mkdriverdisk | status }" >$std_err
+    echo $"                    | mkdriverdisk | mktarball | ldtarball | status }" >$std_err
     echo $"      [options] = [-c dkms.conf-location] [-k kernel-version]" >$std_err
-    echo $"                  [-m module] [-v module-version] [-d distro ] [-q]" >$std_err
+    echo $"                  [-m module] [-v module-version] [-d distro ] [-q] [--force]" >$std_err
     echo $"                  [--postadd=script-location] [--postbuild=script-location]" >$std_err
     echo $"                  [--postinstall=script-location] [--postremove=script-location]" >$std_err
     echo $"                  [--templatekernel=kernel] [--config=kernel-.config-location]" >$std_err 
@@ -78,7 +78,8 @@ function read_conf ()
     LOCATION=""
     CLEAN=""
     MODULE_NAME=""
-    NEEDED_FOR_BOOT=""
+    REMAKE_INITRD=""
+    MODULES_CONF_ALIAS_TYPE=""
 
     # Set variables supported in dkms.conf files (eg. $kernelver)
     kernelver="$kernel_version"
@@ -91,7 +92,8 @@ function read_conf ()
     location="/lib/modules/$kernel_version$LOCATION"
     clean="$CLEAN"
     module_name_list="$MODULE_NAME"
-    needed_for_boot="$NEEDED_FOR_BOOT"
+    remake_initrd="$REMAKE_INITRD"
+    modules_conf_alias_type="$MODULES_CONF_ALIAS_TYPE"
     
     # Set modules_conf_array
     index=0
@@ -130,10 +132,10 @@ function read_conf ()
     if [ -z "$module_name_list" ]; then
 	module_name_list="$module"
     fi
-    if [ `echo "$needed_for_boot" | grep -ic "^y"` -gt 0 ]; then
-	needed_for_boot="yes"
+    if [ `echo "$remake_initrd" | grep -ic "^y"` -gt 0 ]; then
+	remake_initrd="yes"
     else
-	needed_for_boot=""
+	remake_initrd=""
     fi
 
     # Fail if no make command
@@ -167,6 +169,19 @@ function modulesconf_modify ()
 {
     # Make modules.conf changes as necessary
     if [ "$1" == "add" ]; then
+
+	# Add aliases
+	if [ -n "$modules_conf_alias_type" ]; then
+	    for module_name in $module_name_list; do
+		module_name_after=`echo $module_name | sed 's/.*://' | sed 's/\..*//'`
+		if [ `grep -c "alias ${modules_conf_alias_type}[0-9]* $module_name_after\b" /etc/modules.conf` -eq 0 ]; then
+		    next_alias_number=$(( `grep "alias $modules_conf_alias_type" /etc/modules.conf | awk '{print $2}' | sed "s/$modules_conf_alias_type//" | sort -n | tail -1` + 1 ))
+		    echo -e "alias ${modules_conf_alias_type}${next_alias_number} $module_name_after" >> /etc/modules.conf
+		fi
+	    done
+	fi
+
+	# Add anything else
 	index=0
 	while [ $index -lt ${#modules_conf_array[*]} ]; do
 	    if [ -n "${modules_conf_array[$index]}" ] && [ `grep -c "${modules_conf_array[$index]}" "/etc/modules.conf"` -eq 0 ]; then
@@ -174,10 +189,24 @@ function modulesconf_modify ()
 	    fi	    
 	    index=$((index+1))
 	done
+
     fi
 
     # Remove modules_conf entries from /etc/modules.conf
     if [ "$1" == "delete" ]; then
+
+	# Remove aliases (maybe)
+	if [ -n "$modules_conf_alias_type" ]; then
+	    for module_name in $module_name_list; do
+		module_name_after=`echo $module_name | sed 's/.*://' | sed 's/\..*//'`
+		if [ `find /lib/modules/$kernel_version/ -name "$module_name_after.*" | wc -l | awk '{print $1}'` -eq 0 ]; then
+		    grep -v "alias ${modules_conf_alias_type}[0-9]* $module_name_after" /etc/modules.conf > /etc/modules.new
+		    mv -f /etc/modules.new /etc/modules.conf
+		fi
+	    done
+	fi
+
+	# Remove everything else
 	index=0
 	while [ $index -lt ${#modules_conf_array[*]} ]; do
 	    if [ -n "${modules_conf_array[$index]}" ]; then
@@ -449,8 +478,8 @@ function install_module()
 	invoke_command "depmod -a $kernel_version -F /boot/System.map-$kernel_version" "depmod" background 
     fi
 
-    # Do needed_for_boot things (save old initrd)
-    if [ -n "$needed_for_boot" ]; then
+    # Do remake_initrd things (save old initrd)
+    if [ -n "$remake_initrd" ]; then
 	echo $"" 
 	echo $"Saving old initrd as /boot/initrd-${kernel_version}_old.img" 
 	mv -f "/boot/initrd-${kernel_version}.img" "/boot/initrd-${kernel_version}_old.img"
@@ -647,8 +676,8 @@ function do_uninstall()
 	invoke_command "depmod -a $kernel_version -F /boot/System.map-$kernel_version" "depmod" background 
     fi
     
-    # Do needed_for_boot things (remake initrd)
-    if [ -n "$needed_for_boot" ]; then
+    # Do remake_initrd things (remake initrd)
+    if [ -n "$remake_initrd" ]; then
 	echo $"" 
 	echo $"Remaking initrd as /boot/initrd-${kernel_version}.img" 
 	invoke_command "mkinitrd -f /boot/initrd-${kernel_version}.img ${kernel_version}" "mkinitrd" background
@@ -769,14 +798,14 @@ function remove_module ()
     # If kernel_version is unset, remove all installations of $module_version, otherwise just one kernel
     kernel_list=""
     if [ -z "$kernel_version" ]; then
-	kernel_list="`ls "$dkms_tree/$module/$module_version"`"
+	kernel_list="`ls $dkms_tree/$module/$module_version | grep -v "build\b" | grep -v "tarball\b" | grep -v "rpm\b"`"
     else
 	kernel_list="$kernel_version"
     fi
 
     # Iterate over the kernel_list
     for kernel_in_tree in $kernel_list; do
-	if [ -d "$dkms_tree/$module/$module_version/$kernel_in_tree" ] && ! [ -h "$dkms_tree/$module/$module_version/$kernel_in_tree" ] && [ "$kernel_in_tree" != "build" ] ; then
+	if [ -d "$dkms_tree/$module/$module_version/$kernel_in_tree" ] && ! [ -h "$dkms_tree/$module/$module_version/$kernel_in_tree" ]; then
 	    kernel_version="$kernel_in_tree"
 	    read_conf
 	    if [ "$?" -ne 0 ]; then
@@ -794,7 +823,7 @@ function remove_module ()
     done
 
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
-    if [ "`find $dkms_tree/$module/$module_version/* -maxdepth 1 -type d`" == "$dkms_tree/$module/$module_version/build" ]; then
+    if [ -z "`find $dkms_tree/$module/$module_version/* -maxdepth 1 -type d | grep -v build$ | grep -v tarball$ | grep -v rpm$`"  ]; then
 	echo $"" 
 	echo $"------------------------------" 
 	echo $"Deleting module version: $module_version" 
@@ -866,8 +895,8 @@ show_status ()
 		    if [ -n "$kernel_version" ]; then
 			kernels_needing_status="$kernel_version"
 		    else
-			for filename in `ls "$dkms_tree/$module_in_tree/$version_in_tree"`; do
-			    if [ -d "$dkms_tree/$module_in_tree/$version_in_tree/$filename" ] && ! [ -h "$dkms_tree/$module_in_tree/$version_in_tree/$filename" ] && [ "$filename" != "build" ] ; then
+			for filename in `ls $dkms_tree/$module_in_tree/$version_in_tree | grep -v "build\b" | grep -v "tarball\b" | grep -v "rpm\b"`; do
+			    if [ -d "$dkms_tree/$module_in_tree/$version_in_tree/$filename" ] && ! [ -h "$dkms_tree/$module_in_tree/$version_in_tree/$filename" ]; then
 				kernels_needing_status="$kernels_needing_status $filename"
 			    fi
 			done    
@@ -1001,6 +1030,178 @@ make_driver_disk ()
     echo $"Done."
 }
 
+make_tarball()
+{
+    # Error if $module_version is set but $module is not
+    if [ -z "$module" ] || [ -z "$module_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! Invalid number of parameters passed." >$std_err
+	echo $"Usage: mktarball [-m module] [-v module-version]" >$std_err
+	exit 1	
+    fi
+
+    # Check that source symlink works
+    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
+	echo $"" >$std_err
+	echo $"Error! DKMS tree does not contain: $module-$module_version" >$std_err
+	echo $"Build cannot continue without the proper tree." >$std_err
+	exit 2
+    fi
+
+    # Make sure that its installed in the first place
+    if ! [ -d "$dkms_tree/$module/$module_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! The module/version combo: $module-$module_version" >$std_err
+	echo $"is not located in the DKMS tree." >$std_err
+	exit 3
+    fi
+
+    # Create a list of possible built kernels for this module
+    built_for_kernels=`dkms status -m $module -v $module_version | awk '{print $3}' | grep ":" | sed 's/://'`
+
+    if [ -z "$built_for_kernels" ]; then
+	echo $"" >$std_err
+	echo $"Error!  There are no built modules for any kernels for $module" >$std_err
+	echo $"$module_version.  Cannot create an empty tarball." >$std_err
+	exit 4
+    fi
+
+    # Create the base list of things to archive
+    files_in_tree=`find $dkms_tree/$module/$module_version -type f -maxdepth 1`
+    things_to_archive="$source_tree/$module-$module_version $files_in_tree"
+    echo $""
+    echo $"Marking $source_tree/$module-$module_version for archiving..."
+
+    # Determine the kernel_versions to put in the tarball
+    kernel_version=`echo $kernel_version | cut -d "," --output-delimiter " " -f 1-`
+    kernel_version_list=""
+    for kernel in $built_for_kernels; do
+	if [ -z "$kernel_version" ] || [ `echo "$kernel_version" | grep -c "$kernel\b"` -gt 0 ]; then
+	    things_to_archive="$things_to_archive $dkms_tree/$module/$module_version/$kernel"
+	    if [ -z "$kernel_version_list" ]; then
+		kernel_version_list="kernel$kernel"
+	    else
+		kernel_version_list="$kernel_version_list-kernel$kernel"
+	    fi
+	    echo $"Marking kernel $kernel for archiving..."
+	fi
+    done
+
+    # If they specified a kernel(s), make sure everything is sane
+    for kernel in $kernel_version; do
+	if [ `echo "$built_for_kernels" | grep -c "$kernel\b"` -eq 0 ]; then
+	    echo $"" >$std_err
+	    echo $"Error! The kernel $kernel does not have modules built for" >$std_err
+	    echo $"$module $module_version.  Cannot create archive." >$std_err
+	    exit 5
+	fi
+    done
+
+    # Make the tarball
+    tar -czf $module-$module_version-$kernel_version_list.dkms.tar.gz $things_to_archive 2>/dev/null
+    if [ "$?" -eq 0 ]; then
+	mkdir -p $dkms_tree/$module/$module_version/tarball
+	mv -f $module-$module_version-$kernel_version_list.dkms.tar.gz $dkms_tree/$module/$module_version/tarball/
+	echo $""
+	echo $"Tarball location: $dkms_tree/$module/$module_version/tarball/$module-$module_version-$kernel_version_list.dkms.tar.gz"
+	echo $""
+	echo $"Done."
+    else
+	echo $"" >$std_err
+	echo $"Error! Failed to make tarball." >$std_err
+	exit 6
+    fi
+}
+
+load_tarball()
+{
+    # Error out of --config was not set with the tarball location
+    if [ -z "$kernel_config" ]; then
+	echo $"" >$std_err
+	echo $"Error! Invalid number of parameters passed." >$std_err
+	echo $"Usage: ldtarball [--config=tarball-location]" >$std_err
+	exit 1	
+    fi
+
+    # Error out if $kernel_config does not exist
+    if ! [ -e "$kernel_config" ]; then
+	echo $"" >$std_err
+	echo $"Error! Cannot locate $kernel_config." >$std_err
+	echo $"File does not exist." >$std_err
+	exit 2
+    fi
+
+    # Figure out what kind of archive it is (tar.gz, tar, tar.bz, etc)
+    tar_options=""
+    if `gzip -t $kernel_config 2>/dev/null`; then
+	tar_options="${tar_options}z"
+    fi
+    if `bzip2 -t $kernel_config 2>/dev/null`; then
+	tar_options="${tar_options}j"
+    fi
+
+    # Figure out which module and module-version we're loading
+    module=`tar -${tar_options}tf $kernel_config | grep "var/dkms/" | head -1 | sed 's/var\/dkms\///' | sed 's/\/.*//'`
+    module_version=`tar -${tar_options}tf $kernel_config | grep "var/dkms/" | head -1 | sed "s/var\/dkms\/$module\///" | sed 's/\/.*//'`
+    
+    # Make sure its a sane tarball
+    if [ -z "$module" ] || [ -z "$module_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! Tarball does not appear to be correctly formed." >$std_err
+	echo $"Could not decipher which module/module_version it contained." >$std_err
+	exit 3
+    fi
+
+    # Untar it into /tmp
+    tar -${tar_options}xf $kernel_config -C /tmp 
+
+    echo $""
+    echo $"Loading tarball for module: $module / version: $module_version"
+    echo $""
+
+    # Load the source from the tarball
+    if [ "`dkms status -m $module -v $module_version`" != "" ] && [ -z "$force" ]; then
+	echo $"Warning! Source for $module-$module_version already exists.  Skipping..."
+    else
+	echo $"Loading /usr/src/$module-$module_version..."
+	rm -rf /usr/src/$module-$module_version
+	mkdir -p /usr/src/$module-$module_version
+	cp -rf /tmp/usr/src/$module-$module_version/* /usr/src/$module-$module_version
+    fi
+
+    mkdir -p $dkms_tree/$module/$module_version
+
+    # Load config files & scripts
+    files_to_load=`find /tmp$dkms_tree/$module/$module_version -type f -maxdepth 1`
+    for filename in $files_to_load; do
+	dkms_file_location=`echo $filename | sed 's/\/tmp//'`
+	if [ -e "$dkms_file_location" ] && [ -z "$force" ]; then
+	    echo $"Warning! $dkms_file_location already exists.  Skipping..."
+	else
+	    cp -f $filename $dkms_file_location
+	    echo "Loading $dkms_file_location..."
+	fi
+    done
+
+    # Load kernel directories
+    dirs_to_load=`find /tmp$dkms_tree/$module/$module_version -type d -maxdepth 1 -mindepth 1`
+    for directory in $dirs_to_load; do
+	dkms_dir_location=`echo $directory | sed 's/\/tmp//'`
+	if [ -d "$dkms_dir_location" ] && [ -z "$force" ]; then
+	    echo $"Warning! $dkms_dir_location already exists.  Skipping..."
+	else
+	    echo $"Loading $dkms_dir_location..."
+	    rm -rf $dkms_dir_location
+	    mkdir -p $dkms_dir_location
+	    cp -rf $directory/* $dkms_dir_location
+	fi
+    done
+    
+    # Create source symlink
+    rm -f "$dkms_tree/$module/$module_version/source"
+    ln -s "$source_tree/$module-$module_version" "$dkms_tree/$module/$module_version/source"
+}
+
 run_match ()
 {
     # Error if $template_kernel or $kernel_version are unset
@@ -1122,6 +1323,7 @@ post_remove=""
 post_install=""
 kernel_config=""
 action=""
+force=""
 std_err="/dev/stderr"
 
 # Parse command line arguments
@@ -1180,8 +1382,11 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.25.14"
+	    echo $"dkms: 0.27.05"
 	    exit 0
+	    ;;
+	--force)
+	    force="true"
 	    ;;
 	--postadd*)
 	    if echo $1 | grep '=' >/dev/null ; then
@@ -1297,6 +1502,17 @@ case "$action" in
 	fi
 	make_driver_disk
 	;;	
+    mktarball)
+	make_tarball
+	;;	
+    ldtarball)
+	# Make sure they're root
+	if [ `id -u` -ne 0 ]; then
+	    echo $"You must be root to use this command." >$std_err
+	    exit 1
+	fi
+	load_tarball
+	;;
     status)
 	show_status
 	;;
