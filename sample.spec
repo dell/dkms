@@ -48,7 +48,7 @@ if [ "$RPM_BUILD_ROOT" != "/" ]; then
 fi
 
 %files
-%defattr(0644,root,root)
+%defattr(-,root,root)
 /usr/src/%{module}-%{version}/
 
 %pre

@@ -121,6 +121,7 @@ function read_conf ()
     POST_BUILD=""
     POST_INSTALL=""
     POST_REMOVE=""
+    PRE_BUILD=""
     BUILD_EXCLUSIVE_KERNEL=""
     BUILD_EXCLUSIVE_ARCH=""
     build_exclude=""
@@ -174,6 +175,7 @@ function read_conf ()
     post_build="$POST_BUILD"
     post_install="$POST_INSTALL"
     post_remove="$POST_REMOVE"
+    pre_build="$PRE_BUILD"
 
     # Set module naming/location arrays
     index=0
@@ -850,6 +852,14 @@ function build_module()
     # Set up temporary build directory for build
     rm -rf "$dkms_tree/$module/$module_version/build"
     cp -rf "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
+
+    # Run the pre_build script
+    if [ -n "$pre_build" ] && [ -x "$dkms_tree/$module/$module_version/source/$pre_build" ]; then
+	echo $"" 
+	echo $"Running the pre_build script:" 
+	"$dkms_tree/$module/$module_version/source/$pre_build" 
+    fi
+
     cd "$dkms_tree/$module/$module_version/build"
     echo $"" 
     echo $"Building module:" 
@@ -1899,7 +1909,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 1.10"
+	    echo $"dkms: 1.11"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

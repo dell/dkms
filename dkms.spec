@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 1.10
+Version: 1.11
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -55,6 +55,9 @@ fi
 
 
 %changelog
+* Mon Jun 01 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.11-1
+- Added PRE_BUILD dkms.conf directive
+
 * Fri May 07 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.10-1
 - bumped the revision
 
