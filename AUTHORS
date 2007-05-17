@@ -1,6 +1,9 @@
 Gary Lerhaupt <gary_lerhaupt@dell.com>
-- Initial dkms software development
+- DKMS software development
 - Build from source adaptation from QLogic RPM
+
+Fred Treasure <fwtreas@us.ibm.com>
+- Kernel preparation support for SuSE/UL
 
 Matt Domsch <matt_domsch@dell.com>
 - DKMS Architecture and Linux standards input and advice

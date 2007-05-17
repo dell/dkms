@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.32.04
+Version: 0.33.02
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
@@ -28,6 +28,7 @@ mkdir -p $RPM_BUILD_ROOT/{var/dkms,sbin,usr/share/man/man8,etc}
 install -m 755 dkms $RPM_BUILD_ROOT/sbin/dkms
 install -m 644 dkms.8.gz $RPM_BUILD_ROOT/usr/share/man/man8
 install -m 644 dkms_framework.conf  $RPM_BUILD_ROOT/etc/dkms_framework.conf
+install -m 644 dkms_dbversion $RPM_BUILD_ROOT/var/dkms/dkms_dbversion
 
 %clean 
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
@@ -43,6 +44,11 @@ fi
 %config(noreplace) /etc/dkms_framework.conf
 
 %changelog
+* Fri Aug 08 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.33.02-1
+- Fixed quote bugs in match (Reported by: John Hull <john_hull@dell.com>) 
+- Added Fred Treasure to the AUTHORS list
+- Added dkms_dbversion file to DKMS tree to track architecture of dkms db layout
+
 * Thu Jul 03 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.32.04-1
 - Added mkinitrd support for SuSE (etc_sysconfig_kernel_modify)
 - Added generic make command for kernel >2.4 (make -C <path-to-kernel-source> SUBDIRS=<build dir> modules)

@@ -1380,7 +1380,7 @@ run_match ()
 	    exit 3
 	fi
 
-	template_kernel_status=`echo $template_kernel_status | grep "^$module,"`
+	template_kernel_status=`echo "$template_kernel_status" | grep "^$module,"`
     fi
 
     echo $""
@@ -1395,7 +1395,7 @@ run_match ()
 	prepare_kernel
 
         # Iterate over the kernel_status and match kernel to the template_kernel
-	for template_line in "$template_kernel_status"; do
+	for template_line in $template_kernel_status; do
 	    template_module=`echo "$template_line" | sed 's/\(.*\), .*, .*:.*/\1/'`
 	    template_version=`echo "$template_line" | sed 's/.*, \(.*\), .*: .*/\1/'`
 	    
@@ -1407,10 +1407,10 @@ run_match ()
 	    echo $"-------------------------" 
 	    
 	    # Figure out what to do from here
-	    if [ `$0 status -m "$template_module" -v "$template_version" -k "$kernel_version" | grep -c ": installed"` -eq 1 ]; then
+	    if [ `$0 status -m "$template_module" -v "$template_version" -k "$kernel_version" 2>/dev/null | grep -c ": installed"` -eq 1 ]; then
 		echo $"" 
 		echo $"This module/version combo is already installed.  Nothing to be done." 
-	    elif [ `$0 status -m "$template_module" -v "$template_version" -k "$kernel_version" | grep -c ": built"` -eq 1 ]; then
+	    elif [ `$0 status -m "$template_module" -v "$template_version" -k "$kernel_version" 2>/dev/null | grep -c ": built"` -eq 1 ]; then
 		unset IFS
 		echo $"" 
 		echo $"This module/version combo is built.  Installing it:" 
@@ -1542,7 +1542,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.32.04"
+	    echo $"dkms: 0.33.02"
 	    exit 0
 	    ;;
 	--force)

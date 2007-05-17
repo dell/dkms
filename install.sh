@@ -19,6 +19,7 @@ fi
 echo "Installing DKMS"
 cp -f $DIR/dkms /sbin
 cp -f $DIR/dkms.8.gz /usr/share/man/man8
+cp -f $DIR/dkms_dbversion /var/dkms/
 if ! [ -e /etc/dkms_framework.conf ]; then
 	cp -f $DIR/dkms_framework.conf /etc/dkms_framework.conf
 fi
