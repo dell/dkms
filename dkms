@@ -63,10 +63,12 @@ function remake_initrd()
     mkinitrd --version >/dev/null
     if [ "$?" -eq 0 ]; then
       	echo $"" 
-	echo $"Saving old initrd as /boot/initrd-${kernel_version}_old.img" 
-	cp -f "/boot/initrd-${kernel_version}.img" "/boot/initrd-${kernel_version}_old.img"
-	echo $"Making new initrd as /boot/initrd-${kernel_version}.img" 
-	invoke_command "mkinitrd -f /boot/initrd-${kernel_version}.img ${kernel_version}" "mkinitrd" background
+	initrd_dir="/boot"
+	[ `uname -m` == "ia64" ] && [ -d "/boot/efi/efi/redhat" ] && initrd_dir="/boot/efi/efi/redhat"
+	echo $"Saving old initrd as $initrd_dir/initrd-${kernel_version}_old.img" 
+	cp -f "$initrd_dir/initrd-${kernel_version}.img" "$initrd_dir/initrd-${kernel_version}_old.img"
+	echo $"Making new initrd as $initrd_dir/initrd-${kernel_version}.img" 
+	invoke_command "mkinitrd -f $initrd_dir/initrd-${kernel_version}.img ${kernel_version}" "mkinitrd" background
 	exitval="$?"
 	echo $"If your next boot fails, edit your bootloader file and revert" 
 	echo $"to the _old initrd image." 
@@ -1827,7 +1829,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 1.00"
+	    echo $"dkms: 1.02"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

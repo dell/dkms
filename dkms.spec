@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 1.00
+Version: 1.02
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -46,7 +46,7 @@ fi
 %attr(0755,root,root) /etc/init.d/dkms_autoinstaller
 %attr(0755,root,root) /usr/sbin/dkms_mkkerneldoth
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
-%doc %attr(0644,root,root) sample.spec sample.conf AUTHORS COPYING
+%doc %attr (-,root,root) sample.spec sample.conf AUTHORS COPYING
 %config(noreplace) /etc/dkms_framework.conf
 
 %post
@@ -55,6 +55,12 @@ fi
 
 
 %changelog
+* Thu Jan 15 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.02-1
+- Fixed mkinitrd for ia64
+
+* Tue Dec 09 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.00.01-1
+- Fixed /usr/share/doc/dkms-<version> mode to 755
+
 * Mon Dec 01 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.00-1
 - Bumped version to 1.00
 
