@@ -117,6 +117,8 @@ function read_conf ()
     MODULE_NAME=""
     REMAKE_INITRD=""
     MODULES_CONF_ALIAS_TYPE=""
+    PACKAGE_NAME=""
+    PACKAGE_VERSION=""
 
     # Set variables supported in dkms.conf files (eg. $kernelver)
     kernelver="$kernel_version"
@@ -155,6 +157,8 @@ function read_conf ()
     module_name_list="$MODULE_NAME"
     remake_initrd="$REMAKE_INITRD"
     modules_conf_alias_type="$MODULES_CONF_ALIAS_TYPE"
+    package_name="$PACKAGE_NAME"
+    package_version="$PACKAGE_VERSION"
     
     # Set modules_conf_array
     index=0
@@ -206,6 +210,18 @@ function read_conf ()
     # Fail if bad location command
     if [ `echo "$LOCATION" | grep -c "^/kernel"` -eq 0 ]; then
 	echo $"dkms.conf: Error! Directive 'LOCATION' does not begin with '/kernel'.">$std_err
+	return_value=1
+    fi
+
+    # Fail if no PACKAGE_NAME
+    if [ -z "$package_name" ]; then
+	echo $"dkms.conf: Error! No 'PACKAGE_NAME' directive specified.">$std_err
+	return_value=1
+    fi
+
+    # Fail if no PACKAGE_VERSION
+    if [ -z "$package_version" ]; then
+	echo $"dkms.conf: Error! No 'PACKAGE_VERSION' directive specified.">$std_err
 	return_value=1
     fi
 
@@ -1544,7 +1560,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.34.10"
+	    echo $"dkms: 0.35.01"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

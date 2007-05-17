@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.34.10
+Version: 0.35.01
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
@@ -49,6 +49,9 @@ fi
 /sbin/chkconfig dkms_autoinstaller on
 
 %changelog
+* Wed Sep 10 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.35.01-1
+- Added PACKAGE_NAME, PACKAGE_VERSION requirements to dkms.conf for gmodconfig use
+
 * Mon Sep 08 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.34.10-1
 - Continued adding autoinstall stuff
 - Updated man page
