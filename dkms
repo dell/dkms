@@ -59,6 +59,7 @@ function readlink()
 function remake_initrd()
 {
     # If its Red Hat's version of mkinitrd, we know what to do, otherwise we don't
+    exitval="0"
     mkinitrd --version >/dev/null
     if [ "$?" -eq 0 ]; then
       	echo $"" 
@@ -66,18 +67,22 @@ function remake_initrd()
 	cp -f "/boot/initrd-${kernel_version}.img" "/boot/initrd-${kernel_version}_old.img"
 	echo $"Making new initrd as /boot/initrd-${kernel_version}.img" 
 	invoke_command "mkinitrd -f /boot/initrd-${kernel_version}.img ${kernel_version}" "mkinitrd" background
+	exitval="$?"
 	echo $"If your next boot fails, edit your bootloader file and revert" 
 	echo $"to the _old initrd image." 
     else
 	echo $""
 	echo $"Calling mkinitrd (bad exit status 9 may occur)"
 	invoke_command "mkinitrd >/dev/null 2>&1" "mkinitrd" background
+	exitval="$?"
     fi
 
     # Rerun lilo if necessary
     if ! [ -e /boot/grub/grub.conf ] && [ -e /etc/lilo.conf ]; then
 	invoke_command "/sbin/lilo" "Updating lilo"
     fi
+
+    return $exitval
 }
 
 function show_usage ()
@@ -435,8 +440,9 @@ function prepare_kernel()
     # Check that kernel-source exists
     if ! [ -e "$kernel_source_dir/include" ]; then
 	echo $"" >$std_err
-	echo $"Error! Your kernel source for kernel $kernel_version is not" >$std_err
-	echo $"installed. DKMS build requires kernel source to build modules." >$std_err
+	echo $"Error! Your kernel source for kernel $kernel_version cannot be found" >$std_err
+	echo $"at: $kernel_source_dir." >$std_err
+	echo $"You can use the --kernelsourcedir option to tell DKMS where it's located."
 	exit 1	
     fi
 
@@ -647,12 +653,35 @@ function install_module()
 
     # Run depmod if System.map-<kernel_version> exists
     if [ -e "/boot/System.map-$kernel_version" ]; then
-	invoke_command "depmod -a $kernel_version -F /boot/System.map-$kernel_version" "depmod" background 
+	invoke_command "depmod -au $kernel_version -F /boot/System.map-$kernel_version" "depmod" background 
+	if [ "$?" -ne 0 ]; then
+	    unresolved_symbols="`depmod -a $kernel_version -F /boot/System.map-$kernel_version 2>&1`"
+	    count=0
+	    while [ "$count" -lt "${#built_module_name[*]}" ]; do
+		if [ `echo "$unresolved_symbols" | grep -c "${dest_module_name[$count]}$module_suffix$"` -gt 0 ]; then
+		    echo $"Problems with depmod detected.  Automatically uninstalling this module."
+		    sleep 2
+		    do_uninstall
+		    echo $""
+		    echo $"DKMS: Install Failed (depmod problems).  Module rolled back to built state."
+		    exit 6
+		fi
+		count=$(($count + 1))
+	    done
+	fi
     fi
 
     # Do remake_initrd things (save old initrd)
     if [ -n "$remake_initrd" ]; then
 	remake_initrd
+	if [ "$?" -ne 0 ]; then
+	    echo $"Problems with mkinitrd detected.  Automatically uninstalling this module."
+	    sleep 2
+	    do_uninstall
+	    echo $""
+	    echo $"DKMS: Install Failed (mkinitrd problems).  Module rolled back to built state."
+	    exit 7
+	fi
     fi
      
     echo $"" 
@@ -847,6 +876,14 @@ function do_uninstall()
     # Do remake_initrd things (remake initrd)
     if [ -n "$remake_initrd" ] && [ -n "$was_active" ]; then
 	remake_initrd
+	if [ "$?" -ne 0 ]; then
+	    echo $""
+	    echo $"WARNING! WARNING! WARNING!"
+	    echo $"There was a problem remaking your initrd.  You must manually remake it"
+	    echo $"before booting into this kernel."
+	    echo $"WARNING! WARNING! WARNING!"
+	    echo $""
+	fi
     fi
 
     # Make sure modules.conf still has entries if they got removed above
@@ -1667,7 +1704,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.41.11"
+	    echo $"dkms: 0.41.15"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
