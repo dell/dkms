@@ -1,9 +1,9 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.37.04
+Version: 0.37.10
 Release: 1
 Vendor: Dell Computer Corporation
-Copyright: GPL
+License: GPL
 Packager: Gary Lerhaupt <gary_lerhaupt@dell.com>
 Group: System Environment/Base
 Requires: gcc bash sed gawk findutils tar cpio gzip grep mktemp
@@ -49,6 +49,13 @@ fi
 /sbin/chkconfig dkms_autoinstaller on
 
 %changelog
+* Wed Sep 24 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.37.10-1
+- Don't allow installs of modules onto non-existant kernels
+- Suppressed stderr on some commands
+- Fixed brain-dead bug for REMAKE INITRD
+- During uninstall, dont remake initrd if it was not installed
+- ldtarball into unique tempdir and delete it when finished
+
 * Tue Sep 23 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.37.04-1
 - Changed PATCH to array based system (added PATCH_MATCH array)
 - PATCHes can now be matched against regular expressions, not just substrings

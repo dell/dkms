@@ -136,7 +136,6 @@ function read_conf ()
 
     # Set variables
     clean="$CLEAN"
-    remake_initrd="$REMAKE_INITRD"
     modules_conf_alias_type="$MODULES_CONF_ALIAS_TYPE"
     package_name="$PACKAGE_NAME"
     package_version="$PACKAGE_VERSION"
@@ -223,8 +222,7 @@ function read_conf ()
     done
 
     # Set remake_initrd
-    remake_initrd=""
-    [ `echo "$remake_initrd" | grep -ic "^y"` -gt 0 ] && remake_initrd="yes"
+    [ `echo "$REMAKE_INITRD" | grep -ic "^y"` -gt 0 ] && remake_initrd="yes"
 
     # Fail if no make command
     if [ -z "$make_command" ]; then
@@ -289,7 +287,7 @@ function modulesconf_modify ()
 	# Remove aliases (maybe)
 	if [ -n "$modules_conf_alias_type" ]; then
 	    for module_name_after in ${dest_module_name[*]}; do
-		if [ `find /lib/modules/$kernel_version/ -name "$module_name_after.*" | wc -l | awk '{print $1}'` -eq 0 ]; then
+		if [ `find /lib/modules/$kernel_version/ -name "$module_name_after.*" 2>/dev/null | wc -l | awk '{print $1}'` -eq 0 ]; then
 		    grep -v "alias ${modules_conf_alias_type}[0-9]* $module_name_after" /etc/modules.conf > /etc/modules.new
 		    mv -f /etc/modules.new /etc/modules.conf
 		fi
@@ -545,6 +543,14 @@ function install_module()
 	exit 2
     fi
 
+    # Make sure that kernel exists to install into
+    if ! [ -e "/lib/modules/$kernel_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! The directory /lib/modules/$kernel_version doesn't exist." >$std_err
+	echo $"You cannot install a module onto a non-existant kernel." >$std_err
+	exit 6
+    fi
+
     # Read the conf file
     read_conf
     if [ "$?" -ne 0 ]; then
@@ -770,7 +776,7 @@ function build_module()
     fi
 
     # Clean the build directory
-    rm -rf "$dkms_tree/$module/$module_version"/build/*
+    rm -rf "$dkms_tree/$module/$module_version/build/*"
 
     echo $"" 
     echo $"Build Completed." 
@@ -831,7 +837,7 @@ function do_uninstall()
     fi
     
     # Do remake_initrd things (remake initrd)
-    if [ -n "$remake_initrd" ]; then
+    if [ -n "$remake_initrd" ] && [ -n "$was_active" ]; then
 	remake_initrd
     fi
 
@@ -1310,11 +1316,12 @@ load_tarball()
     fi
 
     # Untar it into /tmp
-    tar -${tar_options}xf $kernel_config -C /tmp 
+    temp_dir_name=`mktemp -d /tmp/dkms.XXXXXX`
+    tar -${tar_options}xf $kernel_config -C $temp_dir_name 
 
     # Figure out tar_dkms_tree
     for file_named_source in `tar -${tar_options}tf $kernel_config | grep "source$"`; do
-	if [ -h "/tmp/$file_named_source" ]; then
+	if [ -h "$tmp_dir_name/$file_named_source" ]; then
 	    chopped_tar_dkms_tree=`echo $file_named_source | sed 's/\(.*\)\/.*\/.*\/source/\1/'`
 	    tar_dkms_tree="/$chopped_tar_dkms_tree"
 	fi
@@ -1337,26 +1344,26 @@ load_tarball()
     echo $""
 
     # Determine the source location in the tarball
-    readlink "/tmp/$chopped_tar_dkms_tree/$module/$module_version/source"
+    readlink "$temp_dir_name/$chopped_tar_dkms_tree/$module/$module_version/source"
     tar_source_location="$read_link"
     tar_source_tree=`echo $tar_source_location | sed 's/\/$//' | sed 's/\(.*\)\/.*/\1/'`
 
     # Load the source from the tarball
-    if [ "`dkms status -m $module -v $module_version`" != "" ] && [ -z "$force" ]; then
+    if [ "`dkms status -m $module -v $module_version 2>/dev/null`" != "" ] && [ -z "$force" ]; then
 	echo $"Warning! Source for $module-$module_version already exists.  Skipping..."
     else
 	echo $"Loading $source_tree/$module-$module_version..."
 	rm -rf $source_tree/$module-$module_version
 	mkdir -p $source_tree/$module-$module_version
-	cp -rf /tmp$tar_source_tree/$module-$module_version/* $source_tree/$module-$module_version
+	cp -rf $temp_dir_name/$tar_source_tree/$module-$module_version/* $source_tree/$module-$module_version
     fi
 
     mkdir -p $dkms_tree/$module/$module_version
 
     # Load config files & scripts
-    files_to_load=`find /tmp/$chopped_tar_dkms_tree/$module/$module_version -type f -maxdepth 1`
+    files_to_load=`find $temp_dir_name/$chopped_tar_dkms_tree/$module/$module_version -type f -maxdepth 1`
     for filename in $files_to_load; do
-	dkms_file_location="$dkms_tree`echo $filename | sed 's/\/tmp//' | sed "s#$tar_dkms_tree##"`"
+	dkms_file_location="$dkms_tree`echo $filename | sed "s#$temp_dir_name##" | sed "s#$tar_dkms_tree##"`"
 	if [ -e "$dkms_file_location" ] && [ -z "$force" ]; then
 	    echo $"Warning! $dkms_file_location already exists.  Skipping..."
 	else
@@ -1366,9 +1373,9 @@ load_tarball()
     done
 
     # Load kernel directories
-    dirs_to_load=`find /tmp/$chopped_tar_dkms_tree/$module/$module_version -type d -maxdepth 1 -mindepth 1`
+    dirs_to_load=`find $temp_dir_name/$chopped_tar_dkms_tree/$module/$module_version -type d -maxdepth 1 -mindepth 1`
     for directory in $dirs_to_load; do
-	dkms_dir_location="$dkms_tree`echo $directory | sed 's/\/tmp//' | sed "s#$tar_dkms_tree##"`"
+	dkms_dir_location="$dkms_tree`echo $directory | sed "s#$temp_dir_name##" | sed "s#$tar_dkms_tree##"`"
 	if [ -d "$dkms_dir_location" ] && [ -z "$force" ]; then
 	    echo $"Warning! $dkms_dir_location already exists.  Skipping..."
 	else
@@ -1382,6 +1389,9 @@ load_tarball()
     # Create source symlink
     rm -f "$dkms_tree/$module/$module_version/source"
     ln -s "$source_tree/$module-$module_version" "$dkms_tree/$module/$module_version/source"
+    
+    # Clean up /tmp
+    rm -rf $temp_dir_name
 }
 
 run_match ()
@@ -1583,7 +1593,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.37.04"
+	    echo $"dkms: 0.37.10"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
