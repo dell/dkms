@@ -1,0 +1,1182 @@
+#!/bin/bash
+#
+#  Copyright (C) 2002 Dell Computer Corporation <gary_lerhaupt@dell.com>
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+#  Dynamic Kernel Module Support (DKMS)
+#  by Gary Lerhaupt <gary_lerhaupt@dell.com>
+
+function invoke_command ()
+{
+    exitval=0
+    rm -f .tmp_exitval
+    if [ -e .tmp_exitval ]; then
+	echo $"invoke_command could not run!" >$std_err
+	exit 1
+    fi
+    echo -en "$2..." 
+    if [ "$3" == background ]; then
+	(eval $1; echo "exitval=$?" >> .tmp_exitval) &
+	while ! [ -e .tmp_exitval ]
+	  do
+	  sleep 3
+	  echo -en "." 
+	done
+	. .tmp_exitval
+	rm .tmp_exitval
+    else
+	eval $1; exitval=$?
+    fi
+    if [ $exitval -gt 0 ]; then
+	echo -en "(bad exit status)" 
+	script_location=`dirname $0`
+	echo $1 >> $script_location/.invoke_command.log
+    fi
+    echo -en "\n" 
+    return $exitval
+}
+
+function show_usage ()
+{
+    echo $"Usage: $0 [action] [options]" >$std_err
+    echo $"      [action]  = {add | remove | build | install | uninstall | match | status}" >$std_err
+    echo $"      [options] = [-c dkms.conf-location] [-k kernel-version]" >$std_err
+    echo $"                  [-m module] [-v module-version] [-q]" >$std_err
+    echo $"                  [--postadd=script-location] [--postbuild=script-location]" >$std_err
+    echo $"                  [--postinstall=script-location] [--postremove=script-location]" >$std_err
+    echo $"                  [--templatekernel=kernel] [--config=kernel-.config-location]" >$std_err 
+}
+
+function read_conf ()
+{
+    return_value=0
+    # Find which conf file to check
+    if [ -n "$1" ]; then
+	read_conf_file="$1"
+    elif [ -n "$conf" ]; then
+	read_conf_file="$conf"
+    else
+	read_conf_file="$dkms_tree/$module/$module_version/dkms.conf"
+    fi
+
+    # Clear variables
+    MAKE=""
+    LOCATION=""
+    CLEAN=""
+    MODULE_NAME=""
+    NEEDED_FOR_BOOT=""
+    MODULES_CONF_1=""
+    MODULES_CONF_2=""
+    MODULES_CONF_3=""
+    MODULES_CONF_4=""
+    MODULES_CONF_5=""
+
+    # Set variables supported in dkms.conf files (eg. $kernelver)
+    kernelver="$kernel_version"
+
+    # Source in the dkms.conf
+    . $read_conf_file 2>/dev/null
+
+    # Set variables
+    make_command="$MAKE"
+    location="/lib/modules/$kernel_version$LOCATION"
+    clean="$CLEAN"
+    module_name_list="$MODULE_NAME"
+    needed_for_boot="$NEEDED_FOR_BOOT"
+    modules_conf_1="$MODULES_CONF_1"
+    modules_conf_2="$MODULES_CONF_2"    
+    modules_conf_3="$MODULES_CONF_3"
+    modules_conf_4="$MODULES_CONF_4"
+    modules_conf_5="$MODULES_CONF_5"
+    
+    # Get the correct make command
+    for make_subdirective in `grep -i "^MAKE_" "$read_conf_file" | sed 's/MAKE_//' | sed 's/=.*//'`; do
+	if [ `echo "$kernel_version" | grep -c "$make_subdirective"` -eq 1 ]; then
+	    subdirective_to_use="MAKE_$make_subdirective"
+	    make_command="${!subdirective_to_use}"
+	fi
+    done
+
+    # Set default values
+    if [ -z "$module_name_list" ]; then
+	module_name_list="$module.o"
+    fi
+    if [ `echo "$needed_for_boot" | grep -ic "^y"` -gt 0 ]; then
+	needed_for_boot="yes"
+    else
+	needed_for_boot=""
+    fi
+
+    # Fail if no make command
+    if [ -z "$make_command" ]; then
+	echo $"dkms.conf: Error! No 'MAKE' directive specified.">$std_err
+	return_value=1
+    fi
+
+    # Fail if no location command
+    if [ -z "$LOCATION" ]; then
+	echo $"dkms.conf: Error! No 'LOCATION' directive specified.">$std_err
+	return_value=1
+    fi
+
+    # Fail if bad location command
+    if [ `echo "$LOCATION" | grep -c "^/kernel"` -eq 0 ]; then
+	echo $"dkms.conf: Error! Directive 'LOCATION' does not begin with '/kernel'.">$std_err
+	return_value=1
+    fi
+
+    # Warn if no clean command
+    if [ -z "$clean" ]; then
+	echo $"dkms.conf: Warning.  No 'CLEAN' directive specified. Assuming: make clean" >$std_err
+	clean="make clean"
+    fi
+
+    return $return_value
+}
+
+function modulesconf_modify ()
+{
+    # Make modules.conf changes as necessary
+    if [ "$1" == "add" ]; then
+	if [ -n "$modules_conf_1" ] && [ `grep -c "$modules_conf_1" "/etc/modules.conf"` -eq 0 ]; then
+	    echo -e "$modules_conf_1" >> /etc/modules.conf
+	fi
+	if [ -n "$modules_conf_2" ] && [ `grep -c "$modules_conf_2" "/etc/modules.conf"` -eq 0 ]; then
+	    echo -e "$modules_conf_2" >> /etc/modules.conf
+	fi
+	if [ -n "$modules_conf_3" ] && [ `grep -c "$modules_conf_3" "/etc/modules.conf"` -eq 0 ]; then
+	    echo -e "$modules_conf_3" >> /etc/modules.conf
+	fi
+	if [ -n "$modules_conf_4" ] && [ `grep -c "$modules_conf_4" "/etc/modules.conf"` -eq 0 ]; then
+	    echo -e "$modules_conf_4" >> /etc/modules.conf
+	fi
+	if [ -n "$modules_conf_5" ] && [ `grep -c "$modules_conf_5" "/etc/modules.conf"` -eq 0 ]; then
+	    echo -e "$modules_conf_5" >> /etc/modules.conf
+	fi
+    fi
+
+    # Remove modules_conf entries from /etc/modules.conf
+    if [ "$1" == "delete" ]; then
+	if [ -n "$modules_conf_1" ]; then
+	    grep -v "$modules_conf_1" "/etc/modules.conf" > /etc/modules.new
+	    mv -f /etc/modules.new /etc/modules.conf
+	fi
+	if [ -n "$modules_conf_2" ]; then
+	    grep -v "$modules_conf_2" "/etc/modules.conf" > /etc/modules.new
+	    mv -f /etc/modules.new /etc/modules.conf
+	fi
+	if [ -n "$modules_conf_3" ]; then
+	    grep -v "$modules_conf_3" "/etc/modules.conf" > /etc/modules.new
+	    mv -f /etc/modules.new /etc/modules.conf
+	fi
+	if [ -n "$modules_conf_4" ]; then
+	    grep -v "$modules_conf_4" "/etc/modules.conf" > /etc/modules.new
+	    mv -f /etc/modules.new /etc/modules.conf
+	fi
+	if [ -n "$modules_conf_5" ]; then
+	    grep -v "$modules_conf_5" "/etc/modules.conf" > /etc/modules.new
+	    mv -f /etc/modules.new /etc/modules.conf
+	fi
+    fi
+}
+
+function add_module ()
+{
+
+    # Set the kernel_version if it remains unset
+    if [ -z "$kernel_version" ]; then
+	kernel_version="$current_kernel"
+    fi
+
+    # Check that we have all the arguments
+    if [ -z "$module" ] || [ -z "$module_version" ] || [ -z "$conf" ]; then
+	echo $"" >$std_err
+	echo $"Error! Invalid number of arguments passed." >$std_err
+	echo $"Usage: add [-m module] [-v module-version] [-c dkms.conf-location]" >$std_err
+	exit 1
+    fi
+	
+    # Check that /usr/src/$module-$module_version exists	
+    if ! [ -d "$source_tree/$module-$module_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! Could not find module source directory." >$std_err
+	echo $"Directory: $source_tree/$module-$module_version does not exist." >$std_err
+	exit 2
+    fi
+
+    # Check that this module-version hasn't already been added
+    if [ -d "$dkms_tree/$module/$module_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! DKMS tree already contains: $module-$module_version" >$std_err
+	echo $"You cannot add the same module/version combo more than once." >$std_err
+	exit 3
+    fi
+
+    # Check that the conf file exists or any other script specified
+    if ! [ -e "$conf" ]; then
+	echo $"" >$std_err
+	echo $"Error! Could not locate dkms.conf file." >$std_err
+	echo $"File: $conf does not exist." >$std_err
+	exit 4
+    fi
+    if [ -n "$post_add" ] && ! [ -e "$post_add" ]; then
+	echo $"" >$std_err
+	echo $"Error! Could not locate postadd script." >$std_err
+	echo $"File: $post_add does not exist." >$std_err
+	exit 5
+    fi
+    if [ -n "$post_build" ] && ! [ -e "$post_build" ]; then
+	echo $"" >$std_err
+	echo $"Error! Could not locate postbuild script." >$std_err
+	echo $"File: $post_build does not exist." >$std_err
+	exit 5
+    fi
+    if [ -n "$post_install" ] && ! [ -e "$post_install" ]; then
+	echo $"" >$std_err
+	echo $"Error! Could not locate postinstall script." >$std_err
+	echo $"File: $post_install does not exist." >$std_err
+	exit 6
+    fi
+    if [ -n "$post_remove" ] && ! [ -e "$post_remove" ]; then
+	echo $"" >$std_err
+	echo $"Error! Could not locate postremove script." >$std_err
+	echo $"File: $post_remove does not exist." >$std_err
+	exit 7
+    fi
+
+    # Check the conf file for sanity
+    read_conf "$conf"
+    if [ "$?" -ne 0 ]; then
+	echo $"" >$std_err
+	echo $"Error! Bad conf file." >$std_err
+	echo $"File: $conf does not represent a valid dkms.conf file" >$std_err
+	exit 8
+    fi
+    
+    # Create the necessary dkms tree structure
+    mkdir -p "$dkms_tree/$module/$module_version"
+    ln -s "$source_tree/$module-$module_version" "$dkms_tree/$module/$module_version/source"
+    
+    # Copy the dkms.conf file
+    echo $"Copying $conf to: $dkms_tree/$module/$module_version/dkms.conf" 
+    cp -f "$conf" "$dkms_tree/$module/$module_version/dkms.conf"
+    
+    # Copy any other scripts as necessary
+    if [ -n "$post_add" ]; then
+	echo $"Copying $post_add to: $dkms_tree/$module/$module_version/post_add" 
+	cp -f "$post_add" "$dkms_tree/$module/$module_version/post_add"
+	chmod u+x "$dkms_tree/$module/$module_version/post_add"
+    fi
+    if [ -n "$post_build" ]; then
+	echo $"Copying $post_build to: $dkms_tree/$module/$module_version/post_build" 
+	cp -f "$post_build" "$dkms_tree/$module/$module_version/post_build"
+	chmod u+x "$dkms_tree/$module/$module_version/post_build"
+    fi
+    if [ -n "$post_install" ]; then
+	echo $"Copying $post_install to: $dkms_tree/$module/$module_version/post_install" 
+	cp -f "$post_install" "$dkms_tree/$module/$module_version/post_install"
+	chmod u+x "$dkms_tree/$module/$module_version/post_install"
+    fi
+    if [ -n "$post_remove" ]; then
+	echo $"Copying $post_remove to: $dkms_tree/$module/$module_version/post_remove" 
+	cp -f "$post_remove" "$dkms_tree/$module/$module_version/post_remove"
+	chmod u+x "$dkms_tree/$module/$module_version/post_remove"
+    fi
+
+    # Run the post_add script
+    if [ -x "$dkms_tree/$module/$module_version/post_add" ]; then
+	echo $"" 
+	echo $"Running the post_add script:" 
+	"$dkms_tree/$module/$module_version/post_add" 
+    fi
+    
+    echo $"" 
+    echo $"Add Completed." 
+}
+
+function prepare_kernel()
+{
+    # Set the kernel variables
+    kernel_source_dir="/lib/modules/$kernel_version/build"
+
+    # Check that kernel-source exists
+    if ! [ -e "$kernel_source_dir/include" ]; then
+	echo $"" >$std_err
+	echo $"Error! Your kernel source for kernel $kernel_version is not" >$std_err
+	echo $"installed. DKMS build requires kernel source to build modules." >$std_err
+	exit 1	
+    fi
+
+    # Prepare kernel for module build
+    echo $"" 
+    echo $"Preparing kernel $kernel_version for module build:" 
+    echo $"(This is not compiling a kernel, only just preparing kernel symbols)" 
+    cd $kernel_source_dir
+    invoke_command "make mrproper >/dev/null 2>&1" "make mrproper" background
+
+    # Fix Makefile up so that EXTRAVERSION matches the kernel_version extraversion
+    echo $"editing kernel Makefile"
+    extraversion=`echo "$kernel_version" | sed 's/.*-/-/'`
+    sed "s/EXTRAVERSION *=.*/EXTRAVERSION = $extraversion/" Makefile 2>/dev/null > Makefile.new
+    mv -f Makefile.new Makefile
+    sed "s/EXTRAVERSION=.*/EXTRAVERSION = $extraversion/" Makefile 2>/dev/null > Makefile.new
+    mv -f Makefile.new Makefile
+
+    # If kernel_config is not set, look in default spot for .config (./configs/kernel-...)
+    if [ -z "$kernel_config" ]; then
+	if [ `echo $kernel_version | grep smp` ]; then
+	    invoke_command "cp ./configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-smp.config .config" \
+		"copying kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-smp.config to .config"
+	elif [ `echo $kernel_version | grep ent` ]; then
+	    invoke_command "cp ./configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-enterprise.config .config" \
+		"copying kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-enterprise.config to .config"
+	elif [ `echo $kernel_version | grep bigmem` ]; then
+	    invoke_command "cp ./configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-bigmem.config .config" \
+		"copying kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-bigmem.config to .config"
+	else
+	    
+	    invoke_command "cp ./configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`.config .config" \
+		"copying kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`.config to .config"
+	fi
+    else
+	echo $"copying $kernel_config to .config..."
+	cp "$kernel_config" .config
+    fi
+    invoke_command "make oldconfig >/dev/null 2>&1" "make oldconfig" background
+    invoke_command "make dep >/dev/null 2>&1" "make dep" background
+    cd -
+}
+
+function install_module()
+{
+    # Set the kernel_version if it remains unset
+    if [ -z "$kernel_version" ]; then
+	kernel_version="$current_kernel"
+    fi
+
+    # Check that the right arguments were passed
+    if [ -z "$module" ] || [ -z "$module_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! Invalid number of parameters passed." >$std_err
+	echo $"Usage: install [-m module] [-v module-version]" >$std_err
+	exit 1
+    fi
+
+    # Check that /usr/src/$module-$module_version exists	
+    if ! [ -d "$source_tree/$module-$module_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! Directory: $source_tree/$module-$module_version does not exist." >$std_err
+	echo $"You must first add and then build via DKMS before you can install." >$std_err
+	exit 2
+    fi
+
+    # Read the conf file
+    read_conf
+    if [ "$?" -ne 0 ]; then
+	echo $"" >$std_err
+	echo $"Error! Bad conf file." >$std_err
+	echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" $std_err
+	echo $"a valid dkms.conf file." >$std_err
+	exit 3
+    fi
+
+    # Make sure the $module_name exists
+    for module_name in $module_name_list; do
+	if ! [ -e "$dkms_tree/$module/$module_version/$kernel_version/module/$module_name" ]; then
+	    echo $"" >$std_err
+	    echo $"Error! Could not locate $module_name for module $module in the DKMS tree." >$std_err
+	    echo $"You must run a dkms build for kernel $kernel_version first." >$std_err
+	    exit 4
+	fi
+    done
+
+    # Check that its not already installed (kernel symlink)
+    kernel_symlink=`ls -l "$dkms_tree/$module" | grep "kernel-${kernel_version} " | sed 's/.*-> //'`
+    if [ "$kernel_symlink" == "$module_version/$kernel_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! This module/version combo is already installed" >$std_err
+	echo $"for kernel: $kernel_version" >$std_err
+	exit 5
+    fi
+
+    # Save the original_module if one exists, none have been saved before, and this is the first module for this kernel
+    for module_name in $module_name_list; do
+	if ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ]; then
+	    echo $"" 
+	    echo $"Found an original module $module_name in /lib/modules/" 
+	    echo $"Archiving it within the DKMS tree for uninstallation purposes." 
+	    mkdir -p "$dkms_tree/$module/original_module/$kernel_version/"
+	    mv -f "$location/$module_name" "$dkms_tree/$module/original_module/$kernel_version/"
+	else
+	    rm -f "$location/$module_name" 2>/dev/null
+	fi
+    done
+    
+    # Create the kernel-<kernelver> symlink to designate this version as active
+    rm -f "$dkms_tree/$module/kernel-$kernel_version" 2>/dev/null
+    ln -s "$module_version/$kernel_version" "$dkms_tree/$module/kernel-$kernel_version" 2>/dev/null
+
+    # Copy module to its location
+    echo $"" 
+    for module_name in $module_name_list; do
+	echo $"Copying the new $module_name for $module to $location" 
+	cp -f "$dkms_tree/$module/$module_version/$kernel_version/module/$module_name" "$location/$module_name"
+    done
+
+    # Run the post_install script
+    if [ -x "$dkms_tree/$module/$module_version/post_install" ]; then
+	echo $"" 
+	echo $"Running the post_install script:" 
+	"$dkms_tree/$module/$module_version/post_install" 
+    fi
+
+    # Make modules.conf changes as necessary
+    modulesconf_modify "add"
+
+    # Run depmod if System.map-<kernel_version> exists
+    if [ -e "/boot/System.map-$kernel_version" ]; then
+	invoke_command "depmod -a $kernel_version -F /boot/System.map-$kernel_version" "depmod" background 
+    fi
+
+    # Do needed_for_boot things (save old initrd)
+    if [ -n "$needed_for_boot" ]; then
+	echo $"" 
+	echo $"Saving old initrd as /boot/initrd-${kernel_version}_old.img" 
+	mv -f "/boot/initrd-${kernel_version}.img" "/boot/initrd-${kernel_version}_old.img"
+	echo $"Making new initrd as /boot/initrd-${kernel_version}.img" 
+	invoke_command "mkinitrd -f /boot/initrd-${kernel_version}.img ${kernel_version}" "mkinitrd" background
+	echo $"If your next boot fails, edit your bootloader file and revert" 
+	echo $"to the _old initrd image." 
+	
+        # Rerun lilo if necessary
+	if ! [ -e /boot/grub/grub.conf ]; then
+	    invoke_command "/sbin/lilo" "Updating lilo"
+	fi
+    fi
+     
+    echo $"" 
+    echo $"Install Completed." 
+}
+
+
+function build_module()
+{
+    # Set the kernel_version if it remains unset
+    if [ -z "$kernel_version" ]; then
+	kernel_version="$current_kernel"
+    fi
+
+    # Check that the right arguments were passed
+    if [ -z "$module" ] || [ -z "$module_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! Invalid number of parameters passed." >$std_err
+	echo $"Usage: build [-m module] [-v module-version]" >$std_err
+	exit 1
+    fi
+    
+    # Set the kernel variables
+    kernel_source_dir="/lib/modules/$kernel_version/build"
+
+    # Check that source symlink works
+    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
+	echo $"" >$std_err
+	echo $"Error! DKMS tree does not contain: $module-$module_version" >$std_err
+	echo $"Build cannot continue without the proper tree." >$std_err
+	exit 2
+    fi
+
+    # Check that the module has not already been built for this kernel
+    if [ -d "$dkms_tree/$module/$module_version/$kernel_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! This module/version has already been installed on: $kernel_version" >$std_err
+	echo $"The directory: $dkms_tree/$module/$module_version/$kernel_version already" >$std_err
+	echo $"exists.  Use the dkms remove function before trying to install again." >$std_err
+	exit 3
+    fi
+	
+    # Read the conf file
+    read_conf
+    if [ "$?" -ne 0 ]; then
+	echo $"" >$std_err
+	echo $"Error! Bad conf file." >$std_err
+	echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
+	echo $"a valid dkms.conf file." >$std_err
+	exit 4
+    fi
+    
+    # Prepare the kernel for the module build
+    if [ "$1" != "no-prepare-kernel" ]; then
+	prepare_kernel
+    fi
+	
+    # Create the necessary dkms tree for build
+    mkdir -p "$dkms_tree/$module/$module_version/$kernel_version/log"
+    cp -f "$kernel_source_dir/.config" "$dkms_tree/$module/$module_version/$kernel_version/log/" 
+    
+    # Build module
+    cd "$dkms_tree/$module/$module_version/source"
+    echo $"" 
+    echo $"Building module:" 
+    invoke_command "$clean >/dev/null 2>&1" "cleaning" background
+    echo $"DKMS make.log for $module-$module_version for kernel $kernel_version" >> "$dkms_tree/$module/$module_version/$kernel_version/log/make.log"
+    echo $"`date`" >> "$dkms_tree/$module/$module_version/$kernel_version/log/make.log"
+    invoke_command "$make_command >> $dkms_tree/$module/$module_version/$kernel_version/log/make.log 2>&1" "$make_command" background
+    # Back out changes if module build failed
+    for module_name in $module_name_list; do
+	if ! [ -e "./$module_name" ]; then
+	    mv -f "$dkms_tree/$module/$module_version/$kernel_version/log/make.log" "$source_tree/$module-$module_version/" 2>/dev/null
+	    rm -rf "$dkms_tree/$module/$module_version/$kernel_version" 2>/dev/null
+	    echo $"" >$std_err
+	    echo $"Error!  Module build failed for kernel: $kernel_version" >$std_err
+	    echo $"Changes to the DKMS tree have been backed out.  Consult the make.log" >$std_err
+	    echo $"which has been moved to $source_tree/$module-$module_version/make.log" >$std_err
+	    exit 5
+	fi
+    done
+    cd -
+    
+    # Save a copy of the new module
+    mkdir "$dkms_tree/$module/$module_version/$kernel_version/module" >/dev/null
+    for module_name in $module_name_list; do
+	cp -f "$source_tree/$module-$module_version/$module_name" "$dkms_tree/$module/$module_version/$kernel_version/module/" >/dev/null
+    done
+
+    # Run the post_build script
+    if [ -x "$dkms_tree/$module/$module_version/post_build" ]; then
+	echo $"" 
+	echo $"Running the post_build script:" 
+	"$dkms_tree/$module/$module_version/post_build" 
+    fi
+    
+    # Run the clean command
+    invoke_command "$clean >/dev/null 2>&1" "cleaning" background
+
+    echo $"" 
+    echo $"Build Completed." 
+}
+
+function do_uninstall()
+{
+    echo $"" 
+    echo $"--- Uninstall Beginning ---" 
+    echo $"Module:  $module"  
+    echo $"Version: $module_version" 
+    echo $"Kernel:  $kernel_version" 
+    echo $"---------------------------" 
+
+    # If kernel-<kernelver> symlink points to this module, check for original_module and put it back
+    was_active=""
+    kernel_symlink=`ls -l "$dkms_tree/$module" | grep "kernel-${kernel_version} " | sed 's/.*-> //'`
+    if [ "$kernel_symlink" == "$module_version/$kernel_version" ]; then
+	was_active="true"
+	echo $"" 
+	echo $"Status: Before uninstall, this module version was ACTIVE on this kernel."
+	for module_name in $module_name_list; do
+	    echo $""
+	    echo $"Deleting $module_name from: $location" 
+	    rm -f "$location/$module_name"
+	    if [ -e "$dkms_tree/$module/original_module/$kernel_version/$module_name" ]; then
+		echo $"Archived original_module $module_name found!  Reinstating it under the" 
+		echo $"directory: $location" 
+		cp -f "$dkms_tree/$module/original_module/$kernel_version/$module_name" "$location/" 2>/dev/null
+	    else
+		echo $"No original module $module_name  was found for this module on this kernel." 
+		echo $"Use the dkms install command to reinstall any previous module version." 
+		
+	        # Remove modules_conf entries from /etc/modules.conf
+		modulesconf_modify "delete"
+	    fi
+	done
+	rm -f "$dkms_tree/$module/kernel-$kernel_version"
+    else
+	echo $"" 
+	echo $"Status: This module version was INACTIVE for this kernel." 
+    fi
+
+    # Run the post_remove script
+    if [ -x "$dkms_tree/$module/$module_version/post_remove" ]; then
+	echo $"" 
+	echo $"Running the post_remove script:" 
+	"$dkms_tree/$module/$module_version/post_remove" 
+    fi
+
+    # Run depmod if System.map-<kernel_version> exists
+    if [ -e "/boot/System.map-$kernel_version" ]; then
+	echo $""
+	invoke_command "depmod -a $kernel_version -F /boot/System.map-$kernel_version" "depmod" background 
+    fi
+    
+    # Do needed_for_boot things (remake initrd)
+    if [ -n "$needed_for_boot" ]; then
+	echo $"" 
+	echo $"Remaking initrd as /boot/initrd-${kernel_version}.img" 
+	invoke_command "mkinitrd -f /boot/initrd-${kernel_version}.img ${kernel_version}" "mkinitrd" background
+         # Rerun lilo if necessary
+	 if ! [ -e /boot/grub/grub.conf ]; then
+	     invoke_command "/sbin/lilo" "Updating lilo"
+	 fi
+    fi
+
+    # Make sure modules.conf still has entries if they got removed above
+    modulesconf_modify "add"
+
+    # Delete the original_module if nothing for this kernel is installed anymore
+    if [ -d "$dkms_tree/$module/original_module/$kernel_version" ] && [ -n "$was_active" ]; then
+	echo $"" 
+	echo $"Removing original_module from DKMS tree for kernel $kernel_version" 
+	rm -rf "$dkms_tree/$module/original_module/$kernel_version" 2>/dev/null
+    fi
+    if [ `find "$dkms_tree/$module/original_module" -path "$dkms_tree/$module/original_module/*" 2>/dev/null | wc -l | awk '{print $1}'` -eq 0 ]; then
+	rm -rf "$dkms_tree/$module/original_module" 2>/dev/null
+    fi
+    
+    echo $"" 
+    echo $"Uninstall finished." 
+}
+
+function uninstall_module ()
+{
+    # Set the kernel_version if it remains unset
+    if [ -z "$kernel_version" ]; then
+	kernel_version="$current_kernel"
+    fi
+
+    # Check that the right arguments were passed
+    if [ -z "$module" ] || [ -z "$module_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! Invalid number of parameters passed." >$std_err
+	echo $"Usage: uninstall [-m module] [-v module-version]" >$std_err
+	echo $"   or: uninstall [-m module] [-v module-version] [-k kernel-version]" >$std_err
+	exit 1
+    fi
+
+    # Check that $module is in the dkms tree
+    if ! [ -d "$dkms_tree/$module" ]; then
+	echo $"" >$std_err
+	echo $"Error! There are no instances of module: $module" >$std_err
+	echo $"located in the DKMS tree." >$std_err
+	exit 2
+    fi
+
+    # Make sure that its installed in the first place
+    if ! [ -d "$dkms_tree/$module/$module_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! The module/version combo: $module-$module_version" >$std_err
+	echo $"is not located in the DKMS tree." >$std_err
+	exit 3
+    fi
+
+    # Read the conf file
+    read_conf
+    if [ "$?" -ne 0 ]; then
+	echo $"" >$std_err
+	echo $"Error! Bad conf file." >$std_err
+	echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
+	echo $"a valid dkms.conf file." >$std_err
+	exit 4
+    fi
+
+    # Only do stuff if module/module version is currently installed
+    kernel_symlink=`ls -l "$dkms_tree/$module" | grep "kernel-${kernel_version} " | sed 's/.*-> //'`
+    if [ "$kernel_symlink" == "$module_version/$kernel_version" ]; then
+	do_uninstall
+    else
+	echo $"" >$std_err
+	echo $"Error! The module $module $module_version is not currently installed." >$std_err
+	echo $"This module is not currently ACTIVE for kernel $kernel_version." >$std_err
+	exit 5
+    fi
+}
+
+function remove_module ()
+{
+    # Check that the right arguments were passed
+    if [ -z "$module" ] || [ -z "$module_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! Invalid number of parameters passed." >$std_err
+	echo $"Usage: remove [-m module] [-v module-version]" >$std_err
+	echo $"   or: remove [-m module] [-v module-version] [-k kernel-version]" >$std_err
+	exit 1
+    fi
+
+    # Check that $module is in the dkms tree
+    if ! [ -d "$dkms_tree/$module/$module_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! There are no instances of module: $module" >$std_err
+	echo $"$module_version located in the DKMS tree." >$std_err
+	exit 2
+    fi
+
+    # If $kernel_version is set, make sure its there first before removing
+    if [ -n "$kernel_version" ] && ! [ -d "$dkms_tree/$module/$module_version/$kernel_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! There is no instance of $module $module_version" >$std_err
+	echo $"for kernel $kernel_version located in the DKMS tree." >$std_err
+	exit 3
+    fi
+
+    # Read the conf file
+    read_conf
+    if [ "$?" -ne 0 ]; then
+	echo $"" >$std_err
+	echo $"Error! Bad conf file." >$std_err
+	echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
+	echo $"a valid dkms.conf file." >$std_err
+	exit 4
+    fi
+
+    # If kernel_version is unset, remove all installations of $module_version, otherwise just one kernel
+    kernel_list=""
+    if [ -z "$kernel_version" ]; then
+	kernel_list="`ls "$dkms_tree/$module/$module_version"`"
+    else
+	kernel_list="$kernel_version"
+    fi
+
+    # Iterate over the kernel_list
+    for kernel_in_tree in $kernel_list; do
+	if [ -d "$dkms_tree/$module/$module_version/$kernel_in_tree" ] && ! [ -h "$dkms_tree/$module/$module_version/$kernel_in_tree" ]; then
+	    kernel_version="$kernel_in_tree"
+	    read_conf
+	    if [ "$?" -ne 0 ]; then
+		echo $"" >$std_err
+		echo $"Error! Bad conf file." >$std_err
+		echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
+		echo $"a valid dkms.conf file." >$std_err
+		exit 4
+	    fi
+	    do_uninstall
+	    
+            # Delete the $kernel_version part of the tree
+	    rm -rf "$dkms_tree/$module/$module_version/$kernel_version"
+	fi
+    done
+
+    # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
+    if [ "`find $dkms_tree/$module/$module_version/* -maxdepth 1 -type d`" == "" ]; then
+	echo $"" 
+	echo $"------------------------------" 
+	echo $"Deleting module version: $module_version" 
+	echo $"completely from the DKMS tree." 
+	echo $"------------------------------" 
+	rm -rf "$dkms_tree/$module/$module_version"
+	echo $"Done."
+    fi
+
+    # Get rid of any remnant directories if necessary
+    if [ `ls "$dkms_tree/$module" | wc -w | awk '{print $1}'` -eq 0 ]; then
+	rm -rf "$dkms_tree/$module" 2>/dev/null
+       
+	# Its now safe to completely remove references in modules.conf
+	modulesconf_modify "delete"
+    fi
+}
+
+show_status ()
+{
+    # Error if $module_version is set but $module is not
+    if [ -n "$module_version" ] && [ -z "$module" ]; then
+	echo $"" >$std_err
+	echo $"Error! Invalid number of parameters passed." >$std_err
+	echo $"Usage: status" >$std_err
+	echo $"   or: status [-m module]" >$std_err
+	echo $"   or: status [-k kernel-version]" >$std_err
+	echo $"   or: status [-m module] [-v module-version]" >$std_err
+	exit 1	
+    fi
+
+    # Determine which modules to show status for
+    if [ -n "$module" ]; then
+	modules_needing_status="$module"
+    else
+	for filename in `ls "$dkms_tree"`; do
+	    if [ -d "$dkms_tree/$filename" ] && ! [ -h "$dkms_tree/$filename" ]; then
+		modules_needing_status="$modules_needing_status $filename"
+	    fi
+	done
+    fi
+
+    # Iterate over the modules
+    for module_in_tree in $modules_needing_status; do
+
+	# Make sure its in the tree
+	if [ -d "$dkms_tree/$module_in_tree" ]; then
+	
+	    # Determine which versions to show status for
+	    versions_needing_status=""
+	    if [ -n "$module_version" ]; then
+		versions_needing_status="$module_version"
+	    else
+		for filename in `ls "$dkms_tree/$module_in_tree"`; do
+		    if [ -d "$dkms_tree/$module_in_tree/$filename" ] && ! [ -h "$dkms_tree/$module_in_tree/$filename" ] && [ "$filename" != "original_module" ]; then
+			versions_needing_status="$versions_needing_status $filename"
+		    fi
+		done    
+	    fi
+	    
+	    # Iterate over the versions
+	    for version_in_tree in $versions_needing_status; do
+		
+     	        # Make sure its in the tree
+		if [ -d "$dkms_tree/$module_in_tree/$version_in_tree" ]; then
+		    
+	            # Determine which kernels to show status for
+		    kernels_needing_status=""
+		    if [ -n "$kernel_version" ]; then
+			kernels_needing_status="$kernel_version"
+		    else
+			for filename in `ls "$dkms_tree/$module_in_tree/$version_in_tree"`; do
+			    if [ -d "$dkms_tree/$module_in_tree/$version_in_tree/$filename" ] && ! [ -h "$dkms_tree/$module_in_tree/$version_in_tree/$filename" ]; then
+				kernels_needing_status="$kernels_needing_status $filename"
+			    fi
+			done    
+		    fi
+		    
+	            # Iterate over the kernels
+		    for kernel_in_tree in $kernels_needing_status; do
+			
+     	                # Make sure its in the tree
+			if [ -d "$dkms_tree/$module_in_tree/$version_in_tree/$kernel_in_tree" ]; then
+			    kernel_symlink=`ls -l "$dkms_tree/$module_in_tree" | grep "kernel-${kernel_in_tree} " | sed 's/.*-> //'`
+			    if [ "$kernel_symlink" == "$version_in_tree/$kernel_in_tree" ]; then
+				activity_state="installed"
+			    else
+				activity_state="built"
+			    fi
+			    extra_status=""
+			    if [ -d "$dkms_tree/$module_in_tree/original_module/$kernel_in_tree" ]; then
+				extra_status="(original_module exists)"
+			    fi
+
+			    echo "$module_in_tree, $version_in_tree, $kernel_in_tree: $activity_state $extra_status" 
+			fi
+			
+		    done
+
+		    if [ "$kernels_needing_status" == "" ]; then
+			echo "$module_in_tree, $version_in_tree: added" 
+		    fi
+		    
+		fi
+		
+	    done
+	    
+	fi
+	
+    done
+}
+
+run_match ()
+{
+    # Error if $template_kernel or $kernel_version are unset
+    if [ -z "$template_kernel" ] || [ -z "$kernel_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! Invalid number of parameters passed." >$std_err
+	echo $"Usage: match [--templatekernel=kernel-version] [-k kernel-version]" >$std_err
+	echo $"   or: match [--templatekernel=kernel-version] [-k kernel-version] [-m module]" >$std_err
+	exit 1	
+    fi  
+
+    # Error out if $template_kernel = $kernel_version
+    if [ "$template_kernel" == "$kernel_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! The templatekernel and the specified kernel version are the same." >$std_err
+	exit 2
+    fi
+
+    # Set the IFS to split on new-lines and not on spaces
+    IFS='
+'
+    # Read in the status of template_kernel
+    template_kernel_status=`$0 status -k $template_kernel | grep ": installed"`
+    
+    # If $module is set, grep the status only for that module
+    if [ -n "$module" ]; then
+
+        # Make sure that its installed in the first place
+	if ! [ -d "$dkms_tree/$module/" ]; then
+	    echo $"" >$std_err
+	    echo $"Error! The module: $module is not located in the DKMS tree." >$std_err
+	    unset IFS
+	    exit 3
+	fi
+
+	template_kernel_status=`echo $template_kernel_status | grep "^$module,"`
+    fi
+
+    echo $""
+    echo $"Matching modules in kernel: $kernel_version" 
+    echo $"to the configuration of kernel: $template_kernel" 
+
+    # Prepare the kernel just once but only if there is actual work to do
+    if [ "$template_kernel_status" == "" ]; then
+	echo $""
+	echo $"There is nothing to be done for this match."
+    else
+	prepare_kernel
+
+        # Iterate over the kernel_status and match kernel to the template_kernel
+	for template_line in "$template_kernel_status"; do
+	    template_module=`echo "$template_line" | sed 's/\(.*\), .*, .*:.*/\1/'`
+	    template_version=`echo "$template_line" | sed 's/.*, \(.*\), .*: .*/\1/'`
+	    
+	    # Print out a match header
+	    echo $"" 
+	    echo $"---- Match Beginning ----" 
+	    echo $"Module:  $template_module"  
+	    echo $"Version: $template_version" 
+	    echo $"-------------------------" 
+	    
+	    # Figure out what to do from here
+	    if [ `$0 status -m "$template_module" -v "$template_version" -k "$kernel_version" | grep -c ": installed"` -eq 1 ]; then
+		echo $"" 
+		echo $"This module/version combo is already installed.  Nothing to be done." 
+	    elif [ `$0 status -m "$template_module" -v "$template_version" -k "$kernel_version" | grep -c ": built"` -eq 1 ]; then
+		unset IFS
+		echo $"" 
+		echo $"This module/version combo is built.  Installing it:" 
+		module="$template_module"
+		module_version="$template_version"
+		install_module
+		IFS='
+'
+	    else
+		unset IFS
+		echo $"" 
+		echo $"Building & Installing this module/version:" 
+		module="$template_module"
+		module_version="$template_version"
+		build_module "no-prepare-kernel"
+		install_module
+		IFS='
+'
+	    fi
+	done
+    fi
+
+    # Return the IFS to its old state
+    unset IFS
+    
+    # Done
+    echo $"" 
+    echo $"Match Completed."
+}
+
+#############################
+####                     #### 
+#### Program Starts Here ####
+####                     ####
+#############################
+
+# Source for the function library.
+. /etc/init.d/functions
+
+# Set important variables
+current_kernel=`uname -r`
+dkms_tree="/var/dkms"
+source_tree="/usr/src"
+dkms_conf="/etc/dkms.conf"
+
+# Clear out command line argument variables
+module=""
+module_version=""
+kernel_version=""
+template_kernel=""
+conf=""
+post_add=""
+post_build=""
+post_remove=""
+post_install=""
+kernel_config=""
+action=""
+std_err="/dev/stderr"
+
+# Parse command line arguments
+action_flag=""
+while [ $# -gt 0 ]; do
+    case $1 in
+	--module*|-m)
+	    if echo $1 | grep '=' >/dev/null ; then
+		module=`echo $1 | sed 's/^.*=//'`
+            else
+                module="$2"
+                shift
+            fi
+            ;;
+	-v)
+	    if echo $1 | grep '=' >/dev/null ; then
+		module_version=`echo $1 | sed 's/^.*=//'`
+            else
+                module_version="$2"
+                shift
+            fi
+            ;;
+	--kernelver*|-k)
+	    if echo $1 | grep '=' >/dev/null ; then
+		kernel_version=`echo $1 | sed 's/^.*=//'`
+            else
+                kernel_version="$2"
+                shift
+            fi
+            ;;
+	--templatekernel*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		template_kernel=`echo $1 | sed 's/^.*=//'`
+            else
+                template_kernel="$2"
+                shift
+            fi
+            ;;
+	-c)
+	    if echo $1 | grep '=' >/dev/null ; then
+		conf=`echo $1 | sed 's/^.*=//'`
+            else
+                conf="$2"
+                shift
+            fi
+            ;;
+	--quiet|-q)
+	    exec >/dev/null 2>&1
+	    ;;
+	--version|-V)
+	    echo $"dkms: 0.22.04"
+	    exit 0
+	    ;;
+	--postadd*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		post_add=`echo $1 | sed 's/^.*=//'`
+            else
+                post_add="$2"
+                shift
+            fi
+            ;;
+	--postbuild*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		post_build=`echo $1 | sed 's/^.*=//'`
+            else
+                post_build="$2"
+                shift
+            fi
+            ;;
+	--postremove*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		post_remove=`echo $1 | sed 's/^.*=//'`
+            else
+                post_remove="$2"
+                shift
+            fi
+            ;;
+	--postinstall*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		post_install=`echo $1 | sed 's/^.*=//'`
+            else
+                post_install="$2"
+                shift
+            fi
+            ;;
+	--config*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		kernel_config=`echo $1 | sed 's/^.*=//'`
+            else
+                kernel_config="$2"
+                shift
+            fi
+	    ;;
+	-*|--*)
+	    echo $"" >&2
+	    echo $"Error!  Unknown option: $1" >&2
+	    show_usage
+	    exit 2
+	    ;;
+	*)
+	    if [ -n "$action_flag" ]; then
+		echo $"" >&2
+		echo $"Error!  Multiple actions specified: $action, $1" >&2
+		show_usage
+		exit 3
+	    fi
+	    action_flag="set"
+	    action="$1"
+	    ;;
+    esac
+    shift
+done
+
+# Run the specified action
+case "$action" in
+    start)
+        # ignore
+	;;
+    stop)
+	# ignore
+	;;
+    add)
+	add_module
+	;;
+    remove)
+	# Make sure they're root
+	if [ `id -u` -ne 0 ]; then
+	    echo $"You must be root to use this command." >$std_err
+	    exit 1
+	fi
+	remove_module
+	;;
+    build)
+        # Make sure they're root
+	if [ `id -u` -ne 0 ]; then
+	    echo $"You must be root to use this command." >$std_err
+	    exit 1
+	fi
+	build_module
+	;;
+    install)
+        # Make sure they're root
+	if [ `id -u` -ne 0 ]; then
+	    echo $"You must be root to use this command." >$std_err
+	    exit 1
+	fi
+	install_module
+	;;
+    match)
+	# Make sure they're root
+	if [ `id -u` -ne 0 ]; then
+	    echo $"You must be root to use this command." >$std_err
+	    exit 1
+	fi
+	run_match
+	;;
+    uninstall)
+	# Make sure they're root
+	if [ `id -u` -ne 0 ]; then
+	    echo $"You must be root to use this command." >$std_err
+	    exit 1
+	fi
+	uninstall_module
+	;;
+    status)
+	show_status
+	;;
+    "")
+	echo "" >&2
+	echo $"Error! No action was specified.">$std_err
+	show_usage
+	;;
+    *)
+	echo "" >&2
+	echo $"Error! Unknown action specified: $action" >$std_err
+	show_usage
+	;;
+esac
