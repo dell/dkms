@@ -933,6 +933,7 @@ function install_module()
 	if ! [ -L "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}" ]; then
 	    local archive_pref1="$lib_tree/updates/${dest_module_name[$count]}$module_suffix"
 	    local archive_pref2="$lib_tree${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+	    local archive_pref3=""
 	    [ "$module_count" -eq 1 ] && archive_pref3="`find $lib_tree -name ${dest_module_name[$count]}$module_suffix`"
 	    local original_module=""
 	    local found_orginal=""
@@ -2423,7 +2424,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.5.8"
+	    echo $"dkms: 2.0.5.9"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

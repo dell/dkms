@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.5.8
+Version: 2.0.5.9
 Release: 1
 License: GPL
 Group: System Environment/Base
@@ -101,6 +101,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Mon Jul 25 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.5.9
+- FIX BUG, when only some modules have original_modules, ARCHIVE_PREF3 wasn't getting reset causing big problems
+
 * Mon Jul 18 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.5.8
 - DKMS install now moves out original modules, does not copy them out
 
