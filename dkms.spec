@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.10.1
+Version: 2.0.11
 Release: 1
 License: GPL
 Group: System Environment/Base
@@ -104,6 +104,9 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Wed Mar 29 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.11-1
+- use -n <val> to all head and tail calls
+
 * Tue Mar 28 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.10.1-1
 - fix munging of /etc/sysconfig/kernel INITRD_MODULES= line
   so it doesn't move already-present entries to the end

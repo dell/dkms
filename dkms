@@ -164,7 +164,7 @@ function setup_kernels_arches ()
     if [ "$1" != "status" ]; then
 	[ -z "${kernelver_array[0]}" ] && [ -z "$all" ] && kernelver_array[0]=`uname -r`
 	if [ -z "${arch_array[0]}" ] && [ -n "${kernelver_array[0]}" ]; then
-	    kernelver_rpm=`rpm -qf "/lib/modules/${kernelver_array[0]}" 2>/dev/null | grep -v "not owned by any package" | grep kernel | head -1`
+	    kernelver_rpm=`rpm -qf "/lib/modules/${kernelver_array[0]}" 2>/dev/null | grep -v "not owned by any package" | grep kernel | head -n 1`
 	    if ! arch_array[0]=`rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null`; then
 		arch_array[0]=`uname -m`
 		if [ ${arch_array[0]} == "x86_64" ] && \
@@ -342,7 +342,7 @@ function read_conf ()
 
     # Set module naming/location arrays
     local index=0
-    array_size=`echo -e "${#BUILT_MODULE_NAME[@]}\n${#BUILT_MODULE_LOCATION[@]}\n${#DEST_MODULE_NAME[@]}\n${#DEST_MODULE_LOCATION[@]}\n" | sort -n | tail -1`
+    array_size=`echo -e "${#BUILT_MODULE_NAME[@]}\n${#BUILT_MODULE_LOCATION[@]}\n${#DEST_MODULE_NAME[@]}\n${#DEST_MODULE_LOCATION[@]}\n" | sort -n | tail -n 1`
     while [ "$index" -lt "$array_size" ]; do
 	# Set values
 	built_module_name[$index]=${BUILT_MODULE_NAME[$index]}
@@ -572,7 +572,7 @@ function moduleconfig_add ()
 	    if [ -n "${modules_conf_alias_type[$index]}" ] && \
 	       ! grep -q "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}\b" $moduleconfig && \
 	       [ "${modules_conf_obsolete_only[$index]}" != "yes" ]; then
-		alias_number=$(( `grep "alias ${modules_conf_alias_type[$index]}" $moduleconfig | awk '{print $2}' | sed "s/${modules_conf_alias_type[$index]}//" | sort -n | tail -1` + 1 ))
+		alias_number=$(( `grep "alias ${modules_conf_alias_type[$index]}" $moduleconfig | awk '{print $2}' | sed "s/${modules_conf_alias_type[$index]}//" | sort -n | tail -n 1` + 1 ))
 		echo -e "alias ${modules_conf_alias_type[$index]}${alias_number} ${dest_module_name[$index]}" >> $moduleconfig
 		echo $"$moduleconfig: added alias reference for '${dest_module_name[$index]}'"
 	    fi
@@ -1461,8 +1461,8 @@ function remove_module ()
 	    local pppid=`cat /proc/$PPID/status | grep PPid: | awk {'print $2'}`
 	    local time_stamp=`ps -o lstart --no-headers -p $pppid 2>/dev/null`
 	    for lock_file in `ls $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.* 2>/dev/null`; do
-		lock_head=`head -1 $lock_file 2>/dev/null`
-		lock_tail=`tail -1 $lock_file 2>/dev/null`
+		lock_head=`head -n 1 $lock_file 2>/dev/null`
+		lock_tail=`tail -n 1 $lock_file 2>/dev/null`
 		if [ "$lock_head" == "$module-$module_version" ] && [ "$lock_tail" == "$time_stamp" ] && [ -n "$time_stamp" ]; then
 		    echo $""
 		    echo $"DKMS: Remove cancelled because --rpm_safe_upgrade scenario detected."
@@ -2047,7 +2047,7 @@ load_tarball()
     local is_binaries_only=""
     local is_not_arch_aware=""
     if ! [ -d "$temp_dir_name/dkms_main_tree" ]; then
-	conf=`find $temp_dir_name/ -name dkms.conf 2>/dev/null | head -1`
+	conf=`find $temp_dir_name/ -name dkms.conf 2>/dev/null | head -n 1`
 	if [ -z "$conf" ]; then
 	    echo $"" >&2
 	    echo $"Error! Tarball does not appear to be a correctly formed" >&2
@@ -2603,7 +2603,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.10.1"
+	    echo $"dkms: 2.0.11"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
