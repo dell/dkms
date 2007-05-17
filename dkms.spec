@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.46.04
+Version: 0.99.01
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -55,6 +55,14 @@ fi
 
 
 %changelog
+* Fri Nov 21 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.46.06-1
+- Only edit /etc/modules.conf if remake_initrd is set or if this is the last uninstall and no original module exists
+- Added MODULES_CONF_OBSOLETE_ONLY array directive in dkms.conf
+- Updated man page
+
+* Wed Nov 19 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.46.05-1
+- Fixed a bug in mktarball to limit the tarball name to less than 255 chars
+
 * Tue Nov 18 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.46.04-1
 - Binary only tarballs now contain a copy of dkms.conf so that they can be force loaded
 

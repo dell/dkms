@@ -139,6 +139,8 @@ function read_conf ()
     unset modules_conf_obsoletes
     unset MODULES_CONF_ALIAS_TYPE
     unset modules_conf_alias_type
+    unset MODULES_CONF_OBSOLETE_ONLY
+    unset modules_conf_obsolete_only
 
     # Set variables supported in dkms.conf files (eg. $kernelver)
     kernelver="$kernel_version"
@@ -178,6 +180,7 @@ function read_conf ()
 	dest_module_location[$index]=${DEST_MODULE_LOCATION[$index]}
 	modules_conf_obsoletes[$index]=${MODULES_CONF_OBSOLETES[$index]}
 	modules_conf_alias_type[$index]=${MODULES_CONF_ALIAS_TYPE[$index]}
+	[ `echo "${MODULES_CONF_OBSOLETE_ONLY[$index]}" | grep -ic "^y"` -gt 0 ] && modules_conf_obsolete_only[$index]="yes"
 
 	# If unset, set by defaults
 	[ -z "${built_module_name[$index]}" ] && [ "${#DEST_MODULE_LOCATION[*]}" -eq 1 ] && built_module_name[$index]=$module
@@ -310,7 +313,7 @@ function modulesconf_modify ()
 	    fi
 	    
 	    # Only add it if it can't be found already in /etc/modules.conf
-	    if [ -n "${modules_conf_alias_type[$index]}" ] && [ `grep -c "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}\b" /etc/modules.conf` -eq 0 ]; then
+	    if [ -n "${modules_conf_alias_type[$index]}" ] && [ `grep -c "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}\b" /etc/modules.conf` -eq 0 ] && [ "${modules_conf_obsolete_only[$index]}" != "yes" ]; then
 		alias_number=$(( `grep "alias ${modules_conf_alias_type[$index]}" /etc/modules.conf | awk '{print $2}' | sed "s/${modules_conf_alias_type[$index]}//" | sort -n | tail -1` + 1 ))
 		echo -e "alias ${modules_conf_alias_type[$index]}${alias_number} ${dest_module_name[$index]}" >> /etc/modules.conf
 		echo $"Alias reference for '${dest_module_name[$index]}' added to /etc/modules.conf"
@@ -346,14 +349,15 @@ function modulesconf_modify ()
 		    fi
 		done
 		
-		if [ -n "$conf_replacement" ]; then
+		if [ -n "$conf_replacement" ] && [ `grep -c "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}$" /etc/modules.conf` -gt 0 ]; then
 		    sed "s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) ${dest_module_name[$index]}$/\1 $conf_replacement/g" /etc/modules.conf > $temp_dir_name/modules.new
+		    mv -f $temp_dir_name/modules.new /etc/modules.conf
 		    echo $"Alias for '${dest_module_name[$index]}' changed back to '$conf_replacement' in /etc/modules.conf"
-		else
+		elif [ -z "$conf_replacement" ]; then
 		    grep -v "alias ${modules_conf_alias_type}[0-9]* ${dest_module_name[$index]}" /etc/modules.conf > $temp_dir_name/modules.new
+		    mv -f $temp_dir_name/modules.new /etc/modules.conf
 		    echo $"Alias for '${dest_module_name[$index]}' removed from /etc/modules.conf"
 		fi
-		mv -f $temp_dir_name/modules.new /etc/modules.conf
 	    fi
 
 	    index=$(($index+1))
@@ -912,8 +916,8 @@ function do_uninstall()
 		echo $"No original module ${dest_module_name[$count]} was found for this module on this kernel." 
 		echo $"Use the dkms install command to reinstall any previous module version." 
 		
-	        # Remove modules_conf entries from /etc/modules.conf
-		modulesconf_modify "delete"
+	        # Remove modules_conf entries from /etc/modules.conf if remake_initrd is set or if this is last instance removed
+		[ -n "$remake_initrd" ] || [ `dkms status -m $module -v $module_version | grep -c "installed"` -eq 1 ] && modulesconf_modify "delete"
 	    fi
 	    count=$(($count+1))
 	done
@@ -954,7 +958,7 @@ function do_uninstall()
 
     # Re-add entries to modules.conf if this module/version is still installed on another kernel
     # But only do this if it was just ACTIVE on the kernel we just uninstalled from
-    [ -n "$was_active" ] && [ `dkms status -m $module -v $module_version | grep -c "installed"` -gt 0 ] && modulesconf_modify "add"
+    [ -n "$was_active" ] && [ -n "$remake_initrd" ] && [ `dkms status -m $module -v $module_version | grep -c "installed"` -gt 0 ] && modulesconf_modify "add"
     
     echo $"" 
     echo $"DKMS: Uninstall Completed." 
@@ -1439,6 +1443,9 @@ make_tarball()
 
     # Make the tarball
     cd $temp_dir_name
+    if [ `echo $kernel_version_list | wc -m | awk {'print $1'}` -gt 200 ]; then
+	kernel_version_list="manykernels"
+    fi
     tar -czf $temp_dir_name/$module-$module_version-$kernel_version_list.dkms.tar.gz ./* 2>/dev/null
     cd -
     if [ "$?" -eq 0 ]; then
@@ -1820,7 +1827,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.46.04"
+	    echo $"dkms: 0.99.01"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
