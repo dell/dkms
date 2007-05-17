@@ -20,13 +20,15 @@ fi
 
 echo "Installing DKMS"
 mkdir -p /var/dkms
-cp -f $DIR/dkms /sbin
+cp -f $DIR/dkms /usr/sbin
 cp -f $DIR/dkms.8.gz /usr/share/man/man8
-cp -f $DIR/dkms_dbversion /var/dkms/
-cp -f $DIR/dkms_autoinstaller /etc/rc.d/init.d/
+cp -f $DIR/dkms_dbversion /var/dkms
+cp -f $DIR/dkms_autoinstaller /etc/rc.d/init.d
+cp -f $DIR/dkms_mkkerneldoth /usr/sbin
 chkconfig dkms_autoinstaller on
 if ! [ -e /etc/dkms_framework.conf ]; then
 	cp -f $DIR/dkms_framework.conf /etc/dkms_framework.conf
 fi
-chmod 755 /sbin/dkms
-
+chmod 755 /usr/sbin/dkms
+chmod 755 /usr/sbin/dkms_mkkerneldoth
+[ -e /sbin/dkms ] && mv /sbin/dkms /sbin/dkms.old

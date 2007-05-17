@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.40.14
+Version: 0.41.10
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -26,12 +26,13 @@ Computer Corporation.
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
         rm -rf $RPM_BUILD_ROOT
 fi
-mkdir -p $RPM_BUILD_ROOT/{var/dkms,sbin,usr/share/man/man8,etc,etc/rc.d/init.d}
-install -m 755 dkms $RPM_BUILD_ROOT/sbin/dkms
+mkdir -p $RPM_BUILD_ROOT/{var/dkms,/usr/sbin,usr/share/man/man8,etc,etc/rc.d/init.d}
+install -m 755 dkms $RPM_BUILD_ROOT/usr/sbin/dkms
 install -m 644 dkms.8.gz $RPM_BUILD_ROOT/usr/share/man/man8
 install -m 644 dkms_framework.conf  $RPM_BUILD_ROOT/etc/dkms_framework.conf
 install -m 644 dkms_dbversion $RPM_BUILD_ROOT/var/dkms/dkms_dbversion
 install -m 755 dkms_autoinstaller $RPM_BUILD_ROOT/etc/rc.d/init.d/dkms_autoinstaller
+install -m 755 dkms_mkkerneldoth $RPM_BUILD_ROOT/usr/sbin/dkms_mkkerneldoth
 
 %clean 
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
@@ -40,9 +41,10 @@ fi
 
 %files
 %defattr(-,root,root)
-%attr(0755,root,root) /sbin/dkms
+%attr(0755,root,root) /usr/sbin/dkms
 %attr(0755,root,root) /var/dkms
 %attr(0755,root,root) /etc/rc.d/init.d/dkms_autoinstaller
+%attr(0755,root,root) /usr/sbin/dkms_mkkerneldoth
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
 %doc %attr(0644,root,root) sample.spec sample.conf AUTHORS COPYING
 %config(noreplace) /etc/dkms_framework.conf
@@ -51,6 +53,20 @@ fi
 /sbin/chkconfig dkms_autoinstaller on
 
 %changelog
+* Wed Oct 29 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.41.10-1
+- Added Red Hat specific kernel prep to avoid make dep (Thanks Matt Domsch)
+- Added dkms_mkkerneldoth script to support RH kernel prep
+- Moved dkms from /sbin/ to /usr/sbin
+- Fixed typo which caused original_module not to get replaced on uninstall
+- No longer edit Makefiles, just specify KERNELVERSION=$kernel_version on the command line
+- Removed unnecessary depmod during uninstall
+
+* Thu Oct 23 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.40.16-1
+- Fixed mkdriverdisk to copy rhdd-6.1 file into driver disk image
+
+* Wed Oct 22 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.40.15-1
+- Changed expected driver disk filename from module-info to modinfo to work on legacy RH OSs
+
 * Tue Oct 14 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.40.14-1
 - Unset all arrays before using them.  duh.
 

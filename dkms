@@ -449,27 +449,19 @@ function prepare_kernel()
     [ -n "$config_contents" ] && echo $"Storing current .config to be restored when complete"
     
     # Do preparation
-    if [ -f /boot/vmlinuz.version.h ]; then
+    if [ -e /boot/vmlinuz.version.h ]; then
 	echo $"Running UnitedLinux preparation routine"
 	kernel_config="/boot/vmlinuz.config"
 	invoke_command "make mrproper >/dev/null 2>&1" "make mrproper" background
 	[ -n "$config_contents" ] && echo "$config_contents" > .config
 	invoke_command "cp /boot/vmlinuz.version.h include/linux/version.h" "using /boot/vmlinux.version.h" 
 	invoke_command "cp -f $kernel_config .config" "using $kernel_config" 
-	invoke_command "make cloneconfig >/dev/null 2>&1" "make cloneconfig" background
-	invoke_command "make CONFIG_MODVERSIONS=1 dep >/dev/null 2>&1" "make CONFIG_MODVERSIONS=1 dep" background
-    else 
-	echo $"Running Red Hat/Generic preparation routine"
-	invoke_command "make mrproper >/dev/null 2>&1" "make mrproper" background
+	invoke_command "make cloneconfig KERNELVERSION=$kernel_version >/dev/null 2>&1" "make cloneconfig" background
+	invoke_command "make CONFIG_MODVERSIONS=1 KERNELVERSION=$kernel_version dep >/dev/null 2>&1" "make CONFIG_MODVERSIONS=1 dep" background
+    elif `grep -q rhconfig.h $kernel_source_dir/include/linux/modversions.h 2>/dev/null`; then
+	echo $"Running Red Hat preparation routine"
+	invoke_command "make clean >/dev/null 2>&1" "make clean" background
 	[ -n "$config_contents" ] && echo "$config_contents" > .config
-
-        # Fix Makefile up so that EXTRAVERSION matches the kernel_version extraversion
-	echo $"editing kernel Makefile"
-	extraversion=`echo "$kernel_version" | sed 's/.*-/-/'`
-	sed "s/EXTRAVERSION *=.*/EXTRAVERSION = $extraversion/" Makefile 2>/dev/null > Makefile.new
-	mv -f Makefile.new Makefile
-	sed "s/EXTRAVERSION=.*/EXTRAVERSION = $extraversion/" Makefile 2>/dev/null > Makefile.new
-	mv -f Makefile.new Makefile
 
         # If kernel_config is not set, look in default spot for .config (./configs/kernel-...)
 	if [ -z "$kernel_config" ] && [ -d "$kernel_source_dir/configs" ]; then
@@ -495,8 +487,46 @@ function prepare_kernel()
 	    cp -f "$kernel_config" .config
 	fi
 
-	invoke_command "make oldconfig >/dev/null 2>&1" "make oldconfig" background
-	[ -z "$gt2dot4" ] && invoke_command "make dep >/dev/null 2>&1" "make dep" background
+	# Hack to workaround broken tmp_include_depends for Red Hat
+	if `grep -q "/usr/src/build" $kernel_source_dir/tmp_include_depends`; then
+	    sed 's/\/usr\/src\/build\/.*\/install//g' $kernel_source_dir/tmp_include_depends > $kernel_source_dir/tmp_include_depends.new
+	    mv -f $kernel_source_dir/tmp_include_depends.new $kernel_source_dir/tmp_include_depends
+	fi
+
+	invoke_command "make oldconfig KERNELVERSION=$kernel_version >/dev/null 2>&1" "make oldconfig" background
+	kerneldoth_contents=`cat /boot/kernel.h 2>/dev/null`
+	invoke_command "dkms_mkkerneldoth --kernelver $kernel_version --output /boot/kernel.h" "running dkms_mkkerneldoth" background
+    else 
+	echo $"Running Generic preparation routine"
+	invoke_command "make mrproper >/dev/null 2>&1" "make mrproper" background
+	[ -n "$config_contents" ] && echo "$config_contents" > .config
+
+        # If kernel_config is not set, look in default spot for .config (./configs/kernel-...)
+	if [ -z "$kernel_config" ] && [ -d "$kernel_source_dir/configs" ]; then
+	    arch_used=`uname -m`
+	    kernel_trunc=`echo $kernel_version | sed 's/-.*//'`
+	    for config_type in debug summit smp enterprise bigmem BOOT; do
+		if [ `echo "$kernel_version" | grep "$config_type"` ]; then
+		    [ "$config_type" == "BOOT" ] && arch_used="i386"
+		    kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$arch_used-$config_type.config"
+		fi
+	    done
+	    [ -z "$kernel_config" ] && kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$arch_used.config"
+	fi
+	
+	# Warn if no config, otherwise use it
+	if [ -z "$kernel_config" ]; then
+	    echo $""
+	    echo $"Warning! Cannot find a .config file to prepare your kernel with."
+	    echo $"Try using the --config option to specify where one can be found."
+	    echo $"Your build will likely fail because of this."
+	else
+	    echo $"using $kernel_config"
+	    cp -f "$kernel_config" .config
+	fi
+
+	invoke_command "make oldconfig KERNELVERSION=$kernel_version >/dev/null 2>&1" "make oldconfig" background
+	[ -z "$gt2dot4" ] && invoke_command "make dep KERNELVERSION=$kernel_version >/dev/null 2>&1" "make dep" background
     fi
     cd -
 }
@@ -710,7 +740,7 @@ function build_module()
     invoke_command "$clean >/dev/null 2>&1" "cleaning build area" background
     echo $"DKMS make.log for $module-$module_version for kernel $kernel_version" >> "$dkms_tree/$module/$module_version/build/make.log"
     echo $"`date`" >> "$dkms_tree/$module/$module_version/build/make.log"
-    invoke_command "$make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$make_command" background
+    invoke_command "$make_command KERNELVERSION=$kernel_version >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$make_command" background
 
     # Make sure all the modules built successfully
     count=0
@@ -752,8 +782,9 @@ function build_module()
     cd -
     if [ "$1" != "no-prepare-kernel" ] && [ -z $no_clean_kernel ]; then
 	cd "$kernel_source_dir"
-	invoke_command "make mrproper >/dev/null 2>&1" "cleaning kernel tree (make mrproper)" background
+	[ -z "$kerneldoth_contents" ] && invoke_command "make mrproper >/dev/null 2>&1" "cleaning kernel tree (make mrproper)" background
 	[ -n "$config_contents" ] && echo "$config_contents" > .config
+	[ -n "$kerneldoth_contents" ] && echo "$kerneldoth_contents" > /boot/kernel.h
 	cd -
     fi
 
@@ -789,7 +820,7 @@ function do_uninstall()
 	    if [ -e "$dkms_tree/$module/original_module/$kernel_version/${dest_module_name[$count]}$module_suffix" ]; then
 		echo $"Archived original_module ${dest_module_name[$count]}$module_suffix found!  Reinstating it under the" 
 		echo $"directory: /lib/modules/$kernel_version${dest_module_location[$count]}" 
-		cp -f "$dkms_tree/$module/original_module/$kernel_version/${dest_module_name[$count]}$module_suffix" "/lib/modules$kernel_version${dest_module_location[$count]}/" 2>/dev/null
+		cp -f "$dkms_tree/$module/original_module/$kernel_version/${dest_module_name[$count]}$module_suffix" "/lib/modules/$kernel_version${dest_module_location[$count]}/" 2>/dev/null
 	    else
 		echo $"No original module ${dest_module_name[$count]} was found for this module on this kernel." 
 		echo $"Use the dkms install command to reinstall any previous module version." 
@@ -810,12 +841,6 @@ function do_uninstall()
 	echo $"" 
 	echo $"Running the post_remove script:" 
 	"$dkms_tree/$module/$module_version/source/$post_remove" 
-    fi
-
-    # Run depmod if System.map-<kernel_version> exists
-    if [ -e "/boot/System.map-$kernel_version" ]; then
-	echo $""
-	invoke_command "depmod -a $kernel_version -F /boot/System.map-$kernel_version" "depmod" background 
     fi
     
     # Do remake_initrd things (remake initrd)
@@ -1192,8 +1217,8 @@ make_driver_disk ()
     mkdir -p "$dkms_tree/$module/$module_version/driver_disk"
    
     # Copy files for the driver disk (or warn if not present)
-    files_for_driverdisk="module-info disk-info modules.dep pcitable"
-    files_into_driverdisk="modules.cgz"
+    files_for_driverdisk="modinfo disk-info modules.dep pcitable"
+    files_into_driverdisk="modules.cgz rhdd-6.1"
     for file in $files_for_driverdisk; do
 	if ! [ -e "$dkms_tree/$module/$module_version/source/redhat_driver_disk/$file" ]; then
 	    echo $"Warning! File: $file not found in $dkms_tree/$module/$module_version/source/redhat_driver_disk/" >$std_err
@@ -1539,6 +1564,7 @@ run_match ()
     invoke_command "make mrproper >/dev/null 2>&1" "Cleaning kernel tree (make mrproper)" background
     if [ -n "$config_contents" ]; then
 	echo "$config_contents" > .config
+	echo "$kerneldoth_contents" > /boot/kernel.h
     fi
     cd -
     
@@ -1640,7 +1666,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.40.14"
+	    echo $"dkms: 0.41.10"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
