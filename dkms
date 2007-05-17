@@ -301,6 +301,16 @@ function read_conf ()
     # Source in the dkms.conf
     . $read_conf_file 2>/dev/null
 
+    # check environment for directives
+    # You can't have an array of variables exported
+    # so look for DKMS_DIRECTIVE0, DKMS_DIRECTIVE1, ...
+    for directive in `set | grep ^DKMS_DIRECTIVE | cut -d = -f 2-3`; do
+	directive_name=${directive%%=*}
+	directive_value=${directive#*=}
+	export $directive_name="$directive_value"
+	echo $"DIRECTIVE: $directive_name=\"$directive_value\""
+    done
+
     # Source in the directive_array
     for directive in "${directive_array[@]}"; do
 	directive_name=${directive%%=*}
@@ -2439,7 +2449,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.8.2"
+	    echo $"dkms: 2.0.8.3"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

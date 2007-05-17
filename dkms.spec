@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.8.2
+Version: 2.0.8.3
 Release: 1
 License: GPL
 Group: System Environment/Base
@@ -101,6 +101,10 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
+* Wed Dec 7 2005 Matt Domsch <Matt_Domsch@dell.com> 2.0.8.3
+- look to DKMS_DIRECTIVE* environment variables to override dkms.conf settings
+- don't create/remove (unused) /var/lock/subsys/dkms files in autoinstaller
+
 * Mon Nov 7 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.8.2
 - Multi driver suse driver disk support (thanks to Sreenivas.Bagalkote@engenio.com)
 - Cleanup tempdir when ldtarball fails

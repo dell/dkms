@@ -115,10 +115,8 @@ case "$1" in
   		fi
 	    fi
 	done
-	touch /var/lock/subsys/dkms 2>/dev/null
 	;;
   stop)
-	rm -f /var/lock/subsys/dkms
 	# ignore
 	;;
   reload)
