@@ -1338,7 +1338,7 @@ make_driver_disk ()
     invoke_command "dd if=/dev/zero of="./$image_name" bs=72k count=20 >/dev/null 2>&1" "making a blank floppy image" background
     invoke_command "mkdosfs ./$image_name >/dev/null 2>&1" "mkdosfs" background
     mkdir ./mnt
-    invoke_command "mount -o loop $image_name ./mnt >/dev/null 2>&1" "loopback mounting disk image"
+    invoke_command "mount -o loop -t vfat $image_name ./mnt >/dev/null 2>&1" "loopback mounting disk image"
     for file in $files_into_driverdisk; do
 	invoke_command "cp -f ./$file ./mnt/" "  copying $file to disk image"
     done
@@ -1827,7 +1827,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.99.01"
+	    echo $"dkms: 1.00"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.99.01
+Version: 1.00
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -55,7 +55,13 @@ fi
 
 
 %changelog
-* Fri Nov 21 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.46.06-1
+* Mon Dec 01 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.00-1
+- Bumped version to 1.00
+
+* Mon Nov 24 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.99.02-1
+- Add -t vfat to loopback mount during creation of driver disk
+
+* Fri Nov 21 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.99.01-1
 - Only edit /etc/modules.conf if remake_initrd is set or if this is the last uninstall and no original module exists
 - Added MODULES_CONF_OBSOLETE_ONLY array directive in dkms.conf
 - Updated man page
