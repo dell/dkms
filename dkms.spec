@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 1.02
+Version: 1.05
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -55,6 +55,9 @@ fi
 
 
 %changelog
+* Mon Feb 09 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.04-1
+- Added a fix to resolve RHEL21 depmod errors when an obsolete reference is found
+
 * Thu Jan 15 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 1.02-1
 - Fixed mkinitrd for ia64
 

@@ -308,7 +308,8 @@ function modulesconf_modify ()
 		for obsolete_module in `echo ${modules_conf_obsoletes[$index]} | tr ',' '\n'`; do
 		    sed "s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) $obsolete_module$/\1 ${dest_module_name[$index]}/g" /etc/modules.conf > $temp_dir_name/modules.new
 		    if ! `diff /etc/modules.conf $temp_dir_name/modules.new >/dev/null 2>&1`; then 
-			mv -f $temp_dir_name/modules.new /etc/modules.conf
+			cp -fp $temp_dir_name/modules.new /etc/modules.conf 2>/dev/null
+			rm -f $temp_dir_name/modules.new 2>/dev/null
 			echo $"Obsolete alias '$obsolete_module' changed to '${dest_module_name[$index]}' in /etc/modules.conf"
 		    fi
 		done
@@ -1829,7 +1830,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 1.02"
+	    echo $"dkms: 1.05"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
