@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#  Copyright (C) 2002 Dell Computer Corporation <gary_lerhaupt@dell.com>
+#  Copyright (C) 2003 Dell Computer Corporation <gary_lerhaupt@dell.com>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ function invoke_command ()
 	eval $1; exitval=$?
     fi
     if [ $exitval -gt 0 ]; then
-	echo -en "(bad exit status)" 
+	echo -en "(bad exit status: $exitval)" 
 	script_location=`dirname $0`
 	echo $1 >> $script_location/.invoke_command.log
     fi
@@ -78,11 +78,6 @@ function read_conf ()
     CLEAN=""
     MODULE_NAME=""
     NEEDED_FOR_BOOT=""
-    MODULES_CONF_1=""
-    MODULES_CONF_2=""
-    MODULES_CONF_3=""
-    MODULES_CONF_4=""
-    MODULES_CONF_5=""
 
     # Set variables supported in dkms.conf files (eg. $kernelver)
     kernelver="$kernel_version"
@@ -96,15 +91,35 @@ function read_conf ()
     clean="$CLEAN"
     module_name_list="$MODULE_NAME"
     needed_for_boot="$NEEDED_FOR_BOOT"
-    modules_conf_1="$MODULES_CONF_1"
-    modules_conf_2="$MODULES_CONF_2"    
-    modules_conf_3="$MODULES_CONF_3"
-    modules_conf_4="$MODULES_CONF_4"
-    modules_conf_5="$MODULES_CONF_5"
     
+    # Set modules_conf_array
+    index=0
+    var_to_check="MODULES_CONF$index"
+    while [ -n "${!var_to_check}" ]; do
+	modules_conf_array[$index]=${!var_to_check}
+	index=$((index+1))
+	var_to_check="MODULES_CONF$index"
+    done
+
+    # Set patch_array (including kernel specific patches)
+    index=0
+    var_to_check="PATCH$index"
+    while [ -n "${!var_to_check}" ]; do
+	patch_array[$index]="${!var_to_check}"
+	index=$((index+1))
+	var_to_check="PATCH$index"
+    done
+    for patch_subdirective in `grep "^PATCH_" "$read_conf_file" | sed 's/PATCH_//' | sed 's/=.*//'`; do
+	if [ `echo "$kernel_version" | grep -c "$patch_subdirective"` -gt 0 ]; then
+	    subdirective_to_use="PATCH_$patch_subdirective"
+	    patch_array[$index]="${!subdirective_to_use}"
+	    index=$((index+1))
+	fi
+    done
+
     # Get the correct make command
-    for make_subdirective in `grep -i "^MAKE_" "$read_conf_file" | sed 's/MAKE_//' | sed 's/=.*//'`; do
-	if [ `echo "$kernel_version" | grep -c "$make_subdirective"` -eq 1 ]; then
+    for make_subdirective in `grep "^MAKE_" "$read_conf_file" | sed 's/MAKE_//' | sed 's/=.*//'`; do
+	if [ `echo "$kernel_version" | grep -c "$make_subdirective"` -eq 0 ]; then
 	    subdirective_to_use="MAKE_$make_subdirective"
 	    make_command="${!subdirective_to_use}"
 	fi
@@ -112,7 +127,7 @@ function read_conf ()
 
     # Set default values
     if [ -z "$module_name_list" ]; then
-	module_name_list="$module.o"
+	module_name_list="$module"
     fi
     if [ `echo "$needed_for_boot" | grep -ic "^y"` -gt 0 ]; then
 	needed_for_boot="yes"
@@ -151,45 +166,25 @@ function modulesconf_modify ()
 {
     # Make modules.conf changes as necessary
     if [ "$1" == "add" ]; then
-	if [ -n "$modules_conf_1" ] && [ `grep -c "$modules_conf_1" "/etc/modules.conf"` -eq 0 ]; then
-	    echo -e "$modules_conf_1" >> /etc/modules.conf
-	fi
-	if [ -n "$modules_conf_2" ] && [ `grep -c "$modules_conf_2" "/etc/modules.conf"` -eq 0 ]; then
-	    echo -e "$modules_conf_2" >> /etc/modules.conf
-	fi
-	if [ -n "$modules_conf_3" ] && [ `grep -c "$modules_conf_3" "/etc/modules.conf"` -eq 0 ]; then
-	    echo -e "$modules_conf_3" >> /etc/modules.conf
-	fi
-	if [ -n "$modules_conf_4" ] && [ `grep -c "$modules_conf_4" "/etc/modules.conf"` -eq 0 ]; then
-	    echo -e "$modules_conf_4" >> /etc/modules.conf
-	fi
-	if [ -n "$modules_conf_5" ] && [ `grep -c "$modules_conf_5" "/etc/modules.conf"` -eq 0 ]; then
-	    echo -e "$modules_conf_5" >> /etc/modules.conf
-	fi
+	index=0
+	while [ $index -lt ${#modules_conf_array[*]} ]; do
+	    if [ -n "${modules_conf_array[$index]}" ] && [ `grep -c "${modules_conf_array[$index]}" "/etc/modules.conf"` -eq 0 ]; then
+		echo -e "${modules_conf_array[$index]}" >> /etc/modules.conf
+	    fi	    
+	    index=$((index+1))
+	done
     fi
 
     # Remove modules_conf entries from /etc/modules.conf
     if [ "$1" == "delete" ]; then
-	if [ -n "$modules_conf_1" ]; then
-	    grep -v "$modules_conf_1" "/etc/modules.conf" > /etc/modules.new
-	    mv -f /etc/modules.new /etc/modules.conf
-	fi
-	if [ -n "$modules_conf_2" ]; then
-	    grep -v "$modules_conf_2" "/etc/modules.conf" > /etc/modules.new
-	    mv -f /etc/modules.new /etc/modules.conf
-	fi
-	if [ -n "$modules_conf_3" ]; then
-	    grep -v "$modules_conf_3" "/etc/modules.conf" > /etc/modules.new
-	    mv -f /etc/modules.new /etc/modules.conf
-	fi
-	if [ -n "$modules_conf_4" ]; then
-	    grep -v "$modules_conf_4" "/etc/modules.conf" > /etc/modules.new
-	    mv -f /etc/modules.new /etc/modules.conf
-	fi
-	if [ -n "$modules_conf_5" ]; then
-	    grep -v "$modules_conf_5" "/etc/modules.conf" > /etc/modules.new
-	    mv -f /etc/modules.new /etc/modules.conf
-	fi
+	index=0
+	while [ $index -lt ${#modules_conf_array[*]} ]; do
+	    if [ -n "${modules_conf_array[$index]}" ]; then
+		grep -v "${modules_conf_array[$index]}" "/etc/modules.conf" > /etc/modules.new
+		mv -f /etc/modules.new /etc/modules.conf
+	    fi	    
+	    index=$((index+1))
+	done
     fi
 }
 
@@ -202,11 +197,15 @@ function add_module ()
     fi
 
     # Check that we have all the arguments
-    if [ -z "$module" ] || [ -z "$module_version" ] || [ -z "$conf" ]; then
+    if [ -z "$module" ] || [ -z "$module_version" ]; then
 	echo $"" >$std_err
 	echo $"Error! Invalid number of arguments passed." >$std_err
 	echo $"Usage: add [-m module] [-v module-version] [-c dkms.conf-location]" >$std_err
 	exit 1
+    fi
+
+    if [ -z "$conf" ]; then
+	conf="$source_tree/$module-$module_version/dkms.conf"
     fi
 	
     # Check that /usr/src/$module-$module_version exists	
@@ -267,7 +266,7 @@ function add_module ()
     fi
     
     # Create the necessary dkms tree structure
-    mkdir -p "$dkms_tree/$module/$module_version"
+    mkdir -p "$dkms_tree/$module/$module_version/build"
     ln -s "$source_tree/$module-$module_version" "$dkms_tree/$module/$module_version/source"
     
     # Copy the dkms.conf file
@@ -338,23 +337,18 @@ function prepare_kernel()
     # If kernel_config is not set, look in default spot for .config (./configs/kernel-...)
     if [ -z "$kernel_config" ]; then
 	if [ `echo $kernel_version | grep smp` ]; then
-	    invoke_command "cp ./configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-smp.config .config" \
-		"copying kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-smp.config to .config"
+	    kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-smp.config"
 	elif [ `echo $kernel_version | grep ent` ]; then
-	    invoke_command "cp ./configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-enterprise.config .config" \
-		"copying kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-enterprise.config to .config"
+	    kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-enterprise.config"
 	elif [ `echo $kernel_version | grep bigmem` ]; then
-	    invoke_command "cp ./configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-bigmem.config .config" \
-		"copying kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-bigmem.config to .config"
+	    kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-bigmem.config"
 	else
-	    
-	    invoke_command "cp ./configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`.config .config" \
-		"copying kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`.config to .config"
+	    kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`.config"
 	fi
-    else
-	echo $"copying $kernel_config to .config..."
-	cp "$kernel_config" .config
     fi
+    echo $"using $kernel_config"
+    cp "$kernel_config" .config
+
     invoke_command "make oldconfig >/dev/null 2>&1" "make oldconfig" background
     invoke_command "make dep >/dev/null 2>&1" "make dep" background
     cd -
@@ -375,11 +369,11 @@ function install_module()
 	exit 1
     fi
 
-    # Check that /usr/src/$module-$module_version exists	
-    if ! [ -d "$source_tree/$module-$module_version" ]; then
+    # Check that $module-$module_version exists by checking the source symlink	
+    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
 	echo $"" >$std_err
-	echo $"Error! Directory: $source_tree/$module-$module_version does not exist." >$std_err
-	echo $"You must first add and then build via DKMS before you can install." >$std_err
+	echo $"Error! DKMS tree does not contain: $module-$module_version" >$std_err
+	echo $"Build cannot continue without the proper tree." >$std_err
 	exit 2
     fi
 
@@ -521,37 +515,59 @@ function build_module()
     if [ "$1" != "no-prepare-kernel" ]; then
 	prepare_kernel
     fi
-	
-    # Create the necessary dkms tree for build
-    mkdir -p "$dkms_tree/$module/$module_version/$kernel_version/log"
-    cp -f "$kernel_source_dir/.config" "$dkms_tree/$module/$module_version/$kernel_version/log/" 
     
-    # Build module
-    cd "$dkms_tree/$module/$module_version/source"
+    # Set up temporary build directory for build
+    rm -rf "$dkms_tree/$module/$module_version/build"
+    cp -rf "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
+    cd "$dkms_tree/$module/$module_version/build"
     echo $"" 
     echo $"Building module:" 
+
+    # Apply any patches
+    index=0
+    while [ $index -lt ${#patch_array[*]} ]; do
+	if ! [ -e "$dkms_tree/$module/$module_version/build/patches/${patch_array[$index]}" ]; then
+	    echo $"" >$std_err
+	    echo $"Error!  Patch ${patch_array[$index]} as specified in dkms.conf cannot be" >$std_err
+	    echo $"found in $dkms_tree/$module/$module_version/build/patches/." >$std_err
+	    exit 5
+	fi
+	invoke_command "patch -p1 < ./patches/${patch_array[$index]}" "applying patch ${patch_array[$index]}"
+	if [ "$?" -ne 0 ]; then
+	    echo $"" >$std_err
+	    echo $"Error! Application of patch ${patch_array[$index]} failed." >$std_err
+	    echo $"Check $dkms_tree/$module/$module_version/build/ for more information." >$std_err
+	    exit 6
+	fi
+	index=$((index+1))
+    done
+
+    # Build
     invoke_command "$clean >/dev/null 2>&1" "cleaning" background
-    echo $"DKMS make.log for $module-$module_version for kernel $kernel_version" >> "$dkms_tree/$module/$module_version/$kernel_version/log/make.log"
-    echo $"`date`" >> "$dkms_tree/$module/$module_version/$kernel_version/log/make.log"
-    invoke_command "$make_command >> $dkms_tree/$module/$module_version/$kernel_version/log/make.log 2>&1" "$make_command" background
-    # Back out changes if module build failed
+    echo $"DKMS make.log for $module-$module_version for kernel $kernel_version" >> "$dkms_tree/$module/$module_version/build/make.log"
+    echo $"`date`" >> "$dkms_tree/$module/$module_version/build/make.log"
+    invoke_command "$make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$make_command" background
+    # Make sure all the modules built successfully
     for module_name in $module_name_list; do
 	if ! [ -e "./$module_name" ]; then
-	    mv -f "$dkms_tree/$module/$module_version/$kernel_version/log/make.log" "$source_tree/$module-$module_version/" 2>/dev/null
-	    rm -rf "$dkms_tree/$module/$module_version/$kernel_version" 2>/dev/null
 	    echo $"" >$std_err
 	    echo $"Error!  Module build failed for kernel: $kernel_version" >$std_err
-	    echo $"Changes to the DKMS tree have been backed out.  Consult the make.log" >$std_err
-	    echo $"which has been moved to $source_tree/$module-$module_version/make.log" >$std_err
-	    exit 5
+	    echo $"Consult the make.log in the build directory" >$std_err
+	    echo $"$dkms_tree/$module/$module_version/build/ for more information." >$std_err
+	    exit 7
 	fi
     done
     cd -
-    
+
+    # Build success, so create DKMS structure for a built module
+    mkdir -p "$dkms_tree/$module/$module_version/$kernel_version/log"
+    cp -f "$kernel_config" "$dkms_tree/$module/$module_version/$kernel_version/log/"  
+    mv -f "$dkms_tree/$module/$module_version/build/make.log" "$dkms_tree/$module/$module_version/$kernel_version/log/make.log" 2>/dev/null   
+
     # Save a copy of the new module
     mkdir "$dkms_tree/$module/$module_version/$kernel_version/module" >/dev/null
     for module_name in $module_name_list; do
-	cp -f "$source_tree/$module-$module_version/$module_name" "$dkms_tree/$module/$module_version/$kernel_version/module/" >/dev/null
+	cp -f "$dkms_tree/$module/$module_version/build/$module_name" "$dkms_tree/$module/$module_version/$kernel_version/module/" >/dev/null
     done
 
     # Run the post_build script
@@ -563,6 +579,9 @@ function build_module()
     
     # Run the clean command
     invoke_command "$clean >/dev/null 2>&1" "cleaning" background
+
+    # Clean the build directory
+    rm -rf "$dkms_tree/$module/$module_version"/build/*
 
     echo $"" 
     echo $"Build Completed." 
@@ -748,7 +767,7 @@ function remove_module ()
 
     # Iterate over the kernel_list
     for kernel_in_tree in $kernel_list; do
-	if [ -d "$dkms_tree/$module/$module_version/$kernel_in_tree" ] && ! [ -h "$dkms_tree/$module/$module_version/$kernel_in_tree" ]; then
+	if [ -d "$dkms_tree/$module/$module_version/$kernel_in_tree" ] && ! [ -h "$dkms_tree/$module/$module_version/$kernel_in_tree" ] && [ "$kernel_in_tree" != "build" ] ; then
 	    kernel_version="$kernel_in_tree"
 	    read_conf
 	    if [ "$?" -ne 0 ]; then
@@ -766,7 +785,7 @@ function remove_module ()
     done
 
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
-    if [ "`find $dkms_tree/$module/$module_version/* -maxdepth 1 -type d`" == "" ]; then
+    if [ "`find $dkms_tree/$module/$module_version/* -maxdepth 1 -type d`" == "$dkms_tree/$module/$module_version/build" ]; then
 	echo $"" 
 	echo $"------------------------------" 
 	echo $"Deleting module version: $module_version" 
@@ -839,7 +858,7 @@ show_status ()
 			kernels_needing_status="$kernel_version"
 		    else
 			for filename in `ls "$dkms_tree/$module_in_tree/$version_in_tree"`; do
-			    if [ -d "$dkms_tree/$module_in_tree/$version_in_tree/$filename" ] && ! [ -h "$dkms_tree/$module_in_tree/$version_in_tree/$filename" ]; then
+			    if [ -d "$dkms_tree/$module_in_tree/$version_in_tree/$filename" ] && ! [ -h "$dkms_tree/$module_in_tree/$version_in_tree/$filename" ] && [ "$filename" != "build" ] ; then
 				kernels_needing_status="$kernels_needing_status $filename"
 			    fi
 			done    
@@ -981,9 +1000,6 @@ run_match ()
 ####                     ####
 #############################
 
-# Source for the function library.
-. /etc/init.d/functions
-
 # Set important variables
 current_kernel=`uname -r`
 dkms_tree="/var/dkms"
@@ -1052,7 +1068,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.22.04"
+	    echo $"dkms: 0.23.18"
 	    exit 0
 	    ;;
 	--postadd*)

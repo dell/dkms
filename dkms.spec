@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.22.04
+Version: 0.23.18
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
@@ -37,6 +37,28 @@ fi
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
 
 %changelog
+* Wed Mar 12 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.23.18-1
+- Added kernel specific patching ability
+
+* Mon Mar 10 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.23.16-1
+- Removed the sourcing in of /etc/init.d/functions as it was unused anyway
+- Implemented generic patching support
+- Updated man page
+- Fixed timing of the creation of DKMS built infrastructure in case of failure
+
+* Fri Mar 07 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.23.11-1
+- Builds now occur in /var/dkms/$module/$module_version/build and not in /usr/src
+- Fixed the logging of the kernel_config
+
+* Thu Mar 06 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.23.01-1
+- Started adding patch support
+- Redid reading implementation of modules_conf entries in dkms.conf (now supports more than 5)
+- Updated man page
+
+* Tue Mar 04 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.22.06-1
+- Module names are not just assumed to end in .o any longer (you must specify full module name)
+- At exit status to invoke_command when bad exit status is returned
+
 * Fri Feb 28 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.22.03-1
 - Changed the way variables are handled in dkms.conf, %kernelver to $kernelver
 
