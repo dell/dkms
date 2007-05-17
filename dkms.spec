@@ -1,19 +1,19 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.16
+Version: 2.0.16.1
 Release: 1%{?dist}
 License: GPL
 Group: System Environment/Base
 BuildArch: noarch
 Requires: sed gawk findutils modutils tar cpio gzip grep mktemp
 Requires: bash > 1.99
-Provides: dkms-minimal
+# because Mandriva calls this package dkms-minimal
+Provides: dkms-minimal = %{version}
 URL: http://linux.dell.com/dkms
 Source0: http://linux.dell.com/dkms/permalink/dkms-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-#%ifdef %fedora
+# when building for Fedora, uncomment this Requires
 #Requires: kernel-devel
-#%endif
 
 %description
 This package contains the framework for the Dynamic
@@ -23,12 +23,13 @@ module RPMS as originally developed by Dell.
 %prep
 
 %setup -q
+%build
 
-%triggerpostun -- dkms < 1.90.00-1
-for dir in `find /var/dkms -type d -maxdepth 1 -mindepth 1`; do
-	mv -f $dir /var/lib/dkms
+%triggerpostun -- %{name} < 1.90.00-1
+for dir in `find %{_localstatedir}/%{name} -type d -maxdepth 1 -mindepth 1`; do
+	mv -f $dir %{_localstatedir}/lib/%{name}
 done
-[ -e /etc/dkms_framework.conf ] && ! [ -e /etc/dkms/framework.conf ] && mkdir /etc/dkms && cp /etc/dkms_framework.conf /etc/dkms/framework.conf
+[ -e %{_sysconfdir}/dkms_framework.conf ] && ! [ -e %{_sysconfdir}/%{name}/framework.conf ] && mkdir %{_sysconfdir}/%{name} && cp -a %{_sysconfdir}/dkms_framework.conf %{_sysconfdir}/%{name}/framework.conf
 arch_used=""
 [ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && arch_used="ia32e" || arch_used=`uname -m`
 echo ""
@@ -39,10 +40,10 @@ echo "architectures.  Your DKMS tree will now be modified to add this support."
 echo ""
 echo "The upgrade will assume all built modules are for arch: $arch_used"
 current_kernel=`uname -r`
-dkms_tree="/var/lib/dkms"
-source_tree="/usr/src"
+dkms_tree="%{_localstatedir}/lib/%{name}"
+source_tree="%{_prefix}/src"
 tmp_location="/tmp"
-dkms_frameworkconf="/etc/dkms/framework.conf"
+dkms_frameworkconf="%{_sysconfdir}/%{name}/framework.conf"
 . $dkms_frameworkconf 2>/dev/null
 echo ""
 echo "Fixing directories."
@@ -58,10 +59,10 @@ for symlink in `find $dkms_tree -type l -name "kernel*" -mindepth 2 -maxdepth 2`
 	symlink_kernelname=`echo $symlink | sed 's#.*/kernel-##'`
 	dir_of_symlink=`echo $symlink | sed 's#/kernel-.*$##'`
 	cd $dir_of_symlink
-        read_link="$symlink"
-        while [ -L "$read_link" ]; do
-            read_link=`ls -l $read_link | sed 's/.*-> //'`
-        done
+	read_link="$symlink"
+	while [ -L "$read_link" ]; do
+		read_link=`ls -l $read_link | sed 's/.*-> //'`
+	done
 	if [ `echo $read_link | sed 's#/# #g' | wc -w | awk {'print $1'}` -lt 3 ]; then
 		echo "Updating $symlink..."
 		ln -sf $read_link/$arch_used kernel-$symlink_kernelname-$arch_used
@@ -73,38 +74,61 @@ echo ""
 
 %install
 rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/{var/lib/dkms,/usr/sbin,usr/share/man/man8,etc/init.d,etc/dkms}
-install -m 755 dkms $RPM_BUILD_ROOT/usr/sbin/dkms
-gzip -c -9 dkms.8 > $RPM_BUILD_ROOT/usr/share/man/man8/dkms.8.gz
-chmod 644 $RPM_BUILD_ROOT/usr/share/man/man8/dkms.8.gz
-install -m 644 dkms_framework.conf  $RPM_BUILD_ROOT/etc/dkms/framework.conf
-install -m 644 template-dkms-mkrpm.spec $RPM_BUILD_ROOT/etc/dkms
-install -m 644 dkms_dbversion $RPM_BUILD_ROOT/var/lib/dkms/dkms_dbversion
-install -m 755 dkms_autoinstaller $RPM_BUILD_ROOT/etc/init.d/dkms_autoinstaller
-install -m 755 dkms_mkkerneldoth $RPM_BUILD_ROOT/usr/sbin/dkms_mkkerneldoth
+mkdir -m 0755 -p $RPM_BUILD_ROOT%{_localstatedir}/lib/%{name}
+mkdir -m 0755 -p $RPM_BUILD_ROOT%{_sbindir}
+mkdir -m 0755 -p $RPM_BUILD_ROOT%{_mandir}/man8
+mkdir -m 0755 -p $RPM_BUILD_ROOT%{_initrddir}
+mkdir -m 0755 -p $RPM_BUILD_ROOT%{_sysconfdir}/%{name}
+mkdir -m 0755 -p $RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d
+
+install -p -m 0755 dkms $RPM_BUILD_ROOT%{_sbindir}/%{name}
+install -p -m 0755 dkms_mkkerneldoth $RPM_BUILD_ROOT%{_sbindir}/dkms_mkkerneldoth
+install -p -m 0755 dkms_autoinstaller $RPM_BUILD_ROOT%{_initrddir}/dkms_autoinstaller
+install -p -m 0644 dkms_framework.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/framework.conf
+install -p -m 0644 template-dkms-mkrpm.spec $RPM_BUILD_ROOT%{_sysconfdir}/%{name}
+install -p -m 0644 dkms_dbversion $RPM_BUILD_ROOT%{_localstatedir}/lib/%{name}/dkms_dbversion
+install -p -m 0644 dkms.bash-completion $RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d/%{name}
+# install compressed manpage with proper timestamp and permissions
+gzip -c -9 dkms.8 > $RPM_BUILD_ROOT%{_mandir}/man8/%{name}.8.gz
+chmod 0644 $RPM_BUILD_ROOT%{_mandir}/man8/%{name}.8.gz
+touch --reference=dkms.8 $RPM_BUILD_ROOT%{_mandir}/man8/%{name}.8.gz
+# ensure doc file permissions ok
+chmod 0644 sample.spec sample.conf AUTHORS COPYING README.dkms sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
 
 %clean 
 rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%attr(0755,root,root) /usr/sbin/dkms
-%attr(0755,root,root) /var/lib/dkms
-%attr(0755,root,root) /etc/init.d/dkms_autoinstaller
-%attr(0755,root,root) /usr/sbin/dkms_mkkerneldoth
-%doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
-%doc %attr (-,root,root) sample.spec sample.conf AUTHORS COPYING README.dkms
-%doc %attr (-,root,root) sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
-%dir /etc/dkms
-%config(noreplace) /etc/dkms/framework.conf
-%config(noreplace) /etc/dkms/template-dkms-mkrpm.spec
+%{_sbindir}/%{name}
+%{_localstatedir}/lib/%{name}
+%{_initrddir}/dkms_autoinstaller
+%{_sbindir}/dkms_mkkerneldoth
+%{_mandir}/*/*
+%doc sample.spec sample.conf AUTHORS COPYING README.dkms
+%doc sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
+%dir %{_sysconfdir}/%{name}
+%config(noreplace) %{_sysconfdir}/%{name}/framework.conf
+%config(noreplace) %{_sysconfdir}/%{name}/template-dkms-mkrpm.spec
+%{_sysconfdir}/bash_completion.d/%{name}
 
 %post
 [ -e /sbin/dkms ] && mv -f /sbin/dkms /sbin/dkms.old 2>/dev/null
-/sbin/chkconfig dkms_autoinstaller on
+# enable on initial install
+[ $1 -lt 2 ] && /sbin/chkconfig dkms_autoinstaller on ||:
 
+%preun
+# remove on uninstall
+[ $1 -lt 1 ] && /sbin/chkconfig dkms_autoinstaller off ||:
 
 %changelog
+* Tue Mar 20 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.16.1
+- spec file cleanups per re-review in Fedora
+- add bash completion, rpmbuild check, pinit, pass-arch patches from
+  Mandriva.  These are generic.  The other Mandriva patches appear to
+  be distro-specific.
+- Look for /etc/sysconfig/module-init-tools to get some values.
+
 * Tue Feb 27 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.16
 - fix override_dest_module_location() for historical distro versions
 - don't run weak-modules if it doesn't exist
@@ -154,7 +178,7 @@ rm -rf $RPM_BUILD_ROOT
 - fix version comparison for all 2.6 kernels
 
 * Mon Apr 10 2006 Matt Domsch <Matt_Domsch@dell.com>
-- add README.dkms to %doc
+- add README.dkms to doc
 
 * Wed Mar 29 2006 Matt Domsch <Matt_Domsch@dell.com> 2.0.11-1
 - use -n <val> to all head and tail calls

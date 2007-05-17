@@ -4,6 +4,13 @@
 # 				for new kernels.
 # chkconfig: 345 04 04
 # description: An autoinstaller bootup service for DKMS
+#
+### BEGIN INIT INFO
+# Provides: dkms
+# Default-Start: 3 4 5
+# Short-Description: Automatically install DKMS modules for new kernels
+# Description: A service to automatically install DKMS modules for new kernels.
+### END INIT INFO
 
 function invoke_command ()
 {
@@ -92,20 +99,20 @@ case "$1" in
 		    elif [ "$current_state" != "built" ] && [ -e /lib/modules/$kernel/build/include ]; then
 			return_status=""
 			if [ -z "$kernel_preparation_done" ]; then
-			    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel -q --no-clean-kernel >$output_loc" "." background
+			    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q --no-clean-kernel >$output_loc" "." background
 			    return_status="$?"
 			    kernel_preparation_done="true"
 			else
-			    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel --no-prepare-kernel --no-clean-kernel -q >$output_loc" "." background
+			    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel -a $arch --no-prepare-kernel --no-clean-kernel -q >$output_loc" "." background
 			    return_status="$?"
 			fi
 			if [ "$return_status" -eq 0 ]; then
-			    invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -q >$output_loc" "." background
+			    invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q >$output_loc" "." background
 			else
 			    echo "  Build failed.  Installation skipped." >$output_loc
 			fi
 		    else
-			invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -q >$output_loc" "." background
+			invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q >$output_loc" "." background
 			return_status=$?
 			if [ "$return_status" -eq 101 ]; then
 			    echo "  A newer module version than this already exists in this kernel." >$output_loc

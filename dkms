@@ -294,6 +294,8 @@ function distro_version()
 function override_dest_module_location()
 {
     local orig_location="$1"
+    [ -n "${addon_modules_dir}" ] && echo "/${addon_modules_dir}" && return
+
     case "$running_distribution" in
 	fc[12345]) ;;
         el[1234]) ;;
@@ -1013,7 +1015,7 @@ function list_each_installed_module ()
 
 function set_weak_modules()
 {
-    weak_modules=''
+    [ -n "${weak_modules}" ] && return
     [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
     [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 }
@@ -2714,6 +2716,14 @@ make_rpm()
         exit 1
     fi
 
+    # Check that the rpmbuild command is present
+    if ! which rpmbuild >/dev/null 2>&1 ; then
+        echo $"" >&2
+        echo $"Error! rpmbuild not present." >&2
+        echo $"Install the rpm-build package." >&2
+        exit 1
+    fi
+	
     # Check that source symlink works
     if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
         echo $"" >&2
@@ -2775,7 +2785,7 @@ make_rpm()
 	    i=$(($i + 1))
 	done
     fi
-    RPMS=`invoke_command "rpmbuild --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" -ba $SPECFILE 2>&1|grep ^Wrote" "rpmbuild"`
+    RPMS=`invoke_command "LC_ALL=C rpmbuild --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" -ba $SPECFILE 2>&1|grep ^Wrote" "rpmbuild"`
     if [ "$?" -eq 0 ]; then
 	echo $"" 
 	echo $"$RPMS"
@@ -2917,7 +2927,12 @@ install_tree="/lib/modules"
 tmp_location="/tmp"
 verbose=""
 dkms_frameworkconf="/etc/dkms/framework.conf"
-running_distribution="$(distro_version)"
+
+# these can come from the environment or the config file
+[ -z "${ADDON_MODULES_DIR}" -a -e /etc/sysconfig/module-init-tools ] && . /etc/sysconfig/module-init-tools
+addon_modules_dir="${ADDON_MODULES_DIR}"
+[ -n "${addon_modules_dir}" ] && running_distribution="$(distro_version)"
+weak_modules="${WEAK_MODULES_BIN}"
 
 # Source in /etc/dkms_framework.conf
 . $dkms_frameworkconf 2>/dev/null
@@ -3020,7 +3035,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.16"
+	    echo $"dkms: 2.0.16.1"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)
