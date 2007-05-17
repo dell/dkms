@@ -165,9 +165,10 @@ function setup_kernels_arches ()
     if [ "$1" != "status" ]; then
 	[ -z "${kernelver_array[0]}" ] && [ -z "$all" ] && kernelver_array[0]=`uname -r`
 	if [ -z "${arch_array[0]}" ] && [ -n "${kernelver_array[0]}" ]; then
-	    if ! arch_array[0]=`rpm -qf --queryformat "%{ARCH}" "/lib/modules/${kernelver_array[0]}" 2>/dev/null | head -n1`; then
+	    kernelver_rpm=`rpm -qf "/lib/modules/${kernelver_array[0]}" 2>/dev/null | grep -v "not owned by any package" | grep kernel | head -1`
+	    if ! arch_array[0]=`rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null`; then
 		arch_array[0]=`uname -m`
-		if [ ${arch_array[0]} == x86_64 ] && \
+		if [ ${arch_array[0]} == "x86_64" ] && \
 		    grep -q Intel /proc/cpuinfo && \
 		    ls $install_tree/${kernelver_array[0]}/build/configs \
 			2>/dev/null | grep -q "ia32e"; then
@@ -775,10 +776,10 @@ function prepare_kernel()
 	    local kernel_trunc=`echo $1 | sed 's/-.*//'`
 	    for config_type in debug summit smp enterprise bigmem hugemem BOOT; do
 		[ `echo "$1" | grep "$config_type"` ] && kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$2-$config_type.config"
-		[ ! -e $kernel_config ] && kernel_config=""
+		[ ! -e "$kernel_config" ] && kernel_config=""
 	    done
 	    [ -z "$kernel_config" ] && kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$2.config"
-	    [ ! -e $kernel_config ] && kernel_config=""
+	    [ ! -e "$kernel_config" ] && kernel_config=""
 	fi
     elif [ -e /etc/SuSE-release ] || [ -d /etc/SuSEconfig ]; then
         if [ -z "$kernel_config" ] && [ -d "$kernel_source_dir/arch" ]; then
@@ -790,10 +791,10 @@ function prepare_kernel()
             fi
 	    for config_type in default smp bigsmp; do
 	        [ `echo "$1" | grep "$config_type"` ] && kernel_config="$kernel_source_dir/arch/$config_arch/defconfig.$config_type"
-	        [ ! -e $kernel_config ] && kernel_config=""
+	        [ ! -e "$kernel_config" ] && kernel_config=""
 	    done
 	    [ -z "$kernel_config" ] && kernel_config="$kernel_source_dir/arch/$config_arch/defconfig.default"
-	    [ ! -e $kernel_config ] && kernel_config=""
+	    [ ! -e "$kernel_config" ] && kernel_config=""
         fi
     fi
   
@@ -2416,7 +2417,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 2.0.3"
+	    echo $"dkms: 2.0.4"
 	    exit 0
 	    ;;
 	--no-prepare-kernel)

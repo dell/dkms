@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 2.0.3
+Version: 2.0.4
 Release: 1
 Vendor: Dell Computer Corporation
 License: GPL
@@ -29,7 +29,7 @@ for dir in `find /var/dkms -type d -maxdepth 1 -mindepth 1`; do
 done
 [ -e /etc/dkms_framework.conf ] && ! [ -e /etc/dkms/framework.conf ] && mkdir /etc/dkms && cp /etc/dkms_framework.conf /etc/dkms/framework.conf
 arch_used=""
-[ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && [ `ls /lib/modules/`uname -r`/build/configs 2>/dev/null | grep -c "ia32e"` -gt 0 ] && arch_used="ia32e" || arch_used=`uname -m`
+[ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && arch_used="ia32e" || arch_used=`uname -m`
 echo ""
 echo "ALERT! ALERT! ALERT!"
 echo ""
@@ -105,6 +105,19 @@ fi
 
 
 %changelog
+* Mon Dec 13 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.4
+- bumped revision
+
+* Fri Dec 10 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.3.3
+- Added quotes to $kernel_config when checking variable
+- Tweak the multiowned arch detection workaround to deal with no ownership
+
+* Mon Dec 6 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.3.2
+- Fix to template-spec so that ia32e check doesn't require kernel sources
+
+* Wed Dec 1 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.3.1
+- Jeffrey Kirsher's workaround for arch detection on multiowned /lib/modules
+
 * Mon Nov 22 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.3
 - Issues regressed.  Bumped to non-testing version.
 

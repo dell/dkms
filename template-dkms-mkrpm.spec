@@ -39,7 +39,7 @@ fi
 
 %post
 # Determine current arch / kernel
-[ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && [ `ls $install_tree/$kernel_test/build/configs 2>/dev/null | grep -c "ia32e"` -gt 0 ] && c_arch="ia32e" || c_arch=`uname -m`
+[ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && c_arch="ia32e" || c_arch=`uname -m`
 c_kern=`uname -r`
 
 # Load prebuilt binaries
