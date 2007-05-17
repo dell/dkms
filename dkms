@@ -49,6 +49,42 @@ function invoke_command ()
     return $exitval
 }
 
+function readlink()
+{
+    # $1 = the symlink to read
+    read_link=""
+    if [ -L "$1" ]; then
+	read_link="$1"
+	while [ -L "$read_link" ]; do
+	    read_link=`ls -l $read_link | sed 's/.*-> //'`
+	done
+    fi
+}
+
+function remake_initrd()
+{
+    # If its Red Hat's version of mkinitrd, we know what to do, otherwise we don't
+    mkinitrd --version >/dev/null
+    if [ "$?" -eq 0 ]; then
+      	echo $"" 
+	echo $"Saving old initrd as /boot/initrd-${kernel_version}_old.img" 
+	mv -f "/boot/initrd-${kernel_version}.img" "/boot/initrd-${kernel_version}_old.img"
+	echo $"Making new initrd as /boot/initrd-${kernel_version}.img" 
+	invoke_command "mkinitrd -f /boot/initrd-${kernel_version}.img ${kernel_version}" "mkinitrd" background
+	echo $"If your next boot fails, edit your bootloader file and revert" 
+	echo $"to the _old initrd image." 
+	
+        # Rerun lilo if necessary
+	if ! [ -e /boot/grub/grub.conf ] && [ -e /etc/lilo.conf ]; then
+	    invoke_command "/sbin/lilo" "Updating lilo"
+	fi
+    else
+	echo $""
+	echo $"You will need to manually remake your initrd so that this"
+	echo $"kernel has access to these changes during boot-up."
+    fi
+}
+
 function show_usage ()
 {
     echo $"Usage: $0 [action] [options]" >$std_err
@@ -59,6 +95,7 @@ function show_usage ()
     echo $"                  [--postadd=script-location] [--postbuild=script-location]" >$std_err
     echo $"                  [--postinstall=script-location] [--postremove=script-location]" >$std_err
     echo $"                  [--templatekernel=kernel] [--config=kernel-.config-location]" >$std_err 
+    echo $"                  [--directive='cli-directive=cli-value']" >$std_err
 }
 
 function read_conf ()
@@ -86,6 +123,25 @@ function read_conf ()
 
     # Source in the dkms.conf
     . $read_conf_file 2>/dev/null
+
+    # Get the correct make command
+    for make_subdirective in `grep "^MAKE_" "$read_conf_file" | sed 's/MAKE_//' | sed 's/=.*//'`; do
+	if [ `echo "$kernel_version" | grep -c "$make_subdirective"` -gt 0 ]; then
+	    subdirective_to_use="MAKE_$make_subdirective"
+	    MAKE="${!subdirective_to_use}"
+	fi
+    done
+
+    # Source in the directive_array
+    IFS='
+'
+    for directive in "${directive_array[*]}"; do
+	directive_name=`echo $directive | sed 's/\([^=]\+\)=.*/\1/'`
+	directive_value=`echo $directive | sed 's/[^=]\+=//'`
+	[ -n "$directive" ] && export $directive_name="$directive_value"
+	[ -n "$directive" ] && echo $"DIRECTIVE: $directive_name=\"$directive_value\""
+    done
+    unset IFS
 
     # Set variables
     make_command="$MAKE"
@@ -117,14 +173,6 @@ function read_conf ()
 	    subdirective_to_use="PATCH_$patch_subdirective"
 	    patch_array[$index]="${!subdirective_to_use}"
 	    index=$((index+1))
-	fi
-    done
-
-    # Get the correct make command
-    for make_subdirective in `grep "^MAKE_" "$read_conf_file" | sed 's/MAKE_//' | sed 's/=.*//'`; do
-	if [ `echo "$kernel_version" | grep -c "$make_subdirective"` -gt 0 ]; then
-	    subdirective_to_use="MAKE_$make_subdirective"
-	    make_command="${!subdirective_to_use}"
 	fi
     done
 
@@ -355,36 +403,52 @@ function prepare_kernel()
     echo $"(This is not compiling a kernel, only just preparing kernel symbols)" 
     cd $kernel_source_dir
     config_contents=`cat .config 2>/dev/null`
-    [ -n "$config_contents" ] && echo $"storing current .config to be restored when complete"
-    invoke_command "make mrproper >/dev/null 2>&1" "make mrproper" background
+    [ -n "$config_contents" ] && echo $"Storing current .config to be restored when complete"
+    
+    # Do RedHat or UnitedLinux preparation
+    if [ -d "$kernel_source_dir/configs" ]; then
+	echo $"Running Red Hat preparation routine"
+	invoke_command "make mrproper >/dev/null 2>&1" "make mrproper" background
 
-    # Fix Makefile up so that EXTRAVERSION matches the kernel_version extraversion
-    echo $"editing kernel Makefile"
-    extraversion=`echo "$kernel_version" | sed 's/.*-/-/'`
-    sed "s/EXTRAVERSION *=.*/EXTRAVERSION = $extraversion/" Makefile 2>/dev/null > Makefile.new
-    mv -f Makefile.new Makefile
-    sed "s/EXTRAVERSION=.*/EXTRAVERSION = $extraversion/" Makefile 2>/dev/null > Makefile.new
-    mv -f Makefile.new Makefile
+        # Fix Makefile up so that EXTRAVERSION matches the kernel_version extraversion
+	echo $"editing kernel Makefile"
+	extraversion=`echo "$kernel_version" | sed 's/.*-/-/'`
+	sed "s/EXTRAVERSION *=.*/EXTRAVERSION = $extraversion/" Makefile 2>/dev/null > Makefile.new
+	mv -f Makefile.new Makefile
+	sed "s/EXTRAVERSION=.*/EXTRAVERSION = $extraversion/" Makefile 2>/dev/null > Makefile.new
+	mv -f Makefile.new Makefile
 
-    # If kernel_config is not set, look in default spot for .config (./configs/kernel-...)
-    if [ -z "$kernel_config" ]; then
-	if [ `echo $kernel_version | grep smp` ]; then
-	    kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-smp.config"
-	elif [ `echo $kernel_version | grep ent` ]; then
-	    kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-enterprise.config"
-	elif [ `echo $kernel_version | grep bigmem` ]; then
-	    kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-bigmem.config"
-	elif [ `echo $kernel_version | grep BOOT` ]; then
-	    kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-i386-BOOT.config"
-	else
-	    kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`.config"
+        # If kernel_config is not set, look in default spot for .config (./configs/kernel-...)
+	if [ -z "$kernel_config" ]; then
+	    if [ `echo $kernel_version | grep smp` ]; then
+		kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-smp.config"
+	    elif [ `echo $kernel_version | grep ent` ]; then
+		kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-enterprise.config"
+	    elif [ `echo $kernel_version | grep bigmem` ]; then
+		kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-bigmem.config"
+	    elif [ `echo $kernel_version | grep BOOT` ]; then
+		kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-i386-BOOT.config"
+	    else
+		kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`.config"
+	    fi
 	fi
-    fi
-    echo $"using $kernel_config"
-    cp "$kernel_config" .config
+	echo $"using $kernel_config"
+	cp "$kernel_config" .config
 
-    invoke_command "make oldconfig >/dev/null 2>&1" "make oldconfig" background
-    invoke_command "make dep >/dev/null 2>&1" "make dep" background
+	invoke_command "make oldconfig >/dev/null 2>&1" "make oldconfig" background
+	invoke_command "make dep >/dev/null 2>&1" "make dep" background
+    elif [ -f /boot/vmlinuz.version.h ]; then
+	echo $"Running UnitedLinux preparation routine"
+	kernel_config="/boot/vmlinuz.config"
+	invoke_command "make mrproper >/dev/null 2>&1" "make mrproper" background
+	invoke_command "cp /boot/vmlinuz.version.h include/linux/version.h" "using /boot/vmlinux.version.h" 
+	invoke_command "cp $kernel_config .config" "using $kernel_config" 
+	invoke_command "make cloneconfig >/dev/null 2>&1" "make cloneconfig" background
+	invoke_command "make CONFIG_MODVERSIONS=1 dep >/dev/null 2>&1" "make CONFIG_MODVERSIONS=1 dep" background
+    else
+	echo $"Warning! DKMS does not recognize how to prepare your kernel."
+	echo $"Currently, only Red Hat and UnitedLinux prep routines are implemented."
+    fi
     cd -
 }
 
@@ -433,7 +497,8 @@ function install_module()
     done
 
     # Check that its not already installed (kernel symlink)
-    kernel_symlink=`readlink "$dkms_tree/$module/kernel-${kernel_version}"` 
+    readlink "$dkms_tree/$module/kernel-${kernel_version}"
+    kernel_symlink="$read_link"
     if [ "$kernel_symlink" == "$module_version/$kernel_version" ]; then
 	echo $"" >$std_err
 	echo $"Error! This module/version combo is already installed" >$std_err
@@ -474,6 +539,7 @@ function install_module()
         # Copy module to its location
 	echo $""
  	echo $"Copying the new $module_name_after for $module to $location" 
+	mkdir -p $location
 	cp -f "$dkms_tree/$module/$module_version/$kernel_version/module/$module_name_after" "$location/$module_name_after"
     done
     
@@ -498,18 +564,7 @@ function install_module()
 
     # Do remake_initrd things (save old initrd)
     if [ -n "$remake_initrd" ]; then
-	echo $"" 
-	echo $"Saving old initrd as /boot/initrd-${kernel_version}_old.img" 
-	mv -f "/boot/initrd-${kernel_version}.img" "/boot/initrd-${kernel_version}_old.img"
-	echo $"Making new initrd as /boot/initrd-${kernel_version}.img" 
-	invoke_command "mkinitrd -f /boot/initrd-${kernel_version}.img ${kernel_version}" "mkinitrd" background
-	echo $"If your next boot fails, edit your bootloader file and revert" 
-	echo $"to the _old initrd image." 
-	
-        # Rerun lilo if necessary
-	if ! [ -e /boot/grub/grub.conf ]; then
-	    invoke_command "/sbin/lilo" "Updating lilo"
-	fi
+	remake_initrd
     fi
      
     echo $"" 
@@ -662,7 +717,8 @@ function do_uninstall()
 
     # If kernel-<kernelver> symlink points to this module, check for original_module and put it back
     was_active=""
-    kernel_symlink=`readlink "$dkms_tree/$module/kernel-${kernel_version}"`
+    readlink "$dkms_tree/$module/kernel-${kernel_version}"
+    kernel_symlink="$read_link"
     if [ "$kernel_symlink" == "$module_version/$kernel_version" ]; then
 	was_active="true"
 	echo $"" 
@@ -706,13 +762,7 @@ function do_uninstall()
     
     # Do remake_initrd things (remake initrd)
     if [ -n "$remake_initrd" ]; then
-	echo $"" 
-	echo $"Remaking initrd as /boot/initrd-${kernel_version}.img" 
-	invoke_command "mkinitrd -f /boot/initrd-${kernel_version}.img ${kernel_version}" "mkinitrd" background
-         # Rerun lilo if necessary
-	 if ! [ -e /boot/grub/grub.conf ]; then
-	     invoke_command "/sbin/lilo" "Updating lilo"
-	 fi
+	remake_initrd
     fi
 
     # Make sure modules.conf still has entries if they got removed above
@@ -775,7 +825,8 @@ function uninstall_module ()
     fi
 
     # Only do stuff if module/module version is currently installed
-    kernel_symlink=`readlink "$dkms_tree/$module/kernel-${kernel_version}"`
+    readlink "$dkms_tree/$module/kernel-${kernel_version}"
+    kernel_symlink="$read_link"
     if [ "$kernel_symlink" == "$module_version/$kernel_version" ]; then
 	do_uninstall
     else
@@ -944,7 +995,8 @@ show_status ()
 			
      	                # Make sure its in the tree
 			if [ -d "$dkms_tree/$module_in_tree/$version_in_tree/$kernel_in_tree" ]; then
-			    kernel_symlink=`readlink "$dkms_tree/$module_in_tree/kernel-${kernel_in_tree}"`
+			    readlink "$dkms_tree/$module_in_tree/kernel-${kernel_in_tree}"
+			    kernel_symlink="$read_link"
 			    if [ "$kernel_symlink" == "$version_in_tree/$kernel_in_tree" ]; then
 				activity_state="installed"
 			    else
@@ -1213,7 +1265,8 @@ load_tarball()
     echo $""
 
     # Determine the source location in the tarball
-    tar_source_location=`readlink /tmp/$chopped_tar_dkms_tree/$module/$module_version/source`
+    readlink "/tmp/$chopped_tar_dkms_tree/$module/$module_version/source"
+    tar_source_location="$read_link"
     tar_source_tree=`echo $tar_source_location | sed 's/\/$//' | sed 's/\(.*\)\/.*/\1/'`
 
     # Load the source from the tarball
@@ -1395,6 +1448,9 @@ force=""
 all=""
 std_err="/dev/stderr"
 
+# Set up arrays
+declare -a directive_array
+
 # Parse command line arguments
 action_flag=""
 while [ $# -gt 0 ]; do
@@ -1451,7 +1507,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.29.09"
+	    echo $"dkms: 0.30.17"
 	    exit 0
 	    ;;
 	--force)
@@ -1513,6 +1569,14 @@ while [ $# -gt 0 ]; do
 		kernel_config=`echo $1 | sed 's/^.*=//'`
             else
                 kernel_config="$2"
+                shift
+            fi
+	    ;;
+	--directive*)
+	    if echo $1 | grep '=' >/dev/null ; then
+		directive_array[${#directive_array[*]}]=`echo $1 | sed 's/[^=]\+=//'`
+            else
+                directive_array[${#directive_array[*]}]="$2"
                 shift
             fi
 	    ;;

@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.29.09
+Version: 0.30.17
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
@@ -42,6 +42,19 @@ fi
 %config(noreplace) /etc/dkms_framework.conf
 
 %changelog
+* Fri May 30 2003 Gary Lerhaupt <gary_lerahupt@dell.com> 0.30.17-1
+- Added a remake_initrd function to keep SuSE from doing wrong things
+- If you know the correct right steps for rebuilding SuSE initrds, please let me know!
+- Updated man page
+
+* Thu May 29 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.30.15-1
+- Added a native readlink function to make sure it exists
+- Added a mkdir -p to $location to make sure it exists
+- Added --directive
+
+* Wed May 28 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.30.05-1
+- Added kernel preparation support for SLES/United Linux (Many thanks to: Fred Treasure <fwtreas@us.ibm.com>)
+
 * Tue May 20 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.29.09-1
 - On remove, to remove all kernel versions you must now specify --all
 - Added grep, cpio and gzip to the Requires of the RPM
