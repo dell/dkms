@@ -1,6 +1,6 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
-Version: 0.23.19
+Version: 0.25.14
 Release: 1
 Vendor: Dell Computer Corporation
 Copyright: GPL
@@ -37,6 +37,19 @@ fi
 %doc %attr(0644,root,root) /usr/share/man/man8/dkms.8.gz
 
 %changelog
+* Tue Mar 25 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.25.14-1
+- Continued integrating mkdriverdisk
+- Updated man page
+
+* Mon Mar 24 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.25.03-1
+- Added renaming ability to modules after builds (MODULE_NAME="beforename.o:aftername.o")
+- Started adding mkdriverdisk support
+- Added distro parameter for use with mkdriverdisk
+- Now using readlink to determine symlink pointing location
+- Added redhat BOOT config to default location of config files
+- Fixed a bug in read_conf that caused the wrong make subdirective to be used
+- Remove root requirement for build action
+
 * Wed Mar 19 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.23.19-1
 - Fixed archiving of original modules (Reported by: Kris Jordan <kris@sagebrushnetworks.com>)
 

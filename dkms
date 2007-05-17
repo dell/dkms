@@ -52,9 +52,10 @@ function invoke_command ()
 function show_usage ()
 {
     echo $"Usage: $0 [action] [options]" >$std_err
-    echo $"      [action]  = {add | remove | build | install | uninstall | match | status}" >$std_err
+    echo $"      [action]  = { add | remove | build | install | uninstall | match" >$std_err
+    echo $"                    | mkdriverdisk | status }" >$std_err
     echo $"      [options] = [-c dkms.conf-location] [-k kernel-version]" >$std_err
-    echo $"                  [-m module] [-v module-version] [-q]" >$std_err
+    echo $"                  [-m module] [-v module-version] [-d distro ] [-q]" >$std_err
     echo $"                  [--postadd=script-location] [--postbuild=script-location]" >$std_err
     echo $"                  [--postinstall=script-location] [--postremove=script-location]" >$std_err
     echo $"                  [--templatekernel=kernel] [--config=kernel-.config-location]" >$std_err 
@@ -119,7 +120,7 @@ function read_conf ()
 
     # Get the correct make command
     for make_subdirective in `grep "^MAKE_" "$read_conf_file" | sed 's/MAKE_//' | sed 's/=.*//'`; do
-	if [ `echo "$kernel_version" | grep -c "$make_subdirective"` -eq 0 ]; then
+	if [ `echo "$kernel_version" | grep -c "$make_subdirective"` -gt 0 ]; then
 	    subdirective_to_use="MAKE_$make_subdirective"
 	    make_command="${!subdirective_to_use}"
 	fi
@@ -342,6 +343,8 @@ function prepare_kernel()
 	    kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-enterprise.config"
 	elif [ `echo $kernel_version | grep bigmem` ]; then
 	    kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`-bigmem.config"
+	elif [ `echo $kernel_version | grep BOOT` ]; then
+	    kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-i386-BOOT.config"
 	else
 	    kernel_config="$kernel_source_dir/configs/kernel-`echo $kernel_version | sed 's/-.*//'`-`uname -m`.config"
 	fi
@@ -389,16 +392,17 @@ function install_module()
 
     # Make sure the $module_name exists
     for module_name in $module_name_list; do
-	if ! [ -e "$dkms_tree/$module/$module_version/$kernel_version/module/$module_name" ]; then
+	module_name_after=`echo $module_name | sed 's/.*://'`
+	if ! [ -e "$dkms_tree/$module/$module_version/$kernel_version/module/$module_name_after" ]; then
 	    echo $"" >$std_err
-	    echo $"Error! Could not locate $module_name for module $module in the DKMS tree." >$std_err
+	    echo $"Error! Could not locate $module_name_after for module $module in the DKMS tree." >$std_err
 	    echo $"You must run a dkms build for kernel $kernel_version first." >$std_err
 	    exit 4
 	fi
     done
 
     # Check that its not already installed (kernel symlink)
-    kernel_symlink=`ls -l "$dkms_tree/$module" | grep "kernel-${kernel_version} " | sed 's/.*-> //'`
+    kernel_symlink=`readlink "$dkms_tree/$module/kernel-${kernel_version}"` 
     if [ "$kernel_symlink" == "$module_version/$kernel_version" ]; then
 	echo $"" >$std_err
 	echo $"Error! This module/version combo is already installed" >$std_err
@@ -408,27 +412,27 @@ function install_module()
 
     # Save the original_module if one exists, none have been saved before, and this is the first module for this kernel
     for module_name in $module_name_list; do
-	if ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ -e "$location/$module_name" ]; then
+	module_name_before=`echo $module_name | sed 's/:.*//'`
+	module_name_after=`echo $module_name | sed 's/.*://'`
+	if ! [ -L "$dkms_tree/$module/kernel-$kernel_version" ] && [ -e "$location/$module_name_after" ]; then
 	    echo $"" 
-	    echo $"Found an original module $module_name in /lib/modules/" 
+	    echo $"Found an original module $module_name_after in /lib/modules/" 
 	    echo $"Archiving it within the DKMS tree for uninstallation purposes." 
 	    mkdir -p "$dkms_tree/$module/original_module/$kernel_version/"
-	    mv -f "$location/$module_name" "$dkms_tree/$module/original_module/$kernel_version/"
+	    mv -f "$location/$module_name_after" "$dkms_tree/$module/original_module/$kernel_version/"
 	else
-	    rm -f "$location/$module_name" 2>/dev/null
+	    rm -f "$location/$module_name_after" 2>/dev/null
 	fi
+
+        # Copy module to its location
+	echo $""
+ 	echo $"Copying the new $module_name_after for $module to $location" 
+	cp -f "$dkms_tree/$module/$module_version/$kernel_version/module/$module_name_after" "$location/$module_name_after"
     done
     
     # Create the kernel-<kernelver> symlink to designate this version as active
     rm -f "$dkms_tree/$module/kernel-$kernel_version" 2>/dev/null
     ln -s "$module_version/$kernel_version" "$dkms_tree/$module/kernel-$kernel_version" 2>/dev/null
-
-    # Copy module to its location
-    echo $"" 
-    for module_name in $module_name_list; do
-	echo $"Copying the new $module_name for $module to $location" 
-	cp -f "$dkms_tree/$module/$module_version/$kernel_version/module/$module_name" "$location/$module_name"
-    done
 
     # Run the post_install script
     if [ -x "$dkms_tree/$module/$module_version/post_install" ]; then
@@ -549,7 +553,8 @@ function build_module()
     invoke_command "$make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$make_command" background
     # Make sure all the modules built successfully
     for module_name in $module_name_list; do
-	if ! [ -e "./$module_name" ]; then
+	module_name_before=`echo $module_name | sed 's/:.*//'`
+	if ! [ -e "$module_name_before" ]; then
 	    echo $"" >$std_err
 	    echo $"Error!  Module build failed for kernel: $kernel_version" >$std_err
 	    echo $"Consult the make.log in the build directory" >$std_err
@@ -567,7 +572,9 @@ function build_module()
     # Save a copy of the new module
     mkdir "$dkms_tree/$module/$module_version/$kernel_version/module" >/dev/null
     for module_name in $module_name_list; do
-	cp -f "$dkms_tree/$module/$module_version/build/$module_name" "$dkms_tree/$module/$module_version/$kernel_version/module/" >/dev/null
+	module_name_before=`echo $module_name | sed 's/:.*//'`
+	module_name_after=`echo $module_name | sed 's/.*://'`
+	cp -f "$dkms_tree/$module/$module_version/build/$module_name_before" "$dkms_tree/$module/$module_version/$kernel_version/module/$module_name_after" >/dev/null
     done
 
     # Run the post_build script
@@ -598,21 +605,23 @@ function do_uninstall()
 
     # If kernel-<kernelver> symlink points to this module, check for original_module and put it back
     was_active=""
-    kernel_symlink=`ls -l "$dkms_tree/$module" | grep "kernel-${kernel_version} " | sed 's/.*-> //'`
+    kernel_symlink=`readlink "$dkms_tree/$module/kernel-${kernel_version}"`
     if [ "$kernel_symlink" == "$module_version/$kernel_version" ]; then
 	was_active="true"
 	echo $"" 
 	echo $"Status: Before uninstall, this module version was ACTIVE on this kernel."
 	for module_name in $module_name_list; do
+	    module_name_before=`echo $module_name | sed 's/:.*//'`
+	    module_name_after=`echo $module_name | sed 's/.*://'`
 	    echo $""
-	    echo $"Deleting $module_name from: $location" 
-	    rm -f "$location/$module_name"
-	    if [ -e "$dkms_tree/$module/original_module/$kernel_version/$module_name" ]; then
-		echo $"Archived original_module $module_name found!  Reinstating it under the" 
+	    echo $"Deleting $module_name_after from: $location" 
+	    rm -f "$location/$module_name_after"
+	    if [ -e "$dkms_tree/$module/original_module/$kernel_version/$module_name_after" ]; then
+		echo $"Archived original_module $module_name_after found!  Reinstating it under the" 
 		echo $"directory: $location" 
-		cp -f "$dkms_tree/$module/original_module/$kernel_version/$module_name" "$location/" 2>/dev/null
+		cp -f "$dkms_tree/$module/original_module/$kernel_version/$module_name_after" "$location/" 2>/dev/null
 	    else
-		echo $"No original module $module_name  was found for this module on this kernel." 
+		echo $"No original module $module_name_after was found for this module on this kernel." 
 		echo $"Use the dkms install command to reinstall any previous module version." 
 		
 	        # Remove modules_conf entries from /etc/modules.conf
@@ -709,7 +718,7 @@ function uninstall_module ()
     fi
 
     # Only do stuff if module/module version is currently installed
-    kernel_symlink=`ls -l "$dkms_tree/$module" | grep "kernel-${kernel_version} " | sed 's/.*-> //'`
+    kernel_symlink=`readlink "$dkms_tree/$module/kernel-${kernel_version}"`
     if [ "$kernel_symlink" == "$module_version/$kernel_version" ]; then
 	do_uninstall
     else
@@ -869,7 +878,7 @@ show_status ()
 			
      	                # Make sure its in the tree
 			if [ -d "$dkms_tree/$module_in_tree/$version_in_tree/$kernel_in_tree" ]; then
-			    kernel_symlink=`ls -l "$dkms_tree/$module_in_tree" | grep "kernel-${kernel_in_tree} " | sed 's/.*-> //'`
+			    kernel_symlink=`readlink "$dkms_tree/$module_in_tree/kernel-${kernel_in_tree}"`
 			    if [ "$kernel_symlink" == "$version_in_tree/$kernel_in_tree" ]; then
 				activity_state="installed"
 			    else
@@ -877,10 +886,12 @@ show_status ()
 			    fi
 			    extra_status=""
 			    if [ -d "$dkms_tree/$module_in_tree/original_module/$kernel_in_tree" ]; then
-				extra_status="(original_module exists)"
+				extra_status=" (original_module exists)"
 			    fi
-
-			    echo "$module_in_tree, $version_in_tree, $kernel_in_tree: $activity_state $extra_status" 
+			    if [ -e "$dkms_tree/$module_in_tree/$version_in_tree/$kernel_in_tree/driver_disk/$module_in_tree-$version_in_tree-$kernel_in_tree-dd.img" ]; then
+				extra_status="$extra_status (driver_disk exists)"
+			    fi
+			    echo "$module_in_tree, $version_in_tree, $kernel_in_tree: $activity_state$extra_status" 
 			fi
 			
 		    done
@@ -896,6 +907,98 @@ show_status ()
 	fi
 	
     done
+}
+
+make_driver_disk ()
+{
+    # Check that the right arguments were passed
+    if [ -z "$module" ] || [ -z "$module_version" ] || [ -z "$distro" ] || [ -z "$kernel_version" ]; then
+	echo $"" >$std_err
+	echo $"Error! Invalid number of parameters passed." >$std_err
+	echo $"Usage: mkdriverdisk [-d distro] [-m module] [-v module-version] [-k kernel-version]" >$std_err
+	exit 1
+    fi   
+
+    # Check that source symlink works
+    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
+	echo $"" >$std_err
+	echo $"Error! DKMS tree does not contain: $module-$module_version" >$std_err
+	echo $"Build cannot continue without the proper tree." >$std_err
+	exit 2
+    fi
+
+    # Confirm that distro is supported
+    if [ "$distro" != "redhat" ]; then
+	echo $"" >$std_err
+	echo $"Error! Invalid distro argument." >$std_err
+	echo $"Currently the only supported distro for this action is: redhat" >$std_err 
+	exit 3
+    fi
+
+    # Read the conf file
+    read_conf
+    if [ "$?" -ne 0 ]; then
+	echo $"" >$std_err
+	echo $"Error! Bad conf file." >$std_err
+	echo $"File: $dkms_tree/$module/$module_version/dkms.conf does not represent" >$std_err
+	echo $"a valid dkms.conf file." >$std_err
+	exit 4
+    fi
+
+    # Warn if non-sane kernel version
+    if [ `echo $kernel_version | grep -c "BOOT"` -ne 1 ]; then
+	echo $"" >$std_err
+	echo $"Warning! Kernel version is not the BOOT variant of this kernel." >$std_err
+    fi
+
+    if ! [ `$0 status -m "$module" -v "$module_version" -k "$kernel_version" | grep -c '[: built,: installed]'` -gt 0 ]; then
+	build_module
+    fi
+
+    # Create directory and necessary files
+    mkdir -p "$dkms_tree/$module/$module_version/$kernel_version/driver_disk"
+   
+    # Copy files for the driver disk (or warn if not present)
+    files_for_driverdisk="module-info disk-info modules.dep pcitable rhdd-6.1"
+    files_into_driverdisk="modules.cgz"
+    for file in $files_for_driverdisk; do
+	if ! [ -e "$dkms_tree/$module/$module_version/source/$file" ]; then
+	    echo $"" >$std_err
+	    echo $"Warning! File: $file not found in $dkms_tree/$module/$module_version/source/" >$std_err
+	else
+	    files_into_driverdisk="$file $files_into_driverdisk"
+	    cp -f "$dkms_tree/$module/$module_version/source/$file" "$dkms_tree/$module/$module_version/$kernel_version/driver_disk/" 2>/dev/null
+	fi
+    done
+
+    # Create a list of modules to put into modules.cgz
+    modules_cgz_list=""
+    for module_name in $module_name_list; do
+	module_name_after=`echo $module_name | sed 's/.*://'`
+	modules_cgz_list="$dkms_tree/$module/$module_version/$kernel_version/module/$module_name_after\n${modules_cgz_list}"
+    done
+
+    # Create dos disk image
+    image_name="$module-$module_version-$kernel_version-dd.img"  
+    cd "$dkms_tree/$module/$module_version/$kernel_version/driver_disk/"
+    rm -f $image_name
+    echo $""
+    echo $"Creating driver disk:"
+    invoke_command "echo -e '$modules_cgz_list' | cpio -oH crc 2>/dev/null | gzip -9 > ./modules.cgz" "compressing modules.cgz" background
+    invoke_command "dd if=/dev/zero of="./$image_name" bs=72k count=20 >/dev/null 2>&1" "making a blank floppy image" background
+    invoke_command "mkdosfs ./$image_name >/dev/null 2>&1" "mkdosfs" background
+    mkdir ./mnt
+    invoke_command "mount -o loop $image_name ./mnt >/dev/null 2>&1" "loopback mounting disk image"
+    for file in $files_into_driverdisk; do
+	invoke_command "cp -f ./$file ./mnt/" "  copying $file to disk image"
+    done
+    invoke_command "umount ./mnt" "unmounting disk image"
+    rm -rf ./mnt
+    cd -
+    echo $""
+    echo $"Disk image location: $dkms_tree/$module/$module_version/$kernel_version/driver_disk/$image_name"
+    echo $""
+    echo $"Done."
 }
 
 run_match ()
@@ -1011,6 +1114,7 @@ module=""
 module_version=""
 kernel_version=""
 template_kernel=""
+distro=""
 conf=""
 post_add=""
 post_build=""
@@ -1048,6 +1152,14 @@ while [ $# -gt 0 ]; do
                 shift
             fi
             ;;
+	--distro*|-d)
+	    if echo $1 | grep '=' >/dev/null ; then
+		distro=`echo $1 | sed 's/^.*=//'`
+	    else
+		distro="$2"
+		shift
+	    fi
+	    ;;
 	--templatekernel*)
 	    if echo $1 | grep '=' >/dev/null ; then
 		template_kernel=`echo $1 | sed 's/^.*=//'`
@@ -1068,7 +1180,7 @@ while [ $# -gt 0 ]; do
 	    exec >/dev/null 2>&1
 	    ;;
 	--version|-V)
-	    echo $"dkms: 0.23.19"
+	    echo $"dkms: 0.25.14"
 	    exit 0
 	    ;;
 	--postadd*)
@@ -1151,11 +1263,6 @@ case "$action" in
 	remove_module
 	;;
     build)
-        # Make sure they're root
-	if [ `id -u` -ne 0 ]; then
-	    echo $"You must be root to use this command." >$std_err
-	    exit 1
-	fi
 	build_module
 	;;
     install)
@@ -1182,6 +1289,14 @@ case "$action" in
 	fi
 	uninstall_module
 	;;
+    mkdriverdisk)
+	# Make sure they're root
+	if [ `id -u` -ne 0 ]; then
+	    echo $"You must be root to use this command." >$std_err
+	    exit 1
+	fi
+	make_driver_disk
+	;;	
     status)
 	show_status
 	;;
