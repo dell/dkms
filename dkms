@@ -667,9 +667,9 @@ function moduleconfig_add ()
 	    if [ -n "${modules_conf_alias_type[$index]}" ] && \
 	       ! grep -q "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}\b" $moduleconfig && \
 	       [ "${modules_conf_obsolete_only[$index]}" != "yes" ]; then
-		aliases=$(awk '/^alias ${modules_conf_alias_type[$index]}/ {print $2}' $moduleconfig)
+		aliases=$(awk "/^alias ${modules_conf_alias_type[$index]}/ {print \$2}" $moduleconfig)
 		if [ -n "$aliases" ]; then
-			alias_number=$(($(echo aliases | sed "s/${modules_conf_alias_type[$index]}//" | sort -n | tail -n 1) + 1))
+			alias_number=$(($(echo "$aliases" | sed "s/${modules_conf_alias_type[$index]}//" | sort -n | tail -n 1) + 1))
 		else
 			alias_number=0
 		fi
