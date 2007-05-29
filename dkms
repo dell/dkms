@@ -2921,10 +2921,29 @@ make_rpm()
 	    fi
 	    echo $"Marking ${kernelver_array[$i]} (${arch_array[$i]}) for RPM..."
 	    mktarball_line="-k ${kernelver_array[$i]} -a ${arch_array[$i]} $mktarball_line"
+
+        # save off module names to generate RPM Provides later
+        set_module_suffix "${kernelver_array[$i]}"
+        local base_dir="$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}"
+        local kernel_module_name=$base_dir/module/${dest_module_name[$count]}$module_suffix
+        kernel_modules="$kernel_module_name $kernel_modules"
+
 	    i=$(($i + 1))
 	done
     fi
-    RPMS=`invoke_command "LC_ALL=C rpmbuild --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" -ba $SPECFILE 2>&1|grep ^Wrote" "rpmbuild"`
+
+    # generate the RPM Provides:
+    local all_mod_provides=
+    for each_module in $kernel_modules
+    do
+        local kernel_module_version=$(/sbin/modinfo -F version $each_module)
+        local kernel_module_provides=$(/sbin/modinfo -F alias $each_module | perl -p -i -e "s/^(.*)/kmod-alias(\$1) = $kernel_module_version/" | sort | uniq)
+        all_mod_provides="$kernel_module_provides, $all_mod_provides"
+    done
+
+    RPMS=`invoke_command "LC_ALL=C rpmbuild --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  echo '$all_mod_provides'\" --define \"_use_internal_dependency_generator 0\" -ba $SPECFILE 2>&1|grep ^Wrote " "rpmbuild"`
+
+
     if [ "$?" -eq 0 ]; then
 	echo $""
 	echo $"$RPMS"
