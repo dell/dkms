@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # dkms_autoinstaller 		A service to automatically install DKMS modules
 # 				for new kernels.
@@ -8,6 +8,9 @@
 ### BEGIN INIT INFO
 # Provides: dkms
 # Default-Start: 3 4 5
+# Default-Stop: 0 1 2 6
+# Required-Start: $local_fs
+# Required-Stop: $local_fs
 # Short-Description: Automatically install DKMS modules for new kernels
 # Description: A service to automatically install DKMS modules for new kernels.
 ### END INIT INFO
@@ -128,6 +131,15 @@ case "$1" in
   stop)
 	# ignore
 	;;
+  restart)
+        # ignore
+        ;;
+  force-reload)
+        # ignore
+        ;;
+  status)
+        # ignore
+        ;;
   reload)
 	exit 0
 	;;

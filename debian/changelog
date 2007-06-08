@@ -1,3 +1,15 @@
+dkms (2.0.17-1) unstable; urgency=low
+
+  * new upstream release
+
+ -- Matt Domsch <Matt_Domsch@dell.com>  Fri,  8 Jun 2007 16:54:00 -0600
+
+dkms (2.0.16.1-1) unstable; urgency=low
+
+  * new upstream release
+
+ -- Matt Domsch <Matt_Domsch@dell.com>  Fri, 13 Apr 2007 13:54:00 -0600
+
 dkms (2.0.9.1-1) unstable; urgency=low
 
   * New upstream release
