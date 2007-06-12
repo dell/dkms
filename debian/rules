@@ -56,7 +56,7 @@ install: build
 	dh_installdirs
 
 	# Add here commands to install the package into debian/dkms.
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/dkms
+	$(MAKE) install-ubuntu DESTDIR=$(CURDIR)/debian/dkms
 
 
 # Build architecture-independent files here.

@@ -74,26 +74,13 @@ echo ""
 
 %install
 rm -rf $RPM_BUILD_ROOT
-mkdir -m 0755 -p $RPM_BUILD_ROOT%{_localstatedir}/lib/%{name}
-mkdir -m 0755 -p $RPM_BUILD_ROOT%{_sbindir}
-mkdir -m 0755 -p $RPM_BUILD_ROOT%{_mandir}/man8
-mkdir -m 0755 -p $RPM_BUILD_ROOT%{_initrddir}
-mkdir -m 0755 -p $RPM_BUILD_ROOT%{_sysconfdir}/%{name}
-mkdir -m 0755 -p $RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d
-
-install -p -m 0755 dkms $RPM_BUILD_ROOT%{_sbindir}/%{name}
-install -p -m 0755 dkms_mkkerneldoth $RPM_BUILD_ROOT%{_sbindir}/dkms_mkkerneldoth
-install -p -m 0755 dkms_autoinstaller $RPM_BUILD_ROOT%{_initrddir}/dkms_autoinstaller
-install -p -m 0644 dkms_framework.conf $RPM_BUILD_ROOT%{_sysconfdir}/%{name}/framework.conf
-install -p -m 0644 template-dkms-mkrpm.spec $RPM_BUILD_ROOT%{_sysconfdir}/%{name}
-install -p -m 0644 dkms_dbversion $RPM_BUILD_ROOT%{_localstatedir}/lib/%{name}/dkms_dbversion
-install -p -m 0644 dkms.bash-completion $RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d/%{name}
-# install compressed manpage with proper timestamp and permissions
-gzip -c -9 dkms.8 > $RPM_BUILD_ROOT%{_mandir}/man8/%{name}.8.gz
-chmod 0644 $RPM_BUILD_ROOT%{_mandir}/man8/%{name}.8.gz
-touch --reference=dkms.8 $RPM_BUILD_ROOT%{_mandir}/man8/%{name}.8.gz
-# ensure doc file permissions ok
-chmod 0644 sample.spec sample.conf AUTHORS COPYING README.dkms sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
+make install-redhat DESTDIR=$RPM_BUILD_ROOT \
+    SBIN=$RPM_BUILD_ROOT%{_sbindir} \
+    VAR=$RPM_BUILD_ROOT%{_localstatedir}/lib/%{name} \
+    MAN=$RPM_BUILD_ROOT%{_mandir}/man8 \
+    INITD=$RPM_BUILD_ROOT%{_initrddir} \
+    ETC=$RPM_BUILD_ROOT%{_sysconfdir}/%{name} \
+    BASHDIR=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d
 
 %clean 
 rm -rf $RPM_BUILD_ROOT
