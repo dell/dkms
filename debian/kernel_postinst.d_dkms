@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# We're passed the version of the kernel being installed
+inst_kern=$1
+
+/etc/init.d/dkms_autoinstaller start $inst_kern
+
+exit 0
