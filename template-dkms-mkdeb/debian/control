@@ -1,7 +1,7 @@
 Source: MODULE_NAME-dkms
 Section: misc
 Priority: optional
-Maintainer: John Doe <dkms-devel@Dell.com>
+Maintainer: DKMS <dkms-devel@Dell.com>
 Build-Depends: debhelper (>= 5)
 Standards-Version: 3.7.2
 

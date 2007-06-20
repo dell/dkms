@@ -1,7 +1,7 @@
-RELEASE_DATE := "11-Jun-2007"
+RELEASE_DATE := "20-Jun-2007"
 RELEASE_MAJOR := 2
 RELEASE_MINOR := 0
-RELEASE_SUBLEVEL := 17
+RELEASE_SUBLEVEL := 16.2
 RELEASE_EXTRALEVEL :=
 RELEASE_NAME := dkms
 RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_SUBLEVEL)$(RELEASE_EXTRALEVEL)
@@ -14,6 +14,7 @@ MAN = $(DESTDIR)/usr/share/man/man8
 INITD = $(DESTDIR)/etc/init.d
 BASHDIR = $(DESTDIR)/etc/bash_completion.d
 DOCDIR = $(DESTDIR)/usr/share/doc/dkms
+KCONF = $(DESTDIR)/etc/kernel
 
 .PHONY = tarball
 
@@ -21,6 +22,14 @@ all:
 
 clean:
 	-rm dkms-*.tar.gz dkms-*.src.rpm dkms-*.noarch.rpm *~
+
+clean-dpkg: clean
+	rm -f debian/dkms_autoinstaller.init
+	rm -f debian/conffiles
+
+copy-init:
+	install -m 755 dkms_autoinstaller debian/dkms_autoinstaller.init
+	(cd $(DESTDIR); find etc/dkms -type f) > debian/conffiles
 
 install:
 	mkdir -m 0755 -p $(VAR) $(SBIN) $(MAN) $(INITD) $(ETC) $(BASHDIR)
@@ -50,10 +59,13 @@ install-doc:
 	mkdir -m 0755 -p $(DOCDIR)
 	install -p -m 0644 $(DOCFILES) $(DOCDIR)
 
-install-ubuntu: install install-doc
-	mkdir -m 0755 -p $(DESTDIR)/etc/kernel/preinst.d $(DESTDIR)/etc/kernel/postinst.d
-	install -p -m 0755 debian/kernel_preinst.d_dkms  $(DESTDIR)/etc/kernel/preinst.d/dkms
-	install -p -m 0755 debian/kernel_postinst.d_dkms $(DESTDIR)/etc/kernel/postinst.d/dkms
+install-ubuntu: install copy-init install-doc
+	mkdir -m 0755 -p $(KCONF)/preinst.d $(KCONF)/postinst.d
+	install -p -m 0755 debian/kernel_preinst.d_dkms  $(KCONF)/preinst.d/dkms
+	install -p -m 0755 debian/kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
+	mkdir -m 0755 -p $(ETC)/template-dkms-mkdeb/debian
+	install -p -m 0664 template-dkms-mkdeb/* $(ETC)/template-dkms-mkdeb
+	install -p -m 0664 template-dkms-mkdeb/debian/* $(ETC)/template-dkms-mkdeb/debian
 
 
 tarball:

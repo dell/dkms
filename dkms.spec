@@ -109,6 +109,9 @@ rm -rf $RPM_BUILD_ROOT
 [ $1 -lt 1 ] && /sbin/chkconfig dkms_autoinstaller off ||:
 
 %changelog
+* Wed Jun 20 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.16.2
+- updated for Ubuntu support, other bugfixes.
+
 * Tue Mar 20 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.16.1
 - spec file cleanups per re-review in Fedora
 - add bash completion, rpmbuild check, pinit, pass-arch patches from

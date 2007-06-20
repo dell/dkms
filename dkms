@@ -44,7 +44,7 @@ function show_usage ()
 {
     echo $"Usage: $0 [action] [options]" 
     echo $"  [action]  = { add | remove | build | install | uninstall | match" 
-    echo $"               | mkdriverdisk | mktarball | ldtarball | mkrpm | mkkmp | status }"
+    echo $"               | mkdriverdisk | mktarball | ldtarball | mkrpm | mkkmp | mkdeb | status }"
     echo $"  [options] = [-m module] [-v module-version] [-k kernel-version] [-a arch]" 
     echo $"              [-d distro] [-c dkms.conf-location] [-q] [--force] [--all]" 
     echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"  
@@ -246,27 +246,42 @@ function remake_initrd()
 function distro_version()
 {
 # What distribution are we running?
+    local WHATPROVIDES_REDHAT_RELEASE
+    local WHATPROVIDES_SLES_RELEASE
+    local WHATPROVIDES_SUSE_RELEASE
+    local REDHAT_RELEASE
+    local CENTOS_RELEASE
+    local FEDORA_RELEASE
+    local LSB_RELEASE
+    local VER
+    local dist
     dist=unknown
-    [ ! -e /bin/rpm ] && echo "$dist" && return
-    WHATPROVIDES_REDHAT_RELEASE=$(rpm -q --whatprovides redhat-release)
-    if [ $? -eq 0 ]; then
-	if $(echo "${WHATPROVIDES_REDHAT_RELEASE}" | grep redhat-release > /dev/null 2>&1) ; then
-	    REDHAT_RELEASE=1
-	elif (echo "${WHATPROVIDES_REDHAT_RELEASE}" | grep centos-release > /dev/null 2>&1) ; then
-	    CENTOS_RELEASE=1
-	elif $(echo "${WHATPROVIDES_REDHAT_RELEASE}" | grep fedora-release > /dev/null 2>&1) ; then
-	    FEDORA_RELEASE=1
+
+
+    if [ -x /bin/rpm ]; then
+	WHATPROVIDES_REDHAT_RELEASE=$(rpm -q --whatprovides redhat-release)
+	if [ $? -eq 0 ]; then
+	    if $(echo "${WHATPROVIDES_REDHAT_RELEASE}" | grep redhat-release > /dev/null 2>&1) ; then
+		REDHAT_RELEASE=1
+	    elif (echo "${WHATPROVIDES_REDHAT_RELEASE}" | grep centos-release > /dev/null 2>&1) ; then
+		CENTOS_RELEASE=1
+	    elif $(echo "${WHATPROVIDES_REDHAT_RELEASE}" | grep fedora-release > /dev/null 2>&1) ; then
+		FEDORA_RELEASE=1
+	    fi
 	fi
-    fi
 
-    WHATPROVIDES_SLES_RELEASE=$(rpm -q --whatprovides sles-release)
-    if [ $? -eq 0 ]; then
-	SLES_RELEASE=1
-    fi
+	WHATPROVIDES_SLES_RELEASE=$(rpm -q --whatprovides sles-release)
+	if [ $? -eq 0 ]; then
+	    SLES_RELEASE=1
+	fi
 
-    WHATPROVIDES_SUSE_RELEASE=$(rpm -q --whatprovides suse-release)
-    if [ $? -eq 0 ]; then
-	SUSE_RELEASE=1
+	WHATPROVIDES_SUSE_RELEASE=$(rpm -q --whatprovides suse-release)
+	if [ $? -eq 0 ]; then
+	    SUSE_RELEASE=1
+	fi
+    elif [ -r /etc/lsb-release ]; then
+	. /etc/lsb-release
+	LSB_RELEASE=1
     fi
 
     if [ -n "${FEDORA_RELEASE}" ]; then
@@ -287,7 +302,12 @@ function distro_version()
     elif [ -n "${SUSE_RELEASE}" ]; then
 	VER=$(rpm -q --qf "%{version}\n" ${WHATPROVIDES_SUSE_RELEASE})
 	dist=suse${VER}
+    elif [ -n "${LSB_RELEASE}" ]; then
+	if [ -n "${DISTRIB_ID}" -a -n "${DISTRIB_RELEASE}" ]; then
+	    dist="${DISTRIB_ID}${DISTRIB_RELEASE}"
+	fi
     fi
+
     echo "$dist"
 }
 
@@ -306,6 +326,7 @@ function override_dest_module_location()
 	el*) echo "/extra" && return ;;
 	sles*) echo "/updates" && return ;;
 	suse*) echo "/updates" && return ;;
+	Ubuntu*) echo "/updates/dkms" && return ;;
 	*) ;;
     esac
     echo "$orig_location"
@@ -1669,7 +1690,7 @@ function remove_module ()
     done
     
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
-    if [ -z "`find $dkms_tree/$module/$module_version/* -maxdepth 0 -type d 2>/dev/null | grep -v build$ | grep -v tarball$ | grep -v driver_disk$ | grep -v rpm$`"  ]; then
+    if [ -z "$(find $dkms_tree/$module/$module_version/* -maxdepth 0 -type d 2>/dev/null | egrep -v "(build|tarball|driver_disk|rpm|deb)$")"  ]; then
 	echo $"" 
 	echo $"------------------------------" 
 	echo $"Deleting module version: $module_version" 
@@ -1910,12 +1931,13 @@ make_driver_disk ()
 
     # Confirm that distro is supported
     case "$distro" in
-	redhat | redhat[12] | suse | UnitedLinux)
+	redhat | redhat[12] | suse | UnitedLinux | ubuntu)
 	    ;;
 	*)
 	    echo $"" >&2
 	    echo $"Error! Invalid distro argument. Currently, the distros" >&2
 	    echo $"supported are: redhat, redhat1, redhat2, suse, UnitedLinux" >&2 
+	    echo $"               ubuntu" >&2 
 	    exit 3
 	    ;;
     esac
@@ -1932,6 +1954,9 @@ make_driver_disk ()
     case "$distro" in
         redhat*)
 	    make_redhat_driver_disk
+	    ;;
+	ubuntu)
+	    make_ubuntu_driver_disk
 	    ;;
 	*)
 	    make_suse_driver_disk
@@ -2262,6 +2287,98 @@ make_suse_driver_disk()
    	echo $"Disk image location: $dkms_tree/$module/$module_version/driver_disk/$image_name"
 	echo $""
 	echo $"DKMS: mkdriverdisk Completed."
+}
+
+make_ubuntu_driver_disk()
+{
+	local suffix="$(driver_disk_suffix)"
+	local image_dir="$dkms_tree/$module/$module_version/driver_disk"
+	local image_name="$module-$module_version-$distro-dd.$suffix"  
+
+   local tempdir=`mktemp -d $tmp_location/dkms.XXXXXX`
+   if [ -z "$tempdir" ]; then
+      echo $""
+      echo $"Error: Could not create a temporary directory, failing."
+      return
+   fi
+
+   # Check that the dh_make command is present
+   if ! which dpkg-deb >/dev/null 2>&1 ; then
+      echo $"" >&2
+      echo $"Error! dpkg-deb not present." >&2
+      echo $"Install the dpkg-dev package." >&2
+      exit 1
+   fi
+
+   local i=0
+   while [ $i -lt ${#kernelver_array[@]} ]; do
+      set_module_suffix "${kernelver_array[$i]}"
+      # Driver disks only recognize i386 as package arch
+      local arch=$(echo ${arch_array[$i]} | sed -e 's/i.86/i386/')
+      local count=0
+      # ubuntu-drivers/<kver>/*_<debarch>.deb
+      local kvers=$(echo ${kernelver_array[$i]} | sed -e 's/[-_].*//')
+      local dd_prefix="ubuntu-drivers/$kvers"
+      local dd_suffix="_${arch}.deb"
+
+      while [ "$count" -lt "${#dest_module_name[@]}" ]; do
+         if ! [ -e "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" ]; then
+            echo $"" >&2
+            echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver_array[$i]} (${arch_array[$i]})." >&2
+            echo $"Module/version must be in built state before making a driver disk." >&2
+            rm -rf "$tempdir"
+            exit 5
+         fi
+
+         mkdir -p "$tempdir/$dd_prefix"
+         echo "Marking ${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix..."
+
+         local deb_dir="$tempdir/$dd_prefix/debian"
+         local deb_lib_dir="$deb_dir/lib/modules/${kernelver_array[$i]}/updates/dkms"
+         mkdir -p "$deb_lib_dir"
+         cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$deb_lib_dir"
+         pushd "$deb_dir" > /dev/null 2>&1
+         mkdir DEBIAN
+         cat > DEBIAN/control <<EOF
+Package: ${dest_module_name[$count]}-modules-${kernelver_array[$i]}
+Provides: ${dest_module_name[$count]}-modules
+Version: ${module_version}-1
+Section: misc
+Priority: optional
+Architecture: $arch
+Depends: 
+Maintainer: DKMS <dkms-devel@dell.com>
+Description: DKMS packaged binary driver update
+ DKMS automagically generated DEB package for
+ driver update disks, used with Ubuntu installation
+ programs (such as Ubiquity).
+EOF
+         cd "$tempdir/$dd_prefix"
+         dpkg-deb --build debian
+         mv debian.deb "${dest_module_name[$count]}$dd_suffix"
+         rm -rf debian
+         popd > /dev/null 2>&1
+
+         modules_cgz_list="$dd_prefix/${dest_module_name[$count]}$module_suffix\n${modules_cgz_list}"
+         count=$(($count+1))
+      done
+      i=$(($i+1))
+   done
+
+   echo "Copying source..."
+   mkdir -p "$tempdir/ubuntu"
+   cp -ar "$source_tree/$module-$module_version" "$tempdir/ubuntu/"
+
+   mkdir -p "$image_dir"
+   rm -f "$image_dir/$image_name"
+   cd "$tempdir"
+   make_driver_disk_media "$image_dir/$image_name" "$tempdir"
+   cd - >/dev/null
+   rm -rf "$tempdir"
+   echo $""
+   echo $"Disk image location: $dkms_tree/$module/$module_version/driver_disk/$image_name"
+   echo $""
+   echo $"DKMS: mkdriverdisk Completed."
 }
 
 make_tarball()
@@ -2798,6 +2915,141 @@ make_rpm()
     fi
 }
 
+function preproc_file()
+{
+    local date_str=`date "+%a, %d %b %Y %H:%M:%S %z"`
+    echo "modifying $1..."
+    sed -e "s/MODULE_NAME/$module/" \
+        -e "s/MODULE_VERSION/$module_version/" \
+        -e "s/DATE_STAMP/$date_str/" "$1" > "$1.dkms-pp"
+    mv "$1.dkms-pp" "$1"
+}
+
+function make_deb()
+{
+    setup_kernels_arches "mkdeb"
+
+    # Error if $module_version is set but $module is not
+    if [ -z "$module" ] || [ -z "$module_version" ]; then
+        echo $"" >&2
+        echo $"Error! Invalid number of parameters passed." >&2
+        echo $"Usage: mkdeb -m <module> -v <module-version>" >&2
+        exit 1
+    fi
+
+    fakeroot='fakeroot'
+
+    # Check that the fakeroot command is present
+    if ! which $fakeroot >/dev/null 2>&1 ; then
+        echo $"" >&2
+        echo $"Error! fakeroot not present." >&2
+        echo $"Install the fakeroot package." >&2
+        exit 1
+    fi
+
+    # Check that the dh_make command is present
+    if ! which dpkg-buildpackage >/dev/null 2>&1 ; then
+        echo $"" >&2
+        echo $"Error! dpkg-buildpackage not present." >&2
+        echo $"Install the dpkg-dev package." >&2
+        exit 1
+    fi
+
+    # Check that source symlink works
+    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
+        echo $"" >&2
+        echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
+        echo $"Build cannot continue without the proper tree." >&2
+        exit 2
+    fi
+
+    # Make sure that its installed in the first place
+    if ! [ -d "$dkms_tree/$module/$module_version" ]; then
+        echo $"" >&2
+        echo $"Error! The module/version combo: $module-$module_version" >&2
+        echo $"is not located in the DKMS tree." >&2
+        exit 3
+    fi
+
+    # Read the conf file
+    read_conf "${kernelver_array[0]}" "${arch_array[0]}"
+    if [ "$?" -ne 0 ]; then
+        echo $"" >&2
+        echo $"Error! Bad conf file." >&2
+        echo $"Your dkms.conf is not valid." >&2
+        exit 4
+    fi
+
+    local deb_basedir="$dkms_tree/$module/$module_version/deb"
+    mkdir -p "$deb_basedir"
+
+    if [ -e "$dkms_tree/$module/$module_version/source/$module-dkms-mkdeb" ]; then
+	    echo $"Using $dkms_tree/$module/$module_version/source/$module-dkms-mkdeb"
+	    DEBDIR="$dkms_tree/$module/$module_version/source/$module-dkms-mkdeb"
+    elif [ -e "/etc/dkms/template-dkms-mkdeb" ]; then
+        echo $"Using /etc/dkms/template-dkms-mkdeb"
+        DEBDIR="/etc/dkms/template-dkms-mkdeb"
+    else
+        echo $"" >&2
+        echo $"Cannot find /etc/dkms/template-dkms-mkdeb which is needed by" >&2
+        echo $"DKMS in order to use mkdeb." >&2
+        exit 5
+    fi
+
+    # Run a dkms mktarball for use in the deb
+    local mktarball_line
+    if [ -n "$source_only" ]; then
+	    mktarball_line="--source-only"
+    else
+	    local i=0
+	    echo $""
+	    while [ $i -lt ${#kernelver_array[@]} ]; do
+	        if ! [ -d "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}" ]; then
+		        echo $"" >&2
+		        echo $"You do not seem to have $module $module_version built for" >&2
+		        echo $"${kernelver_array[$i]} (${arch_array[$i]}).  All modules must be in" >&2
+		        echo $"the built state before you can use mkdeb." >&2
+		        exit 5
+	        fi
+	        echo $"Marking ${kernelver_array[$i]} (${arch_array[$i]}) for deb..."
+	        mktarball_line="-k ${kernelver_array[$i]} -a ${arch_array[$i]} $mktarball_line"
+	        i=$(($i + 1))
+	    done
+    fi
+
+    local temp_dir=`mktemp -d $tmp_location/dkms.XXXXXX`
+    trap 'rm -rf $temp_dir' EXIT HUP TERM
+    local temp_dir_deb="$temp_dir/$module-dkms-$module_version"
+    mkdir -p "$temp_dir"
+
+    invoke_command "cp -ar '$DEBDIR/' '$temp_dir_deb'" "copying template"
+
+    pushd "$temp_dir_deb" > /dev/null 2>&1
+    for file in debian/*; do
+        preproc_file "$file"
+        chmod 755 "$file"
+    done
+    popd > /dev/null 2>&1
+
+    archive_location="$module-$module_version.dkms.tar.gz"
+    invoke_command "make_tarball -m $module -v $version $mktarball_line" "gathering sources"
+    #tar -C "$temp_dir_deb" -xzf "$dkms_tree/$module/$module_version/tarball/$archive_location"
+    cp "$dkms_tree/$module/$module_version/tarball/$archive_location" "$temp_dir_deb"
+    pushd "$temp_dir_deb" > /dev/null 2>&1
+    invoke_command "$fakeroot dpkg-buildpackage" "dpkg-buildpackage"
+    popd > /dev/null 2>&1
+    invoke_command "mv '$temp_dir/${module}-dkms_${module_version}_all.deb' '$temp_dir/${module}-dkms_${module_version}.dsc' '$temp_dir/${module}-dkms_${module_version}.tar.gz' '$deb_basedir'" "moving files"
+
+    if [ "$?" -eq 0 ]; then
+	    echo $""
+        echo $"DKMS: mkdeb Completed."
+    else
+	    echo $"" >&2
+	    echo $"Error! There was a problem creating your deb." >&2
+	    exit 7
+    fi
+}
+
 function make_kmp_srpm()
 {
     local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
@@ -3210,6 +3462,9 @@ for action_to_run in $action; do
 	    ;;	
 	mkrpm)
 	    make_rpm
+	    ;;
+	mkdeb)
+	    make_deb
 	    ;;
 	mkkmp)
 	    make_kmp

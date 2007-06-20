@@ -1,0 +1,39 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+    remove|upgrade|deconfigure)
+
+    kconf="/etc/kernel-img.conf"
+    hookline="header_postinst_hook = /etc/kernel/postinst.d/dkms"
+
+	if [ $(grep -c "$hookline" "$kconf") -ne 0 ]; then
+	    temp=`mktemp /tmp/dkms.XXXXXX`
+	    grep -v "$hookline" "$kconf" > "$temp"
+	    mv "$temp" "$kconf"
+	fi
+	
+   if [ -e "/etc/kernel/postinst.d/dkms" ]; then
+      rm -f /etc/kernel/postinst.d/dkms
+   fi
+   if [ -e "/etc/kernel/preinst.d/dkms" ]; then
+      rm -f /etc/kernel/preinst.d/dkms
+   fi
+
+    ;;
+
+    failed-upgrade)
+    ;;
+
+    *)
+        echo "prerm called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0
+
+

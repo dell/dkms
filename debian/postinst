@@ -1,0 +1,35 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+    configure)
+
+    kconf="/etc/kernel-img.conf"
+    hookline="header_postinst_hook = /etc/kernel/postinst.d/dkms"
+
+    if [ $(grep -c header_postinst_hook "$kconf") -eq 0 ]; then
+        echo "$hookline" >> "$kconf"
+    elif [ $(grep -c "$hookline" "$kconf") -eq 0 ]; then
+	# we're already there, nothing to do
+    else
+        echo "WARNING: COULD NOT INSTALL header_postinst_hook!"
+        echo "Reason: There was already a hook inside kernel-img.conf"
+        echo "Installation will continue, however, kernel updates"
+        echo "may not properly automatically install new modules."
+    fi
+
+    ;;
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0
+

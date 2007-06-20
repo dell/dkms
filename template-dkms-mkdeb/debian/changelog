@@ -2,5 +2,5 @@ MODULE_NAME-dkms (MODULE_VERSION) stable; urgency=low
 
   * Automatically packaged by DKMS.
 
- -- John Doe <dkms-devel@Dell.com>  DATE_STAMP
+ -- DKMS <dkms-devel@Dell.com>  DATE_STAMP
 

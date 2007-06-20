@@ -1,8 +1,10 @@
-dkms (2.0.17-1) unstable; urgency=low
+dkms (2.0.16.2-1) unstable; urgency=low
 
   * new upstream release
+  * added .deb support and Ubuntu (Casper) driver disk exporting by
+    Mike Morgan <Michael_Morgan@dell.com>
 
- -- Matt Domsch <Matt_Domsch@dell.com>  Fri,  8 Jun 2007 16:54:00 -0600
+ -- Matt Domsch <Matt_Domsch@dell.com>  Wed, 20 Jun 2007 14:21:00 -0600
 
 dkms (2.0.16.1-1) unstable; urgency=low
 

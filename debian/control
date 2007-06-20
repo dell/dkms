@@ -9,7 +9,7 @@ Package: dkms
 Architecture: all
 Depends: ${shlibs:Depends}, ${misc:Depends}
  gawk, modutils, cpio, bash (>> 1.99)
-Recommends: patch, make, gcc
+Recommends: patch, make, gcc, fakeroot
 Description: Dynamic Kernel Module Support Framework
  This package contains the framework for the Dynamic
  Kernel Module Support (DKMS) method for installing
