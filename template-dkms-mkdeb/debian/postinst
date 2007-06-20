@@ -1,0 +1,71 @@
+#!/bin/sh
+
+set -e
+
+NAME=MODULE_NAME
+VERSION=MODULE_VERSION
+
+case "$1" in
+    configure)
+      # Determine current arch / kernel
+      c_arch=`uname -m`
+      c_kern=`uname -r`
+
+      if [ -e "/var/lib/dkms/$NAME/$VERSION" ]; then
+         echo "Removing old $NAME-$VERSION DKMS files..."
+         dkms remove -m $NAME -v $VERSION --all
+      fi
+
+      echo "Loading new $NAME-$VERSION DKMS files..."
+      #dkms add -m $NAME -v $VERSION
+      dkms ldtarball --archive "/usr/src/$NAME-$VERSION.dkms.tar.gz"
+      rm -f "/usr/src/$NAME-$VERSION.dkms.tar.gz"
+
+      echo "Installing prebuilt kernel module binaries (if any)"
+      set +e
+      IFS='
+'
+      for kern in `dkms status -m $NAME -v $VERSION -a $c_arch | grep ": built" | awk {'print $3'} | sed 's/,$//'`; do
+         echo "Trying kernel: $kern"
+         dkms install --force -m $NAME -v $VERSION -k $kern -a $c_arch
+      done
+      unset IFS
+      set -e
+
+      # If none installed, install.
+      ##if [ `dkms status -m $NAME -v $VERSION -k $c_kern -a $c_arch | grep -c ": installed"` -eq 0 ]; then
+      dkms_status=`dkms status -m $NAME -v $VERSION -k $c_kern -a $c_arch`
+      if [ `echo $dkms_status | grep -c ": installed"` -eq 0 ]; then
+         if [ `echo $c_kern | grep -c "BOOT"` -eq 0 ] && [ -e "/lib/modules/$c_kern/build/include" ]; then
+            # Only build if we need to.
+            if [ `echo $dkms_status | grep -c ": built"` -eq 0 ]; then
+               echo "Building module..."
+               dkms build -m $NAME -v $VERSION
+            fi
+            echo "Installing module..."
+            dkms install -m $NAME -v $VERSION
+         elif [ `echo $c_kern | grep -c "BOOT"` -gt 0 ]; then
+            echo -e ""
+            echo -e "Module build for the currently running kernel was skipped since you"
+            echo -e "are running a BOOT variant of the kernel."
+         else
+            echo -e ""
+            echo -e "Module build for the currently running kernel was skipped since the"
+            echo -e "kernel source for this kernel does not seem to be installed."
+         fi
+      fi
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0
+

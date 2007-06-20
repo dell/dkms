@@ -1,0 +1,11 @@
+Source: MODULE_NAME-dkms
+Section: misc
+Priority: optional
+Maintainer: John Doe <dkms-devel@Dell.com>
+Build-Depends: debhelper (>= 5)
+Standards-Version: 3.7.2
+
+Package: MODULE_NAME-dkms
+Architecture: all
+Depends: dkms (>= 1.95), bash (>> 1.99)
+Description: MODULE_NAME driver in DKMS format.
