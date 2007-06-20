@@ -34,7 +34,6 @@ copy-init:
 install:
 	mkdir -m 0755 -p $(VAR) $(SBIN) $(MAN) $(INITD) $(ETC) $(BASHDIR)
 	install -p -m 0755 dkms $(SBIN)
-	install -p -m 0755 dkms_mkkerneldoth $(SBIN)
 	install -p -m 0755 dkms_autoinstaller $(INITD)
 	install -p -m 0644 dkms_framework.conf $(ETC)/framework.conf
 	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
@@ -53,7 +52,7 @@ doc-perms:
 	chmod 0644 $(DOCFILES)
 
 install-redhat: install doc-perms
-	install -p -m 755 dkms_mkkerneldoth $(SBIN)
+	install -p -m 0755 dkms_mkkerneldoth $(SBIN)
 
 install-doc:
 	mkdir -m 0755 -p $(DOCDIR)
@@ -64,8 +63,8 @@ install-ubuntu: install copy-init install-doc
 	install -p -m 0755 debian/kernel_preinst.d_dkms  $(KCONF)/preinst.d/dkms
 	install -p -m 0755 debian/kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
 	mkdir -m 0755 -p $(ETC)/template-dkms-mkdeb/debian
-	install -p -m 0664 template-dkms-mkdeb/* $(ETC)/template-dkms-mkdeb
-	install -p -m 0664 template-dkms-mkdeb/debian/* $(ETC)/template-dkms-mkdeb/debian
+	install -p -m 0664 template-dkms-mkdeb/Makefile $(ETC)/template-dkms-mkdeb/
+	install -p -m 0664 template-dkms-mkdeb/debian/* $(ETC)/template-dkms-mkdeb/debian/
 
 
 tarball:

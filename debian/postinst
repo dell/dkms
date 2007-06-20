@@ -12,6 +12,7 @@ case "$1" in
         echo "$hookline" >> "$kconf"
     elif [ $(grep -c "$hookline" "$kconf") -eq 0 ]; then
 	# we're already there, nothing to do
+	:
     else
         echo "WARNING: COULD NOT INSTALL header_postinst_hook!"
         echo "Reason: There was already a hook inside kernel-img.conf"
