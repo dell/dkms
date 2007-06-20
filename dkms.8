@@ -159,6 +159,19 @@ not want your RPM to contain any prebuilt binaries, be sure to specify
 .B --source-only
 in the mkrpm command.
 .TP
+.B mkdeb
+This action allows you to create a debian package for a specified module / version.
+It uses a template debian directory found in
+.I /etc/dkms/template-dkms-mkdeb
+as the basis for the package. Alternatively, if DKMS finds a file called
+.I /usr/src/<module>-<module-version>/<module>-dkms-mkdeb
+it will use that folder instead. In general, a DKMS tarball is placed inside the
+contents of this package, and the package itself calls various DKMS commands to
+load this tarball, build and install modules on the end user's system.  If you do
+not want your debian package to contain any prebuilt binaries, be sure to specify
+.B --source-only
+in the mkdeb command.
+.TP
 .B mkkmp
 This action allows you to create an Kernel Module Package source RPM for a specified module / version.
 It uses the .spec file specified by
@@ -291,6 +304,8 @@ This option can be used in conjunction with
 .B mktarball
 or
 .B mkrpm
+or
+.B mkdeb
 in order to create a DKMS tarball which does not contain any prebuilt
 kernel module binaries within it.  This is helpful if you simply want
 to easily tar up your source but don't want anything prebuilt within
