@@ -33,6 +33,8 @@ copy-init:
 
 install:
 	mkdir -m 0755 -p $(VAR) $(SBIN) $(MAN) $(INITD) $(ETC) $(BASHDIR)
+	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms > dkms.versioned
+	mv -f dkms.versioned dkms
 	install -p -m 0755 dkms $(SBIN)
 	install -p -m 0755 dkms_autoinstaller $(INITD)
 	install -p -m 0644 dkms_framework.conf $(ETC)/framework.conf
@@ -93,4 +95,10 @@ rpm: tarball dkms.spec
 	rm -rf $${tmp_dir}
 
 deb: tarball
-	pdebuild --buildresult $(shell pwd)/..
+	oldpwd=$(shell pwd) ; \
+	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
+	tar -C $${tmp_dir} -xzf $(RELEASE_STRING).tar.gz ; \
+	cd $${tmp_dir}/$(RELEASE_STRING) ; \
+	pdebuild --buildresult $$oldpwd/.. ; \
+	cd - ;\
+	rm -rf $${tmp_dir}
