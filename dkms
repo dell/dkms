@@ -254,8 +254,7 @@ function distro_version()
     local FEDORA_RELEASE
     local LSB_RELEASE
     local VER
-    local dist
-    dist=unknown
+    local dist=unknown
 
     if which rpm > /dev/null 2>&1 ; then
 	WHATPROVIDES_REDHAT_RELEASE=$(rpm -q --whatprovides redhat-release)
@@ -487,13 +486,13 @@ function read_conf ()
 	# Override location for specific kernels
 	dest_module_location[$index]="$(override_dest_module_location ${dest_module_location[$index]})"
 	
-	# Fail if no DEST_MODULE_LOCATION and no override provided
-	if [ -z "${dest_module_location[$index]}" ]; then
+	# Fail if no DEST_MODULE_LOCATION
+	if [ -z "${DEST_MODULE_LOCATION[$index]}" ]; then
 	    echo $"dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified for record #$index.">&2
 	    return_value=1
 	fi
         # Fail if bad DEST_MODULE_LOCATION
-	case "${dest_module_location[$index]}" in
+	case "${DEST_MODULE_LOCATION[$index]}" in
 	    /kernel*)
 		;;
 	    /updates*)
@@ -1508,8 +1507,8 @@ function do_uninstall()
 	    echo $" - Original module"
 	    if [ -e "$dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix" ]; then
 		echo $"   - Archived original module found in the DKMS tree" 
-		echo $"   - Moving it to: $install_tree/$1${real_dest_module_location}/" 
-		mv -f "$dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix" "$install_tree/$1${real_dest_module_location}/" 2>/dev/null
+		echo $"   - Moving it to: $install_tree/$1${DEST_MODULE_LOCATION[$count]}/" 
+		mv -f "$dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix" "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/" 2>/dev/null
 	    else
 		echo $"   - No original module was found for this module on this kernel." 
 		echo $"   - Use the dkms install command to reinstall any previous module version." 
@@ -2291,9 +2290,9 @@ make_suse_driver_disk()
 
 make_ubuntu_driver_disk()
 {
-	local suffix="$(driver_disk_suffix)"
-	local image_dir="$dkms_tree/$module/$module_version/driver_disk"
-	local image_name="$module-$module_version-$distro-dd.$suffix"  
+    local suffix="$(driver_disk_suffix)"
+    local image_dir="$dkms_tree/$module/$module_version/driver_disk"
+    local image_name="$module-$module_version-$distro-dd.$suffix"  
 
    local tempdir=`mktemp -d $tmp_location/dkms.XXXXXX`
    if [ -z "$tempdir" ]; then
@@ -2315,12 +2314,11 @@ make_ubuntu_driver_disk()
       set_module_suffix "${kernelver_array[$i]}"
       # Driver disks only recognize i386 as package arch
       local arch=$(echo ${arch_array[$i]} | sed -e 's/i.86/i386/')
-      local count=0
-      # ubuntu-drivers/<kver>/*_<debarch>.deb
       local kvers=$(echo ${kernelver_array[$i]} | sed -e 's/[-_].*//')
+       # ubuntu-drivers/<kver>/*_<debarch>.deb
       local dd_prefix="ubuntu-drivers/$kvers"
       local dd_suffix="_${arch}.deb"
-
+      local count=0
       while [ "$count" -lt "${#dest_module_name[@]}" ]; do
          if ! [ -e "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" ]; then
             echo $"" >&2
@@ -2337,11 +2335,13 @@ make_ubuntu_driver_disk()
          local deb_lib_dir="$deb_dir/lib/modules/${kernelver_array[$i]}/updates/dkms"
          mkdir -p "$deb_lib_dir"
          cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$deb_lib_dir"
-         pushd "$deb_dir" > /dev/null 2>&1
-         mkdir DEBIAN
-         cat > DEBIAN/control <<EOF
-Package: ${dest_module_name[$count]}-modules-${kernelver_array[$i]}
-Provides: ${dest_module_name[$count]}-modules
+         count=$(($count+1))
+       done
+
+       pushd "$deb_dir" > /dev/null 2>&1
+       mkdir DEBIAN
+       cat > DEBIAN/control <<EOF
+Package: ${module}-modules-${kernelver_array[$i]}
 Version: ${module_version}-1
 Section: misc
 Priority: optional
@@ -2353,16 +2353,23 @@ Description: DKMS packaged binary driver update
  driver update disks, used with Ubuntu installation
  programs (such as Ubiquity).
 EOF
-         cd "$tempdir/$dd_prefix"
-         dpkg-deb --build debian
-         mv debian.deb "${dest_module_name[$count]}$dd_suffix"
-         rm -rf debian
-         popd > /dev/null 2>&1
 
-         modules_cgz_list="$dd_prefix/${dest_module_name[$count]}$module_suffix\n${modules_cgz_list}"
-         count=$(($count+1))
-      done
-      i=$(($i+1))
+       # Generate the DEBIAN/preinst file.
+       # This is tricky as we need some parts evaluated now
+       # and some parts evaluated at runtime
+       echo '#!/bin/bash' > DEBIAN/preinst
+       echo -n '[ "$(uname -r)" == ' >> DEBIAN/preinst
+       echo -n "\"${kernelver_array[$i]}\"" >> DEBIAN/preinst
+       echo  ' ] || exit 1' >> DEBIAN/preinst
+       echo 'exit 0' >> DEBIAN/preinst
+
+       chmod 0775 DEBIAN/preinst
+       cd "$tempdir/$dd_prefix"
+       dpkg-deb --build debian
+       mv debian.deb "${module}_${module_version}-${kernelver_array[$i]}${dd_suffix}"
+       rm -rf debian
+       popd > /dev/null 2>&1
+       i=$(($i+1))
    done
 
    echo "Copying source..."
@@ -3181,7 +3188,7 @@ dkms_frameworkconf="/etc/dkms/framework.conf"
 # these can come from the environment or the config file
 [ -z "${ADDON_MODULES_DIR}" -a -e /etc/sysconfig/module-init-tools ] && . /etc/sysconfig/module-init-tools
 addon_modules_dir="${ADDON_MODULES_DIR}"
-[ -n "${addon_modules_dir}" ] && running_distribution="$(distro_version)"
+[ -z "${addon_modules_dir}" ] && running_distribution="$(distro_version)"
 weak_modules="${WEAK_MODULES_BIN}"
 
 # Source in /etc/dkms_framework.conf
