@@ -257,8 +257,7 @@ function distro_version()
     local dist
     dist=unknown
 
-
-    if [ -x /bin/rpm ]; then
+    if which rpm > /dev/null 2>&1 ; then
 	WHATPROVIDES_REDHAT_RELEASE=$(rpm -q --whatprovides redhat-release)
 	if [ $? -eq 0 ]; then
 	    if $(echo "${WHATPROVIDES_REDHAT_RELEASE}" | grep redhat-release > /dev/null 2>&1) ; then
@@ -279,7 +278,8 @@ function distro_version()
 	if [ $? -eq 0 ]; then
 	    SUSE_RELEASE=1
 	fi
-    elif [ -r /etc/lsb-release ]; then
+    fi
+    if [ -r /etc/lsb-release ]; then
 	. /etc/lsb-release
 	LSB_RELEASE=1
     fi
@@ -2927,8 +2927,6 @@ function preproc_file()
 
 function make_deb()
 {
-    setup_kernels_arches "mkdeb"
-
     # Error if $module_version is set but $module is not
     if [ -z "$module" ] || [ -z "$module_version" ]; then
         echo $"" >&2
