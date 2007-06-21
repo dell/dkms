@@ -1,3 +1,12 @@
+dkms (2.0.17-1) unstable; urgency=low
+
+  * new upstream release
+  * bug fix putting original_module back at uninstall time.
+  * bug fix with generating Ubuntu driver disk debs.
+
+
+ -- Matt Domsch <Matt_Domsch@dell.com>  Wed, 21 Jun 2007 18:56:00 -0600
+
 dkms (2.0.16.2-1) unstable; urgency=low
 
   * new upstream release
