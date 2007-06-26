@@ -199,7 +199,14 @@ function remake_initrd()
     # $2 = arch
 
     local exitval="0"
-    mkinitrd --version >/dev/null
+    local mkinitrd='mkinitrd'
+
+    # Support initramfs distributions (Ubuntu).
+    if [ -x "/usr/sbin/mkinitramfs" ]; then
+        mkinitrd='mkinitramfs'
+    fi
+
+    $mkinitrd --version >/dev/null 2>&1
     if [ "$?" -eq 0 ]; then
       	echo $"" 
 	initrd_dir="/boot"
@@ -208,7 +215,7 @@ function remake_initrd()
 	cp -f "$initrd_dir/initrd-$1.img" "$initrd_dir/initrd-$1_old.img"
 	echo $"Making new initrd as $initrd_dir/initrd-$1.img" 
 	echo $"(If next boot fails, revert to the _old initrd image)"
-	invoke_command "mkinitrd -f $initrd_dir/initrd-$1.img $1" "mkinitrd" background
+	invoke_command "$mkinitrd -f $initrd_dir/initrd-$1.img $1" "$mkinitrd" background
 	exitval="$?"
     elif [ -e /etc/SuSE-release ] || [ -d /etc/SuSEconfig ]; then
 	echo $""
@@ -217,7 +224,7 @@ function remake_initrd()
 	cp -f "$initrd_dir/initrd-$1" "$initrd_dir/initrd-$1_old"
 	echo $"Making new initrd as $initrd_dir/initrd-$1" 
 	echo $"(If next boot fails, revert to the _old initrd image)"
-	invoke_command "mkinitrd -k vmlinuz-$1 -i initrd-$1" "mkinitrd" background
+	invoke_command "$mkinitrd -k vmlinuz-$1 -i initrd-$1" "$mkinitrd" background
 	exitval="$?"
     elif [ -e /etc/debian_version ]; then
       	echo $"" 
@@ -226,12 +233,12 @@ function remake_initrd()
 	cp -f "$initrd_dir/initrd.img-$1" "$initrd_dir/initrd.img_old-$1"
 	echo $"Making new initrd as $initrd_dir/initrd.img-$1" 
 	echo $"(If next boot fails, revert to the _old initrd image)"
-	invoke_command "mkinitrd -o $initrd_dir/initrd.img-$1 $1" "mkinitrd" background
+	invoke_command "$mkinitrd -o $initrd_dir/initrd.img-$1 $1" "$mkinitrd" background
 	exitval="$?"
     else
 	echo $""
-	echo $"Calling mkinitrd (bad exit status 9 may occur)"
-	invoke_command "mkinitrd" "mkinitrd" background
+	echo $"Calling $mkinitrd (bad exit status 9 may occur)"
+	invoke_command "$mkinitrd" "$mkinitrd" background
 	exitval="$?"
     fi
 
