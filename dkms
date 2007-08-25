@@ -630,7 +630,7 @@ function check_version_sanity ()
 		kernels_ver_checksum=`echo $kernels_ver_string | awk {'print $3'}`
 		dkms_ver_checksum=`echo $dkms_ver_string | awk {'print $3'}`
 	    fi
-	    
+
 	    if [ -n "$kernels_ver_checksum" -a -n "$dkms_ver_checksum" -a \
 		    "$kernels_ver_checksum" == "$dkms_ver_checksum" -a -z "$force" ]; then
 		echo $"" >&2
@@ -1104,6 +1104,14 @@ function install_module()
 	echo $"Error! This module/version combo is already installed" >&2
 	echo $"for kernel: ${kernelver_array[0]} (${arch_array[0]})" >&2
 	exit 5
+    fi
+
+    # if upgrading using rpm_safe_upgrade, go ahead and force the install
+    # else we can wind up with the first half of an upgrade failing to install anything,
+    # while the second half of the upgrade, the removal, then succeeds, leaving us with
+    # nothing installed.
+    if [ -n "$rpm_safe_upgrade" ]; then
+	force="true"
     fi
 
     # Check this version against what is already in the kernel
