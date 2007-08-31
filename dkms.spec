@@ -88,6 +88,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root)
 %{_sbindir}/%{name}
+%{_sbindir}/dkms_find-provides
 %{_localstatedir}/lib/%{name}
 %{_initrddir}/dkms_autoinstaller
 %{_sbindir}/dkms_mkkerneldoth
