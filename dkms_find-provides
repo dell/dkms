@@ -96,8 +96,8 @@ for cand in $(grep -E '(/lib/modules/.+\.ko$|tgz$|tbz$|tar\.(gz|bz2)$)') $*; do
     tar ${opts}f $cand -C $TMPDIR
 done
 
-for module in $(find $TMPDIR -name \*.ko)  $modlist; do
-    if echo $module | grep -E '.ko$'; then
+for module in $(find $TMPDIR -name \*.ko) $modlist; do
+    if echo $module | grep -q -E '.ko$' >/dev/null 2>&1; then
         # it is a straight module
         get_modinfo $module
         continue
