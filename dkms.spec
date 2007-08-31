@@ -51,10 +51,10 @@ for directory in `find $dkms_tree -type d -name "module" -mindepth 3 -maxdepth 4
 	dir_to_fix=`echo $directory | sed 's#/module$##'`
 	echo "Creating $dir_to_fix/$arch_used..."
 	mkdir $dir_to_fix/$arch_used
-	mv -f $dir_to_fix/* $dir_to_fix/$arch_used 2>/dev/null 
+	mv -f $dir_to_fix/* $dir_to_fix/$arch_used 2>/dev/null
 done
 echo ""
-echo "Fixing symlinks."	
+echo "Fixing symlinks."
 for symlink in `find $dkms_tree -type l -name "kernel*" -mindepth 2 -maxdepth 2`; do
 	symlink_kernelname=`echo $symlink | sed 's#.*/kernel-##'`
 	dir_of_symlink=`echo $symlink | sed 's#/kernel-.*$##'`
@@ -82,7 +82,7 @@ make install-redhat DESTDIR=$RPM_BUILD_ROOT \
     ETC=$RPM_BUILD_ROOT%{_sysconfdir}/%{name} \
     BASHDIR=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d
 
-%clean 
+%clean
 rm -rf $RPM_BUILD_ROOT
 
 %files
@@ -206,10 +206,10 @@ rm -rf $RPM_BUILD_ROOT
 - mkrpm now is built with -ba, not -bb (creates source RPM)
 
 * Fri Nov 4 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.8
-- In dkms_autoinstaller added -no-clean-kernel to builds of multiple modules to avoid mrproper 
+- In dkms_autoinstaller added -no-clean-kernel to builds of multiple modules to avoid mrproper
 
 * Wed Oct 19 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.7
-- Repackaged 2.0.6.2 as 2.0.7 
+- Repackaged 2.0.6.2 as 2.0.7
 
 * Wed Oct 19 2005 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.6.2
 - Updated dkms_mkkerneldoth to know about VMWare kernel
@@ -287,7 +287,7 @@ rm -rf $RPM_BUILD_ROOT
 
 * Tue Sep 28 2004 Gary Lerhaupt <gary_lerhaupt@dell.com> 2.0.1.2-1
 - Charles Duffy's fix for multiple rpms owning /lib/modules/kernel...
-- Andreas Gruenbacher's removal of IFS usage 
+- Andreas Gruenbacher's removal of IFS usage
 - Andreas Gruenbacher's reorganizing prepare check into prepare_kernel
 - Andreas Gruenbacher's patch to cut down on line length by using $base_dir
 - fixed $base_dir so it gets set after setup_kernels_arches
@@ -295,7 +295,7 @@ rm -rf $RPM_BUILD_ROOT
 * Sun Sep 12 2004 Andreas Gruenbacher <agruen@suse.de>
 - patch to remove tick usage
 - patch to rewrite version comparison code
-- patch to switch to usage of case, remove use of grep -c, remove use of IFS 
+- patch to switch to usage of case, remove use of grep -c, remove use of IFS
 - patch to change handling of stderr
 
 * Fri Sep 10 2004 Gary Lerhaupt <gary_lerhaupt@dell.com>
@@ -661,7 +661,7 @@ rm -rf $RPM_BUILD_ROOT
 - Added --no-prepare-kernel cli option
 
 * Fri Aug 08 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.33.02-1
-- Fixed quote bugs in match (Reported by: John Hull <john_hull@dell.com>) 
+- Fixed quote bugs in match (Reported by: John Hull <john_hull@dell.com>)
 - Added Fred Treasure to the AUTHORS list
 - Added dkms_dbversion file to DKMS tree to track architecture of dkms db layout
 
@@ -710,7 +710,7 @@ rm -rf $RPM_BUILD_ROOT
 
 * Tue Apr 29 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.27.05-1
 - Changed NEEDED_FOR_BOOT to REMAKE_INITRD as this makes more sense
-- Redid handling of modifying modules.conf 
+- Redid handling of modifying modules.conf
 - Added MODULE_CONF_ALIAS_TYPE to specs
 
 * Mon Apr 28 2003 Gary Lerhaupt <gary_lerhaupt@dell.com> 0.26.12-1

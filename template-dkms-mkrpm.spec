@@ -84,7 +84,7 @@ dkms remove -m %{module_name} -v %{version} --all --rpm_safe_upgrade
 exit 0
 
 %files
-%defattr(-,root,root)                                                                 
+%defattr(-,root,root)
 /usr/src/%{module_name}-%{version}/
 
 %changelog

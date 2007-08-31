@@ -26,14 +26,14 @@ tree.  If the modules is currently installed, it first uninstalls it
 and if applicable, will replace it with its original_module.  Use the
 .B --all
 option in order to remove all instances for every kernel at once.
-.TP 
+.TP
 .B build
 Builds the specified module/version combo for the specified kernel. If
 no kernel is specified it builds for the currently running kernel.  All builds
 occur in the directory
 .I /var/dkms/<module>/<module-version>/build/.
-.TP 
-.B install        
+.TP
+.B install
 Installs a built module/version combo onto the kernel it was built for. If
 the kernel option is not specified it assumes the currently running kernel.
 .TP
@@ -41,7 +41,7 @@ the kernel option is not specified it assumes the currently running kernel.
 Uninstalls an installed module/version combo from the kernel it was installed
 upon.  After uninstall completion, the driver will be left in the built state.
 To completely remove a driver, the remove action should be utilized.
-.TP 
+.TP
 .B match
 Match installs modules onto the specified kernel by looking at the
 configuration of the specified
@@ -55,7 +55,7 @@ is then installed on that specified kernel.
 .B mkdriverdisk
 Creates a floppy driver disk image for use when updated drivers are needed
 to install an OS.  Currently, the supported distributions are redhat, suse
-and UnitedLinux. For Red Hat driver disks, necessary driver disk files are 
+and UnitedLinux. For Red Hat driver disks, necessary driver disk files are
 looked for in the redhat_driver_disk
 subdirectory of your module source directory.  You
 must specify the distro while using this action.  Driver disks can be made
@@ -90,7 +90,7 @@ will also be copied to the driver disk; no other files are needed.
 However, for these distros, you must specify a -r release. For
 SuSE 9.1, it would be -d suse -r 9.1. For SLES9, it would be -d suse -r sles9.
 
-By default the disk image it creates is 1440 (k) in size.  This can be 
+By default the disk image it creates is 1440 (k) in size.  This can be
 overridden by specifying a different
 .B --size ####
 which should should be given as a number in kilobytes divisible by 20.
@@ -118,15 +118,15 @@ a singular kernel to archive only, or multiple kernels to archive
 (-k kernel1 -k kernel2 -a arch1 -a arch2).  Optionally, you can use
 .B --archive
 to specify the name (with no preceding path) that you would like this
-tarball to have.  You can also specify 
+tarball to have.  You can also specify
 .B --binaries-only
 if you want the resultant tarball not to include the module source.  Likewise,
 .B --source-only
 can be used to specify that no prebuilt binaries should be included in the tarball.
-In general, 
+In general,
 .B mktarball
 is great for systems management purposes as you can build your driver
-on just one system and then use 
+on just one system and then use
 .B ldtarball
 on all of your other systems to get the same built modules loaded
 without having to wait for anything to compile.
@@ -134,13 +134,13 @@ without having to wait for anything to compile.
 .B ldtarball
 This takes a tarball made from the
 .B mktarball
-command and specified with the 
-.B --archive 
+command and specified with the
+.B --archive
 option and loads it into your DKMS tree.  This will leave any
-newly added modules in the built state and 
+newly added modules in the built state and
 .B dkms install
 should then be called to install any of them.  If files already
-exist where 
+exist where
 .B ldtarball
 is attempting to place them, it will warn and not copy over them.  The
 .B --force
@@ -148,7 +148,7 @@ option should be used to override this.
 .TP
 .B mkrpm
 This action allows you to create an RPM package for a specified module / version.
-It uses a template .spec file found in 
+It uses a template .spec file found in
 .I /etc/dkms/template-dkms-mkrpm.spec
 as the basis for the RPM.  Alternatively, if DKMS finds a file called
 .I /usr/src/<module>-<module-version>/<module>-dkms-mkrpm.spec
@@ -181,8 +181,8 @@ else
 as the basis for the RPM.  The generated source RPM may then be built using SuSE's build.rpm or
 Fedora/RHEL's mock chroot environments.  See http://kerneldrivers.org/ for
 more details on KMPs.
-.TP 
-.B status        
+.TP
+.B status
 Returns the current status of modules, versions and kernels within
 the tree as well as whether they have been added, built or installed.
 Status can be shown for just a certain module, a certain kernel,
@@ -190,21 +190,21 @@ a module/version combination or a module/version/kernel combination.
 .SH OPTIONS
 .TP
 .B -m <module>
-The name of the module. 
+The name of the module.
 .TP
 .B -v <module-version>
-The version of the module to execute the specified action upon. 
+The version of the module to execute the specified action upon.
 .TP
 .B -k <kernel-version>
 The kernel to perform the action upon.  You can specify multiple kernel versions
 on the command line by repeating the -k argument with a different kernel name.
-However, not all actions support multiple kernel versions (it will error out 
-in this case).   
-.TP 
+However, not all actions support multiple kernel versions (it will error out
+in this case).
+.TP
 .B -a, --arch
 The system architecture to perform the action upon.  If not specified, it assumes
 the arch of the currently running system (`uname -m`).  You can specify multiple
-arch parameters on the same command line by repeating the -a argument with a 
+arch parameters on the same command line by repeating the -a argument with a
 different arch name.  When multiple architectures are specified, there must
 be a 1:1 relationship between -k arguments to -a arguments.  DKMS will then
 assume the first -a argument aligns with the first -k kernel and so on for the
@@ -223,7 +223,7 @@ Prints the currently installed version of dkms and exits.
 The location of the
 .I dkms.conf
 file.  This is needed for the add action and if not specified,
-it is assumed to be located in 
+it is assumed to be located in
 .I /usr/src/<module>-<module-version>/.
 See below for more information on the format of
 .I dkms.conf.
@@ -240,22 +240,22 @@ See the sections on
 .B mkdriverdisk
 and
 .B mkkmp
-for more information.  
+for more information.
 .TP
 .B -r, --release
-The release being used.  This is only currently used for 
+The release being used.  This is only currently used for
 .B mkdriverdisk
-and is only used for suse or UnitedLinux distros (eg. -r 9.1).  It is 
+and is only used for suse or UnitedLinux distros (eg. -r 9.1).  It is
 used in the internal makeup of the driverdisk.
-.TP 
+.TP
 .B --size
 The size of the driver disk image to be created.  By default, this value is set
 at 1440.  Any different size should be given as an integer value only, should
 be divisible by 20 and should represent the number of kilobytes of the image
-size you desire.  
+size you desire.
 .TP
 .B --config <kernel-.config-location>
-During a 
+During a
 .B build
 this option is used to specify an alternate location for the kernel .config
 file which was used to compile that kernel.  Normally,
@@ -270,7 +270,7 @@ where the necessary .config can be found so that your kernel can be properly
 prepared for the module build.
 .TP
 .B --archive <tarball-location>
-This option is used during a 
+This option is used during a
 .B ldtarball
 action to specify the location of the tarball you wish to load into
 your DKMS tree.
@@ -341,14 +341,14 @@ source is accessible via
 .TP
 .B --directive <"cli-directive=cli-value">
 Using this option, you can specify additional directives from the command
-line.  The 
+line.  The
 .B --directive
 option can be used multiple times on the same command-line to specify
 multiple additional command line directives.
 .TP
 .B --rpm_safe_upgrade
 This flag should be used when packaging DKMS enabled modules in RPMs.  It should
-be specified during both the 
+be specified during both the
 .B add
 and
 .B remove
@@ -364,9 +364,9 @@ action to specify which RPM spec file to use when generating the KMP.
 .I specfile
 will be sought in the module source directory.
 .SH ORIGINAL MODULES
-During the first install of a module for a <kernelversion>, 
+During the first install of a module for a <kernelversion>,
 .B dkms
-will search 
+will search
 .I /lib/modules/<kernelversion>
 for a pre-existing module of the same name. If one is found, it will automatically
 be saved as an "original_module" so that if the newer module is later removed,
@@ -376,12 +376,12 @@ for these original modules with first preference going to modules located in
 .I /lib/modules/<kernelversion>/updates/
 followed by
 .B $DEST_MODULE_LOCATION
-(as specified in 
+(as specified in
 .I dkms.conf
 ).  If one cannot be found in either location, a find will be used to locate one for
 that kernel.
 If none are found, then during a later uninstall, your kernel will not have that module
-replaced.  
+replaced.
 
 If more than one is found, then the first one located (by preference indicated
 above) will be considered the "original_module".  As well, all copies of the same-named
@@ -396,11 +396,11 @@ When performing an
 , a proper
 .I dkms.conf
 file must be found.  A properly formatted conf file is essential
-for communicating to 
+for communicating to
 .B dkms
 how and where the module should be installed.  While not all the directives
 are required, providing as many as possible helps to limit any ambiguity.  Note
-that the 
+that the
 .I dkms.conf
 is really only a shell-script of variable definitions which are then sourced in
 by the
@@ -412,27 +412,27 @@ directives are case-sensitive and should be given in
 It is important to understand that many of the DKMS directives are arrays whose index
 values are tied together.  These array associations can be considered families, and there
 are currently four such families of directive arrays.  MAKE[#] and MAKE_MATCH[#] make up
-one family.  PATCH[#] and PATCH_MATCH[#] make up the second family.  The third  and 
+one family.  PATCH[#] and PATCH_MATCH[#] make up the second family.  The third  and
 largest family consists of BUILT_MODULE_NAME[#], BUILT_MODULE_LOCATION[#], DEST_MODULE_NAME[#],
-DEST_MODULE_LOCATION[#], MODULES_CONF_ALIAS_TYPE[#], MODULES_CONF_OBSOLETES[#], 
+DEST_MODULE_LOCATION[#], MODULES_CONF_ALIAS_TYPE[#], MODULES_CONF_OBSOLETES[#],
 MODULES_CONF_OBSOLETE_ONLY[#] and STRIP[#].  The fourth
 family is made up of only MODULES_CONF[#].  When indexing these arrays when creating your
 dkms.conf, each family should start at index value 0.
 .TP
 .B MAKE[#]=
-The MAKE directive array tells DKMS which make command should be used for building your module. The default make command 
+The MAKE directive array tells DKMS which make command should be used for building your module. The default make command
 should be put into
 .B MAKE[0].
-Other entries in the MAKE array will only be used if their corresponding entry in 
+Other entries in the MAKE array will only be used if their corresponding entry in
 .B MAKE_MATCH[#]
 matches, as a regular expression (using egrep), the kernel that the module is being built for.
-Note that if no value is placed in 
+Note that if no value is placed in
 .B MAKE_MATCH[#]
-for any 
+for any
 .B MAKE[#]
 where # > 0, then that
-.B MAKE 
-directive is ignored. 
+.B MAKE
+directive is ignored.
 .B MAKE_MATCH[0]
 is optional and if it is populated, it will be used to determine
 if MAKE[0] should be used to build the module for that kernel.  If multiple
@@ -444,24 +444,24 @@ MAKE_MATCH matches the kernel being built for, DKMS
 will attempt to use a generic MAKE command to build your module.
 .TP
 .B MAKE_MATCH[#]=
-See the above entry on 
+See the above entry on
 .B MAKE[#]
 directives.  This array should be populated with regular expressions which, when matched
 against the kernel being built for, will tell
 .B DKMS
-to use the corresponding make command in the 
+to use the corresponding make command in the
 .B MAKE[#]
 directive array to build your module.
 .TP
 .B BUILT_MODULE_NAME[#]=
 This directive gives the name of the module just after it is built.  If your DKMS module
-package contains more than one module to install, this is a 
+package contains more than one module to install, this is a
 .B required
 directive for all of the modules.  This directive should explicitly not contain any
 trailing ".o" or ".ko".
 Note that for each module within a dkms package, the numeric value of
 .B #
-must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and 
+must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and
 DEST_MODULE_LOCATION and that the numbering should start at 0 (eg. BUILT_MODULE_NAME[0]="qla2200"
 BUILT_MODULE_NAME[1]="qla2300").
 .TP
@@ -473,34 +473,34 @@ dkms.conf file can be found).  If unset, DKMS expects to find your
 in the root directory of your source files.
 Note that for each module within a dkms package, the numeric value of
 .B #
-must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and 
+must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and
 DEST_MODULE_LOCATION and that the numbering should start at 0 (eg. BUILT_MODULE_LOCATION[0]="some/dir/"
 BUILT_MODULE_LOCATION[1]="other/dir/").
 .TP
 .B DEST_MODULE_NAME[#]=
 This directive can be used to specify the name of the module as it should be installed.  This
-will rename the module from 
+will rename the module from
 .B BUILT_MODULE_NAME[#]
-to 
+to
 .B DEST_MODULE_NAME[#].
 This directive should explicitly not contain any trailing ".o" or ".ko".  If unset, it is
-assumed to be the same value as 
+assumed to be the same value as
 .B BUILT_MODULE_NAME[#].
 Note that for each module within a dkms package, the numeric value of
 .B #
-must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and 
+must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and
 DEST_MODULE_LOCATION and that the numbering should start at 0 (eg. DEST_MODULE_NAME[0]="qla2200_6x"
 DEST_MODULE_NAME[1]="qla2300_6x").
-.TP 
+.TP
 .B DEST_MODULE_LOCATION[#]=
 This directive specifies the destination where a module should be installed to, once compiled.  It also
-is used for finding original_modules.  This is a 
+is used for finding original_modules.  This is a
 .B required
-directive.  This directive must start with the text "/kernel" which is in reference to 
+directive.  This directive must start with the text "/kernel" which is in reference to
 /lib/modules/<kernelversion>/kernel.
 Note that for each module within a dkms package, the numeric value of
 .B #
-must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and 
+must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and
 DEST_MODULE_LOCATION and that the numbering should start at 0 (eg. DEST_MODULE_LOCATION[0]="/kernel/drivers/something/"
 DEST_MODULE_LOCATION[1]="/kernel/drivers/other/").
 .TP
@@ -513,7 +513,7 @@ it is not detected, it will add it to the modules.conf as the last alias number 
 that alias type (eg. if MODULES_CONF_ALIAS_TYPE="scsi_hostadapter", no alias
 currently exists for that module and the last scsi_hostadapter reference is 6, then
 your module will be added as "scsi_hostadapter7").  Common values for this directive
-include: 
+include:
 .B scsi_hostadapter
 ,
 .B sound-slot-
@@ -531,10 +531,10 @@ should be a comma-delimited list of those modules that are obsoleted (eg. for me
 MODULES_CONF_OBSOLETES[0]="megaraid,megaraid_2002"). When you are installing your module,
 DKMS ensures that any entries in
 .I /etc/modules.conf
-with the same 
-.B MODULES_CONF_ALIAS_TYPE 
+with the same
+.B MODULES_CONF_ALIAS_TYPE
 are changed over to the new module name.  When you are uninstalling
-your module, depending on the modules in your 
+your module, depending on the modules in your
 .I /lib/modules
 tree, DKMS will take different actions.
 If you kernel has an original_module, then modules.conf will not be touched and the non-obsolete
@@ -562,8 +562,8 @@ run strip -g against your built module to remove debug symbols from it.
 .TP
 .B PACKAGE_NAME=
 This directive is used to give the name associated with the entire package of modules.  This is the same
-name that is used with the 
-.B -m 
+name that is used with the
+.B -m
 option when building, adding, etc. and may not necessarily be the same as the MODULE_NAME.  This
 directive must be present in every dkms.conf.
 .TP
@@ -577,7 +577,7 @@ module.  If unset, it is assumed to be "make clean".
 .TP
 .B REMAKE_INITRD=
 This directive specifies whether your initrd should be remade after the module is installed
-onto the kernel.  Any text after the first character is ignored and if the first character 
+onto the kernel.  Any text after the first character is ignored and if the first character
 is not a "y" or a "Y", it is assumed that REMAKE_INITRD="no".
 .TP
 .B MODULES_CONF[#]=
@@ -597,21 +597,21 @@ be located in the patches subdirectory of your source directory (
 ).  If any patch fails to apply, the build will be halted and the rejections can be
 inspected in
 .I /var/dkms/<module>/<module-version>/build/.
-If a PATCH should only be applied conditionally, the 
+If a PATCH should only be applied conditionally, the
 .B PATCH_MATCH[#]
-array should be used, and a corresponding regular expression should be placed in 
+array should be used, and a corresponding regular expression should be placed in
 .B PATCH_MATCH[#]
-which will alert dkms to only use that 
+which will alert dkms to only use that
 .B PATCH[#]
 if the regular expression matches the kernel which the module is currently being built for.
 .TP
 .B PATCH_MATCH[#]=
-See the above description for 
+See the above description for
 .B PATCH[#]
 directives. If you only want a patch applied in certain scenarios, the
 .B PATCH_MATCH
 array should be utilized by giving a regular expression which matches
-the kernels you intend the corresponding 
+the kernels you intend the corresponding
 .B PATCH[#]
 to be applied to before building that module.
 .TP
@@ -621,10 +621,10 @@ If this directive is set to
 then the service
 .I /etc/rc.d/init.d/dkms_autoinstaller
 will automatically try to install this module on any kernel you boot into.  See the section
-on 
+on
 .B dkms_autoinstaller
 for more information.
-.TP 
+.TP
 .B BUILD_EXCLUSIVE_KERNEL=
 This optional directive allows you to specify a regular expression which defines
 the subset of kernels which DKMS is allowed to build your module for.  If the kernel
@@ -672,20 +672,20 @@ install will be aborted.  This is typically used to perform a custom
 version comparison.
 .TP
 .SH DKMS.CONF VARIABLES
-Within your 
+Within your
 .I dkms.conf
-file, you can use certain variables which will be replaced at run-time with their 
+file, you can use certain variables which will be replaced at run-time with their
 values.
 .TP
 .B $kernelver
 This variable can be used within a directive definition and during use, the actual kernel
 version in question will be substituted in its place.  This is especially useful in MAKE
-commands when specifying which INCLUDE statements should be used when compiling your 
+commands when specifying which INCLUDE statements should be used when compiling your
 module (eg. MAKE="make all INCLUDEDIR=/lib/modules/${kernelver}/build/include").
 .TP
 .B $dkms_tree
 See the section on /etc/dkms/framework.conf for more information.  This variable represents
-the location of the DKMS tree on the local system.  By default this is 
+the location of the DKMS tree on the local system.  By default this is
 .I /var/dkms
 , but this value should not be hard-coded into a dkms.conf in the event that the local user
 has changed it on their system.
@@ -701,7 +701,7 @@ has changed it on their system.
 This variable holds the value of the location of your kernel source directory.  Usually, this
 will be
 .I /lib/modules/$kernelver/build
-, unless otherwise specified with the 
+, unless otherwise specified with the
 .B --kernelsourcedir
 option.
 .SH /etc/dkms/framework.conf
@@ -709,7 +709,7 @@ This configuration file controls how the overall DKMS framework handles.  It is 
 in everytime the dkms command is run.  Mainly it can currently be used to set different
 default values for the variables
 .B $dkms_tree
-, 
+,
 .B $source_tree
 and
 .B $install_tree
@@ -721,13 +721,13 @@ This boot-time service automatically installs any module which has
 .B AUTOINSTALL="yes"
 set in its
 .B dkms.conf
-file.  The service works quite simply and if multiple versions of a module are in 
+file.  The service works quite simply and if multiple versions of a module are in
 your system's DKMS tree, it will not do anything and instead explain that manual
 intervention is required.
 .SH MODULES.CONF / MODPROBE.CONF CHANGES
-Changes that your module will make to 
+Changes that your module will make to
 .I /etc/modules.conf
-or 
+or
 .I /etc/modprobe.conf
 should be specified with the
 .B MODULES_CONF_ALIAS_TYPE[#]
@@ -735,33 +735,33 @@ should be specified with the
 .B MODULES_CONF_OBSOLETES[#]
 and the
 .B MODULES_CONF[#]
-directive arrays.  These arrays should also be used even if your distro uses 
+directive arrays.  These arrays should also be used even if your distro uses
 .I /etc/sysconfig/kernel
 to track kernel modules.
 
 When the first module is installed upon the first kernel within the user's system,
-these entries in 
+these entries in
 .B MODULES_CONF[#]
-are automatically added to 
+are automatically added to
 .I /etc/modules.conf
-and if 
+and if
 .B REMAKE_INITRD
 is specified, then the user's initrd is then remade.  Subsequently, as your modules are then
 later removed from the user's system, until the final module/version combination is removed
-from the final kernel version, those references in 
+from the final kernel version, those references in
 .I modules.conf
 will remain.  Once the last module/version combination is removed, those references are then
 removed.
 
 As modules/versions are removed and initrds are remade, one of three things will happen if you
-have specified a 
+have specified a
 .B MODULES_CONF_ALIAS_TYPE.
 If no original_module exists for that kernel, and no
 .B MODULES_CONF_OBSOLETES
-modules are found in that kernel too, the 
+modules are found in that kernel too, the
 .I modules.conf
-alias references will temporarily be removed so that the initrd will successfully 
-remake.  Once the initrd is remade, however; those references are then automatically put 
+alias references will temporarily be removed so that the initrd will successfully
+remake.  Once the initrd is remade, however; those references are then automatically put
 back into
 .I modules.conf
 (unless you are removing the last instance of the module on the last kernel).
@@ -769,24 +769,24 @@ However, if no original_module exists, but there is an OBSOLETE module
 found within that kernel, the alias reference is temporarily shifted to point to the
 OBSOLETE module so that the initrd can be remade.  After it is remade, it then automatically
 puts back the alias reference (unless you are removing the last instance of the module
-on the last kernel).  Lastly, if an original_module does exist for the kernel 
-version, then 
+on the last kernel).  Lastly, if an original_module does exist for the kernel
+version, then
 .I modules.conf
 is not touched and all references persist (even if you are removing the last instance of the
-module on the last kernel).  
+module on the last kernel).
 
-Certain module installations might not only require adding references to 
+Certain module installations might not only require adding references to
 .I modules.conf
 but also require removing conflicting references that might exist in the user's system.  If this
 is the case, the
 .B MODULES_CONF_OBSOLETES[#]
 directive should be utilized to remove these references.  More information about this directive
-can be found in the 
+can be found in the
 .B DKMS.CONF
 section of this man page.
 
 Note that the end state of your modules.conf file very much depends on what kernel modules exist
-in the final kernel you remove your DKMS module from.  This is an imperfect system caused by the 
+in the final kernel you remove your DKMS module from.  This is an imperfect system caused by the
 fact that there is only one modules.conf file for every kernel on your system even though various
 kernels use different modules.  In a perfect world, there would be one modules.conf file for
 every kernel (just like System.map).
@@ -798,7 +798,7 @@ file packaged with
 as an example for what your RPM spec file might look like.
 Creating RPMs which utilize
 .B dkms
-is a fairly straight-forward process.  The RPM need only to install the source into 
+is a fairly straight-forward process.  The RPM need only to install the source into
 .I /usr/src/<module>-<module-version>/
 and then employ
 .B dkms
@@ -806,14 +806,14 @@ itself to do all the work of installation.  As such, the RPM should first untar 
 this directory.  From here, within the RPM
 .I .spec
 file, a
-.B dkms add 
+.B dkms add
 should be called (remember to use the --rpm_safe_upgrade flag during the add) followed by a
 .B dkms build
 followed by a
-.B dkms install. 
+.B dkms install.
 Your
 .I dkms.conf
-file should be placed within the 
+file should be placed within the
 .I /usr/src/<module>-<module-version>/
 directory.
 
@@ -832,13 +832,13 @@ releases of an RPM for the same <module-version>, DKMS does not do anything dumb
 a smooth upgrade from megaraid-2.09-5.noarch.rpm to megaraid-2.09-6.noarch.rpm).
 
 It should be noted that a binary RPM which contains source is not a traditional practice.
-However, given the benefits of 
+However, given the benefits of
 .B dkms
 it hopefully will become so.  As the RPM created which utilizes
 .B dkms
-is not architecture specific, 
+is not architecture specific,
 .B BuildArch: noarch
-should be specified in the 
+should be specified in the
 .I .spec
 file to indicate that the package can work regardless of the system architecture.  Also
 note that DKMS RPM upgrades (-U option) will automatically work because of the structure
