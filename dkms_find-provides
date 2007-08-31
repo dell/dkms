@@ -8,23 +8,6 @@
 
 IFS=$'\n'
 
-# 
-# Initially, dont generate modalias() lines for kernel package. This needs
-# additional discussion. Would like to eventually add them for 
-# completeness, so that we can determine when drivers are folded into 
-# mainline kernel.
-# 
-case "$1" in
-kernel-module-*)    ;; # Fedora kernel module package names start with
-		       # kernel-module.
-kernel*)	   is_kernel_package=1 ;;
-esac
-
-if ! [ -z "$is_kernel_package" ]; then
-    cat > /dev/null
-    exit 0
-fi
-
 print_modaliases() {
     declare class=$1 variants=$2 pos=$3
     if [ -n "$variants" ]; then
