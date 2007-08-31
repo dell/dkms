@@ -9,7 +9,7 @@ contain a dkms.conf file within them.
 The DKMS project (and any updates) can be found at: http://linux.dell.com/dkms/
 
 Table of Contents
-0. Installation of DKMS via RPM 
+0. Installation of DKMS via RPM
 1. Installation via RPM
 2. Installation via DKMS Tarballs
 3. Installation on Systems with no Module Source and/or Compiler
@@ -31,7 +31,7 @@ This is a prerequisite to installing DKMS-enabled module RPMs.
 1. Installation via RPM
 #######################
 
-To install a DKMS enabled module RPM, you simply install it like any other 
+To install a DKMS enabled module RPM, you simply install it like any other
 RPM:
 
 	rpm -ivh <module>-<version>-<rpmversion>.noarch.rpm
@@ -67,12 +67,12 @@ install directly from the following:
 	   binaries and a dkms.conf file
 	c. Specially created DKMS tarballs with pre-built module binaries and a
 	   dkms.conf file
-	d. Manual placement of module source and dkms.conf file into 
+	d. Manual placement of module source and dkms.conf file into
 	   /usr/src/<module>-<moduleversion>/ directory
 
 In order to load any tarball into the DKMS tree, you must use the following
 command:
-	
+
 	dkms ldtarball --archive=/path/to/dkms_enabled.tar.gz
 
 This command will first inspect the tarball to ensure that it contains a
@@ -82,7 +82,7 @@ anywhere within the archive, then the ldtarball will fail.
 From here, it will place the source in the tarball into /usr/src/<module>-
 <moduleversion>/.  If source already exists in the directory, it will not
 overwrite it unless the --force option is specified.  If the tarball is of type
-"c" above and does not contain source, it will only continue to load the 
+"c" above and does not contain source, it will only continue to load the
 tarball if existing module source is found in /usr/src/<module>-<moduleversion>/
 or if the --force option is specified.
 
@@ -93,7 +93,7 @@ short of installing them.  Thus, all pre-built binaries will then be of in the
 `dkms install` command to install any of these binaries.
 
 To create a tarball of type "a" above, you need only to take module source and a
-dkms.conf file for that module and create a tarball from them.  Tarballs of 
+dkms.conf file for that module and create a tarball from them.  Tarballs of
 type "b" or type "c" are created with the `dkms mktarball` command.  To create
 a type "c" tarball, you must specify the flag --binaries-only with the
 mktarball.
@@ -114,7 +114,7 @@ because of this.  To avoid this, use the --force flag, as such:
 	dkms ldtarball --archive=/path/to/dkms_enabled.tar.gz --force
 
 This will load the pre-built binaries into the dkms tree, and create the
-directory /usr/src/<module>-<moduleversion>/ which will only contain the 
+directory /usr/src/<module>-<moduleversion>/ which will only contain the
 module's dkms.conf configuration file.  Once the tarball is loaded, you can then
 use `dkms install` to install any of the pre-built modules.
 
@@ -130,7 +130,7 @@ Once DKMS is installed, you can reference its man page for further information
 on different DKMS options and also to understand the formatting of a module's
 dkms.conf configuration file.
 
-You may also wish to join the dkms-devel public mailing-list at 
+You may also wish to join the dkms-devel public mailing-list at
 http://lists.us.dell.com/.
 
 The DKMS project is located at: http://linux.dell.com/dkms/

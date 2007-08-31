@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# This script upgrades DKMS version <1.90 to the new DKMS structure which 
-# accounts for system architecture.  
+# This script upgrades DKMS version <1.90 to the new DKMS structure which
+# accounts for system architecture.
 #
 # Along with using this script to update your DKMS tree, you must also
 # update to a version of DKMS >=1.90.
-# 
+#
 # DKMS v2.0 will be the first stable release to have arch support.
 
 
@@ -43,7 +43,7 @@ if [ -n "$dkms_version" ]; then
 		source_tree="/usr/src"
 		tmp_location="/tmp"
 		dkms_frameworkconf="/etc/dkms_framework.conf"
-                                                                                                                            
+
 		# Source in /etc/dkms_framework.conf
 		. $dkms_frameworkconf 2>/dev/null
 
@@ -54,12 +54,12 @@ if [ -n "$dkms_version" ]; then
 			dir_to_fix=`echo $directory | sed 's#/module$##'`
 			echo "Creating $dir_to_fix/$arch_used..."
 			mkdir $dir_to_fix/$arch_used
-			mv -f $dir_to_fix/* $dir_to_fix/$arch_used 2>/dev/null 
+			mv -f $dir_to_fix/* $dir_to_fix/$arch_used 2>/dev/null
 		done
 
 		# Fix symlinks
 		echo ""
-		echo "Fixing symlinks."	
+		echo "Fixing symlinks."
 		for symlink in `find $dkms_tree -type l -name "kernel*" -mindepth 2 -maxdepth 2`; do
 			symlink_kernelname=`echo $symlink | sed 's#.*/kernel-##'`
 			dir_of_symlink=`echo $symlink | sed 's#/kernel-.*$##'`

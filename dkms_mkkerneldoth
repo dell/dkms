@@ -117,7 +117,7 @@ if [ -n "$KERNEL_ARCH" ]; then
 
 #ifndef __BOOT_KERNEL_VMNIX
 #define __BOOT_KERNEL_VMNIX $VMNIX
-#endif 
+#endif
 #endif
 EOF
 fi

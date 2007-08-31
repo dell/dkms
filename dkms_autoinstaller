@@ -63,10 +63,10 @@ case "$1" in
 
         # Iterate over the modules
 	for module_in_tree in $modules_needing_status; do
-	    
+
 	    # Make sure its in the tree
 	    if [ -d "$dkms_tree/$module_in_tree" ]; then
-		
+
   	        # Determine which versions to show status for
 		do_autoinstall=""
 		version_count=0
@@ -76,7 +76,7 @@ case "$1" in
 		    if [ -d "$dkms_tree/$module_in_tree/$filename" ] && ! [ -h "$dkms_tree/$module_in_tree/$filename" ] && [ "$filename" != "original_module" ]; then
 			version_count=$(($version_count + 1))
 			version_in_tree="$filename"
-			
+
 		        # Source in its dkms.conf to see if we should autoinstall
 			AUTOINSTALL=""
 			. $dkms_tree/$module_in_tree/$version_in_tree/source/dkms.conf
