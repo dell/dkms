@@ -58,7 +58,9 @@ combine_modaliases() {
     print_modaliases "$class" "$variants" "$pos"
 }
 
-for module in $(grep -E '/lib/modules/.+\.ko$') $*; do
+get_modinfo() {
+    module=$1
+
     # | head -n1 because some modules have *two* version tags. *cough*b44*cough*
     modver=$(/sbin/modinfo -F version "$module"| head -n1)
     modver=${modver// /_}
@@ -70,6 +72,35 @@ for module in $(grep -E '/lib/modules/.+\.ko$') $*; do
     else
         /sbin/modinfo -F alias "$module" \
         | sed -nre "s,(.+),modalias(\\1),p"
+    fi
+}
+
+
+TMPDIR=$(mktemp -d /tmp/dkms-findprovides-$$-$RANDOM-XXXXXX)
+trap "rm -rf $TMPDIR"  QUIT EXIT HUP INT TERM
+
+modlist=
+for cand in $(grep -E '(/lib/modules/.+\.ko$|tgz$|tbz$|tar\.(gz|bz2)$)') $*; do
+    if echo $cand | grep -q -E '/lib/modules/.+\.ko$' > /dev/null 2>&1; then
+        modlist="$modlist $cand"
+    fi
+
+    [ -f $cand ] || continue
+
+    opts=x
+    if gzip -t $cand >/dev/null 2>&1; then
+        opts=${opts}z
+    elif bzip2 -t $cand >/dev/null 2>&1; then
+        opts=${opts}j
+    fi
+    tar ${opts}f $cand -C $TMPDIR
+done
+
+for module in $(find $TMPDIR -name \*.ko)  $modlist; do
+    if echo $module | grep -E '.ko$'; then
+        # it is a straight module
+        get_modinfo $module
+        continue
     fi
 done \
 | sort -u \
