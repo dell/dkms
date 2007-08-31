@@ -77,7 +77,7 @@ get_modinfo() {
 
 
 TMPDIR=$(mktemp -d /tmp/dkms-findprovides-$$-$RANDOM-XXXXXX)
-trap "rm -rf $TMPDIR"  QUIT EXIT HUP INT TERM
+trap "rm -rf $TMPDIR >/dev/null 2>&1"  QUIT EXIT HUP INT TERM
 
 modlist=
 for cand in $(grep -E '(/lib/modules/.+\.ko$|tgz$|tbz$|tar\.(gz|bz2)$)') $*; do
@@ -93,7 +93,7 @@ for cand in $(grep -E '(/lib/modules/.+\.ko$|tgz$|tbz$|tar\.(gz|bz2)$)') $*; do
     elif bzip2 -t $cand >/dev/null 2>&1; then
         opts=${opts}j
     fi
-    tar ${opts}f $cand -C $TMPDIR
+    tar ${opts}f $cand -C $TMPDIR > /dev/null 2>&1
 done
 
 for module in $(find $TMPDIR -name \*.ko) $modlist; do
