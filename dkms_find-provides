@@ -1,0 +1,76 @@
+#! /bin/sh
+
+# heavily based upon find-suggests.ksyms by Andreas Gruenbacher <agruen@suse.de>.
+# with modifications by Michael Brown <Michael_E_Brown@dell.com>
+#
+# -- added module versioning info to modalias() symbols
+# -- removed code which inspects spec files.
+
+IFS=$'\n'
+
+# 
+# Initially, dont generate modalias() lines for kernel package. This needs
+# additional discussion. Would like to eventually add them for 
+# completeness, so that we can determine when drivers are folded into 
+# mainline kernel.
+# 
+case "$1" in
+kernel-module-*)    ;; # Fedora kernel module package names start with
+		       # kernel-module.
+kernel*)	   is_kernel_package=1 ;;
+esac
+
+if ! [ -z "$is_kernel_package" ]; then
+    cat > /dev/null
+    exit 0
+fi
+
+print_modaliases() {
+    declare class=$1 variants=$2 pos=$3
+    if [ -n "$variants" ]; then
+	echo "${class:0:pos}[$variants]${class:pos+1}"
+    else
+	[ -z "$class" ] || echo "$class"
+    fi
+}
+
+combine_modaliases() {
+    declare tag class variants pos n
+    read class
+    while read tag; do
+	for ((n=0; n<${#class}; n++)); do
+	    if [ "*" != "${class:n:1}" -a \
+		 "${class:0:n}" = "${tag:0:n}" -a \
+		 "${class:n+1}" = "${tag:n+1}" ] &&
+	       ( [ -z "$pos" ] || [ $n = $pos ] ); then
+		variants="${variants:-${class:n:1}}${tag:n:1}"
+		pos=$n
+		break
+	    fi
+	done
+	if [ $n -eq ${#class} ]; then
+	    print_modaliases "$class" "$variants" "$pos"
+	    variants=
+	    pos=
+	    class=$tag
+	fi
+    done
+    print_modaliases "$class" "$variants" "$pos"
+}
+
+for module in $(grep -E '/lib/modules/.+\.ko$') $*; do
+    # | head -n1 because some modules have *two* version tags. *cough*b44*cough*
+    modver=$(/sbin/modinfo -F version "$module"| head -n1)
+    modver=${modver// /_}
+
+    # only add version tag if it has a version
+    if [ -n "$modver" ]; then
+        /sbin/modinfo -F alias "$module" \
+        | sed -nre "s,(.+),modalias(\\1) = $modver,p"
+    else
+        /sbin/modinfo -F alias "$module" \
+        | sed -nre "s,(.+),modalias(\\1),p"
+    fi
+done \
+| sort -u \
+| combine_modaliases

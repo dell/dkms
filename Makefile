@@ -36,6 +36,7 @@ install:
 	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms > dkms.versioned
 	mv -f dkms.versioned dkms
 	install -p -m 0755 dkms $(SBIN)
+	install -p -m 0755 dkms_find-provides $(SBIN)
 	install -p -m 0755 dkms_autoinstaller $(INITD)
 	install -p -m 0644 dkms_framework.conf $(ETC)/framework.conf
 	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
