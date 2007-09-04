@@ -78,7 +78,6 @@ make install-redhat DESTDIR=$RPM_BUILD_ROOT \
     SBIN=$RPM_BUILD_ROOT%{_sbindir} \
     VAR=$RPM_BUILD_ROOT%{_localstatedir}/lib/%{name} \
     MAN=$RPM_BUILD_ROOT%{_mandir}/man8 \
-    INITD=$RPM_BUILD_ROOT%{_initrddir} \
     ETC=$RPM_BUILD_ROOT%{_sysconfdir}/%{name} \
     BASHDIR=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d
 
