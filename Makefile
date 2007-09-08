@@ -97,7 +97,7 @@ rpm: tarball dkms.spec
 deb: tarball
 	oldpwd=$(shell pwd) ; \
 	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
-	cp $(RELEASE_STRING).tar.gz $${tmpdir}/$(RELEASE_STRING).orig.tar.gz
+	cp $(RELEASE_STRING).tar.gz $${tmpdir}/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz
 	tar -C $${tmp_dir} -xzf $(RELEASE_STRING).tar.gz ; \
 	mv $${tmp_dir}/$(RELEASE_STRING)/pkg/debian $${tmp_dir}/$(RELEASE_STRING)/debian ; \
 	cd $${tmp_dir}/$(RELEASE_STRING) ; \
