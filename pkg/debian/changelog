@@ -1,51 +1,5 @@
 dkms (2.0.17-1) unstable; urgency=low
 
-  * new upstream release
-  * bug fix putting original_module back at uninstall time.
-  * bug fix with generating Ubuntu driver disk debs.
+  * initial debian packaging for Ubuntu
 
-
- -- Matt Domsch <Matt_Domsch@dell.com>  Wed, 21 Jun 2007 18:56:00 -0600
-
-dkms (2.0.16.2-1) unstable; urgency=low
-
-  * new upstream release
-  * added .deb support and Ubuntu (Casper) driver disk exporting by
-    Mike Morgan <Michael_Morgan@dell.com>
-
- -- Matt Domsch <Matt_Domsch@dell.com>  Wed, 20 Jun 2007 14:21:00 -0600
-
-dkms (2.0.16.1-1) unstable; urgency=low
-
-  * new upstream release
-
- -- Matt Domsch <Matt_Domsch@dell.com>  Fri, 13 Apr 2007 13:54:00 -0600
-
-dkms (2.0.9.1-1) unstable; urgency=low
-
-  * New upstream release
-  * patch from Eric Devolder enables mkinitrd for Debian Sarge
-  * include debian/ directory in upstream tarball
-
- -- Matt Domsch <Matt_Domsch@dell.com>  Tue, 13 Dec 2005 16:47:58 -0600
-
-dkms (2.0.8.3-1) unstable; urgency=low
-
-  * New upstream release
-  * look to DKMS_DIRECTIVE* environment variables to override dkms.conf settings
-  * don't create/remove (unused) /var/lock/subsys/dkms files in autoinstaller
-
- -- Matt Domsch <Matt_Domsch@dell.com>  Thu,  8 Dec 2005 08:15:09 -0600
-
-dkms (2.0.8.2-2) unstable; urgency=low
-
-  * lintian suggested cleanups
-
- -- Matt Domsch <Matt_Domsch@dell.com>  Wed,  7 Dec 2005 19:03:13 -0600
-
-dkms (2.0.8.2-1) unstable; urgency=low
-
-  * Initial Release.
-
- -- Matt Domsch <Matt_Domsch@dell.com>  Wed,  7 Dec 2005 10:03:13 -0600
-
+ -- Matt Domsch <Matt_Domsch@dell.com>  Sat, 08 Sep 2007 00:20:00 -0600
