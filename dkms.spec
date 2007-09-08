@@ -79,7 +79,8 @@ make install-redhat DESTDIR=$RPM_BUILD_ROOT \
     VAR=$RPM_BUILD_ROOT%{_localstatedir}/lib/%{name} \
     MAN=$RPM_BUILD_ROOT%{_mandir}/man8 \
     ETC=$RPM_BUILD_ROOT%{_sysconfdir}/%{name} \
-    BASHDIR=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d
+    BASHDIR=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d \
+    LIBDIR=$RPM_BUILD_ROOT%{_prefix}/lib/%{name}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -87,10 +88,9 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root)
 %{_sbindir}/%{name}
-%{_sbindir}/dkms_find-provides
 %{_localstatedir}/lib/%{name}
 %{_initrddir}/dkms_autoinstaller
-%{_sbindir}/dkms_mkkerneldoth
+%{_prefix}/lib/dkms/*
 %{_mandir}/*/*
 %doc sample.spec sample.conf AUTHORS COPYING README.dkms
 %doc sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec

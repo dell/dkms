@@ -997,7 +997,7 @@ function prepare_kernel()
 
 	invoke_command "make KERNELRELEASE=$1 oldconfig" "make oldconfig" background
 	kerneldoth_contents=`cat /boot/kernel.h 2>/dev/null`
-	invoke_command "dkms_mkkerneldoth --kernelver $1 --targetarch $2 --output /boot/kernel.h" "running dkms_mkkerneldoth" background
+	invoke_command "/usr/lib/dkms/mkkerneldoth --kernelver $1 --targetarch $2 --output /boot/kernel.h" "running mkkerneldoth" background
     else
 	echo $"Running Generic preparation routine"
 	invoke_command "make mrproper" "make mrproper" background
@@ -2924,7 +2924,7 @@ make_rpm()
 	    i=$(($i + 1))
 	done
     fi
-    RPMS=`invoke_command "LC_ALL=C rpmbuild --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  /usr/sbin/dkms_find-provides\" --define \"_use_internal_dependency_generator 0\" -ba $SPECFILE 2>&1|grep ^Wrote" "rpmbuild"`
+    RPMS=`invoke_command "LC_ALL=C rpmbuild --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  /usr/lib/dkms/find-provides\" --define \"_use_internal_dependency_generator 0\" -ba $SPECFILE 2>&1|grep ^Wrote" "rpmbuild"`
     if [ "$?" -eq 0 ]; then
 	echo $""
 	echo $"$RPMS"

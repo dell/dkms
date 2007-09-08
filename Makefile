@@ -2,7 +2,7 @@ RELEASE_DATE := "21-Jun-2007"
 RELEASE_MAJOR := 2
 RELEASE_MINOR := 0
 RELEASE_SUBLEVEL := 17
-RELEASE_EXTRALEVEL :=
+RELEASE_EXTRALEVEL := .1
 RELEASE_NAME := dkms
 RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_SUBLEVEL)$(RELEASE_EXTRALEVEL)
 RELEASE_STRING := $(RELEASE_NAME)-$(RELEASE_VERSION)
@@ -12,6 +12,7 @@ ETC = $(DESTDIR)/etc/dkms
 VAR = $(DESTDIR)/var/lib/dkms
 MAN = $(DESTDIR)/usr/share/man/man8
 INITD = $(DESTDIR)/etc/init.d
+LIBDIR = $(DESTDIR)/usr/lib/dkms
 BASHDIR = $(DESTDIR)/etc/bash_completion.d
 DOCDIR = $(DESTDIR)/usr/share/doc/dkms
 KCONF = $(DESTDIR)/etc/kernel
@@ -25,18 +26,16 @@ clean:
 
 clean-dpkg: clean
 	rm -f debian/dkms_autoinstaller.init
-	rm -f debian/conffiles
 
 copy-init:
 	install -m 755 dkms_autoinstaller debian/dkms_autoinstaller.init
-	(cd $(DESTDIR); find etc/dkms -type f) > debian/conffiles
 
 install:
-	mkdir -m 0755 -p $(VAR) $(SBIN) $(MAN) $(INITD) $(ETC) $(BASHDIR)
+	mkdir -m 0755 -p $(VAR) $(SBIN) $(MAN) $(INITD) $(ETC) $(BASHDIR) $(LIBDIR)
 	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms > dkms.versioned
 	mv -f dkms.versioned dkms
 	install -p -m 0755 dkms $(SBIN)
-	install -p -m 0755 dkms_find-provides $(SBIN)
+	install -p -m 0755 dkms_find-provides $(LIBDIR)/find-provides
 	install -p -m 0755 dkms_autoinstaller $(INITD)
 	install -p -m 0644 dkms_framework.conf $(ETC)/framework.conf
 	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
@@ -55,7 +54,7 @@ doc-perms:
 	chmod 0644 $(DOCFILES)
 
 install-redhat: install doc-perms
-	install -p -m 0755 dkms_mkkerneldoth $(SBIN)
+	install -p -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
 
 install-doc:
 	mkdir -m 0755 -p $(DOCDIR)
@@ -68,7 +67,7 @@ install-ubuntu: install copy-init install-doc
 	mkdir -m 0755 -p $(ETC)/template-dkms-mkdeb/debian
 	install -p -m 0664 template-dkms-mkdeb/Makefile $(ETC)/template-dkms-mkdeb/
 	install -p -m 0664 template-dkms-mkdeb/debian/* $(ETC)/template-dkms-mkdeb/debian/
-
+	rm $(DOCDIR)/COPYING*
 
 tarball:
 	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
@@ -98,7 +97,9 @@ rpm: tarball dkms.spec
 deb: tarball
 	oldpwd=$(shell pwd) ; \
 	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
+	cp $(RELEASE_STRING).tar.gz $${tmpdir}/$(RELEASE_STRING).orig.tar.gz
 	tar -C $${tmp_dir} -xzf $(RELEASE_STRING).tar.gz ; \
+	mv $${tmp_dir}/$(RELEASE_STRING)/pkg/debian $${tmp_dir}/$(RELEASE_STRING)/debian ; \
 	cd $${tmp_dir}/$(RELEASE_STRING) ; \
 	pdebuild --buildresult $$oldpwd/.. ; \
 	cd - ;\
