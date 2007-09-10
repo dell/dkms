@@ -1,4 +1,4 @@
-dkms (2.0.17-1) unstable; urgency=low
+dkms (2.0.17.1-1) unstable; urgency=low
 
   * initial debian packaging for Ubuntu
 
