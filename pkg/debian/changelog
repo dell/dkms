@@ -1,5 +1,5 @@
-dkms (2.0.17.1-1) unstable; urgency=low
+dkms (2.0.17.2-1) unstable; urgency=low
 
   * initial debian packaging for Ubuntu
 
- -- Matt Domsch <Matt_Domsch@dell.com>  Sat, 08 Sep 2007 00:20:00 -0600
+ -- Matt Domsch <Matt_Domsch@dell.com>  Mon, 10 Sep 2007 14:56:46 -0500

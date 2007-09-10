@@ -2,7 +2,7 @@ RELEASE_DATE := "21-Jun-2007"
 RELEASE_MAJOR := 2
 RELEASE_MINOR := 0
 RELEASE_SUBLEVEL := 17
-RELEASE_EXTRALEVEL := .1
+RELEASE_EXTRALEVEL := .2
 RELEASE_NAME := dkms
 RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_SUBLEVEL)$(RELEASE_EXTRALEVEL)
 RELEASE_STRING := $(RELEASE_NAME)-$(RELEASE_VERSION)
@@ -35,10 +35,8 @@ install:
 	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms > dkms.versioned
 	mv -f dkms.versioned dkms
 	install -p -m 0755 dkms $(SBIN)
-	install -p -m 0755 dkms_find-provides $(LIBDIR)/find-provides
 	install -p -m 0755 dkms_autoinstaller $(INITD)
 	install -p -m 0644 dkms_framework.conf $(ETC)/framework.conf
-	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
 	install -p -m 0644 dkms_dbversion $(VAR)
 	install -p -m 0644 dkms.bash-completion $(BASHDIR)/dkms
 	# install compressed manpage with proper timestamp and permissions
@@ -55,16 +53,18 @@ doc-perms:
 
 install-redhat: install doc-perms
 	install -p -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
+	install -p -m 0755 dkms_find-provides $(LIBDIR)/find-provides
+	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
 
 install-doc:
 	mkdir -m 0755 -p $(DOCDIR)
 	install -p -m 0644 $(DOCFILES) $(DOCDIR)
 
 install-ubuntu: install copy-init install-doc
-	mkdir -m 0755 -p $(KCONF)/preinst.d $(KCONF)/postinst.d
-	install -p -m 0755 debian/kernel_preinst.d_dkms  $(KCONF)/preinst.d/dkms
+	mkdir   -p -m 0755 $(KCONF)/prerm.d $(KCONF)/postinst.d
+	install -p -m 0755 debian/kernel_prerm.d_dkms  $(KCONF)/prerm.d/dkms
 	install -p -m 0755 debian/kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
-	mkdir -m 0755 -p $(ETC)/template-dkms-mkdeb/debian
+	mkdir   -p -m 0755 $(ETC)/template-dkms-mkdeb/debian
 	install -p -m 0664 template-dkms-mkdeb/Makefile $(ETC)/template-dkms-mkdeb/
 	install -p -m 0664 template-dkms-mkdeb/debian/* $(ETC)/template-dkms-mkdeb/debian/
 	rm $(DOCDIR)/COPYING*
@@ -101,6 +101,6 @@ deb: tarball
 	tar -C $${tmp_dir} -xzf $(RELEASE_STRING).tar.gz ; \
 	mv $${tmp_dir}/$(RELEASE_STRING)/pkg/debian $${tmp_dir}/$(RELEASE_STRING)/debian ; \
 	cd $${tmp_dir}/$(RELEASE_STRING) ; \
-	pdebuild --buildresult $$oldpwd/.. ; \
+	pdebuild --auto-debsign --debsign-k 92F0FC09 --buildresult $$oldpwd/.. ; \
 	cd - ;\
 	rm -rf $${tmp_dir}

@@ -2,7 +2,7 @@ Source: dkms
 Section: admin
 Priority: optional
 Maintainer: Matt Domsch <Matt_Domsch@dell.com>
-Build-Depends: debhelper (>= 5.0.42)
+Build-Depends: debhelper (>= 5)
 Standards-Version: 3.7.2
 
 Package: dkms
