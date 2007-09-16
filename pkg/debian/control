@@ -1,17 +1,18 @@
 Source: dkms
 Section: admin
 Priority: optional
-Maintainer: Matt Domsch <Matt_Domsch@dell.com>
-Build-Depends: debhelper (>= 5)
+Maintainer: Ubuntu MOTU Developers <ubuntu-motu@lists.ubuntu.com>
+XSBC-Original-Maintainer: Matt Domsch <Matt_Domsch@dell.com>
+Build-Depends: debhelper (> 5)
 Standards-Version: 3.7.2
 
 Package: dkms
 Architecture: all
 Depends: ${shlibs:Depends}, ${misc:Depends}
- gawk, modutils, cpio, bash (>> 1.99)
+ gawk, module-init-tools, bash (>> 1.99), linux-image, linux-headers
 Recommends: patch, make, gcc, fakeroot
 Description: Dynamic Kernel Module Support Framework
- This package contains the framework for the Dynamic
- Kernel Module Support (DKMS) method for installing
- module RPMS as originally developed by Dell, Inc.
- Home Page:  http://linux.dell.com/dkms
+ This package contains the framework for the Dynamic Kernel Module
+ Support (DKMS) method for installing and updating kernel modules.
+ .
+  Homepage:  http://linux.dell.com/dkms

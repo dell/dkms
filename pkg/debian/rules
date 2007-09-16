@@ -45,7 +45,7 @@ clean:
 	rm -f build-stamp configure-stamp
 
 	# Add here commands to clean up after the build process.
-	-$(MAKE) clean-dpkg
+	[ ! -f Makefile ] || $(MAKE) clean-dpkg
 
 	dh_clean 
 

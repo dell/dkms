@@ -3,6 +3,7 @@
 # We're passed the version of the kernel being installed
 inst_kern=$1
 
+if [ -x /usr/sbin/dkms ]; then
 while read line; do
    name=`echo "$line" | awk '{print $1}' | sed 's/,$//'`
    vers=`echo "$line" | awk '{print $2}' | sed 's/,$//'`
@@ -10,5 +11,6 @@ while read line; do
    echo "Uninstalling: $name $vers ($inst_kern) ($arch)"
    dkms uninstall -m $name -v $vers -k $inst_kern -a $arch
 done < <(dkms status -k $inst_kern 2>/dev/null | grep ": installed")
+fi
 
 exit 0

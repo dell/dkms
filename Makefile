@@ -1,8 +1,8 @@
-RELEASE_DATE := "21-Jun-2007"
+RELEASE_DATE := "11-Sep-2007"
 RELEASE_MAJOR := 2
 RELEASE_MINOR := 0
 RELEASE_SUBLEVEL := 17
-RELEASE_EXTRALEVEL := .2
+RELEASE_EXTRALEVEL := .3
 RELEASE_NAME := dkms
 RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_SUBLEVEL)$(RELEASE_EXTRALEVEL)
 RELEASE_STRING := $(RELEASE_NAME)-$(RELEASE_VERSION)
@@ -62,9 +62,10 @@ install-doc:
 	install -p -m 0644 $(DOCFILES) $(DOCDIR)
 
 install-ubuntu: install copy-init install-doc
-	mkdir   -p -m 0755 $(KCONF)/prerm.d $(KCONF)/postinst.d
+	mkdir   -p -m 0755 $(KCONF)/prerm.d $(KCONF)/postinst.d $(KCONF)/header_postinst.d
 	install -p -m 0755 debian/kernel_prerm.d_dkms  $(KCONF)/prerm.d/dkms
 	install -p -m 0755 debian/kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
+	install -p -m 0755 debian/kernel_postinst.d_dkms $(KCONF)/header_postinst.d/dkms
 	mkdir   -p -m 0755 $(ETC)/template-dkms-mkdeb/debian
 	install -p -m 0664 template-dkms-mkdeb/Makefile $(ETC)/template-dkms-mkdeb/
 	install -p -m 0664 template-dkms-mkdeb/debian/* $(ETC)/template-dkms-mkdeb/debian/
