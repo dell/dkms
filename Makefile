@@ -102,6 +102,7 @@ deb: tarball
 	cp $(RELEASE_STRING).tar.gz $${tmp_dir}/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz ; \
 	tar -C $${tmp_dir} -xzf $(RELEASE_STRING).tar.gz ; \
 	mv $${tmp_dir}/$(RELEASE_STRING)/pkg/debian $${tmp_dir}/$(RELEASE_STRING)/debian ; \
+	rmdir pkg/ ; \
 	cd $${tmp_dir}/$(RELEASE_STRING) ; \
 	pdebuild --auto-debsign --debsign-k 92F0FC09 --buildresult $$oldpwd/.. ; \
 	cd - ;\
