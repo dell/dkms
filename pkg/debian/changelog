@@ -1,5 +1,5 @@
-dkms (2.0.17.3-0ubuntu1) gutsy; urgency=low
+dkms (2.0.17.4-0ubuntu1) gutsy; urgency=low
 
   * initial debian packaging for Ubuntu (LP: #121676)
 
- -- Matt Domsch <Matt_Domsch@dell.com>  Mon, 11 Sep 2007 11:03:46 -0500
+ -- Matt Domsch <Matt_Domsch@dell.com>  Mon, 17 Sep 2007 09:58:46 -0500

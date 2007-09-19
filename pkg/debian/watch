@@ -1,0 +1,3 @@
+version=3
+
+http://linux.dell.com/dkms/permalink/dkms-(.*)\.tar\.gz

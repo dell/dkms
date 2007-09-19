@@ -1,8 +1,8 @@
-RELEASE_DATE := "11-Sep-2007"
+RELEASE_DATE := "19-Sep-2007"
 RELEASE_MAJOR := 2
 RELEASE_MINOR := 0
 RELEASE_SUBLEVEL := 17
-RELEASE_EXTRALEVEL := .3
+RELEASE_EXTRALEVEL := .4
 RELEASE_NAME := dkms
 RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_SUBLEVEL)$(RELEASE_EXTRALEVEL)
 RELEASE_STRING := $(RELEASE_NAME)-$(RELEASE_VERSION)
@@ -107,3 +107,17 @@ deb: tarball
 	pdebuild --auto-debsign --debsign-k 92F0FC09 --buildresult $$oldpwd/.. ; \
 	cd - ;\
 	rm -rf $${tmp_dir}
+
+sdeb: tarball
+	oldpwd=$(shell pwd) ; \
+	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
+	cp $(RELEASE_STRING).tar.gz $${tmp_dir}/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz ; \
+	tar -C $${tmp_dir} -xzf $(RELEASE_STRING).tar.gz ; \
+	mv $${tmp_dir}/$(RELEASE_STRING)/pkg/debian $${tmp_dir}/$(RELEASE_STRING)/debian ; \
+	rmdir pkg/ ; \
+	cd $${tmp_dir}/$(RELEASE_STRING) ; \
+	dpkg-buildpackage -S -sa -rfakeroot -k92F0FC09 ; \
+	mv ../dkms_* $$oldpwd/.. ; \
+	cd - ;\
+	rm -rf $${tmp_dir}
+
