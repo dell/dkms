@@ -89,7 +89,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root)
 %{_sbindir}/%{name}
 %{_localstatedir}/lib/%{name}
-%{_initrddir}/dkms_autoinstaller
+/etc/init.d/dkms_autoinstaller
 %{_prefix}/lib/dkms/*
 %{_mandir}/*/*
 %doc sample.spec sample.conf AUTHORS COPYING README.dkms
@@ -109,6 +109,9 @@ rm -rf $RPM_BUILD_ROOT
 [ $1 -lt 1 ] && /sbin/chkconfig dkms_autoinstaller off ||:
 
 %changelog
+* Wed Sep 19 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.17.4
+- upgrade to latest upstream
+
 * Wed Jun 20 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.16.2
 - updated for Ubuntu support, other bugfixes.
 
