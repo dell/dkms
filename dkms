@@ -1247,6 +1247,11 @@ function install_module()
 	fi
     fi
 
+    # Notify udev if we installed something for the currently running kernel
+    if [ -x /sbin/udevtrigger -a "${kernelver_array[0]}" == "$(uname -r)" -a "${arch_array[0]}" == "$(uname -m)" ]; then
+	/sbin/udevtrigger
+    fi
+
     echo $""
     echo $"DKMS: install Completed."
 }
