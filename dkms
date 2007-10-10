@@ -1456,9 +1456,9 @@ function possible_dest_module_locations()
     # override_dest_module_location() is what controls whether or not they're the same.
 
     local location
-    location[0]="${DEST_MODULE_LOCATION[$count]}"
-    [ "${location[0]}" != "${dest_module_location[$count]}" ] && \
-	location[1]="${dest_module_location[$count]}"
+    location[0]="${dest_module_location[$count]}"
+    [ "${DEST_MODULE_LOCATION[$count]}" != "${dest_module_location[$count]}" ] && \
+	location[1]="${DEST_MODULE_LOCATION[$count]}"
 
     echo "${location[0]} ${location[1]}"
 }
