@@ -1586,6 +1586,9 @@ function do_uninstall()
     # But only do this if it was just ACTIVE on the kernel we just uninstalled from
     [ -n "$was_active" ] && [ -n "$remake_initrd" ] && $0 status -m $module -v $module_version | grep -q "installed" && moduleconfig_add "$1"
 
+    # Run depmod because we changed /lib/modules
+    invoke_command "depmod -a ${kernelver_array[0]}" "depmod" background
+
     echo $""
     echo $"DKMS: uninstall Completed."
 }
