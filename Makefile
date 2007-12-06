@@ -17,12 +17,15 @@ BASHDIR = $(DESTDIR)/etc/bash_completion.d
 DOCDIR = $(DESTDIR)/usr/share/doc/dkms
 KCONF = $(DESTDIR)/etc/kernel
 
+#Define the top-level build directory
+  BUILDDIR := $(shell pwd)
+
 .PHONY = tarball
 
 all:
 
 clean:
-	-rm dkms-*.tar.gz dkms-*.src.rpm dkms-*.noarch.rpm *~
+	-rm -f dkms-*.tar.gz dkms-*.src.rpm dkms-*.noarch.rpm *~ dist/
 
 clean-dpkg: clean
 	rm -f debian/dkms_autoinstaller.init
@@ -71,7 +74,12 @@ install-ubuntu: install copy-init install-doc
 	install -p -m 0664 template-dkms-mkdeb/debian/* $(ETC)/template-dkms-mkdeb/debian/
 	rm $(DOCDIR)/COPYING*
 
-tarball:
+deb_destdir=$(BUILDDIR)/dist
+TARBALL=$(deb_destdir)/$(RELEASE_STRING).tar.gz
+tarball: $(TARBALL)
+
+$(TARBALL):
+	mkdir -p $(deb_destdir)
 	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
 	cp -a ../$(RELEASE_NAME) $${tmp_dir}/$(RELEASE_STRING) ; \
 	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms > $${tmp_dir}/$(RELEASE_STRING)/dkms ; \
@@ -81,14 +89,14 @@ tarball:
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.rpm -type f -exec rm -f \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.tar.gz -type f -exec rm -f \{\} \; ; \
 	sync ; sync ; sync ; \
-	tar cvzf $(RELEASE_STRING).tar.gz -C $${tmp_dir} $(RELEASE_STRING) ; \
+	tar cvzf $(TARBALL) -C $${tmp_dir} $(RELEASE_STRING) ; \
 	rm -rf $${tmp_dir} ;
 
 
-rpm: tarball dkms.spec
+rpm: $(TARBALL) dkms.spec
 	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
 	mkdir -p $${tmp_dir}/{BUILD,RPMS,SRPMS,SPECS,SOURCES} ; \
-	cp $(RELEASE_STRING).tar.gz $${tmp_dir}/SOURCES ; \
+	cp $(TARBALL) $${tmp_dir}/SOURCES ; \
 	sed "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms.spec > $${tmp_dir}/SPECS/dkms.spec ; \
 	pushd $${tmp_dir} > /dev/null 2>&1; \
 	rpmbuild -ba --define "_topdir $${tmp_dir}" SPECS/dkms.spec ; \
@@ -96,28 +104,44 @@ rpm: tarball dkms.spec
 	cp $${tmp_dir}/RPMS/noarch/* $${tmp_dir}/SRPMS/* . ; \
 	rm -rf $${tmp_dir}
 
-deb: tarball
-	oldpwd=$(shell pwd) ; \
+# This is required to ensure DIST is set when necessary
+NEEDS_DIST = 0
+ifeq ($(MAKECMDGOALS),deb)
+  NEEDS_DIST = 1
+endif
+ifeq ($(MAKECMDGOALS),sdeb)
+  NEEDS_DIST = 1
+endif
+
+ifeq ($(NEEDS_DIST), 1)
+  ifndef DIST
+  $(error "Must set DIST={gutsy,hardy,sid,...} for deb and sdeb targets")
+  endif
+endif
+
+
+deb: $(TARBALL)
 	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
-	cp $(RELEASE_STRING).tar.gz $${tmp_dir}/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz ; \
-	tar -C $${tmp_dir} -xzf $(RELEASE_STRING).tar.gz ; \
-	mv $${tmp_dir}/$(RELEASE_STRING)/pkg/debian $${tmp_dir}/$(RELEASE_STRING)/debian ; \
-	rmdir pkg/ ; \
+	cp $(TARBALL) $${tmp_dir}/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz ; \
+	tar -C $${tmp_dir} -xzf $(TARBALL) ;\
+	cp -ar $(BUILDDIR)/pkg/debian $${tmp_dir}/$(RELEASE_STRING)/debian ; \
+	sed -e "s/#DIST#/$(DIST)/g" $${tmp_dir}/$(RELEASE_STRING)/debian/changelog.in > $${tmp_dir}/$(RELEASE_STRING)/debian/changelog ; \
 	cd $${tmp_dir}/$(RELEASE_STRING) ; \
-	pdebuild --auto-debsign --debsign-k 92F0FC09 --buildresult $$oldpwd/.. ; \
+	mkdir -p $(deb_destdir)/$(DIST) ; \
+	pdebuild --use-pdebuild-internal --buildresult $(deb_destdir)/$(DIST); \
 	cd - ;\
 	rm -rf $${tmp_dir}
 
-sdeb: tarball
-	oldpwd=$(shell pwd) ; \
+sdeb: $(TARBALL)
 	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
-	cp $(RELEASE_STRING).tar.gz $${tmp_dir}/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz ; \
-	tar -C $${tmp_dir} -xzf $(RELEASE_STRING).tar.gz ; \
-	mv $${tmp_dir}/$(RELEASE_STRING)/pkg/debian $${tmp_dir}/$(RELEASE_STRING)/debian ; \
-	rmdir pkg/ ; \
+	cp $(TARBALL) $${tmp_dir}/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz ; \
+	tar -C $${tmp_dir} -xzf $(TARBALL) ; \
+	cp -ar $(BUILDDIR)/pkg/debian $${tmp_dir}/$(RELEASE_STRING)/debian ; \
+	sed -e "s/#DIST#/$(DIST)/g" $${tmp_dir}/$(RELEASE_STRING)/debian/changelog.in > $${tmp_dir}/$(RELEASE_STRING)/debian/changelog ; \
 	cd $${tmp_dir}/$(RELEASE_STRING) ; \
 	dpkg-buildpackage -S -sa -rfakeroot -k92F0FC09 ; \
-	mv ../dkms_* $$oldpwd/.. ; \
+	mkdir -p $(deb_destdir)/$(DIST) ; \
+	mv ../dkms_* $(deb_destdir)/$(DIST) ; \
 	cd - ;\
 	rm -rf $${tmp_dir}
 
