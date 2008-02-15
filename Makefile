@@ -18,7 +18,8 @@ DOCDIR = $(DESTDIR)/usr/share/doc/dkms
 KCONF = $(DESTDIR)/etc/kernel
 
 #Define the top-level build directory
-  BUILDDIR := $(shell pwd)
+BUILDDIR := $(shell pwd)
+TOPDIR := $(shell pwd)
 
 .PHONY = tarball
 
@@ -120,28 +121,24 @@ ifeq ($(NEEDS_DIST), 1)
 endif
 
 
-deb: $(TARBALL)
-	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
-	cp $(TARBALL) $${tmp_dir}/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz ; \
-	tar -C $${tmp_dir} -xzf $(TARBALL) ;\
-	cp -ar $(BUILDDIR)/pkg/debian $${tmp_dir}/$(RELEASE_STRING)/debian ; \
-	sed -e "s/#DIST#/$(DIST)/g" $${tmp_dir}/$(RELEASE_STRING)/debian/changelog.in > $${tmp_dir}/$(RELEASE_STRING)/debian/changelog ; \
-	cd $${tmp_dir}/$(RELEASE_STRING) ; \
-	mkdir -p $(deb_destdir)/$(DIST) ; \
-	pdebuild --use-pdebuild-internal --buildresult $(deb_destdir)/$(DIST); \
-	cd - ;\
-	rm -rf $${tmp_dir}
+debmagic: $(TARBALL)
+	[ -n "$$DEB_TMP_BUILDDIR" ] || (echo "Must set DEB_TMP_BUILDDIR=/tmp/... for deb and sdeb targets"; exit 1)
+	[ -n "$$DIST" ] || (echo "Must set DIST={gutsy,hardy,sid,...} for deb and sdeb targets"; exit 1)
+	[ -n "$$DIST" ] || echo "Remember to set DISTTAG='~gutsy1' for deb and sdeb targets for backports"
+	mkdir -p dist/$(DIST)
+	cp $(TARBALL) $(DEB_TMP_BUILDDIR)/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz
+	tar -C $(DEB_TMP_BUILDDIR) -xzf $(TARBALL)
+	cp -ar pkg/debian $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian
+	chmod +x $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/rules
+	sed -e "s/#DISTTAG#/$(DISTTAG)/g" -e "s/#DIST#/$(DIST)/g" $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog.in > $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog 
+	rm $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog.in 
+	cd $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING) ; \
+	pdebuild --use-pdebuild-internal --buildresult $(TOPDIR)/dist/$(DIST) ; \
+	dpkg-buildpackage -D -S -sa -rfakeroot ; \
+	mv ../$(RELEASE_NAME)_* $(TOPDIR)/dist/$(DIST) ; \
+	cd -
 
-sdeb: $(TARBALL)
-	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
-	cp $(TARBALL) $${tmp_dir}/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz ; \
-	tar -C $${tmp_dir} -xzf $(TARBALL) ; \
-	cp -ar $(BUILDDIR)/pkg/debian $${tmp_dir}/$(RELEASE_STRING)/debian ; \
-	sed -e "s/#DIST#/$(DIST)/g" $${tmp_dir}/$(RELEASE_STRING)/debian/changelog.in > $${tmp_dir}/$(RELEASE_STRING)/debian/changelog ; \
-	cd $${tmp_dir}/$(RELEASE_STRING) ; \
-	dpkg-buildpackage -S -sa -rfakeroot -k92F0FC09 ; \
-	mkdir -p $(deb_destdir)/$(DIST) ; \
-	mv ../dkms_* $(deb_destdir)/$(DIST) ; \
-	cd - ;\
+debs:
+	tmp_dir=`mktemp -d /tmp/firmware-tools.XXXXXXXX` ; \
+	make debmagic DEB_TMP_BUILDDIR=$${tmp_dir} DIST=$(DIST) DISTTAG=$(DISTTAG) ; \
 	rm -rf $${tmp_dir}
-
