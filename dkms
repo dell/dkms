@@ -157,7 +157,7 @@ function setup_kernels_arches ()
 	    arch_array[$i]=`echo $line | awk {'print $4'} | sed 's/:$//'`
 	    i=$(($i + 1))
 	done < <($0 status -m "$module" -v "$module_version" 2>/dev/null | \
-		 egrep "built|installed")
+		 egrep "built|installed" | egrep -v 'installed-weak')
     fi
 
     # Set default kernel version and arch, if none set (but only --all isn't set)
