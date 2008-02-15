@@ -1,0 +1,22 @@
+dkms (2.0.17.6-0ubuntu1#DISTTAG#) #DIST#; urgency=low
+
+  * Correct kernel uninstall trigger (LP: #192240)
+  * Call udevadm trigger if present, fall back to udevtrigger (LP: #192241)
+  * Fix uninstallation with weak modules (Red Hat BZ#429410)
+
+ -- Matt Domsch <Matt_Domsch@dell.com>  Fri, 15 Feb 2008 15:19:43 -0600
+
+dkms (2.0.17.5-0ubuntu1#DISTTAG#) #DIST#; urgency=low
+	
+  * Correct DKMS file install/uninstall problems  (LP: #151644)
+    - call udevtrigger if we install a module for the currently running kernel
+    - uninstall from /extra before DEST_MODULE_LOCATION
+    - Run depmod after uninstall
+
+ -- Matt Domsch <Matt_Domsch@dell.com>  Mon, 10 Oct 2007 16:50:00 -0500
+
+dkms (2.0.17.4-0ubuntu1) gutsy; urgency=low
+
+  * initial debian packaging for Ubuntu (LP: #121676)
+
+ -- Matt Domsch <Matt_Domsch@dell.com>  Mon, 17 Sep 2007 09:58:46 -0500
