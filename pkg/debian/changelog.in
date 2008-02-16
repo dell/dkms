@@ -6,6 +6,18 @@ dkms (2.0.17.6-0ubuntu1#DISTTAG#) #DIST#; urgency=low
 
  -- Matt Domsch <Matt_Domsch@dell.com>  Fri, 15 Feb 2008 15:19:43 -0600
 
+dkms (2.0.17.4-0ubuntu4) hardy; urgency=low
+
+  * Fix -x call.
+
+ -- Scott James Remnant <scott@ubuntu.com>  Fri, 14 Dec 2007 16:52:51 +0000
+
+dkms (2.0.17.4-0ubuntu3) hardy; urgency=low
+
+  * dkms: call udevadm instead of udevtrigger
+
+ -- Scott James Remnant <scott@ubuntu.com>  Fri, 14 Dec 2007 16:15:13 +0000
+
 dkms (2.0.17.5-0ubuntu1#DISTTAG#) #DIST#; urgency=low
 	
   * Correct DKMS file install/uninstall problems  (LP: #151644)
