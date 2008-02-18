@@ -1,10 +1,14 @@
 dkms (2.0.17.6-0ubuntu1#DISTTAG#) #DIST#; urgency=low
 
+  [ Matt Domsch ]
   * Correct kernel uninstall trigger (LP: #192240)
   * Call udevadm trigger if present, fall back to udevtrigger (LP: #192241)
   * Fix uninstallation with weak modules (Red Hat BZ#429410)
+  * debian/control:
+    - Update standards version to 3.7.3
+    - Add Vcs-git repository.
 
- -- Matt Domsch <Matt_Domsch@dell.com>  Fri, 15 Feb 2008 15:19:43 -0600
+ -- Mario Limonciello <mario_limonciello@dell.com>  Mon, 18 Feb 2008 09:40:18 -0600
 
 dkms (2.0.17.4-0ubuntu4) hardy; urgency=low
 
