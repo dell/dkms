@@ -2949,7 +2949,7 @@ make_rpm()
 
 function preproc_file()
 {
-    local date_str=`date "+%a, %d %b %Y %H:%M:%S %z"`
+    local date_str="$(date -R)"
     echo "modifying $1..."
     sed -e "s/MODULE_NAME/$module/" \
         -e "s/MODULE_VERSION/$module_version/" \
