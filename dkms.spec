@@ -94,9 +94,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/*/*
 %doc sample.spec sample.conf AUTHORS COPYING README.dkms
 %doc sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
-%dir %{_sysconfdir}/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}/framework.conf
 %config(noreplace) %{_sysconfdir}/%{name}/template-dkms-mkrpm.spec
+%config(noreplace) %{_sysconfdir}/kernel/postinst.d/%{name}
+%config(noreplace) %{_sysconfdir}/kernel/prerm.d/%{name}
 %{_sysconfdir}/bash_completion.d/%{name}
 
 %post
@@ -109,6 +110,15 @@ rm -rf $RPM_BUILD_ROOT
 [ $1 -lt 1 ] && /sbin/chkconfig dkms_autoinstaller off ||:
 
 %changelog
+* Fri Feb 15 2008 Matt Domsch <Matt_Domsch@dell.com> 2.0.17.6
+- call udevadm trigger instead of udevtrigger for newer udev (Launchpad #192241)
+- omit installed-weak modules from remove --all (Red Hat BZ#429410)
+
+* Wed Oct 10 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.17.5
+- call udevtrigger if we install a module for the currently running kernel
+- uninstall from /extra before DEST_MODULE_LOCATION (Red Hat BZ#264981)
+- Run depmod after uninstall
+
 * Wed Sep 19 2007 Matt Domsch <Matt_Domsch@dell.com> 2.0.17.4
 - upgrade to latest upstream
 
