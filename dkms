@@ -2934,17 +2934,29 @@ make_rpm()
 	    i=$(($i + 1))
 	done
     fi
-    RPMS=`invoke_command "LC_ALL=C rpmbuild --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  /usr/lib/dkms/find-provides\" --define \"_use_internal_dependency_generator 0\" -ba $SPECFILE 2>&1|grep ^Wrote" "rpmbuild"`
+
+    local RC=0
+    local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+    trap 'rm -rf $temp_dir_name' EXIT HUP TERM
+    mkdir -p ${temp_dir_name}/{BUILD,RPMS,SRPMS,SPECS,SOURCES}
+    cp ${SPECFILE} ${temp_dir_name}/SPECS/dkms_mkrpm.spec
+    invoke_command "LC_ALL=C rpmbuild --define \"_topdir ${temp_dir_name}\" --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  /usr/lib/dkms/find-provides\" --define \"_use_internal_dependency_generator 0\" -ba ${temp_dir_name}/SPECS/dkms_mkrpm.spec > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
     if [ "$?" -eq 0 ]; then
+	mkdir -p ${rpm_basedir}
+	cp -a ${temp_dir_name}/SRPMS/* ${temp_dir_name}/RPMS/*/* ${rpm_basedir}/
 	echo $""
-	echo $"$RPMS"
+	cat ${temp_dir_name}/rpmbuild.log | grep ^Wrote | sed -e "s:${temp_dir_name}/:${rpm_basedir}/:" -e 's:SRPMS/::' -e 's:RPMS/.*/::'
 	echo $""
         echo $"DKMS: mkrpm Completed."
     else
 	echo $"" >&2
 	echo $"Error! There was a problem creating your rpm." >&2
-	exit 7
+	cat ${temp_dir_name}/rpmbuild.log >&2
+	RC=7
     fi
+    rm -rf $temp_dir_name
+    trap > /dev/null 2>&1
+    [ ${RC} -ne 0 ] && exit ${RC}
 }
 
 function preproc_file()
