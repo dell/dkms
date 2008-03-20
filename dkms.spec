@@ -96,8 +96,8 @@ rm -rf $RPM_BUILD_ROOT
 %doc sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
 %config(noreplace) %{_sysconfdir}/%{name}/framework.conf
 %config(noreplace) %{_sysconfdir}/%{name}/template-dkms-mkrpm.spec
-%config(noreplace) %{_sysconfdir}/kernel/postinst.d/%{name}
-%config(noreplace) %{_sysconfdir}/kernel/prerm.d/%{name}
+%{_sysconfdir}/kernel/postinst.d/%{name}
+%{_sysconfdir}/kernel/prerm.d/%{name}
 %{_sysconfdir}/bash_completion.d/%{name}
 
 %post
