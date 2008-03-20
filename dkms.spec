@@ -110,6 +110,12 @@ rm -rf $RPM_BUILD_ROOT
 [ $1 -lt 1 ] && /sbin/chkconfig dkms_autoinstaller off ||:
 
 %changelog
+* Thu Mar 20 2008 Matt Domsch <Matt_Domsch@dell.com> 2.0.18
+- don't include dist/ in tarball
+- use /etc/kernel/{prerm,postinst}.d/dkms in RPMs now too
+- mkrpm: display rpmbuild log on error, write RPMs to $dkms_tree/$module/$module_version/rpm
+- clarify license in spec to GPLv2+
+
 * Fri Feb 15 2008 Matt Domsch <Matt_Domsch@dell.com> 2.0.17.6
 - call udevadm trigger instead of udevtrigger for newer udev (Launchpad #192241)
 - omit installed-weak modules from remove --all (Red Hat BZ#429410)

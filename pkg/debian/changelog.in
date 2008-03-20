@@ -1,3 +1,13 @@
+dkms (2.0.18-0ubuntu1#DISTTAG#) #DIST#; urgency=low
+  [ Matt Domsch ]
+  * use 'date -R' in mkdeb creating debian/changelog
+  * RPM:
+    - use /etc/kernel/{prerm,postinst}.d/dkms in RPMs now too
+    - mkrpm: display rpmbuild log on error, write RPMs $dkms_tree
+    - clarify license in spec to GPLv2+
+
+ -- Mario Limonciello <mario_limonciello@dell.com>  Thu, 20 Mar 2008 14:00:49 -0500
+
 dkms (2.0.17.6-0ubuntu1#DISTTAG#) #DIST#; urgency=low
 
   [ Matt Domsch ]
