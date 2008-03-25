@@ -26,7 +26,7 @@ TOPDIR := $(shell pwd)
 all:
 
 clean:
-	-rm -f dkms-*.tar.gz dkms-*.src.rpm dkms-*.noarch.rpm *~ dist/
+	-rm -f dkms-*.tar.gz dkms-*.src.rpm dkms-*.noarch.rpm *~ dist/ dkms-freshmeat.txt
 
 clean-dpkg: clean
 	rm -f debian/dkms_autoinstaller.init
@@ -90,6 +90,7 @@ $(TARBALL):
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name \*~ -type f -exec rm -f \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.rpm -type f -exec rm -f \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.tar.gz -type f -exec rm -f \{\} \; ; \
+	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms-freshmeat.txt -type f -exec rm -f \{\} \; ; \
 	sync ; sync ; sync ; \
 	tar cvzf $(TARBALL) -C $${tmp_dir} $(RELEASE_STRING) ; \
 	rm -rf $${tmp_dir} ;
@@ -143,3 +144,6 @@ debs:
 	tmp_dir=`mktemp -d /tmp/firmware-tools.XXXXXXXX` ; \
 	make debmagic DEB_TMP_BUILDDIR=$${tmp_dir} DIST=$(DIST) DISTTAG=$(DISTTAG) ; \
 	rm -rf $${tmp_dir}
+
+fm:
+	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms-freshmeat.txt.in > dkms-freshmeat.txt

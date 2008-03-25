@@ -1,0 +1,11 @@
+Project: dkms
+Branch: Default
+Home-Page-URL: http://linux.dell.com/dkms/dkms.shtml
+Changelog-URL: http://linux.dell.com/git/dkms.git/?p=dkms.git;a=shortlog
+Mailing-List-URL: http://lists.us.dell.com/mailman/listinfo/dkms-devel
+Hide: N
+Release-Focus: Minor feature enhancements
+Version: [INSERT_VERSION_HERE]
+Gzipped-Tar-URL: http://linux.dell.com/dkms/permalink/dkms-[INSERT_VERSION_HERE].tar.gz
+RPM-URL: http://linux.dell.com/dkms/permalink/dkms-[INSERT_VERSION_HERE]-1.noarch.rpm
+Debian-URL: http://linux.dell.com/dkms/permalink/dkms_[INSERT_VERSION_HERE]-0ubuntu1_all.deb
