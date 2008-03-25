@@ -110,6 +110,9 @@ rm -rf $RPM_BUILD_ROOT
 [ $1 -lt 1 ] && /sbin/chkconfig dkms_autoinstaller off ||:
 
 %changelog
+* Tue Mar 25 2008 Matt Domsch <Matt_Domsch@dell.com> 2.0.19
+- fix dkms.spec file/dir ownerships yet again
+
 * Thu Mar 20 2008 Matt Domsch <Matt_Domsch@dell.com> 2.0.18
 - don't include dist/ in tarball
 - use /etc/kernel/{prerm,postinst}.d/dkms in RPMs now too
