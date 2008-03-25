@@ -90,12 +90,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_sbindir}/%{name}
 %{_localstatedir}/lib/%{name}
 /etc/init.d/dkms_autoinstaller
-%{_prefix}/lib/dkms/*
+%{_prefix}/lib/%{name}
 %{_mandir}/*/*
+%config(noreplace) %{_sysconfdir}/%{name}
 %doc sample.spec sample.conf AUTHORS COPYING README.dkms
 %doc sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
-%config(noreplace) %{_sysconfdir}/%{name}/framework.conf
-%config(noreplace) %{_sysconfdir}/%{name}/template-dkms-mkrpm.spec
+# these dirs are for plugins - owned by other packages
 %{_sysconfdir}/kernel/postinst.d/%{name}
 %{_sysconfdir}/kernel/prerm.d/%{name}
 %{_sysconfdir}/bash_completion.d/%{name}
