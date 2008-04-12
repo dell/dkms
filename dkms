@@ -2127,6 +2127,7 @@ make_redhat_driver_disk()
 		rm -rf $cpioarchive_dir_name
 		exit 5
 	    fi
+	    # FIXME: add check for KMP binary RPMs to include in the driver disk
 	    if [ -z "$kernel_version_list" ]; then
 		kernel_version_list="kernel${kernelver_array[$i]}-${arch_array[$i]}"
 	    else
@@ -2200,6 +2201,8 @@ make_redhat_driver_disk()
     done
     [ -e ./modules.alias ] && cp -f ./modules.alias "$driver_disk_dir/"
 
+    # FIXME: add rpms/ directory, copy in KMP RPMs, run createrepo --pretty
+
     cd - >/dev/null
     rm -rf "$cpioarchive_dir_name"
 
@@ -2255,7 +2258,7 @@ make_suse_driver_disk()
 				rm -rf $temp_dir_name
 				exit 5
 			fi
-
+                        # FIXME: add check for KMP binary RPMs to include in the driver disk
 			suse_arch=${arch_array[$i]}
 			case $suse_arch in
 				i?86)
@@ -2299,6 +2302,7 @@ make_suse_driver_disk()
 		# ---
 		count=$(($count+1))
 	done
+        # FIXME: add suse-equivalent rpms/ directory, copy in KMP RPMs, run createrepo --pretty
 
 	mkdir -p "$image_dir"
 	rm -f "$image_dir/$image_name"
@@ -3189,6 +3193,7 @@ function make_kmp()
 	echo $"Error! There was a problem creating your KMP source rpm." >&2
 	exit 7
     fi
+    # FIXME: hand SRPM to mock or build system to build
 }
 
 #############################
