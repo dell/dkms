@@ -193,6 +193,12 @@ function setup_kernels_arches ()
     done
 }
 
+function do_depmod()
+{
+    # $1 = kernel version
+    depmod -au "$1" -F "/boot/System.map-$1"
+}
+
 function remake_initrd()
 {
     # $1 = kernel version
@@ -1213,25 +1219,22 @@ function install_module()
     moduleconfig_add "${kernelver_array[0]}"
     etc_sysconfig_kernel_modify "add"
 
-    # Run depmod if System.map-${kernelver_array[0]} exists
-    if [ -e "/boot/System.map-${kernelver_array[0]}" ]; then
-	invoke_command "depmod -au ${kernelver_array[0]} -F /boot/System.map-${kernelver_array[0]}" "depmod" background
-	if [ "$?" -ne 0 ]; then
-	    local unresolved_symbols="`depmod -a ${kernelver_array[0]} -F /boot/System.map-${kernelver_array[0]} 2>&1`"
-	    local count=0
-	    while [ "$count" -lt "${#built_module_name[@]}" ]; do
-		if echo "$unresolved_symbols" | grep -q "${dest_module_name[$count]}$module_suffix$"; then
-		    echo $""
-		    echo $"Problems with depmod detected.  Automatically uninstalling this module."
-		    sleep 2
-		    do_uninstall "${kernelver_array[0]}" "${arch_array[0]}"
-		    echo $""
-		    echo $"DKMS: Install Failed (depmod problems).  Module rolled back to built state."
-		    exit 6
-		fi
-		count=$(($count + 1))
-	    done
-	fi
+    invoke_command "do_depmod ${kernelver_array[0]}" "depmod" background
+    if [ "$?" -ne 0 ]; then
+	local unresolved_symbols="$(do_depmod ${kernelver_array[0]} 2>&1)"
+	local count=0
+	while [ "$count" -lt "${#built_module_name[@]}" ]; do
+	    if echo "$unresolved_symbols" | grep -q "${dest_module_name[$count]}$module_suffix$"; then
+		echo $""
+		echo $"Problems with depmod detected.  Automatically uninstalling this module."
+		sleep 2
+		do_uninstall "${kernelver_array[0]}" "${arch_array[0]}"
+		echo $""
+		echo $"DKMS: Install Failed (depmod problems).  Module rolled back to built state."
+		exit 6
+	    fi
+	    count=$(($count + 1))
+	done
     fi
 
     # Do remake_initrd things (save old initrd)
@@ -1540,7 +1543,7 @@ function do_uninstall()
 		    [ `$0 status -m $module -v $module_version | \
 			grep -c "installed"` -eq 1 ]; then
 		    echo $""
-		    moduleconfig_remove "${kernelver_array[0]}"
+		    moduleconfig_remove "$1"
 		fi
 	    fi
 	    count=$(($count+1))
@@ -1557,6 +1560,9 @@ function do_uninstall()
 	echo $"Running the post_remove script:"
 	$dkms_tree/$module/$module_version/source/$post_remove
     fi
+
+    # Run depmod because we changed /lib/modules
+    invoke_command "do_depmod $1" "depmod" background
 
     # Do remake_initrd things (remake initrd)
     if [ -n "$remake_initrd" ] && [ -n "$was_active" ]; then
@@ -1587,9 +1593,6 @@ function do_uninstall()
     # Re-add entries to modules.conf if this module/version is still installed on another kernel
     # But only do this if it was just ACTIVE on the kernel we just uninstalled from
     [ -n "$was_active" ] && [ -n "$remake_initrd" ] && $0 status -m $module -v $module_version | grep -q "installed" && moduleconfig_add "$1"
-
-    # Run depmod because we changed /lib/modules
-    invoke_command "depmod -a ${kernelver_array[0]}" "depmod" background
 
     echo $""
     echo $"DKMS: uninstall Completed."
@@ -2127,7 +2130,6 @@ make_redhat_driver_disk()
 		rm -rf $cpioarchive_dir_name
 		exit 5
 	    fi
-	    # FIXME: add check for KMP binary RPMs to include in the driver disk
 	    if [ -z "$kernel_version_list" ]; then
 		kernel_version_list="kernel${kernelver_array[$i]}-${arch_array[$i]}"
 	    else
@@ -2201,8 +2203,6 @@ make_redhat_driver_disk()
     done
     [ -e ./modules.alias ] && cp -f ./modules.alias "$driver_disk_dir/"
 
-    # FIXME: add rpms/ directory, copy in KMP RPMs, run createrepo --pretty
-
     cd - >/dev/null
     rm -rf "$cpioarchive_dir_name"
 
@@ -2258,7 +2258,7 @@ make_suse_driver_disk()
 				rm -rf $temp_dir_name
 				exit 5
 			fi
-                        # FIXME: add check for KMP binary RPMs to include in the driver disk
+
 			suse_arch=${arch_array[$i]}
 			case $suse_arch in
 				i?86)
@@ -2302,7 +2302,6 @@ make_suse_driver_disk()
 		# ---
 		count=$(($count+1))
 	done
-        # FIXME: add suse-equivalent rpms/ directory, copy in KMP RPMs, run createrepo --pretty
 
 	mkdir -p "$image_dir"
 	rm -f "$image_dir/$image_name"
@@ -3193,7 +3192,6 @@ function make_kmp()
 	echo $"Error! There was a problem creating your KMP source rpm." >&2
 	exit 7
     fi
-    # FIXME: hand SRPM to mock or build system to build
 }
 
 #############################
