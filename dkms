@@ -1739,12 +1739,14 @@ function remove_module ()
 function find_module_from_ko()
 {
     local depth="$1"
-    local basename_ko="$2"
+    local ko="$2"
+    local basename_ko=$(basename "${ko}")
+    local module
     local kernellink
 
     for kernellink in $(find $dkms_tree -maxdepth $depth -mindepth $depth -name kernel-\* -type l); do
 	module=$(echo "$kernellink" | awk -F / '{print $(NF-1)}')
-	[ -e "$kernellink/module/${basename_ko}" ] && echo "$module"
+	diff "$kernellink/module/${basename_ko}" "${ko}" >/dev/null 2>&1 && echo "$module" && break
     done
     echo ""
 }
@@ -1806,10 +1808,11 @@ function do_status_weak ()
 		# dangling symlink, ouch, but is somebody else's problem so ignore it
 		continue
 	    fi
+	    # remember, installed_ko is probably a relative path, so $kernelversion isn't present in its link
 	    # is $installed_ko in /var/lib/dkms as installed?  Find which module has it
 	    for f in $(find $dkms_tree/$r_mod -maxdepth $depth -mindepth $depth -name kernel-\* -type l 2>/dev/null); do
 		if [ -z "$r_mod" ]; then
-		    mod=$(find_module_from_ko "$depth" "$basename_ko")
+		    mod=$(find_module_from_ko "$depth" "$ko")
 		else
 		    mod="$r_mod"
 		fi
