@@ -110,6 +110,10 @@ rm -rf $RPM_BUILD_ROOT
 [ $1 -lt 1 ] && /sbin/chkconfig dkms_autoinstaller off ||:
 
 %changelog
+* Wed May 28 2008 Matt Domsch <Matt_Domsch@dell.com> 2.0.19.1
+- depmod on uninstall before mkinitrd, depmod fix & cleanups
+- find_module_from_ko() could incorrectly return multiple values
+
 * Tue Mar 25 2008 Matt Domsch <Matt_Domsch@dell.com> 2.0.19
 - fix dkms.spec file/dir ownerships yet again
 
