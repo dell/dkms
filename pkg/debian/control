@@ -10,7 +10,7 @@ Vcs-git: http://linux.dell.com/git/dkms.git
 Package: dkms
 Architecture: all
 Depends: ${shlibs:Depends}, ${misc:Depends}
- gawk, module-init-tools, bash (>> 1.99), linux-image, linux-headers
+ awk, module-init-tools, bash (>> 1.99), linux-image, linux-headers
 Recommends: patch, make, gcc, fakeroot
 Description: Dynamic Kernel Module Support Framework
  This package contains the framework for the Dynamic Kernel Module
