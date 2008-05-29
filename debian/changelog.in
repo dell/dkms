@@ -1,4 +1,5 @@
 dkms (2.0.19.1-0ubuntu1#DISTTAG#) #DIST#; urgency=low
+
   [ Matt Domsch ]
   *  depmod on uninstall before mkinitrd, depmod fix & cleanups
   *  find_module_from_ko() could incorrectly return multiple values
@@ -9,6 +10,14 @@ dkms (2.0.19.1-0ubuntu1#DISTTAG#) #DIST#; urgency=low
     - use /etc/kernel/{prerm,postinst}.d/dkms in RPMs now too
     - mkrpm: display rpmbuild log on error, write RPMs $dkms_tree
     - clarify license in spec to GPLv2+
+
+  [ Mario Limonciello ]
+  * Add support for OBSOLETE_BY to DKMS.
+  * debian/rules:
+    - Redo to use CDBS
+    - Add get-orig-source target rule.
+  * debian/control:
+    - Build depend on cdbs now
 
  -- Matt Domsch <Matt_Domsch@dell.com>  Thu, 20 Mar 2008 14:00:49 -0500
 
