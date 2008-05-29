@@ -588,6 +588,12 @@ for your module. See the section on MODULES.CONF CHANGES for more information re
 implications of modifying
 .I /etc/modules.conf
 .TP
+.B OBSOLETE_BY=
+This directive allows you to specify a kernel version that obsoletes the necessity for this
+particular DKMS module.  This can be specified as a particular upstream kernel or an ABI
+bump of a kernel.  For example, "2.6.24" would be an upstream kernel and "2.6.24-16" would
+represent an ABI bump for a kernel.  Both are valid in this area.
+.TP
 .B PATCH[#]=
 Use the PATCH directive array to specify patches which should be applied to your source before a build occurs.
 All patches are expected to be in -p1 format and are applied with the patch -p1 command.
