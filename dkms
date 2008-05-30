@@ -665,6 +665,7 @@ function check_version_sanity ()
 		local obs_local=`echo $3 | cut -d- -f 2`
 		local my_upstream=`echo $1 | cut -d- -f 1`
 		local my_local=`echo $1 | cut -d- -f 2`
+		local obsolete=0
 		if [ -n "$obs_upstream" -a -n "$my_upstream" ]; then
 			if [[ ( $(VER $obs_upstream) == $(VER $my_upstream) ) && -z "$force" ]]; then
 			#they get obsoleted possibly in this kernel release
@@ -684,7 +685,7 @@ function check_version_sanity ()
 			fi
 		fi
 
-		if [ "$obsolete" = 1 ]; then
+		if [ "$obsolete" == 1 ]; then
 			echo $"" >&2
 			echo $"Module has been obsoleted due to being included" >&2
 			echo $"in kernel $3.  We will avoid installing" >&2
