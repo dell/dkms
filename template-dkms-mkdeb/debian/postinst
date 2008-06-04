@@ -19,7 +19,6 @@ case "$1" in
       echo "Loading new $NAME-$VERSION DKMS files..."
       #dkms add -m $NAME -v $VERSION
       dkms ldtarball --archive "/usr/src/$NAME-$VERSION.dkms.tar.gz"
-      rm -f "/usr/src/$NAME-$VERSION.dkms.tar.gz"
 
       echo "Installing prebuilt kernel module binaries (if any)"
       set +e
