@@ -1,28 +1,41 @@
 dkms (2.0.19.1-0ubuntu1#DISTTAG#) #DIST#; urgency=low
+
   [ Matt Domsch ]
   *  depmod on uninstall before mkinitrd, depmod fix & cleanups
   *  find_module_from_ko() could incorrectly return multiple values
-
- -- Matt Domsch <Matt_Domsch@dell.com>  Tue, 25 Mar 2008 08:47:20 -0500
-
-dkms (2.0.19-0ubuntu1#DISTTAG#) #DIST#; urgency=low
-  [ Matt Domsch ]
   * RPM:
     - fix file/dir ownerships in dkms.spec
-
- -- Matt Domsch <Matt_Domsch@dell.com>  Tue, 25 Mar 2008 08:47:20 -0500
-
-dkms (2.0.18-0ubuntu1#DISTTAG#) #DIST#; urgency=low
-  [ Matt Domsch ]
   * use 'date -R' in mkdeb creating debian/changelog
   * RPM:
     - use /etc/kernel/{prerm,postinst}.d/dkms in RPMs now too
     - mkrpm: display rpmbuild log on error, write RPMs $dkms_tree
     - clarify license in spec to GPLv2+
 
+  [ Mario Limonciello ]
+  * Add support for OBSOLETE_BY to DKMS.
+  * debian/rules:
+    - Redo to use CDBS
+    - Add get-orig-source target rule.
+  * debian/control:
+    - Build depend on cdbs now
+
  -- Matt Domsch <Matt_Domsch@dell.com>  Thu, 20 Mar 2008 14:00:49 -0500
 
-dkms (2.0.17.6-0ubuntu1#DISTTAG#) #DIST#; urgency=low
+dkms (2.0.19-0ubuntu2) hardy; urgency=low
+
+  * Depend on awk instead of gawk.  All variants of awk provide the
+    currently required functionality.
+
+ -- Mario Limonciello <mario_limonciello@dell.com>  Wed, 26 Mar 2008 16:51:33 -0500
+
+dkms (2.0.19-0ubuntu1) hardy; urgency=low
+
+  * New upstream version.
+    - Fixes appending date to debian/changelog in mkdeb.
+
+ -- Mario Limonciello <mario_limonciello@dell.com>  Wed, 26 Mar 2008 10:46:52 -0500
+
+dkms (2.0.17.6-0ubuntu1) hardy; urgency=low
 
   [ Matt Domsch ]
   * Correct kernel uninstall trigger (LP: #192240)

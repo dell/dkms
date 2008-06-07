@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/class/makefile.mk
+
+GIT_BRANCH+=$(shell grep "Vcs-git" debian/control | awk '{ print $$2 }')
+TARFILE+=$(DEB_SOURCE_PACKAGE)_$(DEB_UPSTREAM_VERSION).orig.tar.gz
+
+get-orig-source::
+	git clone $(GIT_BRANCH) $(DEB_SOURCE_PACKAGE)-$(DEB_UPSTREAM_VERSION)
+	tar czf $(CURDIR)/../$(TARFILE) $(DEB_SOURCE_PACKAGE)-$(DEB_UPSTREAM_VERSION) --exclude debian,.git
+	rm -rf $(CURDIR)/$(DEB_SOURCE_PACKAGE)-$(DEB_UPSTREAM_VERSION)
+
+../$(TARFILE):: get-orig-source
+
+DEB_MAKE_CLEAN_TARGET    := clean-dpkg
+DEB_MAKE_INSTALL_TARGET  := install-ubuntu DESTDIR=$(CURDIR)/debian/dkms

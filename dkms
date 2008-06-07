@@ -378,6 +378,7 @@ function read_conf ()
     BUILD_EXCLUSIVE_KERNEL=""
     BUILD_EXCLUSIVE_ARCH=""
     build_exclude=""
+    OBSOLETE_BY=""
 
     # Clear arrays
     unset MAKE
@@ -440,6 +441,7 @@ function read_conf ()
     post_remove="$POST_REMOVE"
     pre_build="$PRE_BUILD"
     pre_install="$PRE_INSTALL"
+    obsolete_by="$OBSOLETE_BY"
 
     # Set module naming/location arrays
     local index=0
@@ -610,6 +612,7 @@ function check_version_sanity ()
 {
     # $1 = kernel_version
     # $2 = arch
+    # $3 = obs by kernel version
 
     local lib_tree="$install_tree/$1"
     local count=0
@@ -657,6 +660,39 @@ function check_version_sanity ()
 		    exit 101
 		fi
 	    fi
+
+		local obs_upstream=`echo $3 | cut -d- -f 1`
+		local obs_local=`echo $3 | cut -d- -f 2`
+		local my_upstream=`echo $1 | cut -d- -f 1`
+		local my_local=`echo $1 | cut -d- -f 2`
+		local obsolete=0
+		if [ -n "$obs_upstream" -a -n "$my_upstream" ]; then
+			if [[ ( $(VER $obs_upstream) == $(VER $my_upstream) ) && -z "$force" ]]; then
+			#they get obsoleted possibly in this kernel release
+				if [ -z "$obs_local" ]; then
+				#they were obsoleted in this upstream kernel
+					obsolete=1
+				elif [[ ( $(VER $my_local) > $(VER $obs_local) ) ]]; then
+				#they were obsoleted in an earlier ABI bump of the kernel
+					obsolete=1
+				elif [[ ( $(VER $my_local) = $(VER $obs_local) ) ]]; then
+				#they were obsoleted in this ABI bump of the kernel
+					obsolete=1
+				fi
+			elif [[ ( $(VER $my_upstream) > $(VER $obs_upstream) ) && -z "$force" ]]; then
+			#they were obsoleted in an earlier kernel release
+				obsolete=1
+			fi
+		fi
+
+		if [ "$obsolete" == 1 ]; then
+			echo $"" >&2
+			echo $"Module has been obsoleted due to being included" >&2
+			echo $"in kernel $3.  We will avoid installing" >&2
+			echo $"for future kernels above $3." >&2
+			echo $"You may override by specifying --force." >&2
+			exit 101
+		fi
 	fi
 	count=$(($count + 1))
     done
@@ -1121,7 +1157,7 @@ function install_module()
     fi
 
     # Check this version against what is already in the kernel
-    check_version_sanity "${kernelver_array[0]}" "${arch_array[0]}"
+    check_version_sanity "${kernelver_array[0]}" "${arch_array[0]}" "$obsolete_by"
 
     # Run the pre_install script
     if [ -n "$pre_install" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$pre_install" | sed 's/ .*//'` ]; then

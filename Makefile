@@ -92,7 +92,7 @@ $(TARBALL):
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.tar.gz -type f -exec rm -f \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms-freshmeat.txt -type f -exec rm -f \{\} \; ; \
 	sync ; sync ; sync ; \
-	tar cvzf $(TARBALL) -C $${tmp_dir} $(RELEASE_STRING) ; \
+	tar cvzf $(TARBALL) -C $${tmp_dir} $(RELEASE_STRING) --exclude debian; \
 	rm -rf $${tmp_dir} ;
 
 
@@ -130,7 +130,7 @@ debmagic: $(TARBALL)
 	mkdir -p dist/$(DIST)
 	cp $(TARBALL) $(DEB_TMP_BUILDDIR)/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz
 	tar -C $(DEB_TMP_BUILDDIR) -xzf $(TARBALL)
-	cp -ar pkg/debian $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian
+	cp -ar debian $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian
 	chmod +x $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/rules
 	sed -e "s/#DISTTAG#/$(DISTTAG)/g" -e "s/#DIST#/$(DIST)/g" $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog.in > $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog 
 	rm $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog.in 
