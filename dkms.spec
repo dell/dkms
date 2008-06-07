@@ -6,7 +6,7 @@ License: GPLv2+
 Group: System Environment/Base
 BuildArch: noarch
 Requires: sed gawk findutils modutils tar cpio gzip grep mktemp
-Requires: bash > 1.99
+Requires: bash > 1.99, lsb
 # because Mandriva calls this package dkms-minimal
 Provides: dkms-minimal = %{version}
 URL: http://linux.dell.com/dkms
