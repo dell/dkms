@@ -1,5 +1,5 @@
 .\" -*- nroff -*-
-.TH DKMS 8 "Feb 2007" "Version 2.0.14"
+.TH DKMS 8 "June 2008" "Version 2.0.20"
 .SH NAME
 dkms \- Dynamic Kernel Module Support
 .SH SYNOPSIS
@@ -593,6 +593,31 @@ This directive allows you to specify a kernel version that obsoletes the necessi
 particular DKMS module.  This can be specified as a particular upstream kernel or an ABI
 bump of a kernel.  For example, "2.6.24" would be an upstream kernel and "2.6.24-16" would
 represent an ABI bump for a kernel.  Both are valid in this area.
+
+Please avoid the use of
+.B OBSOLETE_BY
+wherever possible.  It's use indicates a lack of proper module
+versioning using
+.B MODULE_VERSION()
+tags in the module source itself.  It is better to fix the
+.B MODULE_VERSION()
+tags than use
+.B OBSOLETE_BY.
+This also introduces a implicit distribution/version dependency on the
+package, as the value of
+.B OBSOLETE_BY
+is meaningful only in the context of a single distribution/version.
+
+If you feel you must use it, please use as such in dkms.conf:
+
+ ubuntu_804="Ubuntu
+ 8.04"
+ if [ -x /usr/bin/lsb_release ]; then
+   if [ "$(/usr/bin/lsb_release -sir)" == "${ubuntu_804}" ]; then
+     OBSOLETE_BY="2.6.25"
+   fi
+ fi
+
 .TP
 .B PATCH[#]=
 Use the PATCH directive array to specify patches which should be applied to your source before a build occurs.
