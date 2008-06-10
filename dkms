@@ -2420,7 +2420,7 @@ Architecture: $arch
 Depends:
 Maintainer: DKMS <dkms-devel@dell.com>
 Description: DKMS packaged binary driver update
- DKMS automagically generated DEB package for
+ DKMS automagically generated debian package for
  driver update disks, used with Ubuntu installation
  programs (such as Ubiquity).
 EOF
@@ -2972,48 +2972,49 @@ function preproc_file()
     mv "$1.dkms-pp" "$1"
 }
 
-function make_deb()
+function make_debian_test_depends()
 {
-    # Error if $module_version is set but $module is not
-    if [ -z "$module" ] || [ -z "$module_version" ]; then
-        echo $"" >&2
-        echo $"Error! Invalid number of parameters passed." >&2
-        echo $"Usage: mkdeb -m <module> -v <module-version>" >&2
-        exit 1
-    fi
-
-    fakeroot='fakeroot'
-
+    INSTALL_PACKAGES=""
     # Check that the fakeroot command is present
-    if ! which $fakeroot >/dev/null 2>&1 ; then
-        echo $"" >&2
-        echo $"Error! fakeroot not present." >&2
-        echo $"Install the fakeroot package." >&2
-        exit 1
+    if ! which fakeroot >/dev/null 2>&1 ; then
+        INSTALL_PACKAGES="fakeroot $INSTALL_PACKAGES"
     fi
 
     # Check that the dh_make command is present
     if ! which dpkg-buildpackage >/dev/null 2>&1 ; then
-        echo $"" >&2
-        echo $"Error! dpkg-buildpackage not present." >&2
-        echo $"Install the dpkg-dev package." >&2
-        exit 1
+        INSTALL_PACKAGES="dpkg-dev $INSTALL_PACKAGES"
+    fi
+    echo "$INSTALL_PACKAGES"
+}
+
+function make_debian()
+{
+    create_type="$1"
+
+    make_common_test "mk${create_type}"
+
+    SYNAPTIC=""
+    #Synaptic availablity
+    if [ -x /usr/sbin/synaptic ]; then
+        SYNAPTIC="TRUE"
     fi
 
-    # Check that source symlink works
-    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
-        echo $"" >&2
-        echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
-        echo $"Build cannot continue without the proper tree." >&2
-        exit 2
-    fi
-
-    # Make sure that its installed in the first place
-    if ! [ -d "$dkms_tree/$module/$module_version" ]; then
-        echo $"" >&2
-        echo $"Error! The module/version combo: $module-$module_version" >&2
-        echo $"is not located in the DKMS tree." >&2
-        exit 3
+    #test who we are
+    ROOT=""
+    ADMINABLE=""
+    if [ "$USER" != "root" ]; then
+        if [ -x /usr/bin/gksudo ] && [ ! -z "$DISPLAY" ]; then
+            ROOT="/usr/bin/gksudo --description 'DKMS Debian package builder' "
+        elif [ -x /usr/bin/kdesu ] && [ ! -z "$DISPLAY" ]; then
+            ROOT="/usr/bin/kdesu"
+        elif [ -x /usr/bin/sudo ]; then
+            ROOT="/usr/bin/sudo"
+        fi
+        if groups | sed 's/lpadmin//' | grep admin 2>&1 1>/dev/null; then
+            ADMINABLE="TRUE"
+        fi
+    else
+        ADMINABLE="TRUE"
     fi
 
     # Read the conf file
@@ -3025,73 +3026,123 @@ function make_deb()
         exit 4
     fi
 
-    local deb_basedir="$dkms_tree/$module/$module_version/deb"
-    mkdir -p "$deb_basedir"
+    #test if we are missing dependencies that are needed during package build
+    INSTALL_PACKAGES="`make_debian_test_depends`"
+    if [ ! -z "$INSTALL_PACKAGES" ]; then
+        if [ -z "ADMINABLE" ]; then
+            echo $"" >&2
+            echo $"Error! Missing $INSTALL_PACKAGES" >&2
+            echo $"and unable to install.  Please ask an admin to install for you." >&2
+            exit 4
+        fi
+        if [ ! -z "$SYNAPTIC" ] && [ ! -z "$DISPLAY" ]; then
+            local TEMPFILE=`/bin/tempfile`
+            echo $INSTALL_PACKAGES | sed 's/|/\ install\
+/g' > $TEMPFILE
+            $ROOT "sh -c '/usr/sbin/synaptic --set-selections --non-interactive --hide-main-window < $TEMPFILE'"
+            trap 'rm -f $TEMPFILE' EXIT HUP TERM
+        else
+            $ROOT apt-get -y install $INSTALL_PACKAGES
+        fi
 
-    if [ -e "$dkms_tree/$module/$module_version/source/$module-dkms-mkdeb" ]; then
-	    echo $"Using $dkms_tree/$module/$module_version/source/$module-dkms-mkdeb"
-	    DEBDIR="$dkms_tree/$module/$module_version/source/$module-dkms-mkdeb"
-    elif [ -e "/etc/dkms/template-dkms-mkdeb" ]; then
-        echo $"Using /etc/dkms/template-dkms-mkdeb"
-        DEBDIR="/etc/dkms/template-dkms-mkdeb"
+        INSTALL_PACKAGES="`make_debian_test_depends`"
+        #Retest packages
+        if [ ! -z "$INSTALL_PACKAGES" ]; then
+            echo $"" >&2
+            echo $"Error! Missing $INSTALL_PACKAGES" >&2
+            echo $"and unable to install.  Please ask an admin to install for you." >&2
+            exit 4
+        fi
+    fi
+
+    #skeleton to load templates from
+    local system_mk="$dkms_tree/$module/$module_version/source/$module-dkms-mk${create_type}"
+    local local_mk="/etc/dkms/template-dkms-mk${create_type}"
+    if [ -e "${system_mk}" ]; then
+        echo $"Using ${system_mk}"
+        DEBDIR=${system_mk}
+    elif [ -e "${local_mk}" ]; then
+        echo $"Using ${local_mk}"
+        DEBDIR=${local_mk}
     else
         echo $"" >&2
-        echo $"Cannot find /etc/dkms/template-dkms-mkdeb which is needed by" >&2
-        echo $"DKMS in order to use mkdeb." >&2
+        echo $"Cannot find ${local_mk} which is needed by" >&2
+        echo $"DKMS in order to use mk${create_type}." >&2
         exit 5
     fi
 
-    # Run a dkms mktarball for use in the deb
+    #test for binary or source modules
     local mktarball_line
     if [ -n "$source_only" ]; then
-	    mktarball_line="--source-only"
+        mktarball_line="--source-only"
     else
-	    local i=0
-	    echo $""
-	    while [ $i -lt ${#kernelver_array[@]} ]; do
-	        if ! [ -d "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}" ]; then
-		        echo $"" >&2
-		        echo $"You do not seem to have $module $module_version built for" >&2
-		        echo $"${kernelver_array[$i]} (${arch_array[$i]}).  All modules must be in" >&2
-		        echo $"the built state before you can use mkdeb." >&2
-		        exit 5
-	        fi
-	        echo $"Marking ${kernelver_array[$i]} (${arch_array[$i]}) for deb..."
-	        mktarball_line="-k ${kernelver_array[$i]} -a ${arch_array[$i]} $mktarball_line"
-	        i=$(($i + 1))
-	    done
+        local i=0
+        echo $""
+        while [ $i -lt ${#kernelver_array[@]} ]; do
+            if ! [ -d "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}" ]; then
+                echo $"" >&2
+                echo $"You do not seem to have $module $module_version built for" >&2
+                echo $"${kernelver_array[$i]} (${arch_array[$i]}).  All modules must be in" >&2
+                echo $"the built state before you can use mkdeb." >&2
+                exit 5
+            fi
+            echo $"Marking ${kernelver_array[$i]} (${arch_array[$i]}) for deb..."
+            mktarball_line="-k ${kernelver_array[$i]} -a ${arch_array[$i]} $mktarball_line"
+            i=$(($i + 1))
+        done
     fi
 
+    #prepare build directory and copy template
     local temp_dir=`mktemp -d $tmp_location/dkms.XXXXXX`
     trap 'rm -rf $temp_dir' EXIT HUP TERM
-    local temp_dir_deb="$temp_dir/$module-dkms-$module_version"
-    mkdir -p "$temp_dir"
-
-    invoke_command "cp -ar '$DEBDIR/' '$temp_dir_deb'" "copying template"
-
-    pushd "$temp_dir_deb" > /dev/null 2>&1
+    local temp_dir_debian="$temp_dir/$module-dkms-$module_version"
+    invoke_command "cp -ar '$DEBDIR/' '$temp_dir_debian'" "copying template"
+    pushd "$temp_dir_debian" > /dev/null 2>&1
     for file in debian/*; do
         preproc_file "$file"
         chmod 755 "$file"
     done
     popd > /dev/null 2>&1
 
+    #create tar.gz that lives in DKMS deb
     archive_location="$module-$module_version.dkms.tar.gz"
     invoke_command "make_tarball -m $module -v $version $mktarball_line" "gathering sources"
-    #tar -C "$temp_dir_deb" -xzf "$dkms_tree/$module/$module_version/tarball/$archive_location"
-    cp "$dkms_tree/$module/$module_version/tarball/$archive_location" "$temp_dir_deb"
-    pushd "$temp_dir_deb" > /dev/null 2>&1
-    invoke_command "$fakeroot dpkg-buildpackage" "dpkg-buildpackage"
-    popd > /dev/null 2>&1
-    invoke_command "mv '$temp_dir/${module}-dkms_${module_version}_all.deb' '$temp_dir/${module}-dkms_${module_version}.dsc' '$temp_dir/${module}-dkms_${module_version}.tar.gz' '$deb_basedir'" "moving files"
-
-    if [ "$?" -eq 0 ]; then
-	    echo $""
-        echo $"DKMS: mkdeb Completed."
+    if [ -f $dkms_tree/$module/$module_version/tarball/$archive_location ]; then
+        invoke_command "cp '$dkms_tree/$module/$module_version/tarball/$archive_location' '$temp_dir_debian'" "Copying DKMS tarball into DKMS tree"
     else
-	    echo $"" >&2
-	    echo $"Error! There was a problem creating your deb." >&2
-	    exit 7
+        echo $"" >&2
+        echo $"Error! Unable to find created tarball." >&2
+        exit 12
+    fi
+
+    #calculate destination directory
+    deb_basedir=$dkms_tree/$module/$module_version/${create_type}
+    mkdir -p ${deb_basedir} >/dev/null 2>&1
+
+    #create deb
+    pushd "$temp_dir_debian" > /dev/null 2>&1
+    case "$create_type" in
+        dsc)
+            invoke_command "fakeroot dpkg-buildpackage -S -us -uc 1>/dev/null" "Building source package"
+            invoke_command "mv '$temp_dir/${module}-dkms_${module_version}.dsc' '$temp_dir/${module}-dkms_${module_version}.tar.gz' '$deb_basedir'" "Moving built files to $deb_basedir"
+            ;;
+        deb)
+            invoke_command "fakeroot dpkg-buildpackage -b -us -uc 1>/dev/null" "Building binary package"
+            invoke_command "mv '$temp_dir/${module}-dkms_${module_version}_all.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
+            ;;
+    esac
+
+    #cleanup
+    invoke_command "rm $temp_dir -fr" "Cleaning up temporary files"
+
+    #done
+    if [ "$?" -eq 0 ]; then
+        echo $""
+        echo $"DKMS: mk${create_type} Completed."
+    else
+        echo $"" >&2
+        echo $"Error! There was a problem creating your ${create_type}." >&2
+        exit 7
     fi
 }
 
