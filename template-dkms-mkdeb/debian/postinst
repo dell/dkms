@@ -44,13 +44,13 @@ case "$1" in
             echo "Installing module..."
             dkms install -m $NAME -v $VERSION
          elif [ `echo $c_kern | grep -c "BOOT"` -gt 0 ]; then
-            echo -e ""
-            echo -e "Module build for the currently running kernel was skipped since you"
-            echo -e "are running a BOOT variant of the kernel."
+            echo ""
+            echo "Module build for the currently running kernel was skipped since you"
+            echo "are running a BOOT variant of the kernel."
          else
-            echo -e ""
-            echo -e "Module build for the currently running kernel was skipped since the"
-            echo -e "kernel source for this kernel does not seem to be installed."
+            echo ""
+            echo "Module build for the currently running kernel was skipped since the"
+            echo "kernel source for this kernel does not seem to be installed."
          fi
       fi
     ;;
