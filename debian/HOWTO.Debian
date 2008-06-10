@@ -1,0 +1,40 @@
+HOWTO Build DKMS debs w/ Debian & Ubuntu systems
+Copyright 2008 Dell Inc.
+ Author: Mario Limonciello <Mario_Limonciello@Dell.com>
+
+------------
+
+A dkms deb is a common representation of a DKMS package that can be distributed across multiple machines.
+After you have a functional DKMS package, you can follow these steps to build a DKMS deb.
+
+1) Start out by putting together a tree in /usr/src/PACKAGE-VERSION.  For our example, we are going to use
+the PACKAGE lirc and VERSION 0.8.3~pre1.  Create a dkms.conf per the recommendations in the DKMS guide.
+
+2) "Add" the package to the dkms tree system:
+	dkms add -m lirc -v 0.8.3~pre1
+
+3) "Build" the binary modules for the current kernel:
+	dkms build -m lirc -v 0.8.3~pre1
+
+4) Make the deb and/or dsc for the package:
+	dkms mkdeb -m lirc -v 0.8.3~pre1
+	dkms mkdsc -m lirc -v 0.8.3~pre1
+
+The end result will be a deb and/or dsc in /var/lib/dkms/lirc/0.8.3~pre1/deb or /var/lib/dkms/lirc/0.8.3~pre1/dsc
+
+------------
+If you would prefer not to contaminate your system with the changes from building these debs, you should
+create a framework.conf that contains these variables (adjust for your use case):
+
+	source_tree="/path/to/source/tree"
+	dkms_tree="/path/to/dkms/tree"
+
+You will then call DKMS with an extra variable, '--dkmsframework'.  Here is an example of how this would work
+using the same lirc example above:
+
+	dkms add -m lirc -v 0.8.3~pre1 --dkmsframework framework.conf
+	dkms build -m lirc -v 0.8.3~pre1 --dkmsframework framework.conf
+	dkms mkdeb -m lirc -v 0.8.3~pre1 --dkmsframework framework.conf
+	dkms mkdsc -m lirc -v 0.8.3~pre1 --dkmsframework framework.conf
+
+The end result will be both a debian binary package and a debian source package that you can use.
