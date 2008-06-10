@@ -71,6 +71,7 @@ install-ubuntu: install copy-init install-doc
 	mkdir   -p -m 0755 $(KCONF)/header_postinst.d
 	install -p -m 0755 kernel_postinst.d_dkms $(KCONF)/header_postinst.d/dkms
 	mkdir   -p -m 0755 $(ETC)/template-dkms-mkdeb/debian
+	ln -s template-dkms-mkdeb $(ETC)/template-dkms-mkdsc
 	install -p -m 0664 template-dkms-mkdeb/Makefile $(ETC)/template-dkms-mkdeb/
 	install -p -m 0664 template-dkms-mkdeb/debian/* $(ETC)/template-dkms-mkdeb/debian/
 	rm $(DOCDIR)/COPYING*

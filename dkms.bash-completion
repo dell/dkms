@@ -17,7 +17,7 @@ _dkms()
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "add remove build install uninstall \
-			match mkdriverdisk mktarball ldtarball mkrpm mkdeb mkkmp \
+			match mkdriverdisk mktarball ldtarball mkrpm mkdeb mkdsc mkkmp \
 			status" -- $cur ) )
 	else
 

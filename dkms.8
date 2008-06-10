@@ -160,7 +160,7 @@ not want your RPM to contain any prebuilt binaries, be sure to specify
 in the mkrpm command.
 .TP
 .B mkdeb
-This action allows you to create a debian package for a specified module / version.
+This action allows you to create a debian binary package for a specified module / version.
 It uses a template debian directory found in
 .I /etc/dkms/template-dkms-mkdeb
 as the basis for the package. Alternatively, if DKMS finds a file called
@@ -171,6 +171,19 @@ load this tarball, build and install modules on the end user's system.  If you d
 not want your debian package to contain any prebuilt binaries, be sure to specify
 .B --source-only
 in the mkdeb command.
+.TP
+.B mkdsc
+This action allows you to create a debian source package for a specified module / version.
+It will create a .tar.gz, and a .dsc.  All options supported by
+.B mkdeb
+are supported by it.  The main difference in it's usage is that it will look in
+.I /etc/dkms/template-dkms-mkdsc
+as the basis for the package. Alternatively, if DKMS finds a file called
+.I /usr/src/<module>-<module-version>/<module>-dkms-mkdsc
+it will use that folder instead. If you do not want your debian source package to
+contain any prebuilt binaries, be sure to specify
+.B --source-only
+in the mkdsc command.
 .TP
 .B mkkmp
 This action allows you to create an Kernel Module Package source RPM for a specified module / version.
