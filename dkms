@@ -2489,55 +2489,55 @@ make_tarball()
 
     # Check for dkms_dbversion
     if ! [ -e "$dkms_tree/dkms_dbversion" ]; then
-	echo $"" >&2
-	echo $"Error!  Could not find the file $dkms_tree/dkms_dbversion." >&2
-	echo $"This file and its contents are necessary for creating a tarball." >&2
-	exit 10
+        echo $"" >&2
+        echo $"Could not find the file $dkms_tree/dkms_dbversion." >&2
+        echo $"Creating w/ default contents." >&2
+        echo "2.0.0" > $dkms_tree/dkms_dbversion
     fi
 
     # Error out if archive_location is set and contains a "/" in it
     case "$archive_location" in
         */*)
-	    echo $"" >&2
-	    echo $"Error!  The name you have specified for your tarball contains a '/'." >&2
-	    echo $"You may only specify a simple filename with no preceding path."
-	    exit 7
-	    ;;
+        echo $"" >&2
+        echo $"Error!  The name you have specified for your tarball contains a '/'." >&2
+        echo $"You may only specify a simple filename with no preceding path."
+        exit 7
+        ;;
     esac
 
     # Error out if binaries-only is set and source-only is set
     if [ -n "$binaries_only" ] && [ -n "$source_only" ]; then
-	echo $"" >&2
-	echo $"Error!  You have specified both --binaries-only and --source-only." >&2
-	echo $"You cannot do this." >&2
-	exit 8
+        echo $"" >&2
+        echo $"Error!  You have specified both --binaries-only and --source-only." >&2
+        echo $"You cannot do this." >&2
+        exit 8
     fi
 
     # Read the conf file
     read_conf "${kernelver_array[0]}" "${arch_array[0]}"
     if [ "$?" -ne 0 ]; then
-	echo $"" >&2
-	echo $"Error! Bad conf file." >&2
-	echo $"Your dkms.conf is not valid." >&2
-	exit 5
+        echo $"" >&2
+        echo $"Error! Bad conf file." >&2
+        echo $"Your dkms.conf is not valid." >&2
+        exit 5
     fi
 
     temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
     mkdir -p $temp_dir_name/dkms_main_tree
 
     if [ -n "$source_only" ]; then
-	kernel_version_list="source-only"
+    kernel_version_list="source-only"
     else
-	local i=0
-	while [ $i -lt ${#kernelver_array[@]} ]; do
+    local i=0
+    while [ $i -lt ${#kernelver_array[@]} ]; do
 
-	    if ! [ -d "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}" ]; then
-		echo $"" >&2
-		echo $"Error! No modules built for ${kernelver_array[$i]} (${arch_array[$i]})." >&2
-		echo $"Modules must already be in the built state before using mktarball." >&2
-		rm -rf "$temp_dir_name" 2>/dev/null
-		exit 6
-	    fi
+        if ! [ -d "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}" ]; then
+            echo $"" >&2
+            echo $"Error! No modules built for ${kernelver_array[$i]} (${arch_array[$i]})." >&2
+            echo $"Modules must already be in the built state before using mktarball." >&2
+            rm -rf "$temp_dir_name" 2>/dev/null
+            exit 6
+        fi
 
 	    set_module_suffix "${kernelver_array[$i]}"
 
@@ -2560,9 +2560,9 @@ make_tarball()
     # Copy the source_tree or make special binaries-only structure
     if [ -z "$binaries_only" ]; then
 	echo $""
-	echo $"Marking $source_tree/$module-$module_version for archiving..."
+	echo $"Marking $dkms_tree/$module/$module_version/source for archiving..."
 	mkdir -p $temp_dir_name/dkms_source_tree
-	cp -rf $source_tree/$module-$module_version/* $temp_dir_name/dkms_source_tree
+	cp -rf $dkms_tree/$module/$module_version/source/* $temp_dir_name/dkms_source_tree
     else
 	echo $""
 	echo $"Binaries only specified.  Creating special tarball structure to accomodate."
@@ -2583,18 +2583,19 @@ make_tarball()
     tar -czf $temp_dir_name/$tarball_name ./* 2>/dev/null
     cd - >/dev/null
     if [ "$?" -eq 0 ]; then
-	mkdir -p $dkms_tree/$module/$module_version/tarball
-	mv -f $temp_dir_name/$tarball_name $dkms_tree/$module/$module_version/tarball/
+        echo $""
+        mkdir -p $dkms_tree/$module/$module_version/tarball 2>/dev/null
+        mv -f $temp_dir_name/$tarball_name $dkms_tree/$module/$module_version/tarball/
 	echo $""
 	echo $"Tarball location: $dkms_tree/$module/$module_version/tarball/$tarball_name"
 	echo $""
-	echo $"DKMS: mktarball Completed."
-	rm -rf $temp_dir_name
+        echo $"DKMS: mktarball Completed."
+        rm -rf $temp_dir_name
     else
-	echo $"" >&2
-	echo $"Error! Failed to make tarball." >&2
-	rm -rf $temp_dir_name
-	exit 6
+        echo $"" >&2
+        echo $"Error! Failed to make tarball." >&2
+        rm -rf $temp_dir_name
+        exit 6
     fi
 }
 
