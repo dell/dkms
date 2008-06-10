@@ -2463,29 +2463,7 @@ make_tarball()
 {
     setup_kernels_arches "mktarball"
 
-    # Error if $module_version is set but $module is not
-    if [ -z "$module" ] || [ -z "$module_version" ]; then
-	echo $"" >&2
-	echo $"Error! Invalid number of parameters passed." >&2
-	echo $"Usage: mktarball -m <module> -v <module-version>" >&2
-	exit 1
-    fi
-
-    # Check that source symlink works
-    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
-	echo $"" >&2
-	echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
-	echo $"Build cannot continue without the proper tree." >&2
-	exit 2
-    fi
-
-    # Make sure that its installed in the first place
-    if ! [ -d "$dkms_tree/$module/$module_version" ]; then
-	echo $"" >&2
-	echo $"Error! The module/version combo: $module-$module_version" >&2
-	echo $"is not located in the DKMS tree." >&2
-	exit 3
-    fi
+    make_common_test "mktarball"
 
     # Check for dkms_dbversion
     if ! [ -e "$dkms_tree/dkms_dbversion" ]; then
@@ -2904,13 +2882,7 @@ make_rpm()
 {
     setup_kernels_arches "mkrpm"
 
-    # Error if $module_version is set but $module is not
-    if [ -z "$module" ] || [ -z "$module_version" ]; then
-        echo $"" >&2
-        echo $"Error! Invalid number of parameters passed." >&2
-        echo $"Usage: mkrpm -m <module> -v <module-version>" >&2
-        exit 1
-    fi
+    make_common_test "mkrpm"
 
     # Check that the rpmbuild command is present
     if ! which rpmbuild >/dev/null 2>&1 ; then
@@ -2918,22 +2890,6 @@ make_rpm()
         echo $"Error! rpmbuild not present." >&2
         echo $"Install the rpm-build package." >&2
         exit 1
-    fi
-
-    # Check that source symlink works
-    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
-        echo $"" >&2
-        echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
-        echo $"Build cannot continue without the proper tree." >&2
-        exit 2
-    fi
-
-    # Make sure that its installed in the first place
-    if ! [ -d "$dkms_tree/$module/$module_version" ]; then
-        echo $"" >&2
-        echo $"Error! The module/version combo: $module-$module_version" >&2
-        echo $"is not located in the DKMS tree." >&2
-        exit 3
     fi
 
     # Read the conf file
@@ -3139,6 +3095,52 @@ function make_deb()
     fi
 }
 
+function make_common_test()
+{
+    local create_type=$1
+    # Error if $module_version is set but $module is not
+    if [ -z "$module" ] || [ -z "$module_version" ]; then
+        echo $"" >&2
+        echo $"Error! Invalid number of parameters passed." >&2
+        echo $"Usage: $create_type -m <module> -v <module-version>" >&2
+        exit 1
+    fi
+
+    # Check that source symlink works
+    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
+        echo $"" >&2
+        echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
+        echo $"Build cannot continue without the proper tree." >&2
+        exit 2
+    fi
+
+    # Make sure that its installed in the first place
+    if ! [ -d "$dkms_tree/$module/$module_version" ]; then
+        echo $"" >&2
+        echo $"Error! The module/version combo: $module-$module_version" >&2
+        echo $"is not located in the DKMS tree." >&2
+        exit 3
+    fi
+
+    # Error out if archive_location is set and contains a "/" in it
+    case "$archive_location" in
+        */*)
+        echo $"" >&2
+        echo $"Error!  The name you have specified for your archive contains a '/'." >&2
+        echo $"You may only specify a simple filename with no preceding path."
+        exit 7
+        ;;
+    esac
+
+    # Error out if binaries-only is set and source-only is set
+    if [ -n "$binaries_only" ] && [ -n "$source_only" ]; then
+        echo $"" >&2
+        echo $"Error!  You have specified both --binaries-only and --source-only." >&2
+        echo $"You cannot do this." >&2
+        exit 8
+    fi
+}
+
 function make_kmp_srpm()
 {
     local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
@@ -3174,29 +3176,7 @@ function make_kmp()
 {
     setup_kernels_arches "mkkmp"
 
-    # Error if $module_version is set but $module is not
-    if [ -z "$module" ] || [ -z "$module_version" ]; then
-        echo $"" >&2
-        echo $"Error! Invalid number of parameters passed." >&2
-        echo $"Usage: mkrpm -m <module> -v <module-version>" >&2
-        exit 1
-    fi
-
-    # Check that source symlink works
-    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
-        echo $"" >&2
-        echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
-        echo $"Build cannot continue without the proper tree." >&2
-        exit 2
-    fi
-
-    # Make sure that its installed in the first place
-    if ! [ -d "$dkms_tree/$module/$module_version" ]; then
-        echo $"" >&2
-        echo $"Error! The module/version combo: $module-$module_version" >&2
-        echo $"is not located in the DKMS tree." >&2
-        exit 3
-    fi
+    make_common_test "mkkmp"
 
     # Read the conf file
     read_conf "${kernelver_array[0]}" "${arch_array[0]}"
