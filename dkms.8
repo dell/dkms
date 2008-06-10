@@ -376,6 +376,21 @@ This option is used by the
 action to specify which RPM spec file to use when generating the KMP.
 .I specfile
 will be sought in the module source directory.
+.TP
+.B --dkmstree path/to/place
+Provides a destination tree for building and installing modules to.  Useful in
+cases that you don't want to contaminate a system when using solely for building.
+.B --sourcetree path/to/place
+Provides a location to build a DKMS package from.  Useful for systems that you may
+not have root access, but would still like to be able to build DKMS packages.
+.B --installtree path/to/place
+Provides a location to place modules when a
+.I dkms install
+command is issued.
+.B --dkmsframework path/to/file
+A supplemental configuration file to the systemwide dkms framework, typically located
+in /etc/dkms/framework.conf.  All option that are normally provided on a command line
+can be provided in this file.
 .SH ORIGINAL MODULES
 During the first install of a module for a <kernelversion>,
 .B dkms
@@ -751,15 +766,15 @@ option.
 .SH /etc/dkms/framework.conf
 This configuration file controls how the overall DKMS framework handles.  It is sourced
 in everytime the dkms command is run.  Mainly it can currently be used to set different
-default values for the variables
+default values for the variables.
 .B $dkms_tree
 ,
 .B $source_tree
 and
 .B $install_tree
 which control where DKMS looks for its framework.  Note that these variables can also
-be manipulated on the command line with the undocumented --dkmstree, --sourcetree
-and --installtree options.  Whoops, did I just document these?
+be manipulated on the command line with --dkmstree, --sourcetree
+and --installtree options.
 .SH dkms_autoinstaller
 This boot-time service automatically installs any module which has
 .B AUTOINSTALL="yes"
