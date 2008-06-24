@@ -1,3 +1,6 @@
+Mario Limonciello <Mario_Limonciello@dell.com>
+- Debian/Ubuntu packaging, mkdeb/mkdsc.
+
 Gary Lerhaupt <gary_lerhaupt@dell.com>
 - Main DKMS software development
 - Build from source adaptation from QLogic RPM
