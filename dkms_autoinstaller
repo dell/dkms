@@ -79,7 +79,12 @@ case "$1" in
 
 		        # Source in its dkms.conf to see if we should autoinstall
 			AUTOINSTALL=""
-			. $dkms_tree/$module_in_tree/$version_in_tree/source/dkms.conf
+			if [ -f $dkms_tree/$module_in_tree/$version_in_tree/source/dkms.conf ]; then
+				. $dkms_tree/$module_in_tree/$version_in_tree/source/dkms.conf
+			else
+				current_state="broken"
+				continue
+			fi
 			[ `echo "$AUTOINSTALL" | grep -ic "^y"` -gt 0 ] && do_autoinstall="yes"
 
 			# Get the current state
@@ -91,7 +96,11 @@ case "$1" in
 		done
 
 		# Based on what we know, either do it or not
-		if [ -n "$already_installed" ]; then
+		if [ "$current_state" = "broken" ]; then
+                    echo "$module_in_tree ($version_in_tree): Unable to locate $dkms_tree/$module_in_tree/$version_in_tree/source/dkms.conf" > $output_loc
+                    echo -e "\tDKMS tree must be manually fixed." >$output_loc              
+                    continue      
+		elif [ -n "$already_installed" ]; then
 		    echo "$module_in_tree ($already_installed_version): Already installed on this kernel." >$output_loc
 		elif [ -z "$do_autoinstall" ]; then
 		    echo "$module_in_tree ($version_in_tree): AUTOINSTALL not set in its dkms.conf." >$output_loc
