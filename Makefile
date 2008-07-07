@@ -109,32 +109,17 @@ rpm: $(TARBALL) dkms.spec
 	cp $${tmp_dir}/RPMS/noarch/* $${tmp_dir}/SRPMS/* . ; \
 	rm -rf $${tmp_dir}
 
-# This is required to ensure DIST is set when necessary
-NEEDS_DIST = 0
-ifeq ($(MAKECMDGOALS),deb)
-  NEEDS_DIST = 1
+ifndef DIST
+    DIST=$(lsb_release -c)
 endif
-ifeq ($(MAKECMDGOALS),sdeb)
-  NEEDS_DIST = 1
-endif
-
-ifeq ($(NEEDS_DIST), 1)
-  ifndef DIST
-  $(error "Must set DIST={gutsy,hardy,sid,...} for deb and sdeb targets")
-  endif
-endif
-
 
 debmagic: $(TARBALL)
-	[ -n "$$DEB_TMP_BUILDDIR" ] || (echo "Must set DEB_TMP_BUILDDIR=/tmp/... for deb and sdeb targets"; exit 1)
-	[ -n "$$DIST" ] || (echo "Must set DIST={gutsy,hardy,sid,...} for deb and sdeb targets"; exit 1)
-	[ -n "$$DIST" ] || echo "Remember to set DISTTAG='~gutsy1' for deb and sdeb targets for backports"
 	mkdir -p dist/$(DIST)
 	cp $(TARBALL) $(DEB_TMP_BUILDDIR)/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz
 	tar -C $(DEB_TMP_BUILDDIR) -xzf $(TARBALL)
 	cp -ar debian $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian
 	chmod +x $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/rules
-	sed -e "s/#DISTTAG#/$(DISTTAG)/g" -e "s/#DIST#/$(DIST)/g" $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog.in > $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog 
+	sed -e "-e "s/#DIST#/$(DIST)/g" $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog.in > $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog 
 	rm $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog.in 
 	cd $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING) ; \
 	dpkg-buildpackage -D -S -sa -rfakeroot ; \
@@ -142,8 +127,8 @@ debmagic: $(TARBALL)
 	cd -
 
 debs:
-	tmp_dir=`mktemp -d /tmp/firmware-tools.XXXXXXXX` ; \
-	make debmagic DEB_TMP_BUILDDIR=$${tmp_dir} DIST=$(DIST) DISTTAG=$(DISTTAG) ; \
+	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
+	make debmagic DEB_TMP_BUILDDIR=$${tmp_dir} DIST=$(DIST); \
 	rm -rf $${tmp_dir}
 
 fm:

@@ -1,4 +1,4 @@
-dkms (2.0.19.1-0ubuntu1#DISTTAG#) #DIST#; urgency=low
+dkms (2.0.19.1-0ubuntu1) #DIST#; urgency=low
 
   [ Matt Domsch ]
   *  depmod on uninstall before mkinitrd, depmod fix & cleanups
@@ -59,7 +59,7 @@ dkms (2.0.17.4-0ubuntu3) hardy; urgency=low
 
  -- Scott James Remnant <scott@ubuntu.com>  Fri, 14 Dec 2007 16:15:13 +0000
 
-dkms (2.0.17.5-0ubuntu1#DISTTAG#) #DIST#; urgency=low
+dkms (2.0.17.5-0ubuntu1) hardy; urgency=low
 	
   * Correct DKMS file install/uninstall problems  (LP: #151644)
     - call udevtrigger if we install a module for the currently running kernel
