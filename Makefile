@@ -27,7 +27,7 @@ TOPDIR := $(shell pwd)
 all:
 
 clean:
-	-rm -f dkms-*.tar.gz dkms-*.src.rpm dkms-*.noarch.rpm *~ dist/ dkms-freshmeat.txt
+	-rm -rf dkms-*.tar.gz dkms-*.src.rpm dkms-*.noarch.rpm *~ dist/ dkms-freshmeat.txt
 
 clean-dpkg: clean
 	rm -f debian/dkms_autoinstaller.init
@@ -137,7 +137,6 @@ debmagic: $(TARBALL)
 	sed -e "s/#DISTTAG#/$(DISTTAG)/g" -e "s/#DIST#/$(DIST)/g" $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog.in > $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog 
 	rm $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog.in 
 	cd $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING) ; \
-	pdebuild --use-pdebuild-internal --buildresult $(TOPDIR)/dist/$(DIST) ; \
 	dpkg-buildpackage -D -S -sa -rfakeroot ; \
 	mv ../$(RELEASE_NAME)_* $(TOPDIR)/dist/$(DIST) ; \
 	cd -
