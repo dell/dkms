@@ -2,7 +2,7 @@ RELEASE_DATE := "27-June-2008"
 RELEASE_MAJOR := 2
 RELEASE_MINOR := 0
 RELEASE_SUBLEVEL := 20
-RELEASE_EXTRALEVEL := .0
+RELEASE_EXTRALEVEL := .1
 RELEASE_NAME := dkms
 RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_SUBLEVEL)$(RELEASE_EXTRALEVEL)
 RELEASE_STRING := $(RELEASE_NAME)-$(RELEASE_VERSION)
@@ -94,8 +94,9 @@ $(TARBALL):
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.rpm -type f -exec rm -f \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.tar.gz -type f -exec rm -f \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms-freshmeat.txt -type f -exec rm -f \{\} \; ; \
+	rm -rf $${tmp_dir}/$(RELEASE_STRING)/debian ; \
 	sync ; sync ; sync ; \
-	tar cvzf $(TARBALL) -C $${tmp_dir} $(RELEASE_STRING) --exclude debian; \
+	tar cvzf $(TARBALL) -C $${tmp_dir} $(RELEASE_STRING); \
 	rm -rf $${tmp_dir} ;
 
 
@@ -112,13 +113,14 @@ rpm: $(TARBALL) dkms.spec
 
 debmagic: $(TARBALL)
 	mkdir -p dist/
-	cp $(TARBALL) $(DEB_TMP_BUILDDIR)/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz
+	ln -s $(TARBALL) $(DEB_TMP_BUILDDIR)/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz
 	tar -C $(DEB_TMP_BUILDDIR) -xzf $(TARBALL)
 	cp -ar debian $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian
 	chmod +x $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/rules
 	#only change the first (which is assumingly the header)
 	sed -i -e "s/RELEASE_VERSION/$(RELEASE_VERSION)/; s/UNRELEASED/$(DIST)/" $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog
 	cd $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING) ; \
+	dpkg-buildpackage -D -b -rfakeroot ; \
 	dpkg-buildpackage -D -S -sa -rfakeroot ; \
 	mv ../$(RELEASE_NAME)_* $(TOPDIR)/dist/ ; \
 	cd -

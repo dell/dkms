@@ -1,5 +1,11 @@
 dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
 
+  * Fix FTBFS because of missing template.
+
+ -- Mario Limonciello <mario_limonciello@dell.com>  Tue, 08 Jul 2008 11:52:24 -0500
+
+dkms (2.0.20.0-0ubuntu1) intrepid; urgency=low
+
   [ Matt Domsch ]
   *  depmod on uninstall before mkinitrd, depmod fix & cleanups
   *  find_module_from_ko() could incorrectly return multiple values
