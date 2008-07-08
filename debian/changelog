@@ -1,4 +1,4 @@
-dkms (2.0.19.1-0ubuntu1) #DIST#; urgency=low
+dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
 
   [ Matt Domsch ]
   *  depmod on uninstall before mkinitrd, depmod fix & cleanups
@@ -19,7 +19,7 @@ dkms (2.0.19.1-0ubuntu1) #DIST#; urgency=low
   * debian/control:
     - Build depend on cdbs now
 
- -- Matt Domsch <Matt_Domsch@dell.com>  Thu, 20 Mar 2008 14:00:49 -0500
+ -- Mario Limonciello <mario_limonciello@dell.com>  Mon, 07 Jul 2008 18:12:07 -0500
 
 dkms (2.0.19-0ubuntu2) hardy; urgency=low
 

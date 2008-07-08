@@ -6,6 +6,7 @@ RELEASE_EXTRALEVEL := .0
 RELEASE_NAME := dkms
 RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_SUBLEVEL)$(RELEASE_EXTRALEVEL)
 RELEASE_STRING := $(RELEASE_NAME)-$(RELEASE_VERSION)
+DIST := intrepid
 SHELL=bash
 
 SBIN = $(DESTDIR)/usr/sbin
@@ -24,10 +25,10 @@ TOPDIR := $(shell pwd)
 
 .PHONY = tarball
 
-all:
+all: clean tarball rpm debs
 
 clean:
-	-rm -rf dkms-*.tar.gz dkms-*.src.rpm dkms-*.noarch.rpm *~ dist/ dkms-freshmeat.txt
+	-rm -rf *~ dist/ dkms-freshmeat.txt
 
 clean-dpkg: clean
 	rm -f debian/dkms_autoinstaller.init
@@ -106,24 +107,20 @@ rpm: $(TARBALL) dkms.spec
 	pushd $${tmp_dir} > /dev/null 2>&1; \
 	rpmbuild -ba --define "_topdir $${tmp_dir}" SPECS/dkms.spec ; \
 	popd > /dev/null 2>&1; \
-	cp $${tmp_dir}/RPMS/noarch/* $${tmp_dir}/SRPMS/* . ; \
+	cp $${tmp_dir}/RPMS/noarch/* $${tmp_dir}/SRPMS/* dist ; \
 	rm -rf $${tmp_dir}
 
-ifndef DIST
-    DIST=$(lsb_release -c)
-endif
-
 debmagic: $(TARBALL)
-	mkdir -p dist/$(DIST)
+	mkdir -p dist/
 	cp $(TARBALL) $(DEB_TMP_BUILDDIR)/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz
 	tar -C $(DEB_TMP_BUILDDIR) -xzf $(TARBALL)
 	cp -ar debian $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian
 	chmod +x $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/rules
-	sed -e "-e "s/#DIST#/$(DIST)/g" $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog.in > $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog 
-	rm $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog.in 
+	#only change the first (which is assumingly the header)
+	sed -i -e "s/RELEASE_VERSION/$(RELEASE_VERSION)/; s/UNRELEASED/$(DIST)/" $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog
 	cd $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING) ; \
 	dpkg-buildpackage -D -S -sa -rfakeroot ; \
-	mv ../$(RELEASE_NAME)_* $(TOPDIR)/dist/$(DIST) ; \
+	mv ../$(RELEASE_NAME)_* $(TOPDIR)/dist/ ; \
 	cd -
 
 debs:
