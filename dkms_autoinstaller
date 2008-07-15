@@ -137,6 +137,7 @@ case "$1" in
 		    echo "$module_in_tree ($version_in_tree): Installing module." >>$output_loc
 		    if [ "$current_state" != "built" ] && ! [ -e /lib/modules/$kernel/build/include ]; then
 			echo "  Kernel source for $kernel not installed.  Cannot install this module." >>$output_loc
+                        log_action_end_msg 1
 		    elif [ "$current_state" != "built" ] && [ -e /lib/modules/$kernel/build/include ]; then
 			return_status=""
 			if [ -z "$kernel_preparation_done" ]; then
@@ -175,10 +176,12 @@ case "$1" in
   		fi
 	    fi
 	done
-        if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-            log_end_msg 0
-        else
-            echo -n "."
+        if [ -z "$modules_needing_status" ]; then
+            if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
+                log_end_msg 0
+            else
+                echo -n "."
+            fi
         fi
 	;;
   stop)
