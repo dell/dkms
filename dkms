@@ -564,10 +564,12 @@ function read_conf ()
     index=0
     count=0
     while [ "$index" -lt ${#PATCH[@]} ]; do
-	if [ -z "${PATCH_MATCH[$index]}" ] || \
-	    echo $1 | egrep -q "${PATCH_MATCH[$index]}"; then
-	    patch_array[$count]="${PATCH[$index]}"
-	    count=$(($count+1))
+	if [ -n "${PATCH[$index]}" ]; then
+		if [ -z "${PATCH_MATCH[$index]}" ] || \
+		    echo $1 | egrep -q "${PATCH_MATCH[$index]}"; then
+		    patch_array[$count]="${PATCH[$index]}"
+		    count=$(($count+1))
+		fi
 	fi
 	index=$(($index+1))
     done
