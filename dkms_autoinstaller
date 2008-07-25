@@ -18,7 +18,9 @@
 #use LSB functions for logging on Debian/Ubuntu
 if [ -f /lib/lsb/init-functions ]; then
     . /lib/lsb/init-functions
-    DEBIAN_STYLE_LOGGING="yes"
+    if [ -f /etc/debian_version ]; then
+        DEBIAN_STYLE_LOGGING="yes"
+    fi
 fi
 
 test -f /usr/sbin/dkms || exit 0
