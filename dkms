@@ -880,6 +880,13 @@ function add_module ()
 	conf="$source_tree/$module-$module_version/dkms.conf"
     fi
 
+    # Check for invalid named modules
+    if echo "$module" |  grep "_" 2>&1 1>/dev/null; then
+        echo $"Error! Module $module contains an invalid character." >&2
+        echo $"Please correct your DKMS control file." >&2
+        exit 4
+    fi
+
     # Check that /usr/src/$module-$module_version exists
     if ! [ -d "$source_tree/$module-$module_version" ]; then
 	echo $"" >&2
