@@ -2968,8 +2968,9 @@ function preproc_file()
 {
     local date_str="$(date -R)"
     echo "modifying $1..."
-    sed -e "s/MODULE_NAME/$module/" \
-        -e "s/MODULE_VERSION/$module_version/" \
+    sed -e "s/DEBIAN_PACKAGE/$debian_package/g" \
+        -e "s/MODULE_NAME/$module/g" \
+        -e "s/MODULE_VERSION/$module_version/g" \
         -e "s/DATE_STAMP/$date_str/" "$1" > "$1.dkms-pp"
     mv "$1.dkms-pp" "$1"
 }
@@ -2994,6 +2995,8 @@ function make_debian()
     create_type="$1"
 
     make_common_test "mk${create_type}"
+
+    debian_package=$(echo $module | sed s/_/-/)
 
     SYNAPTIC=""
     #Synaptic availablity
@@ -3097,7 +3100,7 @@ function make_debian()
     #prepare build directory and copy template
     local temp_dir=`mktemp -d $tmp_location/dkms.XXXXXX`
     trap 'rm -rf $temp_dir' EXIT HUP TERM
-    local temp_dir_debian="$temp_dir/$module-dkms-$module_version"
+    local temp_dir_debian="$temp_dir/$debian_package-dkms-$module_version"
     invoke_command "cp -ar '$DEBDIR/' '$temp_dir_debian'" "copying template"
     pushd "$temp_dir_debian" > /dev/null 2>&1
     for file in debian/*; do
@@ -3126,11 +3129,11 @@ function make_debian()
     case "$create_type" in
         dsc)
             invoke_command "fakeroot dpkg-buildpackage -S -us -uc 1>/dev/null" "Building source package"
-            invoke_command "mv '$temp_dir/${module}-dkms_${module_version}.dsc' '$temp_dir/${module}-dkms_${module_version}.tar.gz' '$deb_basedir'" "Moving built files to $deb_basedir"
+            invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}.dsc' '$temp_dir/${debian_package}-dkms_${module_version}.tar.gz' '$deb_basedir'" "Moving built files to $deb_basedir"
             ;;
         deb)
             invoke_command "fakeroot dpkg-buildpackage -b -us -uc 1>/dev/null" "Building binary package"
-            invoke_command "mv '$temp_dir/${module}-dkms_${module_version}_all.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
+            invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_all.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
             ;;
     esac
 

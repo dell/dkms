@@ -1,4 +1,4 @@
-MODULE_NAME-dkms (MODULE_VERSION) stable; urgency=low
+DEBIAN_PACKAGE-dkms (MODULE_VERSION) stable; urgency=low
 
   * Automatically packaged by DKMS.
 
