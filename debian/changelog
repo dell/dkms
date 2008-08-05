@@ -1,5 +1,12 @@
 dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
 
+  * Fix mkdeb/mkdsc to not allow underscores in the source or binary package
+    naming.
+
+ -- Mario Limonciello <mario_limonciello@dell.com>  Tue, 05 Aug 2008 13:59:38 -0500
+
+dkms (2.0.20.2-0ubuntu1) intrepid; urgency=low
+
   * If kernel headers are missing during a module build, report 
     this status properly in DKMS auto installation service. (LP: #247523)
 
