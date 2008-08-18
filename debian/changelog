@@ -1,5 +1,12 @@
 dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
 
+  * Add patch from TJ that doesn't force a tarball to be loaded
+    unless it's present.
+
+ -- Mario Limonciello <mario_limonciello@dell.com>  Mon, 18 Aug 2008 12:23:56 -0500
+
+dkms (2.0.20.3-0ubuntu1) intrepid; urgency=low
+
   * Fix mkdeb/mkdsc to not allow underscores in the source or binary package
     naming.
 
