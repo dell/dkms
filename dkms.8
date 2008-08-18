@@ -380,13 +380,16 @@ will be sought in the module source directory.
 .B --dkmstree path/to/place
 Provides a destination tree for building and installing modules to.  Useful in
 cases that you don't want to contaminate a system when using solely for building.
+.TP
 .B --sourcetree path/to/place
 Provides a location to build a DKMS package from.  Useful for systems that you may
 not have root access, but would still like to be able to build DKMS packages.
+.TP
 .B --installtree path/to/place
 Provides a location to place modules when a
 .I dkms install
 command is issued.
+.TP
 .B --dkmsframework path/to/file
 A supplemental configuration file to the systemwide dkms framework, typically located
 in /etc/dkms/framework.conf.  All option that are normally provided on a command line
