@@ -2234,14 +2234,10 @@ make_redhat_driver_disk()
     for f in $(echo -e ${modules_cgz_list}); do
 	module_wo_suffix=$(basename ${f} ${module_suffix})
 	tmp_alias="./modules.alias.${module_wo_suffix}"
+	f="./${f}"
 	depmod -n ${f} 2>/dev/null | grep ^alias > ${tmp_alias}
 	if [ -s ${tmp_alias} ]; then
 	    cat ${tmp_alias} >> ./modules.alias
-	else
-	    modinfo ${f} 2>/dev/null | grep ^alias: | xargs printf "%s %s ${module_wo_suffix}\n" > ${tmp_alias}
-	    if [ -s ${tmp_alias} ]; then
-		cat ${tmp_alias} >> ./modules.alias
-	    fi
 	fi
     done
     [ -e ./modules.alias ] && cp -f ./modules.alias "$driver_disk_dir/"
