@@ -102,6 +102,16 @@ rm -rf $RPM_BUILD_ROOT
 %{_sysconfdir}/kernel/prerm.d/%{name}
 %{_sysconfdir}/bash_completion.d/%{name}
 
+%if 0%{?suse_version}
+# suse doesnt yet support /etc/kernel/{prerm.d,postinst.d}, but will fail build
+# with unowned dirs if we dont own them ourselves
+# when opensuse *does* add this support, we will need to BuildRequires kernel
+%dir %{_sysconfdir}/kernel
+%dir %{_sysconfdir}/kernel/postinst.d
+%dir %{_sysconfdir}/kernel/prerm.d
+%endif
+
+
 %post
 [ -e /sbin/dkms ] && mv -f /sbin/dkms /sbin/dkms.old 2>/dev/null
 # enable on initial install
