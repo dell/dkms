@@ -12,8 +12,10 @@ Provides: dkms-minimal = %{version}
 URL: http://linux.dell.com/dkms
 Source0: http://linux.dell.com/dkms/permalink/dkms-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-# when building for Fedora, uncomment this Requires
-#Requires: kernel-devel
+
+%if 0%{?fedora}
+Requires: kernel-devel
+%endif
 
 %description
 This package contains the framework for the Dynamic
