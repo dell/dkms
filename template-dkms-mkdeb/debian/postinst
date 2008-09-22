@@ -29,7 +29,7 @@ case "$1" in
 '
       for kern in `dkms status -m $NAME -v $VERSION -a $c_arch | grep ": built" | awk {'print $3'} | sed 's/,$//'`; do
          echo "Trying kernel: $kern"
-         dkms install --force -m $NAME -v $VERSION -k $kern -a $c_arch
+         dkms install -m $NAME -v $VERSION -k $kern -a $c_arch
       done
       unset IFS
       set -e
