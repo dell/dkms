@@ -615,20 +615,19 @@ function check_version_sanity ()
     # $1 = kernel_version
     # $2 = arch
     # $3 = obs by kernel version
+    # $4 = dest_module_name
 
     local lib_tree="$install_tree/$1"
-    local count=0
     echo $"Running module version sanity check."
-    while [ "$count" -lt ${#built_module_name[@]} ]; do
-	local module_count=`find $lib_tree -name ${dest_module_name[$count]}$module_suffix | wc -l | awk {'print $1'}`
+	local module_count=`find $lib_tree -name ${4}$module_suffix | wc -l | awk {'print $1'}`
 	if [ $module_count -gt 1 ]; then
-	    echo $"Warning! Cannot do version sanity checking because multiple ${dest_module_name[$count]}$module_suffix" >&2
+	    echo $"Warning! Cannot do version sanity checking because multiple ${4}$module_suffix" >&2
 	    echo $"modules were found in kernel $1." >&2
 	elif [ $module_count -eq 1 ]; then
-	    local kernels_module=`find $lib_tree -name ${dest_module_name[$count]}$module_suffix`
+	    local kernels_module=`find $lib_tree -name ${4}$module_suffix`
 	    local kernels_ver_string=`modinfo $kernels_module | grep "^version:"`
 	    local kernels_ver_value=`echo $kernels_ver_string | awk {'print $2'}`
-	    local dkms_module="$dkms_tree/$module/$module_version/$1/$2/module/${dest_module_name[$count]}$module_suffix"
+	    local dkms_module="$dkms_tree/$module/$module_version/$1/$2/module/${4}$module_suffix"
 	    local dkms_ver_string=`modinfo $dkms_module | grep "^version:"`
 	    local dkms_ver_value=`echo $dkms_ver_string | awk {'print $2'}`
 
@@ -645,21 +644,21 @@ function check_version_sanity ()
 	    if [ -n "$kernels_ver_checksum" -a -n "$dkms_ver_checksum" -a \
 		    "$kernels_ver_checksum" == "$dkms_ver_checksum" -a -z "$force" ]; then
 		echo $"" >&2
-		echo $"Good news! Module version $dkms_ver_value for ${dest_module_name[$count]}$module_suffix" >&2
+		echo $"Good news! Module version $dkms_ver_value for ${4}$module_suffix" >&2
 		echo $"exactly matches what is already found in kernel $1." >&2
 		echo $"DKMS will not replace this module." >&2
 		echo $"You may override by specifying --force." >&2
-		exit 101
+		return 1
 	    fi
 
 	    if [ -n "$kernels_ver_value" -a -n "$dkms_ver_value" ]; then
 		if [[ ! ( $(VER $dkms_ver_value) > \
 		          $(VER $kernels_ver_value) ) && -z "$force" ]]; then
 		    echo $"" >&2
-		    echo $"Error! Module version $dkms_ver_value for ${dest_module_name[$count]}$module_suffix" >&2
+		    echo $"Error! Module version $dkms_ver_value for ${4}$module_suffix" >&2
 		    echo $"is not newer than what is already found in kernel $1 ($kernels_ver_value)." >&2
 		    echo $"You may override by specifying --force." >&2
-		    exit 101
+		    return 1
 		fi
 	    fi
 
@@ -693,11 +692,10 @@ function check_version_sanity ()
 			echo $"in kernel $3.  We will avoid installing" >&2
 			echo $"for future kernels above $3." >&2
 			echo $"You may override by specifying --force." >&2
-			exit 101
+			return 1
 		fi
 	fi
-	count=$(($count + 1))
-    done
+    return 0
 }
 
 
@@ -1159,27 +1157,31 @@ function install_module()
 	force="true"
     fi
 
-    # Check this version against what is already in the kernel
-    check_version_sanity "${kernelver_array[0]}" "${arch_array[0]}" "$obsolete_by"
-
-    # Run the pre_install script
-    if [ -n "$pre_install" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$pre_install" | sed 's/ .*//'` ]; then
-	echo $""
-	echo $"Running the pre_install script:"
-	$dkms_tree/$module/$module_version/source/$pre_install
-	if [ "$?" -ne 0 -a -z "$force" ]; then
-	    echo $"pre_install failed, aborting install." >&2
-	    echo $"You may override by specifying --force." >&2
-	    exit 101
-	fi
-    fi
-
     # Save the original_module if one exists, none have been saved before, and this is the first module for this kernel
     local lib_tree="$install_tree/${kernelver_array[0]}"
     local count=0
     while [ "$count" -lt ${#built_module_name[@]} ]; do
-	echo $""
+    echo $""
 	echo $"${dest_module_name[$count]}$module_suffix:"
+	# Check this version against what is already in the kernel
+	if ! check_version_sanity "${kernelver_array[0]}" "${arch_array[0]}" "$obsolete_by" "${dest_module_name[$count]}"; then
+		count=$(($count + 1))
+		continue
+	fi
+
+	if [ "$count" -eq 0 ]; then
+        # Run the pre_install script
+        if [ -n "$pre_install" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$pre_install" | sed 's/ .*//'` ]; then
+	    echo $""
+	    echo $"Running the pre_install script:"
+	    $dkms_tree/$module/$module_version/source/$pre_install
+	    if [ "$?" -ne 0 -a -z "$force" ]; then
+	        echo $"pre_install failed, aborting install." >&2
+	        echo $"You may override by specifying --force." >&2
+	        exit 101
+	    fi
+        fi
+	fi
 	local module_count=`find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f | wc -l | awk {'print $1'}`
 	echo $" - Original module"
 	if ! [ -L "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}" ]; then
