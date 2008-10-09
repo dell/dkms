@@ -14,6 +14,8 @@ get-orig-source::
 
 DEB_MAKE_CLEAN_TARGET    := clean-dpkg
 DEB_MAKE_INSTALL_TARGET  := install-ubuntu DESTDIR=$(CURDIR)/debian/dkms
+DEB_UPDATE_RCD_PARAMS = "start 20 2 3 4 5 . stop 74 0 1 6 ."
+DEB_DH_INSTALLINIT_ARGS = "--name=dkms_autoinstaller"
 
 install/dkms::
 	dh_installmodules

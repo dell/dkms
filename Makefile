@@ -31,10 +31,10 @@ clean:
 	-rm -rf *~ dist/ dkms-freshmeat.txt
 
 clean-dpkg: clean
-	rm -f debian/dkms_autoinstaller.init
+	rm -f debian/dkms.dkms_autoinstaller.init
 
 copy-init:
-	install -m 755 dkms_autoinstaller debian/dkms_autoinstaller.init
+	install -m 755 dkms_autoinstaller debian/dkms.dkms_autoinstaller.init
 
 install:
 	mkdir -m 0755 -p $(VAR) $(SBIN) $(MAN) $(INITD) $(ETC) $(BASHDIR)
