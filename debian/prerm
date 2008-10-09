@@ -9,7 +9,7 @@ case "$1" in
     hookline="header_postinst_hook = /etc/kernel/postinst.d/dkms"
 
     if [ -e $kconf ]; then
-	if grep -c "$hookline" "$kconf" ; then
+	if grep -c "$hookline" "$kconf" 1>/dev/null; then
 	    temp=`mktemp /tmp/dkms.XXXXXX`
 	    grep -v "$hookline" "$kconf" > "$temp"
 	    mv "$temp" "$kconf"
