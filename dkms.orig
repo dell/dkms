@@ -1579,7 +1579,6 @@ function do_uninstall()
 	    if [ -e "$dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix" ]; then
 		echo $"   - Archived original module found in the DKMS tree"
 		echo $"   - Moving it to: $install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
-		mkdir -p "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
 		mv -f "$dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix" "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/" 2>/dev/null
 	    else
 		echo $"   - No original module was found for this module on this kernel."
