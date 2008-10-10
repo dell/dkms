@@ -2346,6 +2346,8 @@ make_suse_driver_disk()
 			else
 				echo $"  Warning! No kernel modules found for -default kernel."
 			fi
+
+			rm -fr "$driver_disk_dir/$topdir/$arch_release"
 		done
 
 		# ---
