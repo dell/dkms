@@ -2,6 +2,8 @@ dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
 
   * Don't output useless output on removal (LP: #274792)
   * Install init script to runlevels (LP: #280998)
+  * Depend on linux-headers-generic | linux-headers so that depends are 
+    resolved for the majority case.
 
  -- Mario Limonciello <mario_limonciello@dell.com>  Thu, 09 Oct 2008 17:54:09 -0500
 
