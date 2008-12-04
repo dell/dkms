@@ -13,4 +13,8 @@ while read line; do
 done < <(dkms status -k $inst_kern 2>/dev/null | grep ": installed")
 fi
 
+rmdir --ignore-fail-on-non-empty \
+	"/lib/modules/$inst_kern/updates/dkms" \
+	"/lib/modules/$inst_kern/updates"
+
 exit 0
