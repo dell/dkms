@@ -1,9 +1,24 @@
 dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
 
   * Don't output useless output on removal (LP: #274792)
-  * Install init script to runlevels (LP: #280998)
   * Depend on linux-headers-generic | linux-headers so that depends are 
     resolved for the majority case.
+
+ -- Mario Limonciello <mario_limonciello@dell.com>  Thu, 09 Oct 2008 17:54:09 -0500
+
+dkms (2.0.20.4-0ubuntu3) jaunty; urgency=low
+
+  * Ensure that the /lib/modules/<version>/updates/dkms directory is
+    removed if it is empty after a removal.  This allows the modules
+    directory to be removed as it becomes empty.  (LP: #300773)
+
+ -- Andy Whitcroft <apw@canonical.com>  Thu, 04 Dec 2008 16:48:10 +0000
+
+dkms (2.0.20.4-0ubuntu2) intrepid; urgency=low
+
+  * Backport these fixes from trunk:
+    - Don't output useless output on removal (LP: #274792)
+    - Install init script to runlevels (LP: #280998)
 
  -- Mario Limonciello <mario_limonciello@dell.com>  Thu, 09 Oct 2008 17:54:09 -0500
 
