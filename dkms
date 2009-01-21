@@ -3144,6 +3144,7 @@ function make_debian()
             invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_all.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
             ;;
     esac
+    popd > /dev/null 2>&1
 
     #cleanup
     invoke_command "rm $temp_dir -fr" "Cleaning up temporary files"
