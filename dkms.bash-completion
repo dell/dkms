@@ -8,6 +8,20 @@ _kernels()
         COMPREPLY=( $( command ls /lib/modules | grep "^$cur" ) )
 }
 
+# complete on full directory names under $1
+_subdirectories()
+{
+	COMPREPLY=( $( command ls -F $1 2>/dev/null | awk -F \/ '/\/$/ \
+		{print $1}' | grep "^$cur" ) )
+}
+
+# complete on $2 part of filenames matching pattern $1 under /usr/src
+_filename_parts()
+{
+	COMPREPLY=( $( command ls -F /usr/src 2>/dev/null | grep -E '^'$1'/$' \
+		| sed -r -e 's/^([^-]+)-(.+)\/$/\'$2'/' | grep "^$cur" ) )
+}
+
 _dkms()
 {
 	local cur prev command module i
@@ -22,9 +36,14 @@ _dkms()
 	else
 
 		prev=${COMP_WORDS[COMP_CWORD-1]}
+		command=${COMP_WORDS[1]}
 		case $prev in
 			-m)
-				COMPREPLY=( $( command ls -F /var/lib/dkms | grep '/$' | sed -e 's|/$||' | grep "^$cur" ) )
+				if [ "$command" = 'add' ]; then
+					_filename_parts '.*-.*' 1
+				else
+					_subdirectories /var/lib/dkms
+				fi
 				return 0
 				;;
 			-v)
@@ -35,7 +54,11 @@ _dkms()
 					fi
 				done
 				if [ -n "$module" ]; then
-					COMPREPLY=( $( command ls -F /var/lib/dkms/$module | grep '/$' | sed -e 's|/$||' | grep "^$cur" ) )
+					if [ "$command" = 'add' ]; then
+						_filename_parts "$module-.*" 2
+					else
+						_subdirectories /var/lib/dkms/$module
+					fi
 					return 0
 				fi
 				;;
@@ -53,7 +76,6 @@ _dkms()
 				;;
 		esac
 
-		command=${COMP_WORDS[1]}
 
 		if [[ "$cur" == -* ]]; then
 			case $command in
