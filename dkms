@@ -1967,6 +1967,46 @@ show_status ()
     fi
 }
 
+function create_temporary_trees ()
+{
+    if [ -n "$module" ] || [ -n "$module_version" ]; then
+	return
+    fi
+
+    [ -r dkms.conf ] || return
+
+    . dkms.conf
+    module="$PACKAGE_NAME"
+    module_version="$PACKAGE_VERSION"
+
+    source_tree=`mktemp -d`
+    dkms_tree=`mktemp -d`
+
+    local source_tree_dir="$source_tree/$PACKAGE_NAME-$PACKAGE_VERSION"
+    mkdir -p "$source_tree_dir"
+    cp -a * "$source_tree_dir" # intentionally skip .git or .hg
+    add_module
+    temporary_trees_del_command="rm -rf $source_tree $dkms_tree"
+}
+
+function delete_temporary_trees ()
+{
+    $temporary_trees_del_command
+    if [ -n "$temporary_trees_del_command" ]; then
+	module=
+	module_version=
+	source_tree=
+	dkms_tree=
+	temporary_trees_del_command=
+    fi
+}
+
+function in_temporary_trees ()
+{
+    [ -n "$temporary_trees_del_command" ]
+    return $?
+}
+
 media_valid()
 {
     if [ "$media" == "floppy" ] ||
@@ -3002,6 +3042,9 @@ function make_debian()
 {
     create_type="$1"
 
+    create_temporary_trees
+    trap "delete_temporary_trees" EXIT HUP TERM
+
     make_common_test "mk${create_type}"
 
     debian_package=$(echo $module | sed s/_/-/)
@@ -3053,7 +3096,7 @@ function make_debian()
             echo $INSTALL_PACKAGES | sed 's/|/\ install\
 /g' > $TEMPFILE
             $ROOT "sh -c '/usr/sbin/synaptic --set-selections --non-interactive --hide-main-window < $TEMPFILE'"
-            trap 'rm -f $TEMPFILE' EXIT HUP TERM
+            trap "rm -f $TEMPFILE; delete_temporary_trees" EXIT HUP TERM
         else
             $ROOT apt-get -y install $INSTALL_PACKAGES
         fi
@@ -3107,7 +3150,7 @@ function make_debian()
 
     #prepare build directory and copy template
     local temp_dir=`mktemp -d $tmp_location/dkms.XXXXXX`
-    trap 'rm -rf $temp_dir' EXIT HUP TERM
+    trap "rm -rf $temp_dir; delete_temporary_trees" EXIT HUP TERM
     local temp_dir_debian="$temp_dir/$debian_package-dkms-$module_version"
     invoke_command "cp -ar '$DEBDIR/' '$temp_dir_debian'" "copying template"
     pushd "$temp_dir_debian" > /dev/null 2>&1
@@ -3146,8 +3189,14 @@ function make_debian()
     esac
     popd > /dev/null 2>&1
 
+    if in_temporary_trees; then
+	echo "Copying built files to "`pwd`"/.." >&2
+	cp "$dkms_tree/$module/$module_version/deb/"* ..
+    fi
+
     #cleanup
     invoke_command "rm $temp_dir -fr" "Cleaning up temporary files"
+    delete_temporary_trees
 
     #done
     if [ "$?" -eq 0 ]; then
