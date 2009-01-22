@@ -1,5 +1,6 @@
 dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
 
+  [ Mario Limonciello ]
   * Don't output useless output on removal (LP: #274792)
   * Depend on linux-headers-generic | linux-headers so that depends are 
     resolved for the majority case.
@@ -7,6 +8,9 @@ dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
   * Check for /etc/modprobe.d/dkms not just /etc/modprobe.conf
   * Improvements to suse driver disk creation.
   * Use an unversioned dependency on bash. (LP: #314774)
+
+  [ Alessio Igor Bogani ]
+  * Fix path into man page (LP: #292289)
 
  -- Mario Limonciello <mario_limonciello@dell.com>  Thu, 09 Oct 2008 17:54:09 -0500
 
