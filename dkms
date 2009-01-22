@@ -368,7 +368,7 @@ function read_conf ()
     REMAKE_INITRD=""
     remake_initrd=""
     UDEV_TRIGGER=""
-    udev_trigger="yes"
+    udev_trigger="no"
     PACKAGE_NAME=""
     PACKAGE_VERSION=""
     POST_ADD=""
