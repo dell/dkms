@@ -8,6 +8,7 @@ dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
   * Check for /etc/modprobe.d/dkms not just /etc/modprobe.conf
   * Improvements to suse driver disk creation.
   * Use an unversioned dependency on bash. (LP: #314774)
+  * Promote gcc to Depends (LP: #304014)
 
   [ Alessio Igor Bogani ]
   * Fix path into man page (LP: #292289)
