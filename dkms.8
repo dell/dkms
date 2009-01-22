@@ -31,7 +31,7 @@ option in order to remove all instances for every kernel at once.
 Builds the specified module/version combo for the specified kernel. If
 no kernel is specified it builds for the currently running kernel.  All builds
 occur in the directory
-.I /var/dkms/<module>/<module-version>/build/.
+.I /var/lib/dkms/<module>/<module-version>/build/.
 .TP
 .B install
 Installs a built module/version combo onto the kernel it was built for. If
@@ -417,7 +417,7 @@ replaced.
 If more than one is found, then the first one located (by preference indicated
 above) will be considered the "original_module".  As well, all copies of the same-named
 module will be removed from your kernel tree and placed into
-.I /var/dkms/<module>/original_module/$kernelver/collisions
+.I /var/lib/dkms/<module>/original_module/$kernelver/collisions
 so that they can be *manually* accessible later. DKMS will never actually do anything
 with the modules found underneath the /collisions directory, and they will be stored there
 until you manually delete them.
@@ -666,7 +666,7 @@ be located in the patches subdirectory of your source directory (
 .I /usr/src/<module>-<module-version>/patches/
 ).  If any patch fails to apply, the build will be halted and the rejections can be
 inspected in
-.I /var/dkms/<module>/<module-version>/build/.
+.I /var/lib/dkms/<module>/<module-version>/build/.
 If a PATCH should only be applied conditionally, the
 .B PATCH_MATCH[#]
 array should be used, and a corresponding regular expression should be placed in
@@ -756,7 +756,7 @@ module (eg. MAKE="make all INCLUDEDIR=/lib/modules/${kernelver}/build/include").
 .B $dkms_tree
 See the section on /etc/dkms/framework.conf for more information.  This variable represents
 the location of the DKMS tree on the local system.  By default this is
-.I /var/dkms
+.I /var/lib/dkms
 , but this value should not be hard-coded into a dkms.conf in the event that the local user
 has changed it on their system.
 .TP
