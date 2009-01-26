@@ -367,8 +367,6 @@ function read_conf ()
     CLEAN=""
     REMAKE_INITRD=""
     remake_initrd=""
-    UDEV_TRIGGER=""
-    udev_trigger="no"
     PACKAGE_NAME=""
     PACKAGE_VERSION=""
     POST_ADD=""
@@ -578,9 +576,6 @@ function read_conf ()
 
     # Set remake_initrd
     [ `echo "$REMAKE_INITRD" | grep -ic "^y"` -gt 0 ] && remake_initrd="yes"
-
-    # Set udev_trigger
-    [ `echo "$UDEV_TRIGGER" | grep -ic "^n"` -gt 0 ] && udev_trigger="no"
 
     # Set build_exclude
     if [ -n "$BUILD_EXCLUSIVE_KERNEL" ]; then
@@ -1295,13 +1290,6 @@ function install_module()
 	    echo $"DKMS: Install Failed (mkinitrd problems).  Module rolled back to built state."
 	    exit 7
 	fi
-    fi
-
-    # Notify udev if we installed something for the currently running kernel as long as UDEV_TRIGGER is not set to no
-    if [ "${udev_trigger}" == "yes" -a -x /sbin/udevadm -a "${kernelver_array[0]}" == "$(uname -r)" -a "${arch_array[0]}" == "$(uname -m)" ]; then
-       /sbin/udevadm trigger
-    elif [ "${udev_trigger}" == "yes" -a -x /sbin/udevtrigger -a "${kernelver_array[0]}" == "$(uname -r)" -a "${arch_array[0]}" == "$(uname -m)" ]; then
-	/sbin/udevtrigger
     fi
 
     echo $""
