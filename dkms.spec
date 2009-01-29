@@ -117,6 +117,16 @@ rm -rf $RPM_BUILD_ROOT
 # enable on initial install
 [ $1 -lt 2 ] && /sbin/chkconfig dkms_autoinstaller on ||:
 
+#on sles11, we'll have this file and need to set this option
+#so that we can use DKMS modules
+if [ -f /etc/modprobe.conf.local ]; then
+    if grep ^allow_unsupported_modules /etc/modprobe.conf.local >/dev/null; then
+         sed -e 's/^allow_unsupported_modules.*/allow_unsupported_modules=1/' /etc/modprobe.conf.local
+    else
+         echo "allow_unsupported_modules=1" >> /etc/modprobe.conf.local
+    fi
+fi
+
 %preun
 # remove on uninstall
 [ $1 -lt 1 ] && /sbin/chkconfig dkms_autoinstaller off ||:
