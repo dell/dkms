@@ -121,9 +121,9 @@ rm -rf $RPM_BUILD_ROOT
 #so that we can use DKMS modules
 if [ -f /etc/modprobe.conf.local ]; then
     if grep ^allow_unsupported_modules /etc/modprobe.conf.local >/dev/null; then
-         sed -i -e 's/^allow_unsupported_modules.*/allow_unsupported_modules=1/' /etc/modprobe.conf.local
+         sed -i -e 's/^allow_unsupported_modules.*/allow_unsupported_modules 1/' /etc/modprobe.conf.local
     else
-         echo "allow_unsupported_modules=1" >> /etc/modprobe.conf.local
+         echo "allow_unsupported_modules 1" >> /etc/modprobe.conf.local
     fi
 fi
 
