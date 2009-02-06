@@ -1,0 +1,20 @@
+#! /bin/sh
+set -e
+
+case $1 in
+        configure)
+
+                # Remove shutdown and reboot links;
+                # this init script does not need them.
+                if dpkg --compare-versions "$2" lt "2.0.21.1-0ubuntu1"; then
+                        rm -f /etc/rc0.d/K74dkms_autoinstaller \
+                              /etc/rc1.d/K74dkms_autoinstaller \
+                              /etc/rc6.d/K74dkms_autoinstaller
+                fi
+                ;;
+esac
+
+#DEBHELPER#
+
+exit 0
+

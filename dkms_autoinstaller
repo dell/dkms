@@ -7,10 +7,10 @@
 #
 ### BEGIN INIT INFO
 # Provides: dkms
-# Default-Start: 3 4 5
-# Default-Stop: 0 1 2 6
+# Default-Start: 2 3 4 5
+# Default-Stop:
 # Required-Start: $local_fs
-# Required-Stop: $local_fs
+# Required-Stop:
 # Short-Description: Automatically install DKMS modules for new kernels
 # Description: A service to automatically install DKMS modules for new kernels.
 ### END INIT INFO

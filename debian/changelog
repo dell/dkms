@@ -4,6 +4,7 @@ dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
     Thanks Jonas Kölker.
   * Remove all references to udevadm trigger so that it can't cause problems
     with the system in any situation. (LP: #320200)
+  * Fix init script to not stop on shutdown. (LP: #326181)
 
  -- Mario Limonciello <mario_limonciello@dell.com>  Fri, 06 Feb 2009 15:49:53 -0600
 
