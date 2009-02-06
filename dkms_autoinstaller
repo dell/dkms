@@ -138,7 +138,8 @@ case "$1" in
 		else
 		    echo "$module_in_tree ($version_in_tree): Installing module." >>$output_loc
 		    if [ "$current_state" != "built" ] && ! [ -e /lib/modules/$kernel/build/include ]; then
-			echo "  Kernel source for $kernel not installed.  Cannot install this module." >>$output_loc
+			echo "  Kernel headers for $kernel are not installed.  Cannot install this module." >>$output_loc
+			echo "  Try installing linux-headers-$kernel or equivalent." >>$output_loc
                         log_action_end_msg 1
 		    elif [ "$current_state" != "built" ] && [ -e /lib/modules/$kernel/build/include ]; then
 			return_status=""
