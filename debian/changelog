@@ -4,6 +4,21 @@ dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
 
  -- Mario Limonciello <mario_limonciello@dell.com>  Fri, 06 Feb 2009 15:49:53 -0600
 
+dkms (2.0.21.1-0ubuntu3) jaunty; urgency=low
+
+  * dkms: actually make the change I claimed to have made in the last release,
+    no idea where it went.
+
+ -- Scott James Remnant <scott@ubuntu.com>  Thu, 05 Mar 2009 16:28:41 +0000
+
+dkms (2.0.21.1-0ubuntu2) jaunty; urgency=low
+
+  * Bump dependency on debhelper to install modules to install modprobe.d
+    files to the right path.
+  * Update dkms to check for the new correct path first.
+
+ -- Scott James Remnant <scott@ubuntu.com>  Thu, 05 Mar 2009 11:27:53 +0000
+
 dkms (2.0.21.1-0ubuntu1) jaunty; urgency=low
 
   * Fix misleading error for missing source instead of headers. (LP: #324383)

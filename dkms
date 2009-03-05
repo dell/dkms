@@ -705,6 +705,7 @@ function moduleconfig_add ()
 
     local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
     modconfig_files=""
+    [ -e /etc/modprobe.d/dkms.conf ] && modconfig_files="/etc/modprobe.d/dkms.conf"
     [ -e /etc/modprobe.d/dkms ] && modconfig_files="/etc/modprobe.d/dkms"
     [ -e /etc/modules.conf ] && modconfig_files="$modconfig_files /etc/modules.conf"
     [ -e /etc/modprobe.conf ] && modconfig_files="$modconfig_files /etc/modprobe.conf"

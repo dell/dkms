@@ -3,7 +3,7 @@ Section: admin
 Priority: optional
 Maintainer: Ubuntu Core Developers <ubuntu-motu@lists.ubuntu.com>
 XSBC-Original-Maintainer: Mario Limonciello <Mario_Limonciello@dell.com>
-Build-Depends: debhelper (> 5), cdbs
+Build-Depends: debhelper (>= 7.0.17ubuntu3), cdbs
 Standards-Version: 3.7.3
 Vcs-git: http://linux.dell.com/git/dkms.git
 
