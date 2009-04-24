@@ -294,6 +294,12 @@ function distro_version()
     if [ -r /etc/lsb-release ]; then
 	. /etc/lsb-release
 	LSB_RELEASE=1
+    else
+	if type lsb_release >/dev/null 2>&1; then
+		DISTRIB_ID=$(lsb_release -i -s)
+		DISTRIB_RELEASE=$(lsb_release -r -s)
+		LSB_RELEASE=1
+	fi
     fi
 
     if [ -n "${FEDORA_RELEASE}" ]; then
@@ -339,6 +345,7 @@ function override_dest_module_location()
 	sles*) echo "/updates" && return ;;
 	suse*) echo "/updates" && return ;;
 	Ubuntu*) echo "/updates/dkms" && return ;;
+	Debian*) echo "/updates/dkms" && return ;;
 	*) ;;
     esac
     echo "$orig_location"
