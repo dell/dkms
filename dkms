@@ -3199,11 +3199,11 @@ function make_debian()
     pushd "$temp_dir_debian" > /dev/null 2>&1
     case "$create_type" in
         dsc)
-            invoke_command "fakeroot dpkg-buildpackage -S -us -uc 1>/dev/null" "Building source package"
+            invoke_command "dpkg-buildpackage -S -us -uc 1>/dev/null" "Building source package"
             invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}.dsc' '$temp_dir/${debian_package}-dkms_${module_version}.tar.gz' '$deb_basedir'" "Moving built files to $deb_basedir"
             ;;
         deb)
-            invoke_command "fakeroot dpkg-buildpackage -b -us -uc 1>/dev/null" "Building binary package"
+            invoke_command "dpkg-buildpackage -rfakeroot -b -us -uc 1>/dev/null" "Building binary package"
             invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_all.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
             ;;
     esac
