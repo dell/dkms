@@ -5,20 +5,19 @@
 #
 _kernels()
 {
-        COMPREPLY=( $( command ls /lib/modules | grep "^$cur" ) )
+        COMPREPLY=( $( cd /lib/modules && compgen -d -- "$cur" ) )
 }
 
 # complete on full directory names under $1
 _subdirectories()
 {
-	COMPREPLY=( $( command ls -F $1 2>/dev/null | awk -F \/ '/\/$/ \
-		{print $1}' | grep "^$cur" ) )
+	COMPREPLY=( $( cd $1 && compgen -d -- "$cur" ) )
 }
 
 # complete on $2 part of filenames matching pattern $1 under /usr/src
 _filename_parts()
 {
-	COMPREPLY=( $( command ls -F /usr/src 2>/dev/null | grep -E '^'$1'/$' \
+	COMPREPLY=( $( command ls -F /usr/src/ 2>/dev/null | grep -E '^'$1'/$' \
 		| sed -r -e 's/^([^-]+)-(.+)\/$/\'$2'/' | grep "^$cur" ) )
 }
 
