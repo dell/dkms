@@ -3077,7 +3077,9 @@ function make_debian()
     ROOT=""
     ADMINABLE=""
     if [ "$USER" != "root" ]; then
-        if [ -x /usr/bin/gksudo ] && [ ! -z "$DISPLAY" ]; then
+        if [ -x /usr/sbin/su-to-root ]; then
+            ROOT="/usr/sbin/su-to-root -c"
+        elif [ -x /usr/bin/gksudo ] && [ ! -z "$DISPLAY" ]; then
             ROOT="/usr/bin/gksudo --description 'DKMS Debian package builder' "
         elif [ -x /usr/bin/kdesu ] && [ ! -z "$DISPLAY" ]; then
             ROOT="/usr/bin/kdesu"
