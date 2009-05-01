@@ -1,125 +1,118 @@
-dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
+dkms (2.0.21.1-1) unstable; urgency=low
 
-  *
+  * [bcda131] Imported Upstream version 2.0.21.1
+  * [487ad26] debian/patches/13-template.patch: 
+    Updated template-dkms-mkdeb Changes: 
+    - Bump to debhelper 7 compatibility levels 
+    - Updated to standards version 3.8.1 
+    - Use Dynamic Kernel Modules Support Team as maintainer field
+    - Use an unversioned dependency on bash and add ${misc:Depends} in Depends
+    - Use dh_prep instead og dh_clean -k
+  * [c75e860] Updated to standards version 3.8.1 (No changes needed)
+  * [0d14f3e] Update dkms to check for /etc/modprobe.d/dkms.conf,
+    dh_installmodules now give files in /etc/modprobe.d a .conf syntax,
+    as required by new module-init-tools.
+  * [ceff6d3] Move to kernel section as by ftpmasters override
+  * [aa84c76] debian/control: Fix VCS-Browser field
 
- -- Mario Limonciello <mario_limonciello@dell.com>  Fri, 06 Feb 2009 15:49:53 -0600
+ -- Giuseppe Iuculano <giuseppe@iuculano.it>  Wed, 22 Apr 2009 15:03:34 +0200
 
-dkms (2.0.21.1-0ubuntu3) jaunty; urgency=low
+dkms (2.0.21.0-1) unstable; urgency=low
 
-  * dkms: actually make the change I claimed to have made in the last release,
-    no idea where it went.
+  * [0c2c36b] New Upstream version 2.0.21.0
+  * First Debian release (Closes: #481590)
+  * [6723982] debian/patches/: Refreshed patches, and deleted
+    03-remove_dkms_lib_directory_if_empty.patch (now it is in upstream)
+  * [592acec] debian/patches/04-use_su-to-root.patch: Do not test for $DISPLAY
+    as su-to-root does not require an X display
+  * [22d2ce2] debian/patches/09-lilo_detection.patch: grep for
+    do_bootloader instead of postinst_hook
+  * [b910eb3] debian/patches/03-use-new-
+    header_postinst.d_directory.patch: Use new
+    /etc/kernel/header_postinst.d directory introduced in kernel-package
+    11.017
+  * [f59cc66] debian/control: Add kernel-package (>= 11.017) in Depends
+  * [6ebb0c4] Removed debian/postinst and debian/prerm
 
- -- Scott James Remnant <scott@ubuntu.com>  Thu, 05 Mar 2009 16:28:41 +0000
+ -- Giuseppe Iuculano <giuseppe@iuculano.it>  Mon, 16 Feb 2009 11:06:58 +0100
 
-dkms (2.0.21.1-0ubuntu2) jaunty; urgency=low
+dkms (2.0.20.4-1) unstable; urgency=low
 
-  * Bump dependency on debhelper to install modules to install modprobe.d
-    files to the right path.
-  * Update dkms to check for the new correct path first.
-
- -- Scott James Remnant <scott@ubuntu.com>  Thu, 05 Mar 2009 11:27:53 +0000
-
-dkms (2.0.21.1-0ubuntu1) jaunty; urgency=low
-
-  * Fix misleading error for missing source instead of headers. (LP: #324383)
-    Thanks Jonas Kölker.
-  * Remove all references to udevadm trigger so that it can't cause problems
-    with the system in any situation. (LP: #320200)
-  * Fix init script to not stop on shutdown. (LP: #326181)
-
- -- Mario Limonciello <mario_limonciello@dell.com>  Fri, 06 Feb 2009 15:49:53 -0600
-
-dkms (2.0.21.0-0ubuntu1) jaunty; urgency=low
-
-  [ Mario Limonciello ]
-  * Don't output useless output on removal (LP: #274792)
-  * Depend on linux-headers-generic | linux-headers so that depends are 
-    resolved for the majority case.
-  * Improved bash completion.
-  * Improvements to suse driver disk creation.
-  * Use an unversioned dependency on bash. (LP: #314774)
-  * Promote gcc to Depends (LP: #304014)
-  * Set the default behavior to NOT use udevadm trigger. (LP: #320200)
-
-  [ David Gaarenstroom ]
-  * Check for /etc/modprobe.d/dkms not just /etc/modprobe.conf (LP: #317238)
-
-  [ Alessio Igor Bogani ]
-  * Fix path into man page (LP: #292289)
-
- -- Mario Limonciello <mario_limonciello@dell.com>  Thu, 09 Oct 2008 17:54:09 -0500
-
-dkms (2.0.20.4-0ubuntu3) jaunty; urgency=low
-
-  * Ensure that the /lib/modules/<version>/updates/dkms directory is
-    removed if it is empty after a removal.  This allows the modules
-    directory to be removed as it becomes empty.  (LP: #300773)
-
- -- Andy Whitcroft <apw@canonical.com>  Thu, 04 Dec 2008 16:48:10 +0000
-
-dkms (2.0.20.4-0ubuntu2) intrepid; urgency=low
-
-  * Backport these fixes from trunk:
-    - Don't output useless output on removal (LP: #274792)
-    - Install init script to runlevels (LP: #280998)
-
- -- Mario Limonciello <mario_limonciello@dell.com>  Thu, 09 Oct 2008 17:54:09 -0500
-
-dkms (2.0.20.4-0ubuntu1) intrepid; urgency=low
-
-  * Add patch from TJ that doesn't force a tarball to be loaded
-    unless it's present.
-  * debian/rules:
-    - Run dh_installmodules.  See debbug 377390 for more information.
-  * debian/modprobe:
-    - Install initial modprobe.d/dkms file.
-  * Check for /etc/modprobe.d/dkms before modprobe.conf in case we are
-    on a distro that supports it.
-
- -- Mario Limonciello <mario_limonciello@dell.com>  Mon, 18 Aug 2008 12:23:56 -0500
-
-dkms (2.0.20.3-0ubuntu1) intrepid; urgency=low
-
-  * Fix mkdeb/mkdsc to not allow underscores in the source or binary package
-    naming.
-
- -- Mario Limonciello <mario_limonciello@dell.com>  Tue, 05 Aug 2008 13:59:38 -0500
-
-dkms (2.0.20.2-0ubuntu1) intrepid; urgency=low
-
-  * If kernel headers are missing during a module build, report 
-    this status properly in DKMS auto installation service. (LP: #247523)
-
- -- Mario Limonciello <mario_limonciello@dell.com>  Tue, 15 Jul 2008 17:20:29 -0500
-
-dkms (2.0.20.1-0ubuntu1) intrepid; urgency=low
-
-  * Fix FTBFS because of missing template.
-
- -- Mario Limonciello <mario_limonciello@dell.com>  Tue, 08 Jul 2008 11:52:24 -0500
-
-dkms (2.0.20.0-0ubuntu1) intrepid; urgency=low
-
-  [ Matt Domsch ]
-  *  depmod on uninstall before mkinitrd, depmod fix & cleanups
-  *  find_module_from_ko() could incorrectly return multiple values
-  * RPM:
-    - fix file/dir ownerships in dkms.spec
-  * use 'date -R' in mkdeb creating debian/changelog
-  * RPM:
-    - use /etc/kernel/{prerm,postinst}.d/dkms in RPMs now too
-    - mkrpm: display rpmbuild log on error, write RPMs $dkms_tree
-    - clarify license in spec to GPLv2+
-
-  [ Mario Limonciello ]
-  * Add support for OBSOLETE_BY to DKMS.
-  * debian/rules:
-    - Redo to use CDBS
-    - Add get-orig-source target rule.
+  [ David Paleino ]
   * debian/control:
-    - Build depend on cdbs now
+    - using new Homepage field in source stanza
+    - setting team as Maintainer
+    - adding myself and Mario Limonciello as Uploaders
+    - removed awk and bash dependencies: they are "essential" (de facto)
+      packages (LP: #314774)
+    - DM-Upload-Allowed set
+    - added menu|sudo to Recommends
+  * debian/copyright:
+    - updated to machine-readable format
+    - clarified license for debian/HOWTO.Debian
+  * debian/compat bumped to 7
+  * debian/docs:
+    - sample.{conf,spec} moved to debian/examples
+  * debian/rules updated
+  * debian/patches/01-fix_manpage.patch added, to fix hyphen-used-as-minus-sign
+    lintian warning
+  * debian/postinst added
+  * debian/HOWTO.Debian from Ubuntu package added
+  * debian/modprobe added
+  * debian/prerm:
+    - use sed instead of tricky grep hack
+    - always do the default thing
+  * added get-svn-source to debian/rules
+  * debian/patches/08-use_update-initramfs.patch: updated to parse
+    /etc/kernel-img.conf
+  * debian/patches/11-bash-completion.patch:
+    - better usage of bash builtins
+    - _filename_parts(): fix wrong behaviour when /usr/src/ is a symlink
+    - added patch description
 
- -- Mario Limonciello <mario_limonciello@dell.com>  Mon, 07 Jul 2008 18:12:07 -0500
+  [ Giuseppe Iuculano ]
+  * Added myself as Uploader
+  * Standards-Version bumped to 3.8.0
+    - Add debian/README.source to document quilt usage
+  * debian/prerm: quiet grep, do not write anything to standard output.
+  * debian/rules: 
+    - remove some pointless blank lines
+    - fix dh-clean-k-is-deprecated lintian warning, use dh_prep instead of
+      dh_clean -k
+  * debian/patches/03-remove_dkms_lib_directory_if_empty.patch: Merge from
+    Ubuntu, ensure that the /lib/modules/<version>/updates/dkms directory is
+    removed if it is empty after a removal.  This allows the modules directory
+    to be removed as it becomes empty.
+  * debian/patches/04-use_su-to-root.patch:  Use su-to-root if available
+  * debian/patches/05-do_not_check_admin_group.patch:
+    - Do not check for admin group, this isn't a Debian standard group.
+    - added a g modifier to replace all underscores in function make_debian()
+  * debian/patches/06-fakeroot.patch: Do not use fakeroot for source-
+    only build, and use -rfakeroot for binary build
+  * debian/patches/07-exit-if-build-fails.patch: Fix exit when build
+    fails
+  * debian/patches/08-support_kernel-img.conf.patch: Use update-initramfs
+    if ramdisk value in /etc/kernel-img.conf is missing
+  * debian/patches/09-lilo_detection.patch: check /etc/kernel-img.conf
+    to find if user is using grub
+  * debian/patches/10-lsb.patch: 
+    - /etc/lsb-release is not present in Debian, so run run lsb_release
+    - Added Debian as known distro in override_dest_module_location()
+  * debian/control: 
+    - Added lsb-release in Recommends
+    - Updated VCS control field
+    - Added build-essential in Depends (LP: #304014), 
+      Removed ${shlibs:Depends} from Depends and removed make, dpkg-dev and
+      gcc from Recommends
+  * debian/patches/11-bash-completion.patch: Improve bash-completion
+    support (Origin Mandriva)
+  * debian/patches/01-fix_manpage.patch: fix wrong path into man page
+    (LP: #292289)
+  * debian/patches/12-use_invoke-rc.d.patch: Use invoke-rc.d in
+    kernel_postinst.d_dkms and fix script-calls-init-script-directly lintian
+    warning
+
+ -- Giuseppe Iuculano <giuseppe@iuculano.it>  Thu, 08 Jan 2009 15:01:39 +0100
 
 dkms (2.0.19-0ubuntu2) hardy; urgency=low
 
