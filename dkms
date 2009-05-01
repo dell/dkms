@@ -226,11 +226,21 @@ function remake_initrd()
     elif [ -e /etc/SuSE-release ] || [ -d /etc/SuSEconfig ]; then
 	echo $""
 	initrd_dir="/boot"
+	kernel_file="vmlinuz"
+	if [ ! -f "$initrd_dir/$kernel_file-$1" ]; then
+		kernel_file="vmlinux"
+		if [ ! -f "$initrd_dir/$kernel_file-$1" ]; then
+			echo $"Error! Unable to find valid kernel file under " >&2
+			echo $"$initrd_dir for kernel version $1" >&2
+			echo $"" >&2
+			return 1;
+		fi
+	fi
 	echo $"Saving old initrd as $initrd_dir/initrd-$1_old"
 	cp -f "$initrd_dir/initrd-$1" "$initrd_dir/initrd-$1_old"
 	echo $"Making new initrd as $initrd_dir/initrd-$1"
 	echo $"(If next boot fails, revert to the _old initrd image)"
-	invoke_command "$mkinitrd -k vmlinuz-$1 -i initrd-$1" "$mkinitrd" background
+	invoke_command "$mkinitrd -k $kernel_file-$1 -i initrd-$1" "$mkinitrd" background
 	exitval="$?"
     elif [ -e /etc/debian_version ]; then
       	echo $""
