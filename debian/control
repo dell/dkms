@@ -9,7 +9,8 @@ DM-Upload-Allowed: yes
 Build-Depends: debhelper (>= 7), quilt
 Standards-Version: 3.8.1
 Homepage: http://linux.dell.com/dkms
-Vcs-Git: http://linux.dell.com/git/dkms.git
+Vcs-Git: http://linux.dell.com/git/dkms.git 
+Vcs-Browser: http://linux.dell.com/git/dkms.git 
 
 Package: dkms
 Architecture: all
