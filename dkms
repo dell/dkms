@@ -2097,7 +2097,7 @@ make_driver_disk_floppy()
     if [ "$fs" == 'vfat' ]; then
 	invoke_command "mkdosfs $image_name" "mkdosfs" background
     elif [ "$fs" == 'ext2' ]; then
- 	invoke_command "mke2fs $image_name" "mke2fs" background
+ 	invoke_command "mke2fs -F $image_name" "mke2fs" background
     fi
 
     local mntdir=`mktemp -d $tmp_location/dkms.XXXXXX`
