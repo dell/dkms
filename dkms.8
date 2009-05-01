@@ -527,13 +527,18 @@ DEST_MODULE_NAME[1]="qla2300_6x").
 This directive specifies the destination where a module should be installed to, once compiled.  It also
 is used for finding original_modules.  This is a
 .B required
-directive.  This directive must start with the text "/kernel" which is in reference to
+directive, except as noted below. This directive must start with the text "/kernel" which is in reference to
 /lib/modules/<kernelversion>/kernel.
 Note that for each module within a dkms package, the numeric value of
 .B #
 must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and
 DEST_MODULE_LOCATION and that the numbering should start at 0 (eg. DEST_MODULE_LOCATION[0]="/kernel/drivers/something/"
 DEST_MODULE_LOCATION[1]="/kernel/drivers/other/").
+
+DEST_MODULE_LOCATION is ignored on Fedora Core 6 and higher, Red Hat
+Enterprise Linux 5 and higher, Novell SuSE Linux Enterprise Server 10
+and higher, Novell SuSE Linux 10.0 and higher, and Ubuntu. Instead,
+the proper distribution-specific directory is used.
 .TP
 .B MODULES_CONF_ALIAS_TYPE[#]=
 This directive array specifies how your modules should be aliased in
