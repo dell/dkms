@@ -1,1 +1,4 @@
 # modprobe information used for DKMS modules
+#
+# This is a stub file, should be edited when needed,
+# used by default by DKMS.
