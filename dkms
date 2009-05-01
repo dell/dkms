@@ -3106,7 +3106,7 @@ function make_debian()
 
     make_common_test "mk${create_type}"
 
-    debian_package=$(echo $module | sed s/_/-/)
+    debian_package=$(echo $module | sed s/_/-/g)
 
     SYNAPTIC=""
     #Synaptic availablity
@@ -3116,7 +3116,6 @@ function make_debian()
 
     #test who we are
     ROOT=""
-    ADMINABLE=""
     if [ "$USER" != "root" ]; then
         if [ -x /usr/sbin/su-to-root ]; then
             ROOT="/usr/sbin/su-to-root -c"
@@ -3127,11 +3126,6 @@ function make_debian()
         elif [ -x /usr/bin/sudo ]; then
             ROOT="/usr/bin/sudo"
         fi
-        if groups | sed 's/lpadmin//' | grep admin 2>&1 1>/dev/null; then
-            ADMINABLE="TRUE"
-        fi
-    else
-        ADMINABLE="TRUE"
     fi
 
     # Read the conf file
@@ -3146,7 +3140,7 @@ function make_debian()
     #test if we are missing dependencies that are needed during package build
     INSTALL_PACKAGES="`make_debian_test_depends`"
     if [ ! -z "$INSTALL_PACKAGES" ]; then
-        if [ -z "ADMINABLE" ]; then
+        if [ -z "$ROOT" ]; then
             echo $"" >&2
             echo $"Error! Missing $INSTALL_PACKAGES" >&2
             echo $"and unable to install.  Please ask an admin to install for you." >&2
@@ -3154,8 +3148,7 @@ function make_debian()
         fi
         if [ ! -z "$SYNAPTIC" ] && [ ! -z "$DISPLAY" ]; then
             local TEMPFILE=`/bin/tempfile`
-            echo $INSTALL_PACKAGES | sed 's/|/\ install\
-/g' > $TEMPFILE
+            echo $INSTALL_PACKAGES | sed 's/|/\ install\/g' > $TEMPFILE
             $ROOT "sh -c '/usr/sbin/synaptic --set-selections --non-interactive --hide-main-window < $TEMPFILE'"
             trap "rm -f $TEMPFILE; delete_temporary_trees" EXIT HUP TERM
         else
