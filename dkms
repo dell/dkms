@@ -207,6 +207,20 @@ function remake_initrd()
     local exitval="0"
     local mkinitrd='mkinitrd'
 
+    # Support /etc/kernel-img.conf (Debian)
+    if [ -f "/etc/kernel-img.conf" ]; then
+        # we use the first one listed
+        mkinitrd=$(sed -e '/^\s*ramdisk/!d' \
+                       -e 's/^\s*ramdisk\s*=\s*\(.*\)/\1/' \
+                       -e "s/['\"]*//g" \
+                       /etc/kernel-img.conf | \
+                   awk '{print $1}')
+    else
+        if type update-initramfs >/dev/null 2>&1; then
+            mkinitrd='update-initramfs'
+        fi
+    fi
+
     # Support initramfs distributions (Ubuntu).
     if [ -x "/usr/sbin/mkinitramfs" ]; then
         mkinitrd='mkinitramfs'
@@ -245,11 +259,20 @@ function remake_initrd()
     elif [ -e /etc/debian_version ]; then
       	echo $""
 	initrd_dir="/boot"
-	echo $"Saving old initrd as $initrd_dir/initrd.img_old-$1"
-	cp -f "$initrd_dir/initrd.img-$1" "$initrd_dir/initrd.img_old-$1"
+	echo $"Updating initrd"
 	echo $"Making new initrd as $initrd_dir/initrd.img-$1"
-	echo $"(If next boot fails, revert to the _old initrd image)"
-	invoke_command "$mkinitrd -o $initrd_dir/initrd.img-$1 $1" "$mkinitrd" background
+	echo $"(If next boot fails, revert to the .bak initrd image)"
+	if [ -f "/etc/initramfs-tools/update-initramfs.conf" ] && \
+	   ! ( grep ^update_initramfs /etc/initramfs-tools/update-initramfs.conf | grep -qi no ) && \
+	   [ "$mkinitrd" == "update-initramfs" ]; then
+		invoke_command "$mkinitrd -u" "$mkinitrd" background
+	else
+		echo $"Saving old initrd as $initrd_dir/initrd.img_old-$1"
+		# we use the same convention as update-initramfs, so that we just
+		# print the warning once
+		cp -f "$initrd_dir/initrd.img-$1" "$initrd_dir/initrd.img-$1.bak"
+		invoke_command "$mkinitrd -o $initrd_dir/initrd.img-$1 $1" "$mkinitrd" background
+	fi
 	exitval="$?"
     else
 	echo $""
