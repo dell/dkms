@@ -39,9 +39,8 @@ binary-indep: build install
 	dh_installchangelogs 
 	dh_installdocs AUTHORS debian/HOWTO.Debian
 	dh_installexamples
-	dh_installinit --name dkms_autoinstaller --update-rcd-params="start 20 2 3 4 5"
+	dh_installinit --name dkms_autoinstaller --update-rcd-params="start 20 2 3 4 5 ."
 	dh_installman
-	dh_installmodules
 	dh_link
 	dh_strip
 	dh_compress
@@ -59,5 +58,9 @@ get-orig-source:
 		--force-download \
 		--download-version $(CURVER) \
 		--rename
+
+get-svn-source:
+	[ -d ../tarballs ] || mkdir ../tarballs
+	cd ../tarballs && make -f $(CURDIR)/debian/rules get-orig-source
 
 .PHONY: build clean binary-indep binary-arch binary install
