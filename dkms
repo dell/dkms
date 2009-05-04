@@ -749,6 +749,14 @@ function moduleconfig_add ()
     [ -e /etc/modprobe.d/dkms ] && modconfig_files="/etc/modprobe.d/dkms"
     [ -e /etc/modules.conf ] && modconfig_files="$modconfig_files /etc/modules.conf"
     [ -e /etc/modprobe.conf ] && modconfig_files="$modconfig_files /etc/modprobe.conf"
+    [ -e /etc/modprobe.d/$package_name.conf ] && modconfig_files="/etc/modprobe.d/$package_name.conf"
+
+    if [ -z "$modconfig_files" ]; then
+	    touch /etc/modprobe.d/$package_name.conf
+	    echo $"created /etc/modprobe.d/$package_name.conf.">&2
+	    modconfig_files="/etc/modprobe.d/$package_name.conf"
+    fi
+
 
     for moduleconfig in $modconfig_files; do
 	local index=0
@@ -819,6 +827,7 @@ function moduleconfig_remove ()
     [ -e /etc/modprobe.d/dkms ] && modconfig_files="/etc/modprobe.d/dkms"
     [ -e /etc/modules.conf ] && modconfig_files="$modconfig_files /etc/modules.conf"
     [ -e /etc/modprobe.conf ] && modconfig_files="$modconfig_files /etc/modprobe.conf"
+    [ -e /etc/modprobe.d/$package_name.conf ] && modconfig_files="/etc/modprobe.d/$package_name.conf"
 
     for moduleconfig in $modconfig_files; do
 	index=0
@@ -843,6 +852,11 @@ function moduleconfig_remove ()
 		    grep -v "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}" $moduleconfig > $temp_dir_name/moduleconfig.new
 		    mv -f $temp_dir_name/moduleconfig.new $moduleconfig
 		    echo $"$moduleconfig: removed alias for '${dest_module_name[$index]}'"
+		    if [ "$modconfig_files" == "/etc/modprobe.d/$package_name.conf" ]; then
+			    rm -f /etc/modprobe.d/$package_name.conf
+			    echo $"$moduleconfig: deleted /etc/modprobe.d/$package_name.conf file"
+		    fi
+
 		fi
 	    fi
 
