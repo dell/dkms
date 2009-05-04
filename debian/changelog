@@ -6,16 +6,42 @@ dkms (2.0.21.1-1) unstable; urgency=low
     - Bump to debhelper 7 compatibility levels 
     - Updated to standards version 3.8.1 
     - Use Dynamic Kernel Modules Support Team as maintainer field
-    - Use an unversioned dependency on bash and add ${misc:Depends} in Depends
-    - Use dh_prep instead og dh_clean -k
+    - Remove bash and add ${misc:Depends} in Depends
+    - Use dh_prep instead of dh_clean -k
   * [c75e860] Updated to standards version 3.8.1 (No changes needed)
   * [0d14f3e] Update dkms to check for /etc/modprobe.d/dkms.conf,
-    dh_installmodules now give files in /etc/modprobe.d a .conf syntax,
+    dh_installmodules now gives files in /etc/modprobe.d a .conf syntax,
     as required by new module-init-tools.
   * [ceff6d3] Move to kernel section as by ftpmasters override
   * [aa84c76] debian/control: Fix VCS-Browser field
+  * [6cd45ec] debian/patches/15_modprobe.patch: Do not install
+    /etc/modprobe.d/dkms, it only contains comments and is opened and
+    parsed every time modprobe is run (and it is run very often at boot
+    time). Use instead (and create if necessary)
+    /etc/modprobe.d/package_name.conf. (Closes: #525379)
+  * [171907c] debian/postinst: if /etc/modprobe.d/dkms is modified, put
+    its content in /etc/modprobe.d/dkms.conf and remove it.
+  * [426868b] update debian/copyright to add Giuseppe Iuculano to
+    copyright on debian/*
+  * [1ffb2cd] Removed 03-use-new-header_postinst.d_directory.patch,
+    /etc/kernel/header_postinst.d is used only by kernel-package. dkms
+    must use /etc/kernel/postinst.d/ directory.
+  * [eff2f3e] debian/control: demoted linux-headers and linux-image in
+    Recommends, removed kernel-package and build-essential from Depends,
+    and added only gcc and make.
+  * [508c115] debian/postinst: Remove also
+    /etc/kernel/header_postinst.d/dkms and do an init script remove to
+    un-do the "bad" links created by previous version
 
- -- Giuseppe Iuculano <giuseppe@iuculano.it>  Wed, 22 Apr 2009 15:03:34 +0200
+  [ Mario Limonciello ]
+  * [848d7f9] update debian/copyright to add Mario Limonciello to
+    copyright on debian/*
+  * [791fc37] Update debian/rules to only run DKMS on the startup
+    targets. This change was proposed from Ubuntu some time back as DKMS
+    doesn't do anything on shutdown.
+
+
+ -- Giuseppe Iuculano <giuseppe@iuculano.it>  Mon, 04 May 2009 09:55:18 +0200
 
 dkms (2.0.21.0-1) unstable; urgency=low
 
