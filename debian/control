@@ -14,17 +14,15 @@ Vcs-Browser: http://linux.dell.com/git/dkms.git
 
 Package: dkms
 Architecture: all
-Depends: ${misc:Depends},
- awk,
- bash,
+Depends: ${misc:Depends}, module-init-tools,
  gcc,
- module-init-tools,
- linux-headers-generic | linux-headers,
- linux-image
+ make | build-essential | dpkg-dev
 Recommends: patch,
  fakeroot,
  lsb-release,
- menu | sudo
+ menu | sudo,
+ linux-headers-2.6-686 [i386] | linux-headers-2.6-amd64 [amd64] | linux-headers-generic [i386 amd64] | linux-headers,
+ linux-image
 Description: Dynamic Kernel Module Support Framework
  DKMS is a framework designed to allow individual kernel modules to be upgraded
  without changing the whole kernel. It is also very easy to rebuild modules as
