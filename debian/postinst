@@ -1,20 +1,33 @@
-#! /bin/sh
+#!/bin/sh
+
 set -e
 
-case $1 in
-        configure)
+if dpkg --compare-versions "$2" lt-nl "2.0.21.1-1~" ; then
+	if [ -e "/etc/modprobe.d/dkms" ]; then
+		md5sum=$(md5sum /etc/modprobe.d/dkms | sed -e 's/ .*//')
+		old_md5sum=$(dpkg-query -W -f='${Conffiles}' dkms | \
+			sed -n -e "\' /etc/modprobe.d/dkms ' { s/ obsolete$//; s/.* //; p }")
+		if [ "$md5sum" = "$old_md5sum" ]; then
+			rm -f /etc/modprobe.d/dkms
+		else
+			echo "Moving /etc/modprobe.d/dkms to /etc/modprobe.d/dkms.conf ..."
+			mv /etc/modprobe.d/dkms /etc/modprobe.d/dkms.conf
+			rm -f /etc/modprobe.d/dkms
+		fi
+	fi
 
-                # Remove shutdown and reboot links;
-                # this init script does not need them.
-                if dpkg --compare-versions "$2" lt "2.0.21.1-0ubuntu1"; then
-                        rm -f /etc/rc0.d/K74dkms_autoinstaller \
-                              /etc/rc1.d/K74dkms_autoinstaller \
-                              /etc/rc6.d/K74dkms_autoinstaller
-                fi
-                ;;
-esac
+	if [ -e "/etc/kernel/header_postinst.d/dkms" ]; then
+		md5sum=$(md5sum /etc/kernel/header_postinst.d/dkms | sed -e 's/ .*//')
+		old_md5sum=$(dpkg-query -W -f='${Conffiles}' dkms | \
+			sed -n -e "\' /etc/kernel/header_postinst.d/dkms ' { s/ obsolete$//; s/.* //; p }")
+			if [ "$md5sum" = "$old_md5sum" ]; then
+				echo "Removing obsolete conffile /etc/kernel/header_postinst.d/dkms ..."
+				rm -f /etc/kernel/header_postinst.d/dkms
+				rmdir --ignore-fail-on-non-empty /etc/kernel/header_postinst.d/
+			fi
+	fi
+	# must do a remove first to un-do the "bad" links created by previous version
+	update-rc.d -f dkms_autoinstaller remove >/dev/null 2>&1
+fi
 
 #DEBHELPER#
-
-exit 0
-

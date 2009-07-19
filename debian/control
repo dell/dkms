@@ -1,19 +1,29 @@
 Source: dkms
-Section: admin
+Section: kernel
 Priority: optional
-Maintainer: Ubuntu Core Developers <ubuntu-motu@lists.ubuntu.com>
-XSBC-Original-Maintainer: Mario Limonciello <Mario_Limonciello@dell.com>
-Build-Depends: debhelper (>= 7.0.17ubuntu3), cdbs
-Standards-Version: 3.7.3
-Vcs-git: http://linux.dell.com/git/dkms.git
+Maintainer: Dynamic Kernel Modules Support Team <pkg-dkms-maint@lists.alioth.debian.org>
+Uploaders: David Paleino <d.paleino@gmail.com>,
+ Mario Limonciello <Mario_Limonciello@dell.com>,
+ Giuseppe Iuculano <giuseppe@iuculano.it>
+DM-Upload-Allowed: yes
+Build-Depends: debhelper (>= 7), quilt
+Standards-Version: 3.8.1
+Homepage: http://linux.dell.com/dkms
+Vcs-Git: http://linux.dell.com/git/dkms.git 
+Vcs-Browser: http://linux.dell.com/git/dkms.git 
 
 Package: dkms
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}
- awk, module-init-tools, bash, linux-image, linux-headers-generic | linux-headers, gcc
-Recommends: patch, make, fakeroot
+Depends: ${misc:Depends}, module-init-tools,
+ gcc,
+ make | build-essential | dpkg-dev
+Recommends: patch,
+ fakeroot,
+ lsb-release,
+ menu | sudo,
+ linux-headers-2.6-686 | linux-headers-2.6-amd64 | linux-headers-generic | linux-headers,
+ linux-image
 Description: Dynamic Kernel Module Support Framework
- This package contains the framework for the Dynamic Kernel Module
- Support (DKMS) method for installing and updating kernel modules.
- .
-  Homepage:  http://linux.dell.com/dkms
+ DKMS is a framework designed to allow individual kernel modules to be upgraded
+ without changing the whole kernel. It is also very easy to rebuild modules as
+ you upgrade kernels.

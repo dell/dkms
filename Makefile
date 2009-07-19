@@ -1,12 +1,12 @@
-RELEASE_DATE := "6-February-2009"
+RELEASE_DATE := "8-May-2009"
 RELEASE_MAJOR := 2
 RELEASE_MINOR := 0
-RELEASE_SUBLEVEL := 21
-RELEASE_EXTRALEVEL := .1
+RELEASE_SUBLEVEL := 22
+RELEASE_EXTRALEVEL := .0
 RELEASE_NAME := dkms
 RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_SUBLEVEL)$(RELEASE_EXTRALEVEL)
 RELEASE_STRING := $(RELEASE_NAME)-$(RELEASE_VERSION)
-DIST := jaunty
+DIST := unstable
 SHELL=bash
 
 SBIN = $(DESTDIR)/usr/sbin
@@ -117,9 +117,8 @@ debmagic: $(TARBALL)
 	tar -C $(DEB_TMP_BUILDDIR) -xzf $(TARBALL)
 	cp -ar debian $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian
 	chmod +x $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/rules
-	#only change the first (which is assumingly the header)
-	sed -i -e "s/RELEASE_VERSION/$(RELEASE_VERSION)/; s/UNRELEASED/$(DIST)/" $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/changelog
 	cd $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING) ; \
+	dch -v $(RELEASE_VERSION)-0 "New upstream version, $(RELEASE_VERSION)"; \
 	dpkg-buildpackage -D -b -rfakeroot ; \
 	dpkg-buildpackage -D -S -sa -rfakeroot ; \
 	mv ../$(RELEASE_NAME)_* $(TOPDIR)/dist/ ; \

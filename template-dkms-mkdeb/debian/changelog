@@ -2,5 +2,5 @@ DEBIAN_PACKAGE-dkms (MODULE_VERSION) stable; urgency=low
 
   * Automatically packaged by DKMS.
 
- -- DKMS <dkms-devel@Dell.com>  DATE_STAMP
+ -- Dynamic Kernel Modules Support Team <pkg-dkms-maint@lists.alioth.debian.org>  DATE_STAMP
 

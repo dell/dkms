@@ -207,6 +207,20 @@ function remake_initrd()
     local exitval="0"
     local mkinitrd='mkinitrd'
 
+    # Support /etc/kernel-img.conf (Debian)
+    if [ -f "/etc/kernel-img.conf" ]; then
+        # we use the first one listed
+        mkinitrd=$(sed -e '/^\s*ramdisk/!d' \
+                       -e 's/^\s*ramdisk\s*=\s*\(.*\)/\1/' \
+                       -e "s/['\"]*//g" \
+                       /etc/kernel-img.conf | \
+                   awk '{print $1}')
+    else
+        if type update-initramfs >/dev/null 2>&1; then
+            mkinitrd='update-initramfs'
+        fi
+    fi
+
     # Support initramfs distributions (Ubuntu).
     if [ -x "/usr/sbin/mkinitramfs" ]; then
         mkinitrd='mkinitramfs'
@@ -226,20 +240,39 @@ function remake_initrd()
     elif [ -e /etc/SuSE-release ] || [ -d /etc/SuSEconfig ]; then
 	echo $""
 	initrd_dir="/boot"
+	kernel_file="vmlinuz"
+	if [ ! -f "$initrd_dir/$kernel_file-$1" ]; then
+		kernel_file="vmlinux"
+		if [ ! -f "$initrd_dir/$kernel_file-$1" ]; then
+			echo $"Error! Unable to find valid kernel file under " >&2
+			echo $"$initrd_dir for kernel version $1" >&2
+			echo $"" >&2
+			return 1;
+		fi
+	fi
 	echo $"Saving old initrd as $initrd_dir/initrd-$1_old"
 	cp -f "$initrd_dir/initrd-$1" "$initrd_dir/initrd-$1_old"
 	echo $"Making new initrd as $initrd_dir/initrd-$1"
 	echo $"(If next boot fails, revert to the _old initrd image)"
-	invoke_command "$mkinitrd -k vmlinuz-$1 -i initrd-$1" "$mkinitrd" background
+	invoke_command "$mkinitrd -k $kernel_file-$1 -i initrd-$1" "$mkinitrd" background
 	exitval="$?"
     elif [ -e /etc/debian_version ]; then
       	echo $""
 	initrd_dir="/boot"
-	echo $"Saving old initrd as $initrd_dir/initrd.img_old-$1"
-	cp -f "$initrd_dir/initrd.img-$1" "$initrd_dir/initrd.img_old-$1"
+	echo $"Updating initrd"
 	echo $"Making new initrd as $initrd_dir/initrd.img-$1"
-	echo $"(If next boot fails, revert to the _old initrd image)"
-	invoke_command "$mkinitrd -o $initrd_dir/initrd.img-$1 $1" "$mkinitrd" background
+	echo $"(If next boot fails, revert to the .bak initrd image)"
+	if [ -f "/etc/initramfs-tools/update-initramfs.conf" ] && \
+	   ! ( grep ^update_initramfs /etc/initramfs-tools/update-initramfs.conf | grep -qi no ) && \
+	   [ "$mkinitrd" == "update-initramfs" ]; then
+		invoke_command "$mkinitrd -u" "$mkinitrd" background
+	else
+		echo $"Saving old initrd as $initrd_dir/initrd.img_old-$1"
+		# we use the same convention as update-initramfs, so that we just
+		# print the warning once
+		cp -f "$initrd_dir/initrd.img-$1" "$initrd_dir/initrd.img-$1.bak"
+		invoke_command "$mkinitrd -o $initrd_dir/initrd.img-$1 $1" "$mkinitrd" background
+	fi
 	exitval="$?"
     else
 	echo $""
@@ -249,7 +282,7 @@ function remake_initrd()
     fi
 
     # Rerun lilo if necessary
-    if ! [ -e /boot/grub/grub.conf ] && [ -e /etc/lilo.conf ] && ! [ -e /boot/grub/menu.lst ]; then
+    if  [ ! -e /etc/kernel-img.conf ] || ( grep ^do_bootloader /etc/kernel-img.conf |  grep -qi yes  ) && [ -e /etc/lilo.conf ]; then
 	invoke_command "/sbin/lilo" "Updating lilo"
     fi
 
@@ -294,6 +327,12 @@ function distro_version()
     if [ -r /etc/lsb-release ]; then
 	. /etc/lsb-release
 	LSB_RELEASE=1
+    else
+	if type lsb_release >/dev/null 2>&1; then
+		DISTRIB_ID=$(lsb_release -i -s)
+		DISTRIB_RELEASE=$(lsb_release -r -s)
+		LSB_RELEASE=1
+	fi
     fi
 
     if [ -n "${FEDORA_RELEASE}" ]; then
@@ -339,6 +378,7 @@ function override_dest_module_location()
 	sles*) echo "/updates" && return ;;
 	suse*) echo "/updates" && return ;;
 	Ubuntu*) echo "/updates/dkms" && return ;;
+	Debian*) echo "/updates/dkms" && return ;;
 	*) ;;
     esac
     echo "$orig_location"
@@ -709,6 +749,14 @@ function moduleconfig_add ()
     [ -e /etc/modprobe.d/dkms ] && modconfig_files="/etc/modprobe.d/dkms"
     [ -e /etc/modules.conf ] && modconfig_files="$modconfig_files /etc/modules.conf"
     [ -e /etc/modprobe.conf ] && modconfig_files="$modconfig_files /etc/modprobe.conf"
+    [ -e /etc/modprobe.d/$package_name.conf ] && modconfig_files="/etc/modprobe.d/$package_name.conf"
+
+    if [ -z "$modconfig_files" ]; then
+	    touch /etc/modprobe.d/$package_name.conf
+	    echo $"created /etc/modprobe.d/$package_name.conf.">&2
+	    modconfig_files="/etc/modprobe.d/$package_name.conf"
+    fi
+
 
     for moduleconfig in $modconfig_files; do
 	local index=0
@@ -775,9 +823,11 @@ function moduleconfig_remove ()
 
     local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
     modconfig_files=""
+    [ -e /etc/modprobe.d/dkms.conf ] && modconfig_files="/etc/modprobe.d/dkms.conf"
     [ -e /etc/modprobe.d/dkms ] && modconfig_files="/etc/modprobe.d/dkms"
     [ -e /etc/modules.conf ] && modconfig_files="$modconfig_files /etc/modules.conf"
     [ -e /etc/modprobe.conf ] && modconfig_files="$modconfig_files /etc/modprobe.conf"
+    [ -e /etc/modprobe.d/$package_name.conf ] && modconfig_files="/etc/modprobe.d/$package_name.conf"
 
     for moduleconfig in $modconfig_files; do
 	index=0
@@ -802,6 +852,11 @@ function moduleconfig_remove ()
 		    grep -v "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}" $moduleconfig > $temp_dir_name/moduleconfig.new
 		    mv -f $temp_dir_name/moduleconfig.new $moduleconfig
 		    echo $"$moduleconfig: removed alias for '${dest_module_name[$index]}'"
+		    if [ "$modconfig_files" == "/etc/modprobe.d/$package_name.conf" ]; then
+			    rm -f /etc/modprobe.d/$package_name.conf
+			    echo $"$moduleconfig: deleted /etc/modprobe.d/$package_name.conf file"
+		    fi
+
 		fi
 	    fi
 
@@ -2089,7 +2144,7 @@ make_driver_disk_floppy()
     if [ "$fs" == 'vfat' ]; then
 	invoke_command "mkdosfs $image_name" "mkdosfs" background
     elif [ "$fs" == 'ext2' ]; then
- 	invoke_command "mke2fs $image_name" "mke2fs" background
+ 	invoke_command "mke2fs -F $image_name" "mke2fs" background
     fi
 
     local mntdir=`mktemp -d $tmp_location/dkms.XXXXXX`
@@ -3065,7 +3120,7 @@ function make_debian()
 
     make_common_test "mk${create_type}"
 
-    debian_package=$(echo $module | sed s/_/-/)
+    debian_package=$(echo $module | sed s/_/-/g)
 
     SYNAPTIC=""
     #Synaptic availablity
@@ -3075,20 +3130,16 @@ function make_debian()
 
     #test who we are
     ROOT=""
-    ADMINABLE=""
     if [ "$USER" != "root" ]; then
-        if [ -x /usr/bin/gksudo ] && [ ! -z "$DISPLAY" ]; then
+        if [ -x /usr/sbin/su-to-root ]; then
+            ROOT="/usr/sbin/su-to-root -c"
+        elif [ -x /usr/bin/gksudo ] && [ ! -z "$DISPLAY" ]; then
             ROOT="/usr/bin/gksudo --description 'DKMS Debian package builder' "
         elif [ -x /usr/bin/kdesu ] && [ ! -z "$DISPLAY" ]; then
             ROOT="/usr/bin/kdesu"
         elif [ -x /usr/bin/sudo ]; then
             ROOT="/usr/bin/sudo"
         fi
-        if groups | sed 's/lpadmin//' | grep admin 2>&1 1>/dev/null; then
-            ADMINABLE="TRUE"
-        fi
-    else
-        ADMINABLE="TRUE"
     fi
 
     # Read the conf file
@@ -3103,7 +3154,7 @@ function make_debian()
     #test if we are missing dependencies that are needed during package build
     INSTALL_PACKAGES="`make_debian_test_depends`"
     if [ ! -z "$INSTALL_PACKAGES" ]; then
-        if [ -z "ADMINABLE" ]; then
+        if [ -z "$ROOT" ]; then
             echo $"" >&2
             echo $"Error! Missing $INSTALL_PACKAGES" >&2
             echo $"and unable to install.  Please ask an admin to install for you." >&2
@@ -3111,8 +3162,7 @@ function make_debian()
         fi
         if [ ! -z "$SYNAPTIC" ] && [ ! -z "$DISPLAY" ]; then
             local TEMPFILE=`/bin/tempfile`
-            echo $INSTALL_PACKAGES | sed 's/|/\ install\
-/g' > $TEMPFILE
+            echo $INSTALL_PACKAGES | sed 's/|/\ install\/g' > $TEMPFILE
             $ROOT "sh -c '/usr/sbin/synaptic --set-selections --non-interactive --hide-main-window < $TEMPFILE'"
             trap "rm -f $TEMPFILE; delete_temporary_trees" EXIT HUP TERM
         else
@@ -3197,11 +3247,28 @@ function make_debian()
     pushd "$temp_dir_debian" > /dev/null 2>&1
     case "$create_type" in
         dsc)
-            invoke_command "fakeroot dpkg-buildpackage -S -us -uc 1>/dev/null" "Building source package"
+            invoke_command "dpkg-buildpackage -S -us -uc 1>/dev/null" "Building source package"
+	    if [ "$?" -eq 0 ]; then
+		    echo $""
+		    echo $"DKMS: mk${create_type} Completed."
+	    else
+		    echo $"" >&2
+		    echo $"Error! There was a problem creating your ${create_type}." >&2
+		    exit 7
+	    fi
             invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}.dsc' '$temp_dir/${debian_package}-dkms_${module_version}.tar.gz' '$deb_basedir'" "Moving built files to $deb_basedir"
             ;;
         deb)
-            invoke_command "fakeroot dpkg-buildpackage -b -us -uc 1>/dev/null" "Building binary package"
+            invoke_command "dpkg-buildpackage -rfakeroot -b -us -uc 1>/dev/null" "Building binary package"
+            if [ "$?" -eq 0 ]; then
+		    echo $""
+		    echo $"DKMS: mk${create_type} Completed."
+	    else
+		    echo $"" >&2
+		    echo $"Error! There was a problem creating your ${create_type}." >&2
+		    exit 7
+	    fi
+
             invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_all.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
             ;;
     esac
@@ -3217,12 +3284,9 @@ function make_debian()
     delete_temporary_trees
 
     #done
-    if [ "$?" -eq 0 ]; then
-        echo $""
-        echo $"DKMS: mk${create_type} Completed."
-    else
+    if [ "$?" -ne 0 ]; then
         echo $"" >&2
-        echo $"Error! There was a problem creating your ${create_type}." >&2
+	echo $"Error! There was a problem cleaning up temporary files." >&2
         exit 7
     fi
 }

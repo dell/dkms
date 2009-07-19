@@ -1,21 +1,66 @@
 #!/usr/bin/make -f
-include /usr/share/cdbs/1/rules/debhelper.mk
-include /usr/share/cdbs/1/class/makefile.mk
+# -*- makefile -*-
 
-GIT_BRANCH+=$(shell grep "Vcs-git" debian/control | awk '{ print $$2 }')
-TARFILE+=$(DEB_SOURCE_PACKAGE)_$(DEB_UPSTREAM_VERSION).orig.tar.gz
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
 
-get-orig-source::
-	git clone $(GIT_BRANCH) $(DEB_SOURCE_PACKAGE)-$(DEB_UPSTREAM_VERSION)
-	tar czf $(CURDIR)/../$(TARFILE) $(DEB_SOURCE_PACKAGE)-$(DEB_UPSTREAM_VERSION) --exclude debian,.git
-	rm -rf $(CURDIR)/$(DEB_SOURCE_PACKAGE)-$(DEB_UPSTREAM_VERSION)
+CURVER = $(shell dpkg-parsechangelog | grep ^Version | cut -d" " -f2 | cut -d"-" -f1 )
 
-../$(TARFILE):: get-orig-source
+include /usr/share/quilt/quilt.make
 
-DEB_MAKE_CLEAN_TARGET    := clean-dpkg
-DEB_MAKE_INSTALL_TARGET  := install-ubuntu DESTDIR=$(CURDIR)/debian/dkms
-DEB_UPDATE_RCD_PARAMS = "start 20 2 3 4 5 ."
-DEB_DH_INSTALLINIT_ARGS = "--name=dkms_autoinstaller"
+build: build-stamp
+build-stamp: $(QUILT_STAMPFN)
+	dh_testdir
+	touch $@
 
-install/dkms::
-	dh_installmodules
+clean: unpatch
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp configure-stamp
+	[ ! -f Makefile ] || $(MAKE) clean-dpkg
+	dh_clean 
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_prep 
+	dh_installdirs
+	$(MAKE) install-ubuntu DESTDIR=$(CURDIR)/debian/dkms
+	chmod a+x $(CURDIR)/debian/dkms/etc/dkms/template-dkms-mkdeb/debian/postinst
+	chmod a+x $(CURDIR)/debian/dkms/etc/dkms/template-dkms-mkdeb/debian/postrm
+	chmod a+x $(CURDIR)/debian/dkms/etc/dkms/template-dkms-mkdeb/debian/prerm
+	chmod a+x $(CURDIR)/debian/dkms/etc/dkms/template-dkms-mkdeb/debian/rules
+	rm -rf $(CURDIR)/debian/dkms/usr/share/doc/dkms/sample*
+	
+binary-arch: build install
+binary-indep: build install
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs 
+	dh_installdocs AUTHORS debian/HOWTO.Debian
+	dh_installexamples
+	dh_installinit --name dkms_autoinstaller --update-rcd-params="start 20 2 3 4 5 ."
+	dh_installman
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+	dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep
+
+get-orig-source:
+	uscan \
+		--force-download \
+		--download-version $(CURVER) \
+		--rename
+
+get-svn-source:
+	[ -d ../tarballs ] || mkdir ../tarballs
+	cd ../tarballs && make -f $(CURDIR)/debian/rules get-orig-source
+
+.PHONY: build clean binary-indep binary-arch binary install

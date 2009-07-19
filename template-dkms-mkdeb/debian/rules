@@ -31,7 +31,7 @@ clean:
 install: build
 	dh_testdir
 	dh_testroot
-	dh_clean -k
+	dh_prep
 	dh_installdirs
 	$(MAKE) DESTDIR=$(CURDIR)/debian/$(DEB_NAME)-dkms NAME=$(NAME) VERSION=$(VERSION) install
 
