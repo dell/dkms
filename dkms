@@ -3436,6 +3436,7 @@ case ":$PATH:" in
 	PATH="$PATH:/sbin"
 	;;
 esac
+PATH="$PATH:/usr/lib/dkms"
 
 # Set important variables
 current_kernel=`uname -r`
