@@ -294,6 +294,7 @@ function distro_version_rpm()
     local whatprovides_redhat
     local whatprovides_suse
     local whatprovides_sles
+    local whatprovides_ovm
     local DISTRO
     local VER
     local dist=unknown
@@ -318,6 +319,8 @@ function distro_version_rpm()
     [ $? -eq 0 ] && DISTRO=sles
     whatprovides_suse=$(rpm -q --whatprovides suse-release)
     [ $? -eq 0 ] && DISTRO=suse
+    whatprovides_ovm=$(rpm -q --whatprovides ovs-release)
+    [ $? -eq 0 ] && DISTRO=ovm
 
     case "${DISTRO}" in
 	redhat)
@@ -335,6 +338,11 @@ function distro_version_rpm()
 	    VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
             # format is 3, 4, ...
 	    dist=el${VER}
+	    ;;
+	ovm) 
+	    VER=$(rpm -q --qf "%{version}\n" ${whatprovides_ovm})
+            # format is 2.1
+	    dist=ovm${VER}
 	    ;;
 	sl) 
 	    VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
@@ -432,6 +440,7 @@ function override_dest_module_location()
 	suse10\.[01]) ;;
 	fc*) echo "/extra" && return ;;
 	el*) echo "/extra" && return ;;
+	ovm*) echo "/extra" && return ;;
 	sles*) echo "/updates" && return ;;
 	suse*) echo "/updates" && return ;;
 	Ubuntu*) echo "/updates/dkms" && return ;;
