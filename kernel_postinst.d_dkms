@@ -4,7 +4,7 @@
 inst_kern=$1
 
 if [ -x /etc/init.d/dkms_autoinstaller ]; then
-    if which invoke-rc.d; then
+    if which invoke-rc.d >/dev/null 2>&1 ; then
         invoke-rc.d dkms_autoinstaller start $inst_kern
     else
         /etc/init.d/dkms_autoinstaller start $inst_kern
