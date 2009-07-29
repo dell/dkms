@@ -1234,11 +1234,16 @@ function install_module()
 	    local found_orginal=""
 	    for original_module in $archive_pref1 $archive_pref2 $archive_pref3 $archive_pref4; do
 		if [ -f "$original_module" ]; then
-		    echo $"   - Found $original_module"
-		    echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/"
-		    echo $"   - Archiving for uninstallation purposes"
-		    mkdir -p "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}"
-		    mv -f "$original_module" "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/"
+		    case "$running_distribution" in
+			    Debian* | Ubuntu* ) ;;
+			    *)
+			    echo $"   - Found $original_module"
+			    echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/"
+			    echo $"   - Archiving for uninstallation purposes"
+			    mkdir -p "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}"
+			    mv -f "$original_module" "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/"
+			    ;;
+		    esac
 		    found_original="yes"
 		    break
 		fi
@@ -1258,13 +1263,23 @@ function install_module()
 	if [ "$module_count" -gt 1 ]; then
 	    echo $" - Multiple same named modules!"
 	    echo $"   - $module_count named ${dest_module_name[$count]}$module_suffix in $lib_tree/"
-	    echo $"   - All instances of this module will now be stored for reference purposes ONLY"
-	    echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/collisions/"
+	    case "$running_distribution" in
+		    Debian* | Ubuntu* ) ;;
+		    *)
+		    echo $"   - All instances of this module will now be stored for reference purposes ONLY"
+		    echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/collisions/"
+		    ;;
+	    esac
 	    for module_dup in `find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f`; do
 		dup_tree=`echo $module_dup | sed "s#^$lib_tree##" | sed "s#${dest_module_name[$count]}$module_suffix##"`
-		echo $"     - Stored $module_dup"
-		mkdir -p "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/collisions/$dup_tree"
-		mv -f $module_dup "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/collisions/$dup_tree"
+		case "$running_distribution" in
+			Debian* | Ubuntu* ) ;;
+			*)
+		       echo $"     - Stored $module_dup"
+		       mkdir -p "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/collisions/$dup_tree"
+		       mv -f $module_dup "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/collisions/$dup_tree"
+		       ;;
+	       esac
 	    done
 	fi
 
@@ -1605,10 +1620,16 @@ function do_uninstall()
 	    rm -f "$install_tree/$1${real_dest_module_location}/${dest_module_name[$count]}$module_suffix"
 	    echo $" - Original module"
 	    if [ -e "$dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix" ]; then
-		echo $"   - Archived original module found in the DKMS tree"
-		echo $"   - Moving it to: $install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
-		mkdir -p "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
-		mv -f "$dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix" "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/" 2>/dev/null
+		case "$running_distribution" in
+			Debian* | Ubuntu* ) ;;
+			*)
+			echo $"   - Archived original module found in the DKMS tree"
+			echo $"   - Moving it to: $install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
+			mkdir -p "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
+			mv -f "$dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix" \
+		       	"$install_tree/$1${DEST_MODULE_LOCATION[$count]}/" 2>/dev/null
+			;;
+		esac
 	    else
 		echo $"   - No original module was found for this module on this kernel."
 		echo $"   - Use the dkms install command to reinstall any previous module version."
