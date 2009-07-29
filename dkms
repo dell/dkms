@@ -732,8 +732,6 @@ function moduleconfig_add ()
     [ -e /etc/modprobe.d/$package_name.conf ] && modconfig_files="/etc/modprobe.d/$package_name.conf"
 
     if [ -z "$modconfig_files" ]; then
-	    touch /etc/modprobe.d/$package_name.conf
-	    echo $"created /etc/modprobe.d/$package_name.conf.">&2
 	    modconfig_files="/etc/modprobe.d/$package_name.conf"
     fi
 
@@ -764,8 +762,13 @@ function moduleconfig_add ()
 
 	    # Only add it if it can't be found already in config file
 	    if [ -n "${modules_conf_alias_type[$index]}" ] && \
-	       ! grep -q "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}\b" $moduleconfig && \
+	       ! grep -qs "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}\b" $moduleconfig && \
 	       [ "${modules_conf_obsolete_only[$index]}" != "yes" ]; then
+	        if [ "$modconfig_files" == "/etc/modprobe.d/$package_name.conf" ] && \
+			[ ! -e /etc/modprobe.d/$package_name.conf ]; then
+			touch /etc/modprobe.d/$package_name.conf
+			echo $"created /etc/modprobe.d/$package_name.conf.">&2
+		fi
 		aliases=$(awk "/^alias ${modules_conf_alias_type[$index]}/ {print \$2}" $moduleconfig)
 		if [ -n "$aliases" ]; then
 			alias_number=$(($(echo "$aliases" | sed "s/${modules_conf_alias_type[$index]}//" | sort -n | tail -n 1) + 1))
