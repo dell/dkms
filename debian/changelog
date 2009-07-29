@@ -1,3 +1,27 @@
+dkms (2.0.22.0-1) unstable; urgency=low
+
+  * [023618e] Imported Upstream version 2.0.22.0
+  * [d6e0b15] Deleted patches merged in upstream: 01-fix_manpage.patch
+    02-fix_distribution.patch 04-use_su-to-root.patch 05-
+    do_not_check_admin_group.patch 06-fakeroot.patch 07-exit-if-build-
+    fails.patch 09-lilo_detection.patch 10-lsb.patch 11-bash-
+    completion.patch 12-use_invoke-rc.d.patch 13-template.patch
+    14_new_module-init-tools.patch 08-support_kernel-img.conf.patch
+  * [c5b7822] debian/patches/15_modprobe.patch: do not create an empty
+    /etc/modprobe.d/package_name.conf. It is opened and parsed every
+    time modprobe is run (and it is run very often at boot time). Create
+    it only if necessary.
+  * [3731c00] debian/patches/08-support_kernel-img.conf.patch: Use
+    update-initramfs, it is the default in Debian/Ubuntu and it also computes
+    and stores some checksums. (Closes: #529038)
+  * [f4a197f] debian/patches/16_old_module.patch: Do not move away the old
+    module, by default dkms install the new one in
+    /lib/modules/<kernelversion>/updates/dkms (Closes: #529059)
+  * [db7ffe7] debian/patches/01_kernel_postinst.patch: shut up "which" in the
+    the kernel kernel_postinst.d script, only the exit code is needed.
+
+ -- Giuseppe Iuculano <giuseppe@iuculano.it>  Fri, 05 Jun 2009 22:00:35 +0200
+
 dkms (2.0.21.1-1) unstable; urgency=low
 
   * [bcda131] Imported Upstream version 2.0.21.1
