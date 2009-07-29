@@ -298,7 +298,7 @@ combinations on the other kernel.
 .B \-\-force
 This option can be used in conjunction with
 .B ldtarball
-to force copying over of already existant files.
+to force copying over of extant files.
 .TP
 .B \-\-binaries\-only
 This option can be used in conjunction with
@@ -391,7 +391,7 @@ Provides a location to place modules when a
 command is issued.
 .TP
 .B \-\-dkmsframework path/to/file
-A supplemental configuration file to the systemwide dkms framework, typically located
+A supplemental configuration file to the system-wide dkms framework, typically located
 in /etc/dkms/framework.conf.  All option that are normally provided on a command line
 can be provided in this file.
 .SH ORIGINAL MODULES
@@ -620,7 +620,7 @@ is not a "y" or a "Y", it is assumed that REMAKE_INITRD="no".
 This optional directive specifies, if the udev daemon will be get a trigger event after the module is installed 
 for your currently running kernel. Because this udev trigger might have some unfriendly side effects on some Linux 
 Systems, you can now disable this trigger, if your driver does not need it anyway.
-UDEV_TRIGGER=yes is assumed as the default, although this directive may not be given. This esures backward compatibility 
+UDEV_TRIGGER=yes is assumed as the default, although this directive may not be given. This ensures backward compatibility
 to older DKMS releases. Any text after the first character is ignored and if the first character is not a "n" or a "N",
 it is assumed that UDEV_TRIGGER="yes". 
 .TP
@@ -781,7 +781,7 @@ will be
 option.
 .SH /etc/dkms/framework.conf
 This configuration file controls how the overall DKMS framework handles.  It is sourced
-in everytime the dkms command is run.  Mainly it can currently be used to set different
+in every time the dkms command is run.  Mainly it can currently be used to set different
 default values for the variables.
 .B $dkms_tree
 ,
