@@ -15,6 +15,6 @@ fi
 
 rmdir --ignore-fail-on-non-empty \
 	"/lib/modules/$inst_kern/updates/dkms" \
-	"/lib/modules/$inst_kern/updates"
+	"/lib/modules/$inst_kern/updates" 2>/dev/null
 
 exit 0
