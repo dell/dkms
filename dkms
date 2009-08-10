@@ -2365,6 +2365,40 @@ make_redhat_driver_disk()
     echo $"DKMS: mkdriverdisk Completed."
 }
 
+find_external_dependencies()
+{
+	local mod deps 
+	local count=0
+	local i=0
+
+	# find all module dependencies
+	while [ "$count" -lt "${#dest_module_name[@]}" ]; do
+		i=0
+    		while [ "$i" -lt "${#kernelver_array[@]}" ]; do
+			set_module_suffix "${kernelver_array[$i]}"
+			mod="$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix"
+			deps=(${deps[@]} $(modinfo "$mod" | sed -n 's/,/ /; s/^depends: *//p'))
+			i=$(($i+1))
+		done
+		count=$(($count+1))
+	done
+
+	# prune internally satisfied dependencies
+	i=0
+	while [ "$i" -lt "${#deps[@]}" ]; do
+		for mod in ${dest_module_name[@]}; do
+			[ "${deps[i]}" == "$mod" ] && deps[i]=
+		done
+		i=$(($i+1))
+	done
+
+	i=0
+	while [ "$i" -lt "${#deps[@]}" ]; do
+		echo "${deps[i]}"
+		i=$(($i+1))
+	done | sort -u
+}
+
 make_suse_driver_disk()
 {
 	if [ -z "$release" ]; then
@@ -2388,11 +2422,19 @@ make_suse_driver_disk()
 	echo $""
 	echo $"Creating driver disk:"
 
+	local deps="$(find_external_dependencies)"
+
+	local offset=0
+	if [ -n "${deps[*]}" ]; then
+		# reserve a place for dependencies
+		local offset=1
+	fi
+
 	local count=0
 	while [ "$count" -lt "${#dest_module_name[@]}" ]; do
 
 		local i=0
-		local topdir=`printf "%02d" $(($count+1))`
+		local topdir=`printf "%02d" $(($count+1+offset))`
     		while [ "$i" -lt "${#kernelver_array[@]}" ]; do
 			set_module_suffix "${kernelver_array[$i]}"
 
@@ -2421,6 +2463,9 @@ make_suse_driver_disk()
 					cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$driver_disk_dir/$topdir/$suse_arch-$release/modules/"
 					;;
 			esac
+
+			# create directory for dependency information
+			[ -n "${deps[*]}" ] && mkdir -p "$driver_disk_dir/01/linux/$distro/$suse_arch-$release/modules"
 
 			i=$(($i+1))
 		done
@@ -2478,6 +2523,16 @@ EOF
 		# ---
 		count=$(($count+1))
 	done
+
+	local dir
+	if [ -n "${deps[*]}" ]; then
+		for dir in "$driver_disk_dir/01/linux/$distro/"*"/modules"; do
+			for dep in ${deps[@]}; do
+				echo $dep >> "$dir/module.order"
+			done
+		done
+	fi
+
         # FIXME: add suse-equivalent rpms/ directory, copy in KMP RPMs, run createrepo --pretty
 
 	mkdir -p "$image_dir"
