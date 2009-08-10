@@ -269,76 +269,141 @@ function remake_initrd()
     return $exitval
 }
 
-function distro_version()
+function distro_version_rpm()
 {
-# What distribution are we running?
-    local WHATPROVIDES_REDHAT_RELEASE
-    local WHATPROVIDES_SLES_RELEASE
-    local WHATPROVIDES_SUSE_RELEASE
-    local REDHAT_RELEASE
-    local CENTOS_RELEASE
-    local FEDORA_RELEASE
-    local LSB_RELEASE
+    local whatprovides_redhat
+    local whatprovides_suse
+    local whatprovides_sles
+    local whatprovides_ovm
+    local DISTRO
     local VER
     local dist=unknown
 
-    if which rpm > /dev/null 2>&1 ; then
-	WHATPROVIDES_REDHAT_RELEASE=$(rpm -q --whatprovides redhat-release)
-	if [ $? -eq 0 ]; then
-	    if $(echo "${WHATPROVIDES_REDHAT_RELEASE}" | grep redhat-release > /dev/null 2>&1) ; then
-		REDHAT_RELEASE=1
-	    elif (echo "${WHATPROVIDES_REDHAT_RELEASE}" | grep centos-release > /dev/null 2>&1) ; then
-		CENTOS_RELEASE=1
-	    elif $(echo "${WHATPROVIDES_REDHAT_RELEASE}" | grep fedora-release > /dev/null 2>&1) ; then
-		FEDORA_RELEASE=1
-	    fi
-	fi
-
-	WHATPROVIDES_SLES_RELEASE=$(rpm -q --whatprovides sles-release)
-	if [ $? -eq 0 ]; then
-	    SLES_RELEASE=1
-	fi
-
-	WHATPROVIDES_SUSE_RELEASE=$(rpm -q --whatprovides suse-release)
-	if [ $? -eq 0 ]; then
-	    SUSE_RELEASE=1
-	fi
+    if ! which rpm > /dev/null 2>&1 ; then
+	echo "${dist}"
+	return
     fi
+	
+    whatprovides_redhat=$(rpm -q --whatprovides redhat-release)
+    if [ $? -eq 0 ]; then
+	case "${whatprovides_redhat}" in
+	    redhat*)     DISTRO=redhat ;;
+	    centos*)     DISTRO=centos ;;
+	    enterprise*) DISTRO=oel ;; # Oracle Enterprise Linux
+	    sl*)         DISTRO=sl ;;  # Scientific Linux
+	    fedora*)     DISTRO=fedora ;;
+	    *) ;;
+	esac
+    fi
+    whatprovides_sles=$(rpm -q --whatprovides sles-release)
+    [ $? -eq 0 ] && DISTRO=sles
+    whatprovides_suse=$(rpm -q --whatprovides suse-release)
+    [ $? -eq 0 ] && DISTRO=suse
+    whatprovides_ovm=$(rpm -q --whatprovides ovs-release)
+    [ $? -eq 0 ] && DISTRO=ovm
+
+    case "${DISTRO}" in
+	redhat)
+	    VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
+            # format is 3AS, 4AS, 5Desktop...
+	    VER=$(echo "${VER}" | sed -e 's/^\([[:digit:]]*\).*/\1/g')
+	    dist=el${VER}
+	    ;;
+	centos)
+	    VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
+            # format is 3, 4, ...
+	    dist=el${VER}
+	    ;;
+	oel) 
+	    VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
+            # format is 3, 4, ...
+	    dist=el${VER}
+	    ;;
+	ovm) 
+	    VER=$(rpm -q --qf "%{version}\n" ${whatprovides_ovm})
+            # format is 2.1
+	    dist=ovm${VER}
+	    ;;
+	sl) 
+	    VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
+	    # format is 4.7, 5.3
+	    VER=$(echo "${VER}" | sed -e 's/^\([[:digit:]]*\).*/\1/g')
+	    dist=el${VER}
+	    ;;
+	fedora) 
+	    VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
+	    dist=fc${VER}
+	    ;;
+	sles)
+	    VER=$(rpm -q --qf "%{version}\n" ${whatprovides_sles})
+	    dist=sles${VER}
+	    ;;
+	suse)
+	    VER=$(rpm -q --qf "%{version}\n" ${whatprovides_suse})
+	    dist=suse${VER}
+	    ;;
+	*)
+	    dist=unknown
+	    ;;
+    esac
+    echo "$dist"
+}
+
+function distro_version()
+{
+# What distribution are we running?
+    local LSB_RELEASE
+    local LSB_DESCRIPTION
+    local DISTRIB_ID
+    local DISTRIB_RELEASE
+    local VER
+    local dist=unknown
+
+# try the LSB-provided strings first
     if [ -r /etc/lsb-release ]; then
 	. /etc/lsb-release
 	LSB_RELEASE=1
-    else
-	if type lsb_release >/dev/null 2>&1; then
-		DISTRIB_ID=$(lsb_release -i -s)
-		DISTRIB_RELEASE=$(lsb_release -r -s)
-		LSB_RELEASE=1
-	fi
+    elif type lsb_release >/dev/null 2>&1; then
+	DISTRIB_ID=$(lsb_release -i -s)
+	DISTRIB_RELEASE=$(lsb_release -r -s)
+	LSB_RELEASE=1
     fi
 
-    if [ -n "${FEDORA_RELEASE}" ]; then
-	VER=$(rpm -q --qf "%{version}\n" ${WHATPROVIDES_REDHAT_RELEASE})
-	dist=fc${VER}
-    elif [ -n "${REDHAT_RELEASE}" ]; then
-	VER=$(rpm -q --qf "%{version}\n" ${WHATPROVIDES_REDHAT_RELEASE})
-        # format is 3AS, 4AS, 5Desktop...
-	VER=$(echo "${VER}" | sed -e 's/^\([[:digit:]]*\).*/\1/g')
-	dist=el${VER}
-    elif [ -n "${CENTOS_RELEASE}" ]; then
-	VER=$(rpm -q --qf "%{version}\n" ${WHATPROVIDES_REDHAT_RELEASE})
-        # format is 3, 4, ...
-	dist=el${VER}
-    elif [ -n "${SLES_RELEASE}" ]; then
-	VER=$(rpm -q --qf "%{version}\n" ${WHATPROVIDES_SLES_RELEASE})
-	dist=sles${VER}
-    elif [ -n "${SUSE_RELEASE}" ]; then
-	VER=$(rpm -q --qf "%{version}\n" ${WHATPROVIDES_SUSE_RELEASE})
-	dist=suse${VER}
-    elif [ -n "${LSB_RELEASE}" ]; then
-	if [ -n "${DISTRIB_ID}" -a -n "${DISTRIB_RELEASE}" ]; then
-	    dist="${DISTRIB_ID}${DISTRIB_RELEASE}"
-	fi
-    fi
+    case "${DISTRIB_ID}" in
+	Fedora)             dist=fc${DISTRIB_RELEASE} ;;
+	RedHatEnterprise*)  # OEL also reports as such
+	    # format is 4.7, 5.3
+	    VER=$(echo "${DISTRIB_RELEASE}" | sed -e 's/^\([[:digit:]]*\).*/\1/g')
+	    dist=el${VER}
+	    ;;
+	CentOS)
+	    # format is 4.7, 5.3
+	    VER=$(echo "${DISTRIB_RELEASE}" | sed -e 's/^\([[:digit:]]*\).*/\1/g')
+	    dist=el${VER}
+	    ;;
+	ScientificSL)
+	    # format is 4.7, 5.3
+	    VER=$(echo "${DISTRIB_RELEASE}" | sed -e 's/^\([[:digit:]]*\).*/\1/g')
+	    dist=el${VER}
+	    ;;
+	SUSE*)
+	    LSB_DESCRIPTION="$(lsb_release -d -s)"
+	    if echo "${LSB_DESCRIPTION}" | grep Enterprise > /dev/null 2>&1; then
+		dist=sles${DISTRIB_RELEASE}
+	    else
+		dist=suse${DISTRIB_RELEASE}
+	    fi
+	    ;;
+	*) 	
+	    if [ -n "${LSB_RELEASE}" -a -n "${DISTRIB_ID}" -a -n "${DISTRIB_RELEASE}" ]; then
+		dist="${DISTRIB_ID}${DISTRIB_RELEASE}"
+	    fi
+	    ;;
+    esac
 
+    if [ "${dist}" == "unknown" ]; then
+	dist=$(distro_version_rpm)
+    fi
     echo "$dist"
 }
 
@@ -355,6 +420,7 @@ function override_dest_module_location()
 	suse10\.[01]) ;;
 	fc*) echo "/extra" && return ;;
 	el*) echo "/extra" && return ;;
+	ovm*) echo "/extra" && return ;;
 	sles*) echo "/updates" && return ;;
 	suse*) echo "/updates" && return ;;
 	Ubuntu*) echo "/updates/dkms" && return ;;
@@ -3502,6 +3568,7 @@ case ":$PATH:" in
 	PATH="$PATH:/sbin"
 	;;
 esac
+PATH="$PATH:/usr/lib/dkms"
 
 # Set important variables
 current_kernel=`uname -r`
