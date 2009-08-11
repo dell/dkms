@@ -1084,9 +1084,10 @@ function prepare_kernel()
 
     # Set kernel_config
     if [ -e /etc/redhat-release ] || [ -e /etc/fedora-release ]; then
+	# Note this also applies to VMware 3.x
 	if [ -z "$kernel_config" ] && [ -d "$kernel_source_dir/configs" ]; then
 	    local kernel_trunc=`echo $1 | sed 's/-.*//'`
-	    for config_type in debug summit smp enterprise bigmem hugemem BOOT; do
+	    for config_type in debug summit smp enterprise bigmem hugemem BOOT vmnix; do
 		[ `echo "$1" | grep "$config_type"` ] && kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$2-$config_type.config"
 		[ ! -e "$kernel_config" ] && kernel_config=""
 	    done
