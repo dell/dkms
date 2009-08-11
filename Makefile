@@ -40,6 +40,8 @@ install:
 	mkdir -m 0755 -p $(VAR) $(SBIN) $(MAN) $(INITD) $(ETC) $(BASHDIR)
 	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms > dkms.versioned
 	mv -f dkms.versioned dkms
+	mkdir   -p -m 0755 $(LIBDIR)
+	install -p -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
 	install -p -m 0755 dkms $(SBIN)
 	install -p -m 0755 dkms_autoinstaller $(INITD)
 	install -p -m 0644 dkms_framework.conf $(ETC)/framework.conf
@@ -60,7 +62,6 @@ doc-perms:
 	chmod 0644 $(DOCFILES)
 
 install-redhat: install doc-perms
-	mkdir   -p -m 0755 $(LIBDIR)
 	install -p -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
 	install -p -m 0755 dkms_find-provides $(LIBDIR)/find-provides
 	install -p -m 0755 lsb_release $(LIBDIR)/lsb_release

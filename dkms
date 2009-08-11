@@ -51,7 +51,7 @@ function show_usage ()
     echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"
     echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel]"
     echo $"              [--binaries-only] [--source-only] [-r release (SuSE)] [--verbose]"
-    echo $"              [--size] [--spec=specfile] [--media=floppy|iso|tar]"
+    echo $"              [--size] [--spec=specfile] [--media=floppy|iso|tar] [--legacy-postinst=0|1]"
 }
 
 function readlink()
@@ -3199,6 +3199,12 @@ make_rpm()
     trap 'rm -rf $temp_dir_name' EXIT HUP TERM
     mkdir -p ${temp_dir_name}/{BUILD,RPMS,SRPMS,SPECS,SOURCES}
     cp ${SPECFILE} ${temp_dir_name}/SPECS/dkms_mkrpm.spec
+
+    #if using legacy mode, install common postinst
+    if [ "$legacy_postinst" != "0" ]; then
+        invoke_command "cp '$PREFIX/usr/lib/dkms/common.postinst' '${temp_dir_name}/SOURCES'" "copying legacy postinstall template"
+    fi
+
     invoke_command "LC_ALL=C rpmbuild --define \"_topdir ${temp_dir_name}\" --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  /usr/lib/dkms/find-provides\" --define \"_use_internal_dependency_generator 0\" -ba ${temp_dir_name}/SPECS/dkms_mkrpm.spec > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
     if [ "$?" -eq 0 ]; then
 	mkdir -p ${rpm_basedir}
@@ -3360,6 +3366,11 @@ function make_debian()
         chmod 755 "$file"
     done
     popd > /dev/null 2>&1
+
+    #if using legacy mode, install common postinst
+    if [ "$legacy_postinst" != "0" ]; then
+        invoke_command "cp '$PREFIX/usr/lib/dkms/common.postinst' '$temp_dir_debian'" "copying legacy postinstall template"
+    fi
 
     #create tar.gz that lives in DKMS deb
     archive_location="$module-$module_version.dkms.tar.gz"
@@ -3612,6 +3623,7 @@ module_suffix=""
 rpm_safe_upgrade=""
 size="1440";
 specfile=""
+legacy_postinst="1"
 unset directive_array
 unset kernelver_array
 unset arch_array
@@ -3761,6 +3773,14 @@ while [ $# -gt 0 ]; do
             archive_location=`echo $1 | sed 's/^.*=//'`
         else
             archive_location="$2"
+            shift
+        fi
+        ;;
+    --legacy-postinst*)
+        if echo $1 | grep "=" >/dev/null ; then
+            legacy_postinst=`echo $1 | sed 's/^.*=//'`
+        else
+            legacy_postinst="$2"
             shift
         fi
         ;;
