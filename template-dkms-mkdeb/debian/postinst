@@ -4,86 +4,23 @@
 # Copyright (C) 2007 Mario Limonciello
 # Copyright (C) 2009 Alberto Milone
 
-set -e
-
 NAME=MODULE_NAME
 PACKAGE_NAME=MODULE_NAME-dkms
 
-CVERSION=`dpkg-query -W -f='${Version}' $PACKAGE_NAME | awk -F "-" '{print $1}' | cut -d\: -f2`
-KERNELS=$(ls /lib/modules/)
-CURRENT_KERNEL=$(uname -r)
-
 case "$1" in
 	configure)
-		#We never want to keep an older version side by side to prevent conflicts
-		if [ -e "/var/lib/dkms/$NAME/$VERSION" ]; then
-			echo "Removing old $NAME-$VERSION DKMS files..."
-			dkms remove -m $NAME -v $VERSION --all
-		fi
-
-		#Load new files, either by source package or by tarball
-		echo "Loading new $NAME-$CVERSION DKMS files..."
-		if [ -f "/usr/src/$NAME-$CVERSION.dkms.tar.gz" ]; then
-			dkms ldtarball --archive "/usr/src/$NAME-$CVERSION.dkms.tar.gz"
-		else
-			dkms add -m $NAME -v $CVERSION > /dev/null
-		fi
-
-		ARCH=$(dpkg --print-architecture)
-		case $ARCH in
-			amd64)
-				ARCH=x86_64
-				;;
-			lpia)
-				ARCH=i686
-				;;
-			i386)
-				ARCH=i686
-				;;
-			*)
-				echo "WARNING: unsupported arch: $ARCH"
-				;;
-		esac
-
-		# On 1st installation, let us look for a directory
-		# in /lib/modules which matches `uname -r`. If none
-		# is found it is possible that buildd is being used
-		# and that uname -r is giving us the name of the
-		# kernel used by the buildd machine.
-		# 
-		# If this is the case we try to build the kernel
-		# module for each kernel which has a directory in 
-		# /lib/modules. Furthermore we will have to tell 
-		# DKMS which architecture it should build the module
-		# for (e.g. if the buildd machine is using a
-		# 2.6.24-23-xen 64bit kernel).
-		#
-		# NOTE: if the headers are not installed then the
-		#       module won't be built, as usual
-		if [ -z "$2" ]; then
-			echo "First Installation: checking all kernels..."
-			for KERNEL in $KERNELS; do
-				if [ ${KERNEL} = ${CURRENT_KERNEL} ]; then
-					# Kernel found
-					KERNELS=$CURRENT_KERNEL
-					break
-				fi
-			done
-		else
-			KERNELS=$CURRENT_KERNEL
-		fi
-
-		for KERNEL in $KERNELS; do
-			dkms_status=`dkms status -m $NAME -v $CVERSION -k $KERNEL -a $ARCH`
-			if [ `echo $dkms_status | grep -c ": built"` -eq 0 ]; then
-				echo "Building initial module for $KERNEL, architecture $ARCH"
-				dkms build -m $NAME -v $CVERSION -k $KERNEL -a $ARCH > /dev/null
-				echo "Done."
+		for POSTINST in /usr/lib/dkms/common.postinst /usr/share/$PACKAGE_NAME/postinst; do
+			if [ -f $POSTINST ]; then
+				$POSTINST $NAME $PACKAGE_NAME
+				exit $?
 			fi
-			if [ `echo $dkms_status | grep -c ": installed"` -eq 0 ]; then
-				dkms install -m $NAME -v $CVERSION -k $KERNEL -a $ARCH
-			fi
+			echo "WARNING: $POSTINST does not exist."
 		done
+		echo "ERROR: DKMS version is too old and $PACKAGE_NAME was not"
+		echo "built with legacy DKMS support."
+		echo "You must either rebuild $PACKAGE_NAME with legacy postinst"
+		echo "support or upgrade DKMS to a more current version."
+		exit 1
 	;;
 
 	abort-upgrade|abort-remove|abort-deconfigure)
