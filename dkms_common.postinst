@@ -48,7 +48,7 @@ fi
 #
 # NOTE: if the headers are not installed then the
 #       module won't be built, as usual
-if [ -z "$3" ]; then
+if [ -z "$UPGRADE" ]; then
     echo "First Installation: checking all kernels..."
     for KERNEL in $KERNELS; do
         if [ ${KERNEL} = ${CURRENT_KERNEL} ]; then
