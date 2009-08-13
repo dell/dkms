@@ -37,19 +37,23 @@ if [ -x /usr/bin/dpkg ]; then
 	ARCH=$(dpkg --print-architecture)
 	case $ARCH in
 	    amd64)
-	        ARCH="-a x86_64"
+	        ARCH="x86_64"
 	        ;;
 	    lpia)
-	        ARCH="-a i686"
+	        ARCH="i686"
 	        ;;
 	    i386)
-	        ARCH="-a i686"
+	        ARCH="i686"
 	        ;;
 	    *)
 	        echo "WARNING: unsupported arch: $ARCH"
-		ARCH="-a $ARCH"
+		ARCH="$ARCH"
 	        ;;
 	esac
+else
+	#We should in theory be able to rely on this since any chroot env
+	#should be running as the appropriate personality using setarch
+	ARCH=$(uname -m)
 fi
 
 # On 1st installation, let us look for a directory
@@ -81,13 +85,13 @@ else
 fi
 
 for KERNEL in $KERNELS; do
-    dkms_status=`dkms status -m $NAME -v $CVERSION -k $KERNEL $ARCH`
+    dkms_status=`dkms status -m $NAME -v $CVERSION -k $KERNEL -a $ARCH`
     if [ `echo $dkms_status | grep -c ": built"` -eq 0 ]; then
         echo "Building initial module for $KERNEL, architecture $ARCH"
-        dkms build -m $NAME -v $CVERSION -k $KERNEL $ARCH > /dev/null
+        dkms build -m $NAME -v $CVERSION -k $KERNEL -a $ARCH > /dev/null
         echo "Done."
     fi
     if [ `echo $dkms_status | grep -c ": installed"` -eq 0 ]; then
-        dkms install -m $NAME -v $CVERSION -k $KERNEL $ARCH
+        dkms install -m $NAME -v $CVERSION -k $KERNEL -a $ARCH
     fi
 done
