@@ -5,14 +5,31 @@
 # Copyright (C) 2009 Alberto Milone
 
 NAME=MODULE_NAME
-PACKAGE_NAME=$MODULE_NAME-dkms
+PACKAGE_NAME=$NAME-dkms
 CVERSION=`dpkg-query -W -f='${Version}' $PACKAGE_NAME | awk -F "-" '{print $1}' | cut -d\: -f2`
+
+ARCH=`dpkg --print-architecture`
+case $ARCH in
+	amd64)
+		ARCH="x86_64"
+                ;;
+	lpia)
+		ARCH="i686"
+		;;
+	i386)
+		ARCH="i686"
+		;;
+	*)
+		echo "WARNING: unsupported arch: $ARCH"
+		ARCH="$ARCH"
+		;;
+esac
 
 case "$1" in
 	configure)
 		for POSTINST in /usr/lib/dkms/common.postinst /usr/share/$PACKAGE_NAME/postinst; do
 			if [ -f $POSTINST ]; then
-				$POSTINST $NAME $CVERSION
+				$POSTINST $NAME $CVERSION $ARCH
 				exit $?
 			fi
 			echo "WARNING: $POSTINST does not exist."

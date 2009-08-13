@@ -8,10 +8,11 @@ set -e
 
 NAME=$1
 VERSION=$2
-UPGRADE=$3
+ARCH=$3
+UPGRADE=$4
 
-if [ -z "$1" ] || [ -z "$2" ]; then
-    echo "Need both NAME and VERSION defined"
+if [ -z "$NAME" ] || [ -z "$VERSION" ] || [ -z "$ARCH" ]; then
+    echo "Need NAME, VERSION, and ARCH defined"
     exit 1
 fi
 
@@ -30,29 +31,6 @@ if [ -f "/usr/src/$NAME-$VERSION.dkms.tar.gz" ]; then
     dkms ldtarball --archive "/usr/src/$NAME-$VERSION.dkms.tar.gz"
 else
     dkms add -m $NAME -v $VERSION > /dev/null
-fi
-
-if [ -x /usr/bin/dpkg ]; then
-	ARCH=$(dpkg --print-architecture)
-	case $ARCH in
-	    amd64)
-	        ARCH="x86_64"
-	        ;;
-	    lpia)
-	        ARCH="i686"
-	        ;;
-	    i386)
-	        ARCH="i686"
-	        ;;
-	    *)
-	        echo "WARNING: unsupported arch: $ARCH"
-		ARCH="$ARCH"
-	        ;;
-	esac
-else
-	#We should in theory be able to rely on this since any chroot env
-	#should be running as the appropriate personality using setarch
-	ARCH=$(uname -m)
 fi
 
 # On 1st installation, let us look for a directory
