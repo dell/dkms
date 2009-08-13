@@ -5,13 +5,14 @@
 # Copyright (C) 2009 Alberto Milone
 
 NAME=MODULE_NAME
-PACKAGE_NAME=MODULE_NAME-dkms
+PACKAGE_NAME=$MODULE_NAME-dkms
+CVERSION=`dpkg-query -W -f='${Version}' $PACKAGE_NAME | awk -F "-" '{print $1}' | cut -d\: -f2`
 
 case "$1" in
 	configure)
 		for POSTINST in /usr/lib/dkms/common.postinst /usr/share/$PACKAGE_NAME/postinst; do
 			if [ -f $POSTINST ]; then
-				$POSTINST $NAME $PACKAGE_NAME
+				$POSTINST $NAME $CVERSION
 				exit $?
 			fi
 			echo "WARNING: $POSTINST does not exist."

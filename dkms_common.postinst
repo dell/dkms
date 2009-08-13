@@ -7,15 +7,14 @@
 set -e
 
 NAME=$1
-PACKAGE_NAME=$2
+VERSION=$2
 UPGRADE=$3
 
 if [ -z "$1" ] || [ -z "$2" ]; then
-    echo "Need both NAME and PACKAGE_NAME defined"
+    echo "Need both NAME and VERSION defined"
     exit 1
 fi
 
-CVERSION=`dpkg-query -W -f='${Version}' $PACKAGE_NAME | awk -F "-" '{print $1}' | cut -d\: -f2`
 KERNELS=$(ls /lib/modules/)
 CURRENT_KERNEL=$(uname -r)
 
@@ -26,11 +25,11 @@ if [ -e "/var/lib/dkms/$NAME/$VERSION" ]; then
 fi
 
 #Load new files, either by source package or by tarball
-echo "Loading new $NAME-$CVERSION DKMS files..."
-if [ -f "/usr/src/$NAME-$CVERSION.dkms.tar.gz" ]; then
-    dkms ldtarball --archive "/usr/src/$NAME-$CVERSION.dkms.tar.gz"
+echo "Loading new $NAME-$VERSION DKMS files..."
+if [ -f "/usr/src/$NAME-$VERSION.dkms.tar.gz" ]; then
+    dkms ldtarball --archive "/usr/src/$NAME-$VERSION.dkms.tar.gz"
 else
-    dkms add -m $NAME -v $CVERSION > /dev/null
+    dkms add -m $NAME -v $VERSION > /dev/null
 fi
 
 if [ -x /usr/bin/dpkg ]; then
@@ -85,7 +84,7 @@ else
 fi
 
 for KERNEL in $KERNELS; do
-    dkms_status=`dkms status -m $NAME -v $CVERSION -k $KERNEL -a $ARCH`
+    dkms_status=`dkms status -m $NAME -v $VERSION -k $KERNEL -a $ARCH`
     if [ `echo $KERNEL | grep -c "BOOT"` -gt 0 ]; then
 	echo -e ""
 	echo -e "Module build and install for $KERNEL was skipped as 
@@ -97,7 +96,7 @@ for KERNEL in $KERNELS; do
     if [ `echo $dkms_status | grep -c ": built"` -eq 0 ]; then
 	if [ -e /lib/modules/$KERNEL/build/include ]; then
         	echo -e "Building initial module for $KERNEL, architecture $ARCH"
-        	dkms build -m $NAME -v $CVERSION -k $KERNEL -a $ARCH > /dev/null
+        	dkms build -m $NAME -v $VERSION -k $KERNEL -a $ARCH > /dev/null
         	echo -e "Done."
 	else
                 echo -e "Module build for the currently running kernel was skipped since the"
@@ -108,6 +107,6 @@ for KERNEL in $KERNELS; do
     #if the module is built (either pre-built or just now), install it
     if [ `echo $dkms_status | grep -c ": built"` -eq 1 ] && 
        [ `echo $dkms_status | grep -c ": installed"` -eq 0 ]; then
-        dkms install -m $NAME -v $CVERSION -k $KERNEL -a $ARCH
+        dkms install -m $NAME -v $VERSION -k $KERNEL -a $ARCH
     fi
 done
