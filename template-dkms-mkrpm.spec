@@ -15,7 +15,7 @@ BuildArch:	noarch
 Group:		System/Kernel
 Requires: 	dkms >= 1.95
 BuildRequires: 	dkms
-Source0:	%{module_name}-%{version}-mktarball.dkms.tgz
+Source0:	%{module_name}-%{version}.dkms.tar.gz
 BuildRoot: 	%{_tmppath}/%{name}-%{version}-%{release}-root/
 
 %description
@@ -29,8 +29,14 @@ cp -af %{_dkmsdir}/%{module_name}/%{version}/tarball/`basename %{SOURCE0}` %{SOU
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
         rm -rf $RPM_BUILD_ROOT
 fi
-mkdir -p $RPM_BUILD_ROOT/%{_srcdir}/%{module_name}-%{version}/
-install -m 644 %{SOURCE0} $RPM_BUILD_ROOT/%{_srcdir}/%{module_name}-%{version}
+mkdir -p $RPM_BUILD_ROOT/%{_srcdir}
+mkdir -p $RPM_BUILD_ROOT/%{_datarootdir}/%{module_name}-dkms
+
+install -m 644 %{SOURCE0} $RPM_BUILD_ROOT/%{_srcdir}
+
+if [ -f %{_sourcedir}/common.postinst ]; then
+        install -m 755 %{_sourcedir}/common.postinst $RPM_BUILD_ROOT/%{_datarootdir}/%{module_name}-dkms/postinst
+fi
 
 %clean
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
@@ -38,44 +44,19 @@ if [ "$RPM_BUILD_ROOT" != "/" ]; then
 fi
 
 %post
-# Determine current arch / kernel
 [ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && [ -e /etc/redhat-release ] && [ `grep -c "Taroon" /etc/redhat-release` -gt 0 ] && c_arch="ia32e" || c_arch=`uname -m`
-c_kern=`uname -r`
-
-# Load prebuilt binaries
-echo -e ""
-echo -e "Loading kernel module source and prebuilt module binaries (if any)"
-dkms ldtarball --archive %{_srcdir}/%{module_name}-%{version}/%{module_name}-%{version}-mktarball.dkms.tgz >/dev/null 2>&1
-
-# Install prebuilt binaries
-echo -e "Installing prebuilt kernel module binaries (if any)"
-IFS='
-'
-for kern in `dkms status -m %{module_name} -v %{version} -a $c_arch | grep ": built" | awk {'print $3'} | sed 's/,$//'`; do
-	dkms install -m %{module_name} -v %{version} -k $kern -a $c_arch >/dev/null 2>&1
-done
-unset IFS
-
-# If nothing installed for `uname -r` build and install it
-if [ `dkms status -m %{module_name} -v %{version} -k $c_kern -a $c_arch | grep -c ": installed"` -eq 0 ]; then
-	if [ `echo $c_kern | grep -c "BOOT"` -eq 0 ] && [ -e /lib/modules/$c_kern/build/include ]; then
-		dkms build -m %{module_name} -v %{version}
-		dkms install -m %{module_name} -v %{version}
-        elif [ `echo $c_kern | grep -c "BOOT"` -gt 0 ]; then
-                echo -e ""
-                echo -e "Module build for the currently running kernel was skipped since you"
-                echo -e "are running a BOOT variant of the kernel."
-        else
-                echo -e ""
-                echo -e "Module build for the currently running kernel was skipped since the"
-                echo -e "kernel source for this kernel does not seem to be installed."
+for POSTINST in %{_libdir}/dkms/common.postinst %{_datarootdir}/%{module_name}-dkms/postinst; do
+        if [ -f $POSTINST ]; then
+                $POSTINST %{module_name} %{version} $c_arch
+                exit $?
         fi
-fi
-
-echo -e ""
-echo -e "Your DKMS tree now includes:"
-dkms status -m %{module_name} -v %{version}
-exit 0
+        echo "WARNING: $POSTINST does not exist."
+done
+echo -e "ERROR: DKMS version is too old and %{module_name} was not"
+echo -e "built with legacy DKMS support."
+echo -e "You must either rebuild %{module_name} with legacy postinst"
+echo -e "support or upgrade DKMS to a more current version."
+exit 1
 
 %preun
 echo -e
@@ -85,7 +66,8 @@ exit 0
 
 %files
 %defattr(-,root,root)
-/usr/src/%{module_name}-%{version}/
+%{_srcdir}
+%{_datarootdir}/%{module_name}-dkms/
 
 %changelog
 * %(date "+%a %b %d %Y") %packager %{version}-%{release}
