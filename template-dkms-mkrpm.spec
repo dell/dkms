@@ -15,27 +15,32 @@ BuildArch:	noarch
 Group:		System/Kernel
 Requires: 	dkms >= 1.95
 BuildRequires: 	dkms
-Source0:	%{module_name}-%{version}.dkms.tar.gz
 BuildRoot: 	%{_tmppath}/%{name}-%{version}-%{release}-root/
 
 %description
 Kernel modules for %{module_name} %{version} in a DKMS wrapper.
 
 %prep
-/usr/sbin/dkms mktarball -m %module_name -v %version %mktarball_line --archive `basename %{SOURCE0}`
-cp -af %{_dkmsdir}/%{module_name}/%{version}/tarball/`basename %{SOURCE0}` %{SOURCE0}
+if [ "%mktarball_line" != "none" ]; then
+        /usr/sbin/dkms mktarball -m %module_name -v %version %mktarball_line --archive `basename %{module_name}-%{version}.dkms.tar.gz`
+        cp -af %{_dkmsdir}/%{module_name}/%{version}/tarball/`basename %{module_name}-%{version}.dkms.tar.gz` %{module_name}-%{version}.dkms.tar.gz
+fi
 
 %install
 if [ "$RPM_BUILD_ROOT" != "/" ]; then
         rm -rf $RPM_BUILD_ROOT
 fi
 mkdir -p $RPM_BUILD_ROOT/%{_srcdir}
-mkdir -p $RPM_BUILD_ROOT/%{_datarootdir}/%{module_name}-dkms
+mkdir -p $RPM_BUILD_ROOT/%{_datarootdir}/%{module_name}
 
-install -m 644 %{SOURCE0} $RPM_BUILD_ROOT/%{_srcdir}
+cp -Lpr %{_sourcedir}/%{module_name}-%{version} $RPM_BUILD_ROOT/%{_srcdir}
+
+if [ -f %{module_name}-%{version}.dkms.tar.gz ]; then
+        install -m 644 %{module_name}-%{version}.dkms.tar.gz $RPM_BUILD_ROOT/%{_srcdir}
+fi
 
 if [ -f %{_sourcedir}/common.postinst ]; then
-        install -m 755 %{_sourcedir}/common.postinst $RPM_BUILD_ROOT/%{_datarootdir}/%{module_name}-dkms/postinst
+        install -m 755 %{_sourcedir}/common.postinst $RPM_BUILD_ROOT/%{_datarootdir}/%{module_name}/postinst
 fi
 
 %clean
@@ -45,7 +50,7 @@ fi
 
 %post
 [ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && [ -e /etc/redhat-release ] && [ `grep -c "Taroon" /etc/redhat-release` -gt 0 ] && c_arch="ia32e" || c_arch=`uname -m`
-for POSTINST in %{_libdir}/dkms/common.postinst %{_datarootdir}/%{module_name}-dkms/postinst; do
+for POSTINST in %{_libdir}/dkms/common.postinst %{_datarootdir}/%{module_name}/postinst; do
         if [ -f $POSTINST ]; then
                 $POSTINST %{module_name} %{version} $c_arch
                 exit $?
@@ -67,7 +72,7 @@ exit 0
 %files
 %defattr(-,root,root)
 %{_srcdir}
-%{_datarootdir}/%{module_name}-dkms/
+%{_datarootdir}/%{module_name}/
 
 %changelog
 * %(date "+%a %b %d %Y") %packager %{version}-%{release}

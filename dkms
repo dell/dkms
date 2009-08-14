@@ -3174,9 +3174,8 @@ make_rpm()
 
     # Run a dkms mktarball for use in the rpm
     local mktarball_line
-    if [ -n "$source_only" ]; then
-	mktarball_line="--source-only"
-    else
+    if [ ! -n "$source_only" ]; then
+	mktarball_line="--binaries-only"
 	local i=0
 	echo $""
 	while [ $i -lt ${#kernelver_array[@]} ]; do
@@ -3191,6 +3190,8 @@ make_rpm()
 	    mktarball_line="-k ${kernelver_array[$i]} -a ${arch_array[$i]} $mktarball_line"
 	    i=$(($i + 1))
 	done
+    else
+        mktarball_line="none"
     fi
 
     local RC=0
@@ -3203,6 +3204,9 @@ make_rpm()
     if [ "$legacy_postinst" != "0" ]; then
         invoke_command "cp '$PREFIX/usr/lib/dkms/common.postinst' '${temp_dir_name}/SOURCES'" "copying legacy postinstall template"
     fi
+
+    #Copy in the source tree
+    invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '${temp_dir_name}/SOURCES/$module-$module_version'" "Copying source tree"
 
     invoke_command "LC_ALL=C rpmbuild --define \"_topdir ${temp_dir_name}\" --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  /usr/lib/dkms/find-provides\" --define \"_use_internal_dependency_generator 0\" -ba ${temp_dir_name}/SPECS/dkms_mkrpm.spec > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
     if [ "$?" -eq 0 ]; then
