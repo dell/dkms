@@ -1524,6 +1524,7 @@ function do_build()
     #if we're root, try to run as a user instead
     if [ "$USER" = "root" ] && getent passwd nobody 1>/dev/null && su nobody -c "/bin/true" 1>/dev/null; then
         the_make_command="su nobody -c \"$the_make_command\""
+        chmod +x $dkms_tree/$module/$module_version/build
         chown -R nobody $dkms_tree/$module/$module_version/build
     fi
 
