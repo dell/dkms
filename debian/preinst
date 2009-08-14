@@ -1,0 +1,29 @@
+#!/bin/sh -e
+
+# snippet from http://www.dpkg.org/dpkg/ConffileHandling
+
+# Remove a no-longer used conffile
+rm_conffile() {
+    PKGNAME="$1"
+    CONFFILE="$2"
+    if [ -e "$CONFFILE" ]; then
+        md5sum="`md5sum \"$CONFFILE\" | sed -e \"s/ .*//\"`"
+        old_md5sum="`dpkg-query -W -f='${Conffiles}' $PKGNAME | sed -n -e \"\\\\' $CONFFILE '{s/ obsolete$//;s/.* //p}\"`"
+        if [ "$md5sum" != "$old_md5sum" ]; then
+            echo "Obsolete conffile $CONFFILE has been modified by you."
+            echo "Saving as $CONFFILE.dpkg-bak ..."
+            mv -f "$CONFFILE" "$CONFFILE".dpkg-bak
+        else
+            echo "Removing obsolete conffile $CONFFILE ..."
+            rm -f "$CONFFILE"
+        fi
+    fi
+}
+
+case "$1" in
+install|upgrade)
+    if dpkg --compare-versions "$2" le "2.1.00.0-1"; then
+        rm_conffile dkms "/etc/dkms/template-dkms-mkdeb/debian/postrm"
+    fi
+esac
+
