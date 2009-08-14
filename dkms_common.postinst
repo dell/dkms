@@ -25,12 +25,14 @@ if [ -e "/var/lib/dkms/$NAME/$VERSION" ]; then
     dkms remove -m $NAME -v $VERSION --all
 fi
 
-#Load new files, either by source package or by tarball
+#Load new files, by source package and by tarball
 echo "Loading new $NAME-$VERSION DKMS files..."
+if [ -d "/usr/src/$NAME-$VERSION" ]; then
+    dkms add -m $NAME -v $VERSION > /dev/null
+fi
+
 if [ -f "/usr/src/$NAME-$VERSION.dkms.tar.gz" ]; then
     dkms ldtarball --archive "/usr/src/$NAME-$VERSION.dkms.tar.gz"
-else
-    dkms add -m $NAME -v $VERSION > /dev/null
 fi
 
 # On 1st installation, let us look for a directory
