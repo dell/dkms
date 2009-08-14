@@ -72,8 +72,15 @@ for KERNEL in $KERNELS; do
         continue
     fi
 
+
     #if the module isn't yet built, try to build it
     if [ `echo $dkms_status | grep -c ": built"` -eq 0 ]; then
+        if [ ! -L /var/lib/dkms/$NAME/$VERSION/source ]; then
+            echo "This package appears to be a binaries-only package"
+            echo " you will not be able to build against kernel $KERNEL"
+            echo " since the package source was not provided"
+            continue
+        fi
         if [ -e /lib/modules/$KERNEL/build/include ]; then
             echo "Building initial module for $KERNEL, architecture $ARCH"
             dkms build -m $NAME -v $VERSION -k $KERNEL -a $ARCH > /dev/null
