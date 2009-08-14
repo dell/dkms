@@ -12,8 +12,12 @@ tarball:
 
 install: postinst tarball
 	install -d "$(SRC)"
+
+#source tree
+ifeq ("$(wildcard $(NAME)-$(VERSION))", "$(NAME)-$(VERSION)")
 	cp -a $(NAME)-$(VERSION) $(SRC)
 	chmod 644 -R "$(SRC)/$(NAME)-$(VERSION)"
+endif
 
 #tarball, possibly with binaries
 ifeq ("$(wildcard $(NAME)-$(VERSION).dkms.tar.gz)", "$(NAME)-$(VERSION).dkms.tar.gz")

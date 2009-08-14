@@ -3172,9 +3172,17 @@ make_rpm()
 	exit 5
     fi
 
+    # Error out if binaries-only is set and source-only is set
+    if [ -n "$binaries_only" ] && [ -n "$source_only" ]; then
+        echo $"" >&2
+        echo $"Error!  You have specified both --binaries-only and --source-only." >&2
+        echo $"You cannot do this." >&2
+        exit 8
+    fi
+
     # Run a dkms mktarball for use in the rpm
     local mktarball_line
-    if [ ! -n "$source_only" ]; then
+    if [ ! -n "$source_only" ] || [ -n "$binaries_only" ]; then
 	mktarball_line="--binaries-only"
 	local i=0
 	echo $""
@@ -3206,7 +3214,9 @@ make_rpm()
     fi
 
     #Copy in the source tree
-    invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '${temp_dir_name}/SOURCES/$module-$module_version'" "Copying source tree"
+    if [ ! -n "$binaries_only" ]; then
+        invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '${temp_dir_name}/SOURCES/$module-$module_version'" "Copying source tree"
+    fi
 
     invoke_command "LC_ALL=C rpmbuild --define \"_topdir ${temp_dir_name}\" --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  /usr/lib/dkms/find-provides\" --define \"_use_internal_dependency_generator 0\" -ba ${temp_dir_name}/SPECS/dkms_mkrpm.spec > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
     if [ "$?" -eq 0 ]; then
@@ -3337,12 +3347,6 @@ function make_debian()
         exit 5
     fi
 
-    if [ -n "$binaries_only" ]; then
-        echo $"" >&2
-        echo $"Error! Debian archives can not be made in binaries only mode." >&2
-        exit 13
-    fi
-
     #prepare build directory and copy template
     local temp_dir=`mktemp -d $tmp_location/dkms.XXXXXX`
     trap "rm -rf $temp_dir; delete_temporary_trees" EXIT HUP TERM
@@ -3360,6 +3364,11 @@ function make_debian()
         invoke_command "cp '$PREFIX/usr/lib/dkms/common.postinst' '$temp_dir_debian'" "copying legacy postinstall template"
     fi
 
+    #Copy in the source tree
+    if [ ! -n "$binaries_only" ]; then
+        invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '$temp_dir_debian/$module-$module_version'" "Copying source tree"
+    fi
+
     #Only if we are shipping binary modules, make a .tgz for the deb
     local archive_location="$module-$module_version.dkms.tar.gz"
     if [ ! -n "$source_only" ]; then
@@ -3373,9 +3382,6 @@ function make_debian()
             exit 12
         fi
     fi
-
-    #Copy in the source tree
-    invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '$temp_dir_debian/$module-$module_version'" "Copying source tree"
 
     #calculate destination directory
     deb_basedir=$dkms_tree/$module/$module_version/${create_type}

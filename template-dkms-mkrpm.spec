@@ -33,7 +33,9 @@ fi
 mkdir -p $RPM_BUILD_ROOT/%{_srcdir}
 mkdir -p $RPM_BUILD_ROOT/%{_datarootdir}/%{module_name}
 
-cp -Lpr %{_sourcedir}/%{module_name}-%{version} $RPM_BUILD_ROOT/%{_srcdir}
+if [ -d %{_sourcedir}/%{module_name}-%{version} ]; then
+        cp -Lpr %{_sourcedir}/%{module_name}-%{version} $RPM_BUILD_ROOT/%{_srcdir}
+fi
 
 if [ -f %{module_name}-%{version}.dkms.tar.gz ]; then
         install -m 644 %{module_name}-%{version}.dkms.tar.gz $RPM_BUILD_ROOT/%{_srcdir}
