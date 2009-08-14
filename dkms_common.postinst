@@ -51,7 +51,7 @@ fi
 # NOTE: if the headers are not installed then the
 #       module won't be built, as usual
 if [ -z "$UPGRADE" ]; then
-    echo -e "First Installation: checking all kernels..."
+    echo "First Installation: checking all kernels..."
     for KERNEL in $KERNELS; do
         if [ ${KERNEL} = ${CURRENT_KERNEL} ]; then
             # Kernel found
@@ -66,21 +66,21 @@ fi
 for KERNEL in $KERNELS; do
     dkms_status=`dkms status -m $NAME -v $VERSION -k $KERNEL -a $ARCH`
     if [ `echo $KERNEL | grep -c "BOOT"` -gt 0 ]; then
-	echo -e ""
-	echo -e "Module build and install for $KERNEL was skipped as "
-	echo -e "it is a BOOT variant"
+	echo ""
+	echo "Module build and install for $KERNEL was skipped as "
+	echo "it is a BOOT variant"
 	continue	
     fi
 
     #if the module isn't yet built, try to build it
     if [ `echo $dkms_status | grep -c ": built"` -eq 0 ]; then
 	if [ -e /lib/modules/$KERNEL/build/include ]; then
-        	echo -e "Building initial module for $KERNEL, architecture $ARCH"
+        	echo "Building initial module for $KERNEL, architecture $ARCH"
         	dkms build -m $NAME -v $VERSION -k $KERNEL -a $ARCH > /dev/null
-        	echo -e "Done."
+        	echo "Done."
 	else
-                echo -e "Module build for the currently running kernel was skipped since the"
-                echo -e "kernel source for this kernel does not seem to be installed."
+                echo "Module build for the currently running kernel was skipped since the"
+                echo "kernel source for this kernel does not seem to be installed."
 	fi
     fi
 
