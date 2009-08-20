@@ -51,10 +51,9 @@ if [ "$RPM_BUILD_ROOT" != "/" ]; then
 fi
 
 %post
-[ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && [ -e /etc/redhat-release ] && [ `grep -c "Taroon" /etc/redhat-release` -gt 0 ] && c_arch="ia32e" || c_arch=`uname -m`
 for POSTINST in %{_libdir}/dkms/common.postinst %{_datarootdir}/%{module_name}/postinst; do
         if [ -f $POSTINST ]; then
-                $POSTINST %{module_name} %{version} $c_arch
+                $POSTINST %{module_name} %{version}
                 exit $?
         fi
         echo "WARNING: $POSTINST does not exist."

@@ -11,8 +11,9 @@ VERSION=$2
 ARCH=$3
 UPGRADE=$4
 
-if [ -z "$NAME" ] || [ -z "$VERSION" ] || [ -z "$ARCH" ]; then
-    echo "Need NAME, VERSION, and ARCH defined"
+if [ -z "$NAME" ] || [ -z "$VERSION" ]; then
+    echo "Need NAME, and VERSION defined"
+    echo "ARCH is optional"
     exit 1
 fi
 
@@ -63,8 +64,13 @@ else
     KERNELS=$CURRENT_KERNEL
 fi
 
+if [ ! -z "$ARCH" ]; then
+    echo "Building for architecture $ARCH"
+    ARCH="-a $ARCH"
+fi
+
 for KERNEL in $KERNELS; do
-    dkms_status=`dkms status -m $NAME -v $VERSION -k $KERNEL -a $ARCH`
+    dkms_status=`dkms status -m $NAME -v $VERSION -k $KERNEL $ARCH`
     if [ `echo $KERNEL | grep -c "BOOT"` -gt 0 ]; then
         echo ""
         echo "Module build and install for $KERNEL was skipped as "
@@ -82,8 +88,8 @@ for KERNEL in $KERNELS; do
             continue
         fi
         if [ -e /lib/modules/$KERNEL/build/include ]; then
-            echo "Building initial module for $KERNEL, architecture $ARCH"
-            dkms build -m $NAME -v $VERSION -k $KERNEL -a $ARCH > /dev/null
+            echo "Building initial module for $KERNEL"
+            dkms build -m $NAME -v $VERSION -k $KERNEL $ARCH > /dev/null
             echo "Done."
         else
             echo "Module build for the currently running kernel was skipped since the"
@@ -94,6 +100,6 @@ for KERNEL in $KERNELS; do
     #if the module is built (either pre-built or just now), install it
     if [ `echo $dkms_status | grep -c ": built"` -eq 1 ] && 
        [ `echo $dkms_status | grep -c ": installed"` -eq 0 ]; then
-        dkms install -m $NAME -v $VERSION -k $KERNEL -a $ARCH
+        dkms install -m $NAME -v $VERSION -k $KERNEL $ARCH
     fi
 done
