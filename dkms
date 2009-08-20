@@ -2914,30 +2914,16 @@ load_tarball()
 	    rm -rf $temp_dir_name
 	    exit 5
 	fi
-	if [ "`$0 status -m $PACKAGE_NAME -v $PACKAGE_VERSION 2>/dev/null`" == "" ] && [ -z "$force" ]; then
-	    echo $"" >&2
-	    echo $"Error! Tarball is a DKMS binaries-only archive, but your DKMS tree" >&2
-	    echo $"does not have the source installed for $PACKAGE_NAME-$PACKAGE_VERSION." >&2
-	    echo $"To load a DKMS binaries-only archive, you must already have the module" >&2
-	    echo $"source in your DKMS tree." >&2
-	    echo $"" >&2
-	    echo $"This can be overridden by using --force, but this is not recommended since" >&2
-	    echo $"it will eliminate your ability to actually build for this module." >&2
-            rm -rf $temp_dir_name
-	    exit 6
-	elif [ "`$0 status -m $PACKAGE_NAME -v $PACKAGE_VERSION 2>/dev/null`" == "" ] && [ -n "$force" ]; then
+	if [ "`$0 status -m $PACKAGE_NAME -v $PACKAGE_VERSION 2>/dev/null`" == "" ]; then
 	    if [ -e "$temp_dir_name/dkms_binaries_only/dkms.conf" ]; then
 		echo $""
 		echo $"Binaries-only DKMS tarball to be loaded for $PACKAGE_NAME-$PACKAGE_VERSION"
-		echo $"even though source for this module is not added to the DKMS tree.  This"
-		echo $"will allow you to install the pre-built binaries contained within this"
+		echo $"even though source for this module is not added to the DKMS tree.  "
+                echo $"<<<<WARNING>>>>"
+		echo $"This will allow you to install the pre-built binaries contained within this"
 		echo $"tarball, but will prevent you from building new modules for other kernels."
 		echo $""
-		echo $"Creating $source_tree/$PACKAGE_NAME-$PACKAGE_VERSION..."
-		rm -rf $source_tree/$PACKAGE_NAME-$PACKAGE_VERSION
-		mkdir -p $source_tree/$PACKAGE_NAME-$PACKAGE_VERSION
-		echo $"Copying dkms.conf to $source_tree/$PACKAGE_NAME-$PACKAGE_VERSION..."
-		cp -rf $temp_dir_name/dkms_binaries_only/dkms.conf $source_tree/$PACKAGE_NAME-$PACKAGE_VERSION
+		. $temp_dir_name/dkms_binaries_only/dkms.conf 2>/dev/null
 	    else
 		echo $"" >&2
 		echo $"Binaries-only DKMS tarball does not seem to contain a dkms.conf file for" >&2
@@ -2982,7 +2968,7 @@ load_tarball()
     echo $"Loading tarball for module: $module / version: $module_version"
     echo $""
 
-    # Load the source from the tarball
+    # Load the source from the tarball or build it's structure (for binaries only)
     if [ -z "$is_binaries_only" ]; then
 	if [ "`$0 status -m $module -v $module_version 2>/dev/null`" != "" ] && [ -z "$force" ]; then
 	    echo $"Warning! Source for $module-$module_version already exists.  Skipping..." >&2
@@ -2994,6 +2980,11 @@ load_tarball()
 	fi
 
 	mkdir -p $dkms_tree/$module/$module_version
+    else
+        echo $"Creating $dkms_tree/$module/$module_version/source"
+	mkdir -p $dkms_tree/$module/$module_version/source
+	echo $"Copying dkms.conf to $dkms_tree/$module/$module_version/source..."
+	cp -rf $temp_dir_name/dkms_binaries_only/dkms.conf $dkms_tree/$module/$module_version/source
     fi
 
     # Load kernel directories
@@ -3019,8 +3010,9 @@ load_tarball()
 	fi
     done
 
-    # Create source symlink
-    if [ ! -h "$dkms_tree/$module/$module_version/source" ] || [ ! -z "$force" ]; then
+    # Create source symlink (if there isn't a real directory there)
+    if [ ! -h "$dkms_tree/$module/$module_version/source" ] && \
+       [ ! -d "$dkms_tree/$module/$module_version/source" ] || [ ! -z "$force" ]; then
 	echo $"Creating $dkms_tree/$module/$module_version/source symlink..."
 	rm -f "$dkms_tree/$module/$module_version/source"
 	ln -s "$source_tree/$module-$module_version" "$dkms_tree/$module/$module_version/source"
