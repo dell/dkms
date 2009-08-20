@@ -91,6 +91,7 @@ for KERNEL in $KERNELS; do
             echo "Building initial module for $KERNEL"
             dkms build -m $NAME -v $VERSION -k $KERNEL $ARCH > /dev/null
             echo "Done."
+            dkms_status=`dkms status -m $NAME -v $VERSION -k $KERNEL $ARCH`
         else
             echo "Module build for the currently running kernel was skipped since the"
             echo "kernel source for this kernel does not seem to be installed."
