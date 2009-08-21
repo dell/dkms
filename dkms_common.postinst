@@ -34,7 +34,18 @@ if [ -d "/usr/src/$NAME-$VERSION" ]; then
 fi
 
 if [ -f "$TARBALL_ROOT/$NAME-$VERSION.dkms.tar.gz" ]; then
-    dkms ldtarball --archive "$TARBALL_ROOT/$NAME-$VERSION.dkms.tar.gz"
+    if ! dkms ldtarball --archive "$TARBALL_ROOT/$NAME-$VERSION.dkms.tar.gz"; then
+        echo ""
+        echo ""
+        echo "Unable to load DKMS tarball $TARBALL_ROOT/$NAME-$VERSION.dkms.tar.gz."
+        echo "Common causes include: "
+        echo " - You must be using DKMS 2.1.0.0 or later to support binaries only"
+        echo "   distribution specific archives."
+        echo " - Corrupt distribution specific archive"
+        echo ""
+        echo ""
+        exit 2 
+    fi
 fi
 
 # On 1st installation, let us look for a directory
