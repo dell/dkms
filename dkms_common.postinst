@@ -8,8 +8,9 @@ set -e
 
 NAME=$1
 VERSION=$2
-ARCH=$3
-UPGRADE=$4
+TARBALL_ROOT=$3
+ARCH=$4
+UPGRADE=$5
 
 if [ -z "$NAME" ] || [ -z "$VERSION" ]; then
     echo "Need NAME, and VERSION defined"
@@ -32,8 +33,8 @@ if [ -d "/usr/src/$NAME-$VERSION" ]; then
     dkms add -m $NAME -v $VERSION > /dev/null
 fi
 
-if [ -f "/usr/src/$NAME-$VERSION.dkms.tar.gz" ]; then
-    dkms ldtarball --archive "/usr/src/$NAME-$VERSION.dkms.tar.gz"
+if [ -f "$TARBALL_ROOT/$NAME-$VERSION.dkms.tar.gz" ]; then
+    dkms ldtarball --archive "$TARBALL_ROOT/$NAME-$VERSION.dkms.tar.gz"
 fi
 
 # On 1st installation, let us look for a directory

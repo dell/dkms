@@ -38,7 +38,7 @@ if [ -d %{_sourcedir}/%{module_name}-%{version} ]; then
 fi
 
 if [ -f %{module_name}-%{version}.dkms.tar.gz ]; then
-        install -m 644 %{module_name}-%{version}.dkms.tar.gz $RPM_BUILD_ROOT/%{_srcdir}
+        install -m 644 %{module_name}-%{version}.dkms.tar.gz $RPM_BUILD_ROOT/%{_datarootdir}/%{module_name}
 fi
 
 if [ -f %{_sourcedir}/common.postinst ]; then
@@ -53,7 +53,7 @@ fi
 %post
 for POSTINST in %{_libdir}/dkms/common.postinst %{_datarootdir}/%{module_name}/postinst; do
         if [ -f $POSTINST ]; then
-                $POSTINST %{module_name} %{version}
+                $POSTINST %{module_name} %{version} %{_datarootdir}/%{module_name}
                 exit $?
         fi
         echo "WARNING: $POSTINST does not exist."
