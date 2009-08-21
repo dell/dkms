@@ -1888,7 +1888,7 @@ function remove_module ()
     done
 
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
-    if [ -z "$(find $dkms_tree/$module/$module_version/* -maxdepth 0 -type d 2>/dev/null | egrep -v "(build|tarball|driver_disk|rpm|deb)$")"  ]; then
+    if [ -z "$(find $dkms_tree/$module/$module_version/* -maxdepth 0 -type d 2>/dev/null | egrep -v "(build|tarball|driver_disk|rpm|deb|source)$")"  ]; then
 	echo $""
 	echo $"------------------------------"
 	echo $"Deleting module version: $module_version"
