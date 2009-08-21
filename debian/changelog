@@ -2,7 +2,7 @@ dkms (2.1.0.0-1) UNRELEASED; urgency=low
 
   * New upstream version
 
- -- Mario Limonciello <mario_limonciello@dell.com>  Fri, 14 Aug 2009 16:58:02 -0500
+ -- Mario Limonciello <mario_limonciello@dell.com>  Fri, 21 Aug 2009 15:49:58 -0500
 
 dkms (2.0.22.0-1) unstable; urgency=low
 
