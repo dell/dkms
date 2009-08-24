@@ -5,6 +5,7 @@
 %{?!license: %define license Unknown}
 %{?!_dkmsdir: %define _dkmsdir /var/lib/dkms}
 %{?!_srcdir: %define _srcdir %_prefix/src}
+%{?!_datarootdir: %define _datarootdir %{_datadir}}
 
 Summary:	%{module_name} %{version} dkms package
 Name:		%{module_name}
