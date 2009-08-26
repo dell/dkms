@@ -1,7 +1,7 @@
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
 Version: [INSERT_VERSION_HERE]
-Release: 3%{?dist}
+Release: 1%{?dist}
 License: GPLv2+
 Group: System Environment/Base
 BuildArch: noarch
@@ -10,7 +10,7 @@ Requires: bash > 1.99
 # because Mandriva calls this package dkms-minimal
 Provides: dkms-minimal = %{version}
 URL: http://linux.dell.com/dkms
-Source0: http://linux.dell.com/dkms/permalink/dkms-%{version}.tar.gz
+Source0: http://linux.dell.com/dkms/permalink/dkms_%{version}.orig.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %if 0%{?fedora}
@@ -122,6 +122,12 @@ rm -rf $RPM_BUILD_ROOT
 [ $1 -lt 1 ] && /sbin/chkconfig dkms_autoinstaller off ||:
 
 %changelog
+* Sat Aug 22 2009 Matt Domsch <Matt_Domsch@dell.com> - 2.1.0.0-1
+- update to latest upstream
+- drop Requires: lsb.  avoid calling rpm (recursively) if possible.
+- add recognition for Oracle Enterprise Linux, Oracle VM, Scientific
+  Linux, and VMware 3.x
+
 * Fri Jul 24 2009 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.0.21.1-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_12_Mass_Rebuild
 
