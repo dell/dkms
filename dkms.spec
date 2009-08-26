@@ -10,7 +10,7 @@ Requires: bash > 1.99
 # because Mandriva calls this package dkms-minimal
 Provides: dkms-minimal = %{version}
 URL: http://linux.dell.com/dkms
-Source0: http://linux.dell.com/dkms/permalink/dkms_%{version}.orig.tar.gz
+Source0: http://linux.dell.com/dkms/permalink/dkms-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %if 0%{?fedora}
