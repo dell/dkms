@@ -3574,6 +3574,13 @@ case ":$PATH:" in
 esac
 PATH="$PATH:/usr/lib/dkms"
 
+# Ensure files and directories we create are readable to anyone,
+# since we aim to build as a non-root user
+umask 022
+
+# Unset environment variables that may interfere with the build
+unset CC CXX CFLAGS CXXFLAGS LDFLAGS
+
 # Set important variables
 current_kernel=`uname -r`
 dkms_tree="/var/lib/dkms"
