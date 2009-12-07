@@ -1,6 +1,10 @@
 dkms (2.1.0.1-1) UNRELEASED; urgency=low
 
   * New upstream version
+  
+  [ Alberto Milone ]
+  * dkms_common.postinst: try to build the module for the most recent
+    kernel in addition to building it for the current kernel (LP: #474917).
 
  -- Mario Limonciello <mario_limonciello@dell.com>  Fri, 21 Aug 2009 15:49:58 -0500
 
