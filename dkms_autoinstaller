@@ -15,11 +15,15 @@
 # Description: A service to automatically install DKMS modules for new kernels.
 ### END INIT INFO
 
-#use LSB functions for logging on Debian/Ubuntu
+#We only have these functions on debian/ubuntu
+# so on other distros just stub them out
 if [ -f /lib/lsb/init-functions ]; then
     . /lib/lsb/init-functions
-    if [ -f /etc/debian_version ]; then
-        DEBIAN_STYLE_LOGGING="yes"
+    if [ ! -f /etc/debian_version ]; then
+        alias log_daemon_msg=echo
+        log_end_msg() { if [ "$1" = "0" ]; then echo " Done. "; else echo " Failed. "; fi }
+        alias log_action_begin_msg=log_daemon_msg
+        alias log_action_end_msg=log_end_msg
     fi
 fi
 
@@ -61,11 +65,7 @@ dkms_tree="/var/lib/dkms"
 # See how we were called.
 case "$1" in
   start)
-    if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-        log_daemon_msg "Running DKMS auto installation service for kernel $kernel"
-    else
-        echo "Running DKMS auto installation service for kernel $kernel"
-    fi
+    log_daemon_msg "Running DKMS auto installation service for kernel $kernel"
     echo "" >>$output_loc
 
     # Iterate over the modules
@@ -95,33 +95,23 @@ case "$1" in
             [ "$current_state" = "installed" -o "$current_state" = "installed-weak" ] && already_installed="true" && already_installed_version=$version_in_tree
         done
 
-        if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-            log_action_begin_msg " $module_in_tree ($version_in_tree)"
-        fi
+        log_action_begin_msg " $module_in_tree ($version_in_tree)"
 
         # Based on what we know, either do it or not
         if [ "$current_state" = "broken" ]; then
             echo "$module_in_tree ($version_in_tree): Unable to locate $versioned_path/source/dkms.conf" >>$output_loc
             printf "\tDKMS tree must be manually fixed.\n" >>$output_loc
-            if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                log_action_end_msg 1
-            fi
+            log_action_end_msg 1
             continue
         elif [ -n "$already_installed" ]; then
             echo "$module_in_tree ($already_installed_version): Already installed on this kernel." >>$output_loc
-            if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                log_action_end_msg 0
-            fi
+            log_action_end_msg 0
         elif [ -z "$do_autoinstall" ]; then
             echo "$module_in_tree ($version_in_tree): AUTOINSTALL not set in its dkms.conf." >>$output_loc
-            if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                log_action_end_msg 0
-            fi
+            log_action_end_msg 0
         elif [ -n "$do_autoinstall" ] && [ "$version_count" -gt 1 ]; then
             echo "$module_in_tree: Multiple versions in DKMS. Unsure what to do. Resolve manually." >>$output_loc
-            if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                log_action_end_msg 1
-            fi
+            log_action_end_msg 1
         else
             echo "$module_in_tree ($version_in_tree): Installing module." >>$output_loc
             if [ "$current_state" != "built" ] && ! [ -e /lib/modules/$kernel/build/include ]; then
@@ -140,18 +130,10 @@ case "$1" in
                 fi
                 if [ "$return_status" -eq 0 ]; then
                     invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q >>$output_loc" "." background
-                    if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                        log_action_end_msg 0
-                    else
-                        echo "Done"
-                    fi
+                    log_action_end_msg 0
                 else
                     echo "  Build failed.  Installation skipped." >>$output_loc
-                    if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                        log_action_end_msg 1
-                    else
-                        echo " Failed."
-                    fi
+                    log_action_end_msg 1
                 fi
             else
                 invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q >>$output_loc" "." background
@@ -166,11 +148,7 @@ case "$1" in
         fi
     done
     if [ -z "$modules_needing_status" ]; then
-        if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-            log_end_msg 0
-        else
-            echo -n "."
-        fi
+        log_end_msg 0
     fi
     ;;
   stop|restart|force-reload|status|reload)

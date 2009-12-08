@@ -8,6 +8,9 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
   * Convert DKMS to an upstart script that starts up before GDM or KDM can
     start.  This ensures that drivers are built before X tries to start.
     (LP: #453365)
+  * dkms_autoinstall: Rather than having if/else clauses all over the script,
+    stub out any functions that aren't provided on Debian/Ubuntu when
+    /etc/debian_version isn't present.
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent
