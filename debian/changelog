@@ -38,6 +38,10 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
   * dkms_autoinstall: drop localization of the usage message - this is
     inconsistent with all other init scripts on the system.
 
+  [ Pauli Virtanen ]
+  * Remove dependence from environment's umask and certain environment 
+    variables. (LP: #438393, #436039)
+
  -- Mario Limonciello <mario_limonciello@dell.com>  Fri, 21 Aug 2009 15:49:58 -0500
 
 dkms (2.0.22.0-1) unstable; urgency=low
