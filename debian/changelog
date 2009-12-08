@@ -1,10 +1,19 @@
 dkms (2.1.0.1-1) UNRELEASED; urgency=low
 
+  [ Mario Limonciello ]
   * New upstream version
+  * dkms_autoinstall: Minor logic cleanups from submitted patches.
+  * dkms_autoinstall: Run under dash since dkms.conf isn't sourced anymore.
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent
     kernel in addition to building it for the current kernel (LP: #474917).
+
+  [ Steve Langasek ]
+  * dkms_autoinstall: optimize with a single find call instead of multiple
+    loops with ls.
+  * dkms_autoinstall: drop localization of the usage message - this is
+    inconsistent with all other init scripts on the system.
 
  -- Mario Limonciello <mario_limonciello@dell.com>  Fri, 21 Aug 2009 15:49:58 -0500
 
