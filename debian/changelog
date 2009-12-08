@@ -13,6 +13,9 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
     /etc/debian_version isn't present.
   * dkms_autoinstall: Exit immediately if this script is present but DKMS
     isn't anymore rather than sourcing functions and then exiting.
+  * kernel_postinst.d_dkms: Launch the upstart script instead. In the process
+    all output will be going to /var/log/dkms_autoinstaller (LP: #292606)
+  * dkms_autoinstall: Don't ever output to stdout, even with kernel parameters.
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent

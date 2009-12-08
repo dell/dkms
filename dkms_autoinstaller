@@ -53,7 +53,7 @@ invoke_command ()
 
 # Set Variables
 output_loc="/var/log/dkms_autoinstaller"
-[ -n "$2" ] && kernel=$2 && output_loc="/dev/stdout" || kernel=`uname -r`
+[ -n "$2" ] && kernel=$2 || kernel=`uname -r`
 kernelver_rpm=`rpm -qf "/lib/modules/$kernel" 2>/dev/null | grep -v "not owned by any package" | grep kernel | head -1`
 if ! arch=`rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null`; then
     [ `uname -m` = "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && [ `ls $install_tree/$kernel/build/configs 2>/dev/null | grep -c "ia32e"` -gt 0 ] && arch="ia32e" || arch=`uname -m`

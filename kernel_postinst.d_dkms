@@ -3,7 +3,9 @@
 # We're passed the version of the kernel being installed
 inst_kern=$1
 
-if [ -x /etc/init.d/dkms_autoinstaller ]; then
+if [ -f /etc/init/dkms_autoinstaller.conf ]; then
+    start dkms_autoinstaller KERNEL=$inst_kern >/dev/null
+elif [ -x /etc/init.d/dkms_autoinstaller ]; then
     if which invoke-rc.d >/dev/null 2>&1 ; then
         invoke-rc.d dkms_autoinstaller start $inst_kern
     else

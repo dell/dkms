@@ -14,4 +14,4 @@ start on (starting gdm
 
 task
 
-exec /usr/lib/dkms/dkms_autoinstaller start
+exec /usr/lib/dkms/dkms_autoinstaller start $KERNEL
