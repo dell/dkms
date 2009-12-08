@@ -18,6 +18,8 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
   * dkms_autoinstall: Don't ever output to stdout, even with kernel parameters.
   * dkms_autoinstall: Don't log the situation that we already have everything
     installed that needs to be.
+  * dkms_autoinstall: Rather than logging to /var/log/dkms_autoinstaller,
+    use logger to log to syslog during build and install.
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent
