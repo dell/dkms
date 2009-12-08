@@ -32,9 +32,11 @@ clean:
 
 clean-dpkg: clean
 	rm -f debian/dkms.dkms_autoinstaller.init
+	rm -f debian/dkms.dkms_autoinstaller.upstart
 
 copy-init:
 	install -m 755 dkms_autoinstaller debian/dkms.dkms_autoinstaller.init
+	install -m 755 dkms_autoinstaller.upstart debian/dkms.dkms_autoinstaller.upstart
 
 install:
 	mkdir -m 0755 -p $(VAR) $(SBIN) $(MAN) $(INITD) $(ETC) $(BASHDIR)
