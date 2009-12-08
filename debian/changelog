@@ -16,6 +16,8 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
   * kernel_postinst.d_dkms: Launch the upstart script instead. In the process
     all output will be going to /var/log/dkms_autoinstaller (LP: #292606)
   * dkms_autoinstall: Don't ever output to stdout, even with kernel parameters.
+  * dkms_autoinstall: Don't log the situation that we already have everything
+    installed that needs to be.
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent

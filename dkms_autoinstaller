@@ -104,7 +104,6 @@ case "$1" in
             log_action_end_msg 1
             continue
         elif [ -n "$already_installed" ]; then
-            echo "$module_in_tree ($already_installed_version): Already installed on this kernel." >>$output_loc
             log_action_end_msg 0
         elif [ -z "$do_autoinstall" ]; then
             echo "$module_in_tree ($version_in_tree): AUTOINSTALL not set in its dkms.conf." >>$output_loc
