@@ -20,6 +20,9 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
     installed that needs to be.
   * dkms_autoinstall: Rather than logging to /var/log/dkms_autoinstaller,
     use logger to log to syslog during build and install.
+  * dkms_autoinstall: Clean up the method to get arch.  These hacks shouldn't
+    be necessary.  If you have problems with them gone, file a bug and we'll
+    fix them more cleanly.
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent
