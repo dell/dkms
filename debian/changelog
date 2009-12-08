@@ -11,6 +11,8 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
   * dkms_autoinstall: Rather than having if/else clauses all over the script,
     stub out any functions that aren't provided on Debian/Ubuntu when
     /etc/debian_version isn't present.
+  * dkms_autoinstall: Exit immediately if this script is present but DKMS
+    isn't anymore rather than sourcing functions and then exiting.
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent
