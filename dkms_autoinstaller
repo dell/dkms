@@ -176,9 +176,8 @@ case "$1" in
   stop|restart|force-reload|status|reload)
     # ignore
     ;;
-    ;;
   *)
-    echo "Usage: $0 {start|stop}"
+    echo "Usage: $0 {start}"
 esac
 
 exit 0
