@@ -25,6 +25,8 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
     fix them more cleanly.
   * dkms_autoinstall: Notate the kernel we are building a module against
     when building it.
+  * debian/rules: Don't attempt to stop DKMS on upgrades.  It's a task, not
+    a daemon, so stop wouldn't do anything.
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent
