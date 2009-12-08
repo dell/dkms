@@ -106,7 +106,7 @@ case "$1" in
             logger -t dkms_autoinstaller "$module_in_tree: Multiple versions in DKMS. Unsure what to do. Resolve manually."
             log_action_end_msg 1
         else
-            logger -t dkms_autoinstaller "$module_in_tree ($version_in_tree): Installing module."
+            logger -t dkms_autoinstaller "$module_in_tree ($version_in_tree): Installing module on kernel $kernel."
             if [ "$current_state" != "built" ] && ! [ -e /lib/modules/$kernel/build/include ]; then
                 logger -t dkms_autoinstaller "  Kernel headers for $kernel are not installed.  Cannot install this module."
                 logger -t dkms_autoinstaller "  Try installing linux-headers-$kernel or equivalent."

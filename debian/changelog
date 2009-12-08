@@ -23,6 +23,8 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
   * dkms_autoinstall: Clean up the method to get arch.  These hacks shouldn't
     be necessary.  If you have problems with them gone, file a bug and we'll
     fix them more cleanly.
+  * dkms_autoinstall: Notate the kernel we are building a module against
+    when building it.
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent
