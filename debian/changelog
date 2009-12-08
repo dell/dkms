@@ -4,6 +4,7 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
   * New upstream version
   * dkms_autoinstall: Minor logic cleanups from submitted patches.
   * dkms_autoinstall: Run under dash since dkms.conf isn't sourced anymore.
+  * dkms_autoinstall: Whitespace cleanup.
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent

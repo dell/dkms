@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-# dkms_autoinstaller 		A service to automatically install DKMS modules
-# 				for new kernels.
+# dkms_autoinstaller        A service to automatically install DKMS modules
+#                           for new kernels.
 # chkconfig: 345 04 04
 # description: An autoinstaller bootup service for DKMS
 #
@@ -31,14 +31,14 @@ invoke_command ()
     local exitval_file=`mktemp /tmp/dkms.XXXXXX`
     [ -z "$verbose" ] && echo -n "$2..." >>$output_loc || echo "$1" >>$output_loc
     if [ "$3" = background ] && [ -z "$verbose" ]; then
-	(eval $1 >/dev/null 2>&1; echo "exitval=$?" >> "$exitval_file") &
-	while [ -e "$exitval_file" ] && ! [ -s "$exitval_file" ]; do
-	    sleep 3
-	    echo -n "." >>$output_loc
-	done
-	. "$exitval_file"
+    (eval $1 >/dev/null 2>&1; echo "exitval=$?" >> "$exitval_file") &
+    while [ -e "$exitval_file" ] && ! [ -s "$exitval_file" ]; do
+        sleep 3
+        echo -n "." >>$output_loc
+    done
+    . "$exitval_file"
     else
-	eval $1; exitval=$?
+    eval $1; exitval=$?
     fi
     [ $exitval -gt 0 ] && echo -n "(bad exit status: $exitval)" >>$output_loc
     rm -f "$exitval_file"
@@ -61,135 +61,124 @@ dkms_tree="/var/lib/dkms"
 # See how we were called.
 case "$1" in
   start)
-        if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-            log_daemon_msg "Running DKMS auto installation service for kernel $kernel"
-        else
-	    echo "Running DKMS auto installation service for kernel $kernel"
-	fi
-        echo "" >>$output_loc
+    if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
+        log_daemon_msg "Running DKMS auto installation service for kernel $kernel"
+    else
+        echo "Running DKMS auto installation service for kernel $kernel"
+    fi
+    echo "" >>$output_loc
 
-        # Iterate over the modules
-	for modulepath in $(find "$dkms_tree" -maxdepth 1 -mindepth 1 -type d); do
+    # Iterate over the modules
+    for modulepath in $(find "$dkms_tree" -maxdepth 1 -mindepth 1 -type d); do
 
-		module_in_tree=${modulepath##*/}
-		# Determine which versions to show status for
-		do_autoinstall=""
-		version_count=0
-		already_installed=""
-		already_installed_version=""
-		for versioned_path in $(find "$modulepath" -maxdepth 1 -mindepth 1 -type d -a -not -name original_module); do
-			version_count=$(($version_count + 1))
-			version_in_tree="${versioned_path##*/}"
+        module_in_tree=${modulepath##*/}
+        # Determine which versions to show status for
+        do_autoinstall=""
+        version_count=0
+        already_installed=""
+        already_installed_version=""
+        for versioned_path in $(find "$modulepath" -maxdepth 1 -mindepth 1 -type d -a -not -name original_module); do
+            version_count=$(($version_count + 1))
+            version_in_tree="${versioned_path##*/}"
 
-			if [ -f $versioned_path/source/dkms.conf ]; then
-				do_autoinstall=$(sed -n -e 's/^\(str  *\)\?AUTOINSTALL=\(.*\)$/\2/gp;'  $versioned_path/source/dkms.conf)
-			else
-				current_state="broken"
-				continue
-			fi
-
-			# Get the current state
-			# a mod can be both built and installed-weak (stupid, but could be)
-			# but installed-weak comes last, so use tail
-			current_state=`dkms status -m $module_in_tree -v $version_in_tree -k $kernel -a $arch 2>/dev/null | awk {'print $5'} | tail -n 1`
-			[ "$current_state" = "installed" -o "$current_state" = "installed-weak" ] && already_installed="true" && already_installed_version=$version_in_tree
-		done
-
-                if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                    log_action_begin_msg " $module_in_tree ($version_in_tree)"
-                fi
-
-		# Based on what we know, either do it or not
-		if [ "$current_state" = "broken" ]; then
-                    echo "$module_in_tree ($version_in_tree): Unable to locate $versioned_path/source/dkms.conf" >>$output_loc
-                    printf "\tDKMS tree must be manually fixed.\n" >>$output_loc
-                    if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                        log_action_end_msg 1
-                    fi
-                    continue
-		elif [ -n "$already_installed" ]; then
-		    echo "$module_in_tree ($already_installed_version): Already installed on this kernel." >>$output_loc
-                    if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                        log_action_end_msg 0
-                    fi
-		elif [ -z "$do_autoinstall" ]; then
-		    echo "$module_in_tree ($version_in_tree): AUTOINSTALL not set in its dkms.conf." >>$output_loc
-                    if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                        log_action_end_msg 0
-                    fi
-		elif [ -n "$do_autoinstall" ] && [ "$version_count" -gt 1 ]; then
-		    echo "$module_in_tree: Multiple versions in DKMS. Unsure what to do. Resolve manually." >>$output_loc
-                    if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                        log_action_end_msg 1
-                    fi
-		else
-		    echo "$module_in_tree ($version_in_tree): Installing module." >>$output_loc
-		    if [ "$current_state" != "built" ] && ! [ -e /lib/modules/$kernel/build/include ]; then
-			echo "  Kernel headers for $kernel are not installed.  Cannot install this module." >>$output_loc
-			echo "  Try installing linux-headers-$kernel or equivalent." >>$output_loc
-                        log_action_end_msg 1
-		    elif [ "$current_state" != "built" ] && [ -e /lib/modules/$kernel/build/include ]; then
-			return_status=""
-			if [ -z "$kernel_preparation_done" ]; then
-			    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q --no-clean-kernel >>$output_loc" "." background
-			    return_status="$?"
-			    kernel_preparation_done="true"
-			else
-			    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel -a $arch --no-prepare-kernel --no-clean-kernel -q >>$output_loc" "." background
-			    return_status="$?"
-			fi
-			if [ "$return_status" -eq 0 ]; then
-			    invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q >>$output_loc" "." background
-                            if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                                log_action_end_msg 0
-                            else
-                                echo "Done"
-                            fi
-			else
-			    echo "  Build failed.  Installation skipped." >>$output_loc
-                            if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                                log_action_end_msg 1
-                            else
-                                echo " Failed."
-                            fi
-			fi
-		    else
-			invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q >>$output_loc" "." background
-			return_status=$?
-			if [ "$return_status" -eq 101 ]; then
-			    echo "  A newer module version than this already exists in this kernel." >>$output_loc
-			    echo "  Skipping install... (you can manually install later with --force)" >>$output_loc
-			elif [ "$return_status" -ne 0 ]; then
-			    echo "  Installation failed!" >>$output_loc
-			fi
-		    fi
-		fi
-	done
-        if [ -z "$modules_needing_status" ]; then
-            if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
-                log_end_msg 0
+            if [ -f $versioned_path/source/dkms.conf ]; then
+                do_autoinstall=$(sed -n -e 's/^\(str  *\)\?AUTOINSTALL=\(.*\)$/\2/gp;'  $versioned_path/source/dkms.conf)
             else
-                echo -n "."
+                current_state="broken"
+                continue
+            fi
+
+            # Get the current state
+            # a mod can be both built and installed-weak (stupid, but could be)
+            # but installed-weak comes last, so use tail
+            current_state=`dkms status -m $module_in_tree -v $version_in_tree -k $kernel -a $arch 2>/dev/null | awk {'print $5'} | tail -n 1`
+            [ "$current_state" = "installed" -o "$current_state" = "installed-weak" ] && already_installed="true" && already_installed_version=$version_in_tree
+        done
+
+        if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
+            log_action_begin_msg " $module_in_tree ($version_in_tree)"
+        fi
+
+        # Based on what we know, either do it or not
+        if [ "$current_state" = "broken" ]; then
+            echo "$module_in_tree ($version_in_tree): Unable to locate $versioned_path/source/dkms.conf" >>$output_loc
+            printf "\tDKMS tree must be manually fixed.\n" >>$output_loc
+            if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
+                log_action_end_msg 1
+            fi
+            continue
+        elif [ -n "$already_installed" ]; then
+            echo "$module_in_tree ($already_installed_version): Already installed on this kernel." >>$output_loc
+            if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
+                log_action_end_msg 0
+            fi
+        elif [ -z "$do_autoinstall" ]; then
+            echo "$module_in_tree ($version_in_tree): AUTOINSTALL not set in its dkms.conf." >>$output_loc
+            if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
+                log_action_end_msg 0
+            fi
+        elif [ -n "$do_autoinstall" ] && [ "$version_count" -gt 1 ]; then
+            echo "$module_in_tree: Multiple versions in DKMS. Unsure what to do. Resolve manually." >>$output_loc
+            if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
+                log_action_end_msg 1
+            fi
+        else
+            echo "$module_in_tree ($version_in_tree): Installing module." >>$output_loc
+            if [ "$current_state" != "built" ] && ! [ -e /lib/modules/$kernel/build/include ]; then
+                echo "  Kernel headers for $kernel are not installed.  Cannot install this module." >>$output_loc
+                echo "  Try installing linux-headers-$kernel or equivalent." >>$output_loc
+                log_action_end_msg 1
+            elif [ "$current_state" != "built" ] && [ -e /lib/modules/$kernel/build/include ]; then
+                return_status=""
+                if [ -z "$kernel_preparation_done" ]; then
+                    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q --no-clean-kernel >>$output_loc" "." background
+                    return_status="$?"
+                    kernel_preparation_done="true"
+                else
+                    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel -a $arch --no-prepare-kernel --no-clean-kernel -q >>$output_loc" "." background
+                    return_status="$?"
+                fi
+                if [ "$return_status" -eq 0 ]; then
+                    invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q >>$output_loc" "." background
+                    if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
+                        log_action_end_msg 0
+                    else
+                        echo "Done"
+                    fi
+                else
+                    echo "  Build failed.  Installation skipped." >>$output_loc
+                    if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
+                        log_action_end_msg 1
+                    else
+                        echo " Failed."
+                    fi
+                fi
+            else
+                invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q >>$output_loc" "." background
+                return_status=$?
+                if [ "$return_status" -eq 101 ]; then
+                    echo "  A newer module version than this already exists in this kernel." >>$output_loc
+                    echo "  Skipping install... (you can manually install later with --force)" >>$output_loc
+                elif [ "$return_status" -ne 0 ]; then
+                    echo "  Installation failed!" >>$output_loc
+                fi
             fi
         fi
-	;;
-  stop)
-	# ignore
-	;;
-  restart)
-        # ignore
-        ;;
-  force-reload)
-        # ignore
-        ;;
-  status)
-        # ignore
-        ;;
-  reload)
-	exit 0
-	;;
+    done
+    if [ -z "$modules_needing_status" ]; then
+        if [ ! -z "$DEBIAN_STYLE_LOGGING" ]; then
+            log_end_msg 0
+        else
+            echo -n "."
+        fi
+    fi
+    ;;
+  stop|restart|force-reload|status|reload)
+    # ignore
+    ;;
+    ;;
   *)
-	echo "Usage: $0 {start|stop}"
+    echo "Usage: $0 {start|stop}"
 esac
 
 exit 0
