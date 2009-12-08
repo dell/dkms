@@ -12,7 +12,7 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
 
   [ Steve Langasek ]
   * dkms_autoinstall: optimize with a single find call instead of multiple
-    loops with ls.
+    loops with ls. (LP: 3484386)
   * dkms_autoinstall: drop localization of the usage message - this is
     inconsistent with all other init scripts on the system.
 
