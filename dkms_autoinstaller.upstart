@@ -8,7 +8,7 @@ author          "Mario Limonciello <Mario_Limonciello@Dell.com>"
 start on (starting gdm
           or starting kdm
           or starting xdm
-          or stopping rc RUNLEVEL=[2345])
+          or starting rc RUNLEVEL=[2345])
 
 task
 
