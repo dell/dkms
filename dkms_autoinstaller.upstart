@@ -8,8 +8,6 @@ author          "Mario Limonciello <Mario_Limonciello@Dell.com>"
 start on (starting gdm
           or starting kdm
           or starting xdm
-          or starting oem-config
-          or starting ubiquity
           or stopping rc RUNLEVEL=[2345])
 
 task
