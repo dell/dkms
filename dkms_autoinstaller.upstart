@@ -12,4 +12,6 @@ start on (starting gdm
 
 task
 
+emits built-module
+
 exec /usr/lib/dkms/dkms_autoinstaller start $KERNEL
