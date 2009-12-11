@@ -16,8 +16,9 @@ MAN = $(DESTDIR)/usr/share/man/man8
 INITD = $(DESTDIR)/etc/init.d
 LIBDIR = $(DESTDIR)/usr/lib/dkms
 BASHDIR = $(DESTDIR)/etc/bash_completion.d
-DOCDIR = $(DESTDIR)/usr/share/doc/dkms
 KCONF = $(DESTDIR)/etc/kernel
+SHAREDIR = $(DESTDIR)/usr/share
+DOCDIR = $(SHAREDIR)/doc/dkms
 
 #Define the top-level build directory
 BUILDDIR := $(shell pwd)
@@ -39,14 +40,15 @@ copy-init:
 	install -m 755 dkms_autoinstaller.upstart debian/dkms.dkms_autoinstaller.upstart
 
 install:
-	mkdir -m 0755 -p $(VAR) $(SBIN) $(MAN) $(INITD) $(ETC) $(BASHDIR)
+	mkdir -m 0755 -p $(VAR) $(SBIN) $(MAN) $(INITD) $(ETC) $(BASHDIR) $(SHAREDIR) $(LIBDIR)
 	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms > dkms.versioned
 	mv -f dkms.versioned dkms
-	mkdir   -p -m 0755 $(LIBDIR)
+	mkdir   -p -m 0755 $(SHAREDIR)/apport/package-hooks
 	install -p -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
 	install -p -m 0755 dkms $(SBIN)
 	install -p -m 0755 dkms_autoinstaller $(INITD)
 	install -p -m 0755 dkms_autoinstaller $(LIBDIR)
+	install -p -m 0755 dkms_apport.py $(SHAREDIR)/apport/package-hooks/dkms.py
 	install -p -m 0644 dkms_framework.conf $(ETC)/framework.conf
 	install -p -m 0644 dkms_dbversion $(VAR)
 	install -p -m 0644 dkms.bash-completion $(BASHDIR)/dkms

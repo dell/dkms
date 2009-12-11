@@ -1515,6 +1515,7 @@ function prepare_build()
 	    echo $"" >&2
 	    echo $"Error! Application of patch ${patch_array[$index]} failed." >&2
 	    echo $"Check $dkms_tree/$module/$module_version/build/ for more information." >&2
+            report_build_problem
 	    exit 6
 	fi
 	index=$(($index+1))
@@ -1548,6 +1549,7 @@ function do_build()
 	    echo $"" >&2
 	    echo $"DO YOU HAVE make INSTALLED???" >&2
 	fi
+	report_build_problem
 	exit 10
     fi
 
@@ -1559,6 +1561,7 @@ function do_build()
 	    echo $"Error!  Build of ${built_module_name[$count]}$module_suffix failed for: ${kernelver_array[0]} (${arch_array[0]})" >&2
 	    echo $"Consult the make.log in the build directory" >&2
 	    echo $"$dkms_tree/$module/$module_version/build/ for more information." >&2
+        report_build_problem
 	    exit 7
 	fi
 	count=$(($count+1))
@@ -3505,6 +3508,14 @@ function make_kmp_srpm()
     rm -rf $temp_dir_name
     trap > /dev/null 2>&1
     return ${RC}
+}
+
+function report_build_problem()
+{
+    #If apport is on the system, files a build problem
+    if [ -x /usr/share/apport/apport ] && which python>/dev/null; then
+        python /usr/share/apport/package-hooks/dkms.py -m $module -v $module_version
+    fi
 }
 
 

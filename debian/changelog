@@ -38,6 +38,9 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
       user, but that still wouldn't solve the problems with using 'su'.
   * dkms: Emit built-module MODULE=foo if initctl is available on the system
     after done building a module.   
+  * Add a special apport package-hook for when package builds fail to try
+    to report them against the package providing that DKMS package.
+    (LP: #484871)
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent
