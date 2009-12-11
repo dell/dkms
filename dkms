@@ -314,23 +314,23 @@ function distro_version_rpm()
         # format is 3, 4, ...
         dist=el${VER}
         ;;
-    oel) 
+    oel)
         VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
         # format is 3, 4, ...
         dist=el${VER}
         ;;
-    ovm) 
+    ovm)
         VER=$(rpm -q --qf "%{version}\n" ${whatprovides_ovm})
         # format is 2.1
         dist=ovm${VER}
         ;;
-    sl) 
+    sl)
         VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
         # format is 4.7, 5.3
         VER=$(echo "${VER}" | sed -e 's/^\([[:digit:]]*\).*/\1/g')
         dist=el${VER}
         ;;
-    fedora) 
+    fedora)
         VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
         dist=fc${VER}
         ;;
@@ -567,7 +567,7 @@ function read_conf ()
             echo $"dkms.conf: Error! No 'BUILT_MODULE_NAME' directive specified for record #$index." >&2
             return_value=1
         fi
-    
+
         # FAIL if built_module_name ends in .o or .ko
         case "${built_module_name[$index]}" in
         *.o | *.ko)
@@ -586,7 +586,7 @@ function read_conf ()
 
         # Override location for specific kernels
         dest_module_location[$index]="$(override_dest_module_location ${dest_module_location[$index]})"
-    
+
         # Fail if no DEST_MODULE_LOCATION
         if [ -z "${DEST_MODULE_LOCATION[$index]}" ]; then
             echo $"dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified for record #$index.">&2
@@ -713,7 +713,7 @@ function check_version_sanity ()
         local dkms_module="$dkms_tree/$module/$module_version/$1/$2/module/${4}$module_suffix"
         local dkms_ver_string=`modinfo $dkms_module | grep "^version:"`
         local dkms_ver_value=`echo $dkms_ver_string | awk {'print $2'}`
-    
+
         # there are 2 possible srcversion checksums
         # one in the 'srcversion' tag alone (preferred)
         # and one following the version field in the 'version' tag (deprecated)
@@ -821,7 +821,7 @@ function moduleconfig_add ()
                     fi
                 done
             fi
-    
+
             # Only add it if it can't be found already in config file
             if [ -n "${modules_conf_alias_type[$index]}" ] && \
                ! grep -qs "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}\b" $moduleconfig && \
@@ -840,10 +840,10 @@ function moduleconfig_add ()
                 echo -e "alias ${modules_conf_alias_type[$index]}${alias_number} ${dest_module_name[$index]}" >> $moduleconfig
                 echo $"$moduleconfig: added alias reference for '${dest_module_name[$index]}'"
             fi
-    
+
             index=$(($index+1))
         done
-    
+
         # Add anything else
         index=0
         while [ $index -lt ${#modules_conf_array[@]} ]; do
@@ -879,14 +879,14 @@ function moduleconfig_remove ()
 
             # Remove/Replace aliases (maybe)
             if [ -n "${modules_conf_alias_type[$index]}" ] && [ `find $install_tree/$1/ -name "${dest_module_name[$index]}.*" 2>/dev/null | wc -l | awk '{print $1}'` -eq 0 ]; then
-    
+
                 local conf_replacement=""
                 for obsolete_module in ${modules_conf_obsoletes[$index]//,/ }; do
                     if [ `find $install_tree/$1/ -name "$obsolete_module.*" 2>/dev/null | wc -l | awk '{print $1}'` -gt 0 ] && [ -z "$conf_replacement" ]; then
                         conf_replacement=$obsolete_module
                     fi
                 done
-        
+
                 if [ -n "$conf_replacement" ] && \
                     grep -q "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}$" $moduleconfig; then
                     sed "s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) ${dest_module_name[$index]}$/\1 $conf_replacement/g" $moduleconfig > $temp_dir_name/moduleconfig.new
@@ -902,7 +902,7 @@ function moduleconfig_remove ()
                     fi
                 fi
             fi
-    
+
             index=$(($index+1))
         done
 
@@ -1127,7 +1127,7 @@ function prepare_kernel()
         echo $"Running Red Hat style preparation routine"
         invoke_command "make clean" "make clean" background
         [ -n "$config_contents" ] && echo "$config_contents" > .config
-    
+
         if [ -n "$kernel_config" ]; then
             echo $"using $kernel_config"
             cp -f "$kernel_config" .config
@@ -1154,7 +1154,7 @@ function prepare_kernel()
         echo $"Running Generic preparation routine"
         invoke_command "make mrproper" "make mrproper" background
         [ -n "$config_contents" ] && echo "$config_contents" > .config
-    
+
         if [ -n "$kernel_config" ]; then
             echo $"using $kernel_config"
             cp -f "$kernel_config" .config
@@ -1277,7 +1277,7 @@ function install_module()
             count=$(($count + 1))
             continue
         fi
-    
+
         if [ "$count" -eq 0 ]; then
             # Run the pre_install script
             if [ -n "$pre_install" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$pre_install" | sed 's/ .*//'` ]; then
@@ -1328,7 +1328,7 @@ function install_module()
         else
             echo $"   - This kernel never originally had a module by this name"
         fi
-    
+
         if [ "$module_count" -gt 1 ]; then
             echo $" - Multiple same named modules!"
             echo $"   - $module_count named ${dest_module_name[$count]}$module_suffix in $lib_tree/"
@@ -1351,13 +1351,13 @@ function install_module()
                 esac
             done
         fi
-    
+
         # Copy module to its location
         echo $" - Installation"
         echo $"   - Installing to $install_tree/${kernelver_array[0]}${dest_module_location[$count]}/"
         mkdir -p $install_tree/${kernelver_array[0]}${dest_module_location[$count]}
         cp -f "$base_dir/module/${dest_module_name[$count]}$module_suffix" "$install_tree/${kernelver_array[0]}${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
-    
+
         count=$(($count + 1))
     done
 
@@ -1685,7 +1685,7 @@ function do_uninstall()
             echo $"Removing any linked weak-modules"
             list_each_installed_module "$module" "$1" "$2" | ${weak_modules} --remove-modules
         fi
-    
+
         count=0
         while [ "$count" -lt "${#built_module_name[@]}" ]; do
             real_dest_module_location="$(find_actual_dest_module_location $module $count $1 $2)"
@@ -1709,7 +1709,7 @@ function do_uninstall()
             else
                 echo $"   - No original module was found for this module on this kernel."
                 echo $"   - Use the dkms install command to reinstall any previous module version."
-            
+
                 # Remove modules_conf entries from /etc/modules.conf if remake_initrd is set or if this is last instance removed
                 if [ -n "$remake_initrd" ] || \
                     [ `$0 status -m $module -v $module_version | \
@@ -1902,7 +1902,7 @@ function remove_module ()
     # Get rid of any remnant directories if necessary
     if [ `ls "$dkms_tree/$module" | wc -w | awk '{print $1}'` -eq 0 ]; then
         rm -rf "$dkms_tree/$module" 2>/dev/null
-    
+
         # Its now safe to completely remove references in /etc/sysconfig/kernel for SuSE
         etc_sysconfig_kernel_modify "delete"
     fi
@@ -2047,7 +2047,7 @@ do_status ()
             readlink "$dkms_tree/$mod/kernel-$kern-$arch"
             [ "$read_link" == "$ver/$kern/$arch" ] && state="installed"
         fi
-    
+
         if [ "$state" == "built" ] || [ "$state" == "installed" ]; then
             set_module_suffix "$kern"
             local extra_status=""
@@ -2069,7 +2069,7 @@ do_status ()
                 count=$(($count+1))
             done
         fi
-    
+
         [ -d "$working_dir" ] && echo "$stat_display $state $extra_status"
     fi
 }
@@ -2436,7 +2436,7 @@ make_redhat_driver_disk()
 
 find_external_dependencies()
 {
-    local mod deps 
+    local mod deps
     local count=0
     local i=0
 
@@ -3059,7 +3059,7 @@ run_match ()
             echo $"Error! The module: $module is not located in the DKMS tree." >&2
             exit 3
         fi
-    
+
         template_kernel_status=`echo "$template_kernel_status" | grep "^$module,"`
     fi
 
