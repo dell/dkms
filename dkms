@@ -1615,6 +1615,9 @@ function build_module()
     clean_build
     echo $""
     echo $"DKMS: build Completed."
+    if [ -x /sbin/initctl ]; then
+        initctl emit built-module MODULE=$module 2>/dev/null
+    fi
 }
 
 function possible_dest_module_locations()

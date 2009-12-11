@@ -36,7 +36,8 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
     - Also people have reported that nothing should be owned by 'nobody' per
       Debian & Ubuntu policy.  This could have been fixed by creating a DKMS
       user, but that still wouldn't solve the problems with using 'su'.
-   
+  * dkms: Emit built-module MODULE=foo if initctl is available on the system
+    after done building a module.   
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent
