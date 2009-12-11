@@ -55,8 +55,7 @@ arch=${uname#* }
 kernel_preparation_done=""
 dkms_tree="/var/lib/dkms"
 . /etc/dkms/framework.conf 2>/dev/null
-echo $arch
-echo $kernel
+
 # See how we were called.
 case "$1" in
   start)
