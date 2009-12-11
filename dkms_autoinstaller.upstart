@@ -12,6 +12,4 @@ start on (starting gdm
           or starting ubiquity
           or stopping rc RUNLEVEL=[2345])
 
-task
-
 exec /usr/lib/dkms/dkms_autoinstaller start $KERNEL
