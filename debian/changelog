@@ -27,6 +27,8 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
     when building it.
   * debian/rules: Don't attempt to stop DKMS on upgrades.  It's a task, not
     a daemon, so stop wouldn't do anything.
+  * Makefile: Install the old initscript to /usr/lib so that different distros
+    can migrate to upstart at their leisure.
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent

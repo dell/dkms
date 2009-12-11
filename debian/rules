@@ -30,7 +30,6 @@ install: build
 	chmod a+x $(CURDIR)/debian/dkms/etc/dkms/template-dkms-mkdeb/debian/prerm
 	chmod a+x $(CURDIR)/debian/dkms/etc/dkms/template-dkms-mkdeb/debian/rules
 	rm -rf $(CURDIR)/debian/dkms/usr/share/doc/dkms/sample*
-	dh_install dkms_autoinstaller usr/lib/dkms
 	
 binary-arch: build install
 binary-indep: build install
