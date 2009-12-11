@@ -97,6 +97,9 @@ case "$1" in
             log_action_end_msg 1
             continue
         elif [ -n "$already_installed" ]; then
+            if [ -x /sbin/initctl ]; then
+                initctl emit built-module MODULE=$module_in_tree 2>/dev/null
+            fi
             log_action_end_msg 0
         elif [ -z "$do_autoinstall" ]; then
             logger -t dkms_autoinstaller "$module_in_tree ($version_in_tree): AUTOINSTALL not set in its dkms.conf."
