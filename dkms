@@ -1055,9 +1055,17 @@ function prepare_kernel()
     # Check that kernel-source exists
     if ! [ -e "$kernel_source_dir/include" ]; then
 	echo $"" >&2
-	echo $"Error! Your kernel source for kernel $1 cannot be found at" >&2
+	echo $"Error! Your kernel headers for kernel $1 cannot be found at" >&2
 	echo $"/lib/modules/$1/build or /lib/modules/$1/source." >&2
-	echo $"You can use the --kernelsourcedir option to tell DKMS where it's located."
+	echo -n $"You can use the --kernelsourcedir option to tell DKMS where it's located"
+	case "$running_distribution" in
+		Debian* | Ubuntu* )
+			echo $", or you could install the linux-headers-$1 package."
+			;;
+		* )
+			echo $"."
+			;;
+	esac
 	exit 1
     fi
 
