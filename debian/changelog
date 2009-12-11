@@ -45,6 +45,9 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
   * Remove dependence from environment's umask and certain environment 
     variables. (LP: #438393, #436039)
 
+  [ Giuseppe Iuculano ]
+  * dkms_autoinstall: Correct the provides in the LSB block.
+
  -- Mario Limonciello <mario_limonciello@dell.com>  Fri, 21 Aug 2009 15:49:58 -0500
 
 dkms (2.0.22.0-1) unstable; urgency=low

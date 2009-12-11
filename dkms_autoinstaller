@@ -6,7 +6,7 @@
 # description: An autoinstaller bootup service for DKMS
 #
 ### BEGIN INIT INFO
-# Provides: dkms
+# Provides: dkms_autoinstaller dkms
 # Default-Start: 2 3 4 5
 # Default-Stop:
 # Required-Start: $local_fs
