@@ -29,6 +29,7 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
     a daemon, so stop wouldn't do anything.
   * Makefile: Install the old initscript to /usr/lib so that different distros
     can migrate to upstart at their leisure.
+  * Makefile: Move any debian specific calls into the Makefile.
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent
