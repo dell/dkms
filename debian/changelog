@@ -30,6 +30,13 @@ dkms (2.1.0.1-1) UNRELEASED; urgency=low
   * Makefile: Install the old initscript to /usr/lib so that different distros
     can migrate to upstart at their leisure.
   * Makefile: Move any debian specific calls into the Makefile.
+  * dkms: Revert the code that runs DKMS as the user "nobody".  
+    - It's causing problems with people with nonstandard PAM configs because it
+      uses "su". (LP: #484725)
+    - Also people have reported that nothing should be owned by 'nobody' per
+      Debian & Ubuntu policy.  This could have been fixed by creating a DKMS
+      user, but that still wouldn't solve the problems with using 'su'.
+   
   
   [ Alberto Milone ]
   * dkms_common.postinst: try to build the module for the most recent
