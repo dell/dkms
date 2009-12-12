@@ -5,13 +5,11 @@
 description	"DKMS Automatic Build & Installation Service"
 author          "Mario Limonciello <Mario_Limonciello@Dell.com>"
 
-start on (starting gdm
-          or starting kdm
-          or starting xdm
-          or starting rc RUNLEVEL=[2345])
+start on startup
 
 task
 
-emits built-module
+emits build-successful
+emits build-failed
 
 exec /usr/lib/dkms/dkms_autoinstaller start $KERNEL

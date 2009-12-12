@@ -98,7 +98,7 @@ case "$1" in
             continue
         elif [ -n "$already_installed" ]; then
             if [ -x /sbin/initctl ]; then
-                initctl emit built-module MODULE=$module_in_tree 2>/dev/null
+                initctl emit build-successful MODULE=$module_in_tree 2>/dev/null
             fi
             log_action_end_msg 0
         elif [ -z "$do_autoinstall" ]; then
@@ -127,6 +127,11 @@ case "$1" in
                     invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch" "." background
                     log_action_end_msg 0
                 else
+                    #We might want to start up bullet proof X or do something else useful
+                    if [ -x /sbin/initctl ]; then
+                        initctl emit build-failed MODULE=$module 2>/dev/null
+                    fi
+
                     logger -t dkms_autoinstaller "  Build failed.  Installation skipped."
                     log_action_end_msg 1
                 fi

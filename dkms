@@ -1418,7 +1418,7 @@ function install_module()
     echo $""
     echo $"DKMS: install Completed."
     if [ -x /sbin/initctl ]; then
-        initctl emit built-module MODULE=$module 2>/dev/null
+        initctl emit build-successful MODULE=$module 2>/dev/null
     fi
 }
 
