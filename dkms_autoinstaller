@@ -47,6 +47,14 @@ invoke_command ()
     return $exitval
 }
 
+emit_module_status ()
+{
+    #$1 is the signal to emit (successful|failed)
+    #$2 is the module name in question
+    if [ -x /sbin/initctl ]; then
+        initctl emit build-$1 MODULE=$2 2>/dev/null
+    fi
+}
 
 # Set Variables
 uname=`uname -mr`
@@ -97,15 +105,14 @@ case "$1" in
             log_action_end_msg 1
             continue
         elif [ -n "$already_installed" ]; then
-            if [ -x /sbin/initctl ]; then
-                initctl emit build-successful MODULE=$module_in_tree 2>/dev/null
-            fi
+            emit_module_status successful $module_in_tree
             log_action_end_msg 0
         elif [ -z "$do_autoinstall" ]; then
             logger -t dkms_autoinstaller "$module_in_tree ($version_in_tree): AUTOINSTALL not set in its dkms.conf."
             log_action_end_msg 0
         elif [ -n "$do_autoinstall" ] && [ "$version_count" -gt 1 ]; then
             logger -t dkms_autoinstaller "$module_in_tree: Multiple versions in DKMS. Unsure what to do. Resolve manually."
+            emit_module_status failed $module_in_tree
             log_action_end_msg 1
         else
             logger -t dkms_autoinstaller "$module_in_tree ($version_in_tree): Installing module on kernel $kernel."
@@ -125,24 +132,25 @@ case "$1" in
                 fi
                 if [ "$return_status" -eq 0 ]; then
                     invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch" "." background
+                    emit_module_status successful $module_in_tree
                     log_action_end_msg 0
                 else
-                    #We might want to start up bullet proof X or do something else useful
-                    if [ -x /sbin/initctl ]; then
-                        initctl emit build-failed MODULE=$module 2>/dev/null
-                    fi
-
                     logger -t dkms_autoinstaller "  Build failed.  Installation skipped."
+                    emit_module_status failed $module_in_tree
                     log_action_end_msg 1
                 fi
             else
                 invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q" "." background
                 return_status=$?
-                if [ "$return_status" -eq 101 ]; then
+                if [ "$return_status" -eq 0 ]; then
+                    emit_module_status successful $module_in_tree
+                elif [ "$return_status" -eq 101 ]; then
                     logger -t dkms_autoinstaller "  A newer module version than this already exists in kernel."
                     logger -t dkms_autoinstaller "  Skipping install... (you can manually install later with --force)"
+                    emit_module_status successful $module_in_tree
                 elif [ "$return_status" -ne 0 ]; then
                     logger -t dkms_autoinstaller "  Installation failed!"
+                    emit_module_status failed $module_in_tree
                 fi
             fi
         fi
