@@ -36,6 +36,10 @@ if not options.module or not options.version:
     sys.exit(2)
 
 package=packaging.get_file_package('/usr/src/' + options.module + '-' + options.version)
+if package is None:
+    print >> sys.stderr, 'ERROR: binary package for %s: %s not found' % (options.module,options.version)
+    sys.exit(1)
+
 make_log=os.path.join('/var','lib','dkms',options.module,options.version,'build','make.log')
 
 report = apport.Report('Package')
