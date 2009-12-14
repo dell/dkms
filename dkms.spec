@@ -101,7 +101,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_sysconfdir}/kernel/postinst.d/%{name}
 %{_sysconfdir}/kernel/prerm.d/%{name}
 %{_sysconfdir}/bash_completion.d/%{name}
-%{_datarootdir}/apport/package-hooks/%{name}.py
+%{_datadir}/apport/package-hooks/%{name}.py
 
 %if 0%{?suse_version}
 # suse doesnt yet support /etc/kernel/{prerm.d,postinst.d}, but will fail build
