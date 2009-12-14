@@ -5,7 +5,7 @@
 description	"DKMS Automatic Build & Installation Service"
 author          "Mario Limonciello <Mario_Limonciello@Dell.com>"
 
-start on startup
+start on (startup and filesystem)
 
 task
 
