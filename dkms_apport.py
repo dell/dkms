@@ -24,14 +24,6 @@ from apport.hookutils import *
 import sys
 import subprocess, optparse
 
-def find_package(module,version):
-    proc=subprocess.Popen(['dpkg','-S','/usr/src/' + module + '-' + version],stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    output=proc.communicate()[0]
-    if proc.wait() != 0:
-        print >> sys.stderr, 'ERROR: binary package for %s: %s not found' % (module,version)
-        sys.exit(1)
-    return output.split(':')[0]
-
 optparser = optparse.OptionParser('%prog [options]')
 optparser.add_option('-m', help="Specify the DKMS module to find the package for",
                      action='store', type='string', dest='module')
@@ -43,7 +35,7 @@ if not options.module or not options.version:
     print >> sys.stderr, 'ERROR, both -m and -v are required'
     sys.exit(2)
 
-package=find_package(options.module, options.version)
+package=packaging.get_file_package('/usr/src/' + options.module + '-' + options.version)
 make_log=os.path.join('/var','lib','dkms',options.module,options.version,'build','make.log')
 
 report = apport.Report('Package')
