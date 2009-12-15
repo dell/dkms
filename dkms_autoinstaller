@@ -34,13 +34,13 @@ invoke_command ()
     local exitval=0
     local exitval_file=`mktemp /tmp/dkms.XXXXXX`
     if [ "$3" = background ] && [ -z "$verbose" ]; then
-    (eval $1 >/dev/null 2>&1; echo "exitval=$?" >> "$exitval_file") &
-    while [ -e "$exitval_file" ] && ! [ -s "$exitval_file" ]; do
-        sleep 3
-    done
-    . "$exitval_file"
+        (eval $1 >/dev/null 2>&1; echo "exitval=$?" >> "$exitval_file") &
+        while [ -e "$exitval_file" ] && ! [ -s "$exitval_file" ]; do
+            sleep 3
+        done
+        . "$exitval_file"
     else
-    eval $1; exitval=$?
+        eval $1; exitval=$?
     fi
     [ $exitval -gt 0 ] && logger -t dkms_autoinstaller "(bad exit status: $exitval)"
     rm -f "$exitval_file"
@@ -58,7 +58,7 @@ emit_module_status ()
 
 # Set Variables
 uname=`uname -mr`
-[ -n "$2" ] && kernel=$2 || kernel=${uname% *}
+[ -n "$2" ] && kernel=$2
 arch=${uname#* }
 kernel_preparation_done=""
 dkms_tree="/var/lib/dkms"
@@ -68,6 +68,15 @@ dkms_tree="/var/lib/dkms"
 case "$1" in
   start)
     log_daemon_msg "Running DKMS auto installation service for kernel $kernel"
+
+    if [ -z "$kernel" ]; then
+        if [ -L /vmlinuz -a -e /vmlinuz ]; then
+            linktarget="$(basename "$(readlink /vmlinuz)")"
+            kernel="${linktarget##vmlinuz-}"
+        else
+            kernel=${uname% *}
+        fi
+    fi
 
     # Iterate over the modules
     for modulepath in $(find "$dkms_tree" -maxdepth 1 -mindepth 1 -type d); do
