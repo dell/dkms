@@ -171,7 +171,7 @@ fi
 # NOTE: if the headers are not installed then the
 #       module won't be built, as usual
 if [ -z "$UPGRADE" ]; then
-    echo "First Installation: checking all kernels..."
+    echo "Checking all kernels..."
     for KERNEL in $KERNELS; do
         if [ ${KERNEL} = ${CURRENT_KERNEL} ]; then
             # Kernel found
