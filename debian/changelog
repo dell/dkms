@@ -1,4 +1,47 @@
-dkms (2.1.1.0-1) UNRELEASED; urgency=low
+dkms (2.1.1.0-0ubuntu8) lucid; urgency=low
+
+  * kernel_postinst.d_dkms: Upload the fixed version. 
+
+ -- Scott James Remnant <scott@ubuntu.com>  Tue, 15 Dec 2009 17:08:06 +0000
+
+dkms (2.1.1.0-0ubuntu7) lucid; urgency=low
+
+  * Argh, correct the preinst versioning.  I'm having a key mashing afternoon
+    clearly.
+
+ -- Scott James Remnant <scott@ubuntu.com>  Tue, 15 Dec 2009 17:00:06 +0000
+
+dkms (2.1.1.0-0ubuntu6) lucid; urgency=low
+
+  * Remove /etc/init/dkms_autoinstaller.conf on upgrade too.
+
+ -- Scott James Remnant <scott@ubuntu.com>  Tue, 15 Dec 2009 16:51:07 +0000
+
+dkms (2.1.1.0-0ubuntu5) lucid; urgency=low
+
+  * dkms_autoinstaller: Fix missing "then"
+
+ -- Scott James Remnant <scott@ubuntu.com>  Tue, 15 Dec 2009 15:09:49 +0000
+
+dkms (2.1.1.0-0ubuntu3) lucid; urgency=low
+
+  * dkms_autoinstaller: Copy logic from update-initramfs; when no kernel
+    version is given, use the /vmlinuz link maintained by the kernel package
+    to select one (or fallback to the current).  This should build modules
+    for the right kernel from module package postinst; rebuilding when that
+    link is changed is already taken care of by the kernel postinst.
+
+ -- Scott James Remnant <scott@ubuntu.com>  Tue, 15 Dec 2009 11:33:15 +0000
+
+dkms (2.1.1.0-0ubuntu2) lucid; urgency=low
+
+  * Remove the init script and Upstart job.
+    There is no reason that DKMS needs to run on boot; you can build
+    modules for non-running kernels just fine at installation time.
+
+ -- Scott James Remnant <scott@ubuntu.com>  Tue, 15 Dec 2009 11:20:37 +0000
+
+dkms (2.1.1.0-0ubuntu1) lucid; urgency=low
 
   [ Mario Limonciello ]
   * New upstream version
