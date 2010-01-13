@@ -31,20 +31,13 @@ all: clean tarball rpm debs
 clean:
 	-rm -rf *~ dist/ dkms-freshmeat.txt
 
-clean-dpkg: clean
-	rm -f debian/dkms.dkms_autoinstaller.init
-
-copy-init:
-	install -m 755 dkms_autoinstaller debian/dkms.dkms_autoinstaller.init
-
 install:
-	mkdir -m 0755 -p $(VAR) $(SBIN) $(MAN) $(INITD) $(ETC) $(BASHDIR) $(SHAREDIR) $(LIBDIR)
+	mkdir -m 0755 -p $(VAR) $(SBIN) $(MAN) $(ETC) $(BASHDIR) $(SHAREDIR) $(LIBDIR)
 	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms > dkms.versioned
 	mv -f dkms.versioned dkms
 	mkdir   -p -m 0755 $(SHAREDIR)/apport/package-hooks
 	install -p -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
 	install -p -m 0755 dkms $(SBIN)
-	install -p -m 0755 dkms_autoinstaller $(INITD)
 	install -p -m 0755 dkms_autoinstaller $(LIBDIR)
 	install -p -m 0755 dkms_apport.py $(SHAREDIR)/apport/package-hooks/dkms.py
 	install -p -m 0644 dkms_framework.conf $(ETC)/framework.conf
@@ -65,16 +58,18 @@ doc-perms:
 	chmod 0644 $(DOCFILES)
 
 install-redhat: install doc-perms
+	mkdir -m 0755 -p  $(INITD)
 	install -p -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
 	install -p -m 0755 dkms_find-provides $(LIBDIR)/find-provides
 	install -p -m 0755 lsb_release $(LIBDIR)/lsb_release
 	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
+	install -p -m 0755 dkms_autoinstaller $(INITD)
 
 install-doc:
 	mkdir -m 0755 -p $(DOCDIR)
 	install -p -m 0644 $(DOCFILES) $(DOCDIR)
 
-install-debian: install copy-init install-doc
+install-debian: install install-doc
 	mkdir   -p -m 0755 $(KCONF)/header_postinst.d
 	install -p -m 0755 kernel_postinst.d_dkms $(KCONF)/header_postinst.d/dkms
 	mkdir   -p -m 0755 $(ETC)/template-dkms-mkdeb/debian

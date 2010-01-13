@@ -17,7 +17,7 @@ clean: unpatch
 	dh_testdir
 	dh_testroot
 	rm -f build-stamp configure-stamp
-	[ ! -f Makefile ] || $(MAKE) clean-dpkg
+	[ ! -f Makefile ] || $(MAKE) clean
 	dh_clean 
 
 install: build
@@ -34,7 +34,6 @@ binary-indep: build install
 	dh_installchangelogs 
 	dh_installdocs AUTHORS debian/HOWTO.Debian
 	dh_installexamples
-	dh_installinit -r --name dkms_autoinstaller --update-rcd-params="start 20 2 3 4 5 ."
 	dh_installman
 	dh_link
 	dh_strip
