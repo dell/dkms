@@ -7,6 +7,7 @@ dkms (2.1.1.1-0ubuntu1) UNRELEASED; urgency=low
   * kernel_postinst.d: Make sure that dkms_autoinstaller is executable (LP: #480055)
   * Move the architecture mapping logic out of the DKMS template and into
     common.postinst for Ubuntu only. (LP: #497149)
+  * template-dkms-mkdeb/debian/control: Build-depends on dkms (LP: #506959)
 
   [ Thomas Chenault ]
   * Fix parsing in find_external_dependencies(). The existing code behaves improperly 
