@@ -13,7 +13,7 @@ _is_kernel_name_correct() {
     
     for kernel in /boot/config-*; do
         KERNEL=${kernel#*-}
-        if [ ${KERNEL} = ${KERNEL_NAME} ]; then
+        if [ "${KERNEL}" = "${KERNEL_NAME}" ]; then
             CORRECT="yes"
             break
         fi
@@ -37,7 +37,7 @@ _get_newest_kernel_debian() {
         ABI=${KERNEL#*-}
         ABI=${ABI%%-*}
 
-        if [ -z $NEWEST_KERNEL ]; then
+        if [ -z "$NEWEST_KERNEL" ]; then
             # The 1st time get a version which is bigger than $1
             COMPARE_TO=$1
         else
@@ -106,11 +106,11 @@ get_newest_kernel() {
 
     # Make sure that kernel name that we extracted corresponds to an installed
     # kernel
-    if [ $NEWEST_KERNEL ] && [ `_is_kernel_name_correct $NEWEST_KERNEL` = "no" ]; then
+    if [ -n "$NEWEST_KERNEL" ] && [ `_is_kernel_name_correct $NEWEST_KERNEL` = "no" ]; then
         NEWEST_KERNEL=
     fi
 
-    echo $NEWEST_KERNEL    
+    echo $NEWEST_KERNEL
 }
 
 NAME=$1
@@ -171,7 +171,7 @@ fi
 # NOTE: if the headers are not installed then the
 #       module won't be built, as usual
 if [ -z "$UPGRADE" ]; then
-    echo "Checking all kernels..."
+    echo "First Installation: checking all kernels..."
     for KERNEL in $KERNELS; do
         if [ ${KERNEL} = ${CURRENT_KERNEL} ]; then
             # Kernel found
