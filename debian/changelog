@@ -1,8 +1,13 @@
 dkms (2.1.1.1-0ubuntu1) UNRELEASED; urgency=low
 
+  [ Mario Limonciello ]
   * dkms_common.postinst: Add some missing quotes around strings used in comparisons
     to make sure that this is safe on more shells.
   * Makefile, debian/rules: Only copy the init script in for redhat targets.
+
+  [ Thomas Chenault ]
+  * Fix parsing in find_external_dependencies(). The existing code behaves improperly 
+    when a driver disk module has more than two dependencies.
 
  -- Mario Limonciello <mario_limonciello@dell.com>  Wed, 13 Jan 2010 13:31:37 -0600
 

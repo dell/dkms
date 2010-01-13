@@ -2443,7 +2443,7 @@ find_external_dependencies()
         while [ "$i" -lt "${#kernelver_array[@]}" ]; do
             set_module_suffix "${kernelver_array[$i]}"
             mod="$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix"
-            deps=(${deps[@]} $(modinfo "$mod" | sed -n 's/,/ /; s/^depends: *//p'))
+            deps=(${deps[@]} $(modinfo "$mod" | sed -n 's/,/ /g; s/^depends: *//p'))
             i=$(($i+1))
         done
         count=$(($count+1))
