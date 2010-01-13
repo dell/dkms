@@ -4,6 +4,7 @@ dkms (2.1.1.1-0ubuntu1) UNRELEASED; urgency=low
   * dkms_common.postinst: Add some missing quotes around strings used in comparisons
     to make sure that this is safe on more shells.
   * Makefile, debian/rules: Only copy the init script in for redhat targets.
+  * kernel_postinst.d: Make sure that dkms_autoinstaller is executable (LP: #480055)
 
   [ Thomas Chenault ]
   * Fix parsing in find_external_dependencies(). The existing code behaves improperly 
