@@ -138,8 +138,7 @@ case "$1" in
             else
                 invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q" "." background
                 return_status=$?
-                if [ "$return_status" -eq 0 ]; then
-                elif [ "$return_status" -eq 101 ]; then
+                if [ "$return_status" -eq 101 ]; then
                     logger -t dkms_autoinstaller "  A newer module version than this already exists in kernel."
                     logger -t dkms_autoinstaller "  Skipping install... (you can manually install later with --force)"
                 elif [ "$return_status" -ne 0 ]; then
