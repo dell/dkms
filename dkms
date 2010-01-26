@@ -196,7 +196,7 @@ function setup_kernels_arches ()
 function do_depmod()
 {
     # $1 = kernel version
-    depmod -au "$1" -F "/boot/System.map-$1"
+    /sbin/depmod -au "$1" -F "/boot/System.map-$1"
 }
 
 function remake_initrd()
