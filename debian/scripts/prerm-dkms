@@ -1,0 +1,10 @@
+DKMS_NAME=#MODULE_NAME#
+DKMS_VERSION=#MODULE_VERSION#
+
+case "$1" in
+    remove|upgrade|deconfigure)
+      if [  "$(dkms status -m $DKMS_NAME)" ]; then
+         dkms remove -m $DKMS_NAME -v $DKMS_VERSION --all
+      fi
+    ;;
+esac

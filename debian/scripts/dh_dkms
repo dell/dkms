@@ -1,0 +1,168 @@
+#!/usr/bin/perl -w
+
+=head1 NAME
+
+dh_dkms - correctly handle DKMS usage by a kernel module package
+
+=cut
+
+use strict;
+use Debian::Debhelper::Dh_Lib;
+
+=head1 SYNOPSIS
+
+B<dh_dkms> [S<I<debhelper options>>] [S<B<-l>>] [S<B<-V>[I<version>]>] [S<B<--> I<file>>]
+
+=head1 DESCRIPTION
+
+dh_dkms is a debhelper program that is responsible for correctly setting
+postinst, postrm and dependencies in kernel module packages using DKMS.
+
+If a file named debian/package.dkms exists, then different actions are
+performed, depending on its contents.
+
+=head1 FILES
+
+=over 4
+
+=item debian/I<package>.dkms
+
+=item debian/dkms
+
+It can be a proper configuration file, and in this case it would be installed
+in the proper directory as dkms.conf.
+
+It can also point to another file (this should be used when the configuration
+is provided by upstream), and in this case that file will be installed as dkms.conf
+in the propery directory.
+
+This file can only miss if a filename is provided when calling dh_dkms.
+
+=back
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-l>, B<--legacy>
+
+Add code to also support DKMS versions < 2.1.0.0.
+
+=item B<-V>, B<-V> I<version>
+
+Set C<PACKAGE_VERSION> in F<dkms.conf> to the given I<version> or, if none is
+given, default to the upstream version of the current package.
+
+=item B<--> I<file>
+
+Don't look for debian/I<package>.dkms or debian/dkms, but install I<file> as dkms.conf.
+
+=back
+
+=head1 NOTES
+
+Note that this command is not idempotent. L<dh_prep(1)> should be called
+between invocations of this command. Otherwise, it may cause multiple
+instances of the same text to be added to maintainer scripts.
+
+=cut
+
+init(options => {
+	"l|legacy" => \$dh{LEGACY_DKMS},
+});
+
+foreach my $package (@{$dh{DOPACKAGES}}) {
+	#next if is_udeb($package);
+
+	my $tmp = tmpdir($package);
+	my $dkms_dir = "/usr/lib/dkms/";
+	my $dkms_conf = pkgfile($package, "dkms");
+	my $is_snippet = 0;
+	my @other_conf;
+	my $name;
+	my $package_name;
+	my $package_version;
+
+	if ($dkms_conf) {
+		# let's see if it's a proper snippet
+		open(IN, "< $dkms_conf");
+		while (my $l = <IN>) {
+			$l =~ /PACKAGE_NAME=(["'])(.*)\1/ && ($is_snippet = 1);
+		}
+		close(IN);
+
+		if ($is_snippet) {
+			$name = $dkms_conf;
+		}
+		else {
+			@other_conf = filearray($dkms_conf);
+			if ($#other_conf > 1) {
+				error "cannot list more than one file in $dkms_conf!";
+			}
+			else {
+				$name = $other_conf[0];
+			}
+		}
+	}
+	elsif ($#ARGV == 0) {
+		$name = $ARGV[0];
+	}
+	else {
+		exit;
+	}
+	verbose_print "installing $name as dkms.conf";
+
+	# now, parse our configuration file
+	open(IN, "< $name");
+	while (my $l = <IN>) {
+		$l =~ /PACKAGE_NAME=(["'])(.*)\1/ && ($is_snippet = 1 && $package_name = $2);
+		$l =~ /PACKAGE_VERSION=(["'])(.*)\1/ && ($package_version = $2);
+	}
+	close(IN);
+
+	#$ENV{DH_AUTOSCRIPTDIR} = "debian/scripts/";
+	if ($dh{LEGACY_DKMS}) {
+		doit("install", "-p", "-D", "-m755", "$dkms_dir/common.postinst", "$tmp/usr/share/$package/postinst");
+		addsubstvar($package, "misc:Depends", "dkms");
+	}
+	else {
+		addsubstvar($package, "misc:Depends", "dkms", ">= 2.1.0.0");
+	}
+
+	if ($dh{V_FLAG_SET}) {
+		$package_version = $dh{V_FLAG};
+		if ($package_version eq "") {
+			# Call isnative because it sets $dh{VERSION}
+			# as a side effect.
+			isnative($package);
+			$package_version = $dh{VERSION};
+			# Remove the Debian revision
+			$package_version =~ s/-[^-]+$//;
+		}
+
+		my $old_name = $name;
+		$name = "debian/".pkgext($package)."dkms.debhelper";
+		doit("cp", "-a", $old_name, $name);
+		doit("sed", "-i", "s/#MODULE_VERSION#/$package_version/g", $name);
+	}
+
+	autoscript($package, "prerm", "prerm-dkms",
+	    "s/#MODULE_NAME#/$package_name/;s/#MODULE_VERSION#/$package_version/");
+	autoscript($package, "postinst", "postinst-dkms",
+	    "s/#MODULE_NAME#/$package_name/");
+	doit("install", "-p", "-D", "-m644", "$name", "$tmp/usr/src/$package_name-$package_version/dkms.conf");
+}
+
+=head1 SEE ALSO
+
+L<debhelper(1)>
+
+This program is part of the Debian DKMS package.
+
+L<dkms(8)>
+
+=head1 AUTHOR
+
+David Paleino <dapal@debian.org>
+
+=cut

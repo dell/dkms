@@ -8,6 +8,12 @@ CURVER = $(shell dpkg-parsechangelog | grep ^Version | cut -d" " -f2 | cut -d"-"
 
 include /usr/share/quilt/quilt.make
 
+dh_dkms.1: debian/scripts/dh_dkms
+	pod2man \
+		--center "DKMS Debhelper" \
+		--release $(CURVER) \
+		$< > debian/scripts/$@
+
 build: build-stamp
 build-stamp: $(QUILT_STAMPFN)
 	dh_testdir
@@ -26,6 +32,7 @@ install: build
 	dh_prep 
 	dh_installdirs
 	$(MAKE) install-debian DESTDIR=$(CURDIR)/debian/dkms
+	dh_install
 	
 binary-arch: build install
 binary-indep: build install

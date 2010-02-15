@@ -6,7 +6,7 @@ Uploaders: David Paleino <dapal@debian.org>,
  Mario Limonciello <Mario_Limonciello@dell.com>,
  Giuseppe Iuculano <iuculano@debian.org>
 Build-Depends: debhelper (>= 7), quilt
-Standards-Version: 3.8.3
+Standards-Version: 3.8.4
 Homepage: http://linux.dell.com/dkms
 Vcs-Git: http://linux.dell.com/git/dkms.git 
 Vcs-Browser: http://linux.dell.com/git/dkms.git 

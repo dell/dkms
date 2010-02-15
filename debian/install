@@ -1,0 +1,4 @@
+debian/scripts/dh_dkms      usr/bin
+debian/scripts/dh_dkms.1    usr/share/man/man1/
+debian/scripts/*-dkms       usr/share/debhelper/autoscripts/
+debian/scripts/dkms.pm      usr/share/perl5/Debian/Debhelper/Sequence/
