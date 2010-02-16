@@ -1,11 +1,11 @@
-dkms (2.1.1.2-0ubuntu1) UNRELEASED; urgency=low
+dkms (2.1.1.2-0ubuntu1) lucid; urgency=low
 
   * dkms_autoinstaller:
     - Fix a mismatched if/elif.
   * dkms:
     - Make sure to start up depmod from /sbin/
 
- -- Mario Limonciello <mario_limonciello@dell.com>  Tue, 26 Jan 2010 12:48:57 -0600
+ -- Mario Limonciello <Mario_Limonciello@Dell.com>  Tue, 16 Feb 2010 16:28:14 -0600
 
 dkms (2.1.1.1-0ubuntu1) karmic; urgency=low
 
