@@ -50,8 +50,9 @@ Add code to also support DKMS versions < 2.1.0.0.
 
 =item B<-V>, B<-V> I<version>
 
-Set C<PACKAGE_VERSION> in F<dkms.conf> to the given I<version> or, if none is
-given, default to the upstream version of the current package.
+If C<PACKAGE_VERSION> in F<dkms.conf> is set to C<#MODULE_VERSION#>, set it to
+the given I<version> or, if none is given, default to the upstream version of
+the current package. Otherwise, leave the value specified in F<dkms.conf>.
 
 =item B<--> I<file>
 
@@ -108,7 +109,7 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 		$name = $ARGV[0];
 	}
 	else {
-		exit;
+		next;
 	}
 	verbose_print "installing $name as dkms.conf";
 
@@ -149,7 +150,7 @@ foreach my $package (@{$dh{DOPACKAGES}}) {
 	autoscript($package, "prerm", "prerm-dkms",
 	    "s/#MODULE_NAME#/$package_name/;s/#MODULE_VERSION#/$package_version/");
 	autoscript($package, "postinst", "postinst-dkms",
-	    "s/#MODULE_NAME#/$package_name/");
+	    "s/#MODULE_NAME#/$package_name/;s/#MODULE_VERSION#/$package_version/");
 	doit("install", "-p", "-D", "-m644", "$name", "$tmp/usr/src/$package_name-$package_version/dkms.conf");
 }
 

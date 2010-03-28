@@ -1,9 +1,14 @@
 dkms (2.1.1.2-0ubuntu1) lucid; urgency=low
 
+  [ Mario Limonciello ]
   * dkms_autoinstaller:
     - Fix a mismatched if/elif.
   * dkms:
     - Make sure to start up depmod from /sbin/
+  * Pull in changes from debian to support dh_dkms.
+
+  [ Anders Kaseorg ]
+  * Don't fail to run other debhelper steps in postinst if we fail. (LP: #497149)
 
  -- Mario Limonciello <Mario_Limonciello@Dell.com>  Tue, 16 Feb 2010 16:28:14 -0600
 

@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "DH_DKMS 1"
-.TH DH_DKMS 1 "2010-02-08" "2.1.1.0" "DKMS Debhelper"
+.TH DH_DKMS 1 "2010-02-17" "2.1.1.1" "DKMS Debhelper"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -164,8 +164,9 @@ This file can only miss if a filename is provided when calling dh_dkms.
 Add code to also support \s-1DKMS\s0 versions < 2.1.0.0.
 .IP "\fB\-V\fR, \fB\-V\fR \fIversion\fR" 4
 .IX Item "-V, -V version"
-Set \f(CW\*(C`PACKAGE_VERSION\*(C'\fR in \fIdkms.conf\fR to the given \fIversion\fR or, if none is
-given, default to the upstream version of the current package.
+If \f(CW\*(C`PACKAGE_VERSION\*(C'\fR in \fIdkms.conf\fR is set to \f(CW\*(C`#MODULE_VERSION#\*(C'\fR, set it to
+the given \fIversion\fR or, if none is given, default to the upstream version of
+the current package. Otherwise, leave the value specified in \fIdkms.conf\fR.
 .IP "\fB\-\-\fR \fIfile\fR" 4
 .IX Item "-- file"
 Don't look for debian/\fIpackage\fR.dkms or debian/dkms, but install \fIfile\fR as dkms.conf.
