@@ -21,6 +21,9 @@
 
 invoke_command()
 {
+    # $1 = command to be executed using eval.
+    # $2 = Description of command to run
+    # $3 = 'background' if you want to run the command asynchronously.
     local exitval=0
     [[ $verbose ]] && echo -e "$1" || echo -en "$2..."
     if [[ $3 = background && ! $verbose ]]; then
