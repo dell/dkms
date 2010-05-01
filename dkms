@@ -84,9 +84,9 @@ set_module_suffix()
 set_kernel_source_dir()
 {
     # $1 = the kernel to base the directory on
-    if [ -z "$kernel_source_dir" ] && [ -d "$install_tree/$1/build" ]; then
-        kernel_source_dir="$install_tree/$1/build"
-    fi
+    [[ $kernel_source_dir ]] && return 
+    [[ -d $install_tree/$1/build ]] && \
+	kernel_source_dir="$install_tree/$1/build"
 }
 
 setup_kernels_arches()
