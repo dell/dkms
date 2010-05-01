@@ -17,8 +17,10 @@ dkms_version=(${dkms_version//./ })
     (${dkms_version[2]} == 1 && ${dkms_version[3]} >= 90) )) && exit
 
 mv /var/dkms /var/lib/dkms
-arch_used=""
-[ `uname -m` == "x86_64" ] && [ `cat /proc/cpuinfo | grep -c "Intel"` -gt 0 ] && [ `ls /lib/modules/$kernel_test/build/configs 2>/dev/null | grep -c "ia32e"` -gt 0 ] && arch_used="ia32e" || arch_used=`uname -m`
+arch_used=$(uname -m)
+[[ $arch_used = x86_64 ]] && (($(grep -c "Intel" /proc/cpuinfo > 0 && \
+    $(ls /lib/modules/$kernel_test/build/configs 2>/dev/null | \
+    grep -c "ia32e") > 0)) && arch_used="ia32e"
 echo ""
 echo "ALERT! ALERT! ALERT!"
 echo ""
