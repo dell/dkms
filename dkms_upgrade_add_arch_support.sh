@@ -8,19 +8,6 @@
 #
 # DKMS v2.0 will be the first stable release to have arch support.
 
-
-function readlink()
-{
-    # $1 = the symlink to read
-    read_link=""
-    if [ -L "$1" ]; then
-        read_link="$1"
-        while [ -L "$read_link" ]; do
-            read_link=`ls -l $read_link | sed 's/.*-> //'`
-        done
-    fi
-}
-
 dkms_version=`dkms -V 2>/dev/null`
 if [ -n "$dkms_version" ]; then
 	version_major=`echo $dkms_version | awk {'print $2'} | cut -d '.' -f 1-1`
@@ -64,8 +51,7 @@ if [ -n "$dkms_version" ]; then
 			symlink_kernelname=`echo $symlink | sed 's#.*/kernel-##'`
 			dir_of_symlink=`echo $symlink | sed 's#/kernel-.*$##'`
 			cd $dir_of_symlink
-			readlink $symlink
-			if [ `echo $read_link | sed 's#/# #g' | wc -w | awk {'print $1'}` -lt 3 ]; then
+			if [ $(readlink -e "$symlink" | sed 's#/# #g' | wc -w | awk {'print $1'}) -lt 3 ]; then
 				echo "Updating $symlink..."
 				ln -sf $read_link/$arch_used kernel-$symlink_kernelname-$arch_used
 				rm -f $symlink

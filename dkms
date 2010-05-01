@@ -19,7 +19,7 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-function invoke_command ()
+invoke_command()
 {
     local exitval=0
     local exitval_file=`mktemp $tmp_location/dkms.XXXXXX`
@@ -40,7 +40,7 @@ function invoke_command ()
     return $exitval
 }
 
-function show_usage ()
+show_usage()
 {
     echo $"Usage: $0 [action] [options]"
     echo $"  [action]  = { add | remove | build | install | uninstall | match"
@@ -54,19 +54,7 @@ function show_usage ()
     echo $"              [--size] [--spec=specfile] [--media=floppy|iso|tar] [--legacy-postinst=0|1]"
 }
 
-function readlink()
-{
-    # $1 = the symlink to read
-    read_link=""
-    if [ -L "$1" ]; then
-        read_link="$1"
-        while [ -L "$read_link" ]; do
-            read_link=`ls -l $read_link | sed 's/.*-> //'`
-        done
-    fi
-}
-
-function VER()
+VER()
 {
     # $1 = kernel version string
 
@@ -82,7 +70,7 @@ function VER()
                   -e 's: ::g'
 }
 
-function set_module_suffix ()
+set_module_suffix()
 {
     # $1 = the kernel to base the module_suffix on
     kernel_test="$1"
@@ -95,7 +83,7 @@ function set_module_suffix ()
     fi
 }
 
-function set_kernel_source_dir ()
+set_kernel_source_dir()
 {
     # $1 = the kernel to base the directory on
     if [ -z "$kernel_source_dir" ] && [ -d "$install_tree/$1/build" ]; then
@@ -103,7 +91,7 @@ function set_kernel_source_dir ()
     fi
 }
 
-function setup_kernels_arches ()
+setup_kernels_arches()
 {
     # Error if # of arches doesn't match # of kernels
     if [ ${#kernelver_array[@]} -ne ${#arch_array[@]} ] && [ ${#arch_array[@]} -gt 1 ]; then
@@ -193,13 +181,13 @@ function setup_kernels_arches ()
     done
 }
 
-function do_depmod()
+do_depmod()
 {
     # $1 = kernel version
     /sbin/depmod -au "$1" -F "/boot/System.map-$1"
 }
 
-function remake_initrd()
+remake_initrd()
 {
     # $1 = kernel version
     # $2 = arch
@@ -285,7 +273,7 @@ function remake_initrd()
     return $exitval
 }
 
-function distro_version_rpm()
+distro_version_rpm()
 {
     local whatprovides_redhat
     local whatprovides_suse
@@ -365,7 +353,7 @@ function distro_version_rpm()
     echo "$dist"
 }
 
-function distro_version()
+distro_version()
 {
 # What distribution are we running?
     local LSB_RELEASE
@@ -423,7 +411,7 @@ function distro_version()
     echo "$dist"
 }
 
-function override_dest_module_location()
+override_dest_module_location()
 {
     local orig_location="$1"
     [ -n "${addon_modules_dir}" ] && echo "/${addon_modules_dir}" && return
@@ -446,7 +434,7 @@ function override_dest_module_location()
     echo "$orig_location"
 }
 
-function read_conf ()
+read_conf()
 {
     # $1 kernel version (required)
     # $2 arch (required)
@@ -709,7 +697,7 @@ function read_conf ()
 }
 
 
-function check_version_sanity ()
+check_version_sanity()
 {
     # $1 = kernel_version
     # $2 = arch
@@ -798,7 +786,7 @@ function check_version_sanity ()
 }
 
 
-function moduleconfig_add ()
+moduleconfig_add()
 {
     # $1 = kernel version
 
@@ -877,7 +865,7 @@ function moduleconfig_add ()
 }
 
 
-function moduleconfig_remove ()
+moduleconfig_remove()
 {
     # $1 = kernel version
 
@@ -940,7 +928,7 @@ function moduleconfig_remove ()
 
 # Does string word exist as a word in string list?
 # returns 0 if word present, 1 if word not present
-function is_word_in_list ()
+is_word_in_list()
 {
     for l in $2; do
         [ "$1" = "${l}" ] && return 0
@@ -948,7 +936,7 @@ function is_word_in_list ()
     return 1
 }
 
-function etc_sysconfig_kernel_modify ()
+etc_sysconfig_kernel_modify()
 {
     # Make a temp directory to store files
     local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
@@ -979,7 +967,7 @@ function etc_sysconfig_kernel_modify ()
     rm -rf $temp_dir_name
 }
 
-function add_module ()
+add_module()
 {
     setup_kernels_arches "add"
 
@@ -1055,7 +1043,7 @@ function add_module ()
     echo $"DKMS: add Completed."
 }
 
-function prepare_kernel()
+prepare_kernel()
 {
     # $1 = kernel version to prepare
     # $2 = arch to prepare
@@ -1194,7 +1182,7 @@ function prepare_kernel()
     cd - >/dev/null
 }
 
-function list_each_installed_module ()
+list_each_installed_module()
 {
     # $1 = module
     # $2 = kernel version
@@ -1208,14 +1196,14 @@ function list_each_installed_module ()
     done
 }
 
-function set_weak_modules()
+set_weak_modules()
 {
     [ -n "${weak_modules}" ] && return
     [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
     [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 }
 
-function install_module()
+install_module()
 {
     setup_kernels_arches "install"
     local base_dir="$dkms_tree/$module/$module_version/${kernelver_array[0]}/${arch_array[0]}"
@@ -1265,8 +1253,7 @@ function install_module()
     done
 
     # Check that its not already installed (kernel symlink)
-    readlink "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}"
-    kernel_symlink="$read_link"
+    kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}")
     if [ "$kernel_symlink" == "$module_version/${kernelver_array[0]}/${arch_array[0]}" ]; then
         echo $"" >&2
         echo $"Error! This module/version combo is already installed" >&2
@@ -1436,7 +1423,7 @@ function install_module()
 }
 
 
-function prepare_build()
+prepare_build()
 {
     setup_kernels_arches "build"
     set_kernel_source_dir "${kernelver_array[0]}"
@@ -1529,7 +1516,7 @@ function prepare_build()
     done
 }
 
-function do_build()
+do_build()
 {
     local base_dir="$dkms_tree/$module/$module_version/${kernelver_array[0]}/${arch_array[0]}"
     echo $""
@@ -1597,7 +1584,7 @@ function do_build()
     fi
 }
 
-function clean_build()
+clean_build()
 {
     # Run the clean commands
     cd "$dkms_tree/$module/$module_version/build"
@@ -1621,7 +1608,7 @@ function clean_build()
     rm -rf "$dkms_tree/$module/$module_version/build/*"
 }
 
-function build_module()
+build_module()
 {
     prepare_build
     do_build
@@ -1630,7 +1617,7 @@ function build_module()
     echo $"DKMS: build Completed."
 }
 
-function possible_dest_module_locations()
+possible_dest_module_locations()
 {
     # $1 = count
     # There are two places an installed module may really be:
@@ -1646,7 +1633,7 @@ function possible_dest_module_locations()
     echo "${location[0]} ${location[1]}"
 }
 
-function find_actual_dest_module_location()
+find_actual_dest_module_location()
 {
     local module="$1"
     local count="$2"
@@ -1668,7 +1655,7 @@ function find_actual_dest_module_location()
 
 }
 
-function do_uninstall()
+do_uninstall()
 {
     # $1 = kernel version
     # $2 = arch
@@ -1683,9 +1670,8 @@ function do_uninstall()
     set_module_suffix "$1"
 
     # If kernel-<kernelver> symlink points to this module, check for original_module and put it back
-    local was_active=""
-    readlink "$dkms_tree/$module/kernel-$1-$2"
-    local kernel_symlink="$read_link"
+    local was_active="" 
+    local kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-$1-$2")
     local real_dest_module_location
     if [ "$kernel_symlink" == "$module_version/$1/$2" ]; then
         was_active="true"
@@ -1783,7 +1769,7 @@ function do_uninstall()
     echo $"DKMS: uninstall Completed."
 }
 
-function uninstall_module ()
+uninstall_module()
 {
     setup_kernels_arches "uninstall"
 
@@ -1822,8 +1808,7 @@ function uninstall_module ()
     fi
 
     # Only do stuff if module/module version is currently installed
-    readlink "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}"
-    local kernel_symlink="$read_link"
+    local kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}")
     if [ "$kernel_symlink" == "$module_version/${kernelver_array[0]}/${arch_array[0]}" ]; then
         do_uninstall "${kernelver_array[0]}" "${arch_array[0]}"
     else
@@ -1834,7 +1819,7 @@ function uninstall_module ()
     fi
 }
 
-function remove_module ()
+remove_module()
 {
     # Check that the right arguments were passed (must be done before setup_kernels_arches)
     if [ -z "$module" ] || [ -z "$module_version" ] || $([ -z "${kernelver_array[0]}" ] && [ -z "$all" ]); then
@@ -1921,7 +1906,7 @@ function remove_module ()
     fi
 }
 
-function find_module_from_ko()
+find_module_from_ko()
 {
     local depth="$1"
     local ko="$2"
@@ -1938,7 +1923,7 @@ function find_module_from_ko()
 
 # be careful.  string_array is global
 declare -a string_array
-function add_string_to_array_unique()
+add_string_to_array_unique()
 {
     # string="$1"
     local count=0
@@ -1955,7 +1940,7 @@ function add_string_to_array_unique()
     fi
 }
 
-function print_string_array()
+print_string_array()
 {
     local count=0
     while [ "$count" -lt "${#string_array[@]}" ]; do
@@ -1964,7 +1949,7 @@ function print_string_array()
     done
 }
 
-function do_status_weak ()
+do_status_weak()
 {
     # these are the requested mod/ver/kern/arch fields
     local r_mod="$1"; shift
@@ -1987,8 +1972,7 @@ function do_status_weak ()
         for ko in $(find "$installedkern/weak-updates" -type l 2>/dev/null); do
             installedkernver=$(basename $installedkern)
             basename_ko=$(basename $ko)
-            readlink $ko
-            installed_ko="$read_link"
+            installed_ko=$(readlink -e $ko)
             if [ ! -e "$installed_ko" ]; then
                 # dangling symlink, ouch, but is somebody else's problem so ignore it
                 continue
@@ -2001,10 +1985,10 @@ function do_status_weak ()
                 else
                     mod="$r_mod"
                 fi
-                readlink "$f"
-                tree_ver=$(echo "$read_link" | awk -F / '{print $1}')
-                tree_kern=$(echo "$read_link" | awk -F / '{print $2}')
-                tree_arch=$(echo "$read_link" | awk -F / '{print $3}')
+		local q=$(readlink -e "$f");
+                tree_ver=$(echo "$q" | awk -F / '{print $1}')
+                tree_kern=$(echo "$q" | awk -F / '{print $2}')
+                tree_arch=$(echo "$q" | awk -F / '{print $3}')
                 if diff $dkms_tree/$mod/$tree_ver/$tree_kern/$tree_arch/module/$basename_ko  \
                     $installed_ko >/dev/null 2>&1; then
                     if [ "$r_mod" == "$mod" -o -z "$r_mod" ] && \
@@ -2020,7 +2004,7 @@ function do_status_weak ()
     print_string_array
 }
 
-do_status ()
+do_status()
 {
     local mod="$1"; shift
     local ver="$1"; shift
@@ -2056,11 +2040,9 @@ do_status ()
     if [ "$keep_traversing" == "no" ] && [ $tree_depth -eq 2 ] && [ -z "$arch" ] || [ "$next" == "done" ]; then
         local state="added" && stat_display="$mod, $ver:"
         [ -d "$working_dir/module" ] && state="built" && stat_display="$mod, $ver, $kern, $arch:"
-        if [ -h "$dkms_tree/$mod/kernel-$kern-$arch" ]; then
-            readlink "$dkms_tree/$mod/kernel-$kern-$arch"
-            [ "$read_link" == "$ver/$kern/$arch" ] && state="installed"
-        fi
-
+        [[ -h $dkms_tree/$mod/kernel-$kern-$arch && \
+            $(readlink -e $dkms_tree/$mod/kernel-$kern-$arch)  = $ver/$kern/$arch ]] && \
+	    state="installed"
         if [ "$state" == "built" ] || [ "$state" == "installed" ]; then
             set_module_suffix "$kern"
             local extra_status=""
@@ -2087,7 +2069,7 @@ do_status ()
     fi
 }
 
-show_status ()
+show_status()
 {
     setup_kernels_arches "status"
 
@@ -2104,7 +2086,7 @@ show_status ()
     fi
 }
 
-function create_temporary_trees ()
+create_temporary_trees()
 {
     if [ -n "$module" ] || [ -n "$module_version" ]; then
         return
@@ -2126,7 +2108,7 @@ function create_temporary_trees ()
     temporary_trees_del_command="rm -rf $source_tree $dkms_tree"
 }
 
-function delete_temporary_trees ()
+delete_temporary_trees()
 {
     $temporary_trees_del_command
     if [ -n "$temporary_trees_del_command" ]; then
@@ -2138,7 +2120,7 @@ function delete_temporary_trees ()
     fi
 }
 
-function in_temporary_trees ()
+in_temporary_trees()
 {
     [ -n "$temporary_trees_del_command" ]
     return $?
@@ -2154,7 +2136,7 @@ media_valid()
     return 1
 }
 
-make_driver_disk ()
+make_driver_disk()
 {
     setup_kernels_arches "mkdriverdisk"
 
@@ -3039,7 +3021,7 @@ load_tarball()
     echo $"DKMS: ldtarball Completed."
 }
 
-run_match ()
+run_match()
 {
     setup_kernels_arches "match"
     set_kernel_source_dir "${kernelver_array[0]}"
@@ -3243,7 +3225,7 @@ make_rpm()
     [ ${RC} -ne 0 ] && exit ${RC}
 }
 
-function preproc_file()
+preproc_file()
 {
     local date_str="$(date -R)"
     echo "modifying $1..."
@@ -3254,7 +3236,7 @@ function preproc_file()
     mv "$1.dkms-pp" "$1"
 }
 
-function make_debian_test_depends()
+make_debian_test_depends()
 {
     INSTALL_PACKAGES=""
     # Check that the fakeroot command is present
@@ -3269,7 +3251,7 @@ function make_debian_test_depends()
     echo "$INSTALL_PACKAGES"
 }
 
-function make_debian()
+make_debian()
 {
     create_type="$1"
 
@@ -3441,7 +3423,7 @@ function make_debian()
     fi
 }
 
-function make_common_test()
+make_common_test()
 {
     local create_type=$1
     # Error if $module_version is set but $module is not
@@ -3487,7 +3469,7 @@ function make_common_test()
     fi
 }
 
-function make_kmp_srpm()
+make_kmp_srpm()
 {
     local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
     trap 'rm -rf $temp_dir_name' EXIT HUP TERM
@@ -3517,7 +3499,7 @@ function make_kmp_srpm()
     return ${RC}
 }
 
-function report_build_problem()
+report_build_problem()
 {
     #If apport is on the system, files a build problem
     if [ -x /usr/share/apport/apport ] && which python>/dev/null; then
@@ -3526,7 +3508,7 @@ function report_build_problem()
 }
 
 
-function make_kmp()
+make_kmp()
 {
     setup_kernels_arches "mkkmp"
 
