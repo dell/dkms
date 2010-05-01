@@ -22,20 +22,20 @@
 invoke_command()
 {
     local exitval=0
-    local exitval_file=`mktemp $tmp_location/dkms.XXXXXX`
-    [ -z "$verbose" ] && echo -en "$2..." || echo -e "$1"
-    if [ "$3" == background ] && [ -z "$verbose" ]; then
+    [[ $verbose ]] && echo -e "$1" || echo -en "$2..."
+    if [[ $3 = background && ! $verbose ]]; then
+	local exitval_file=$(mktemp $tmp_location/dkms.XXXXXX)
         (eval $1 >/dev/null 2>&1; echo "exitval=$?" >> "$exitval_file") &
-        while [ -e "$exitval_file" ] && ! [ -s "$exitval_file" ]; do
+        while [[ -e $exitval_file && ! -s $exitval_file ]]; do
             sleep 3
             echo -en "."
         done
         . "$exitval_file"
+	rm -f "$exitval_file"
     else
         eval $1; exitval=$?
     fi
-    [ $exitval -gt 0 ] && echo -en "(bad exit status: $exitval)"
-    rm -f "$exitval_file"
+    (($exitval > 0)) && echo -en "(bad exit status: $exitval)"
     echo -en "\n"
     return $exitval
 }
