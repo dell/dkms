@@ -21,6 +21,7 @@ arch_used=$(uname -m)
 [[ $arch_used = x86_64 ]] && (($(grep -c "Intel" /proc/cpuinfo > 0 && \
     $(ls /lib/modules/$kernel_test/build/configs 2>/dev/null | \
     grep -c "ia32e") > 0)) && arch_used="ia32e"
+
 echo ""
 echo "ALERT! ALERT! ALERT!"
 echo ""
@@ -30,7 +31,7 @@ echo ""
 echo "The upgrade will assume all built modules are for arch: $arch_used"
 
 # Set important variables
-current_kernel=`uname -r`
+current_kernel=$(uname -r)
 dkms_tree="/var/lib/dkms"
 source_tree="/usr/src"
 tmp_location="/tmp"
@@ -42,8 +43,8 @@ dkms_frameworkconf="/etc/dkms_framework.conf"
 # Add the arch dirs
 echo ""
 echo "Fixing directories."
-for directory in `find $dkms_tree -type d -name "module" -mindepth 3 -maxdepth 4`; do
-    dir_to_fix=`echo $directory | sed 's#/module$##'`
+for directory in $(find $dkms_tree -type d -name "module" -mindepth 3 -maxdepth 4); do
+    dir_to_fix=$(echo $directory | sed 's#/module$##')
     echo "Creating $dir_to_fix/$arch_used..."
     mkdir $dir_to_fix/$arch_used
     mv -f $dir_to_fix/* $dir_to_fix/$arch_used 2>/dev/null
@@ -52,9 +53,9 @@ done
 # Fix symlinks
 echo ""
 echo "Fixing symlinks."
-for symlink in `find $dkms_tree -type l -name "kernel*" -mindepth 2 -maxdepth 2`; do
-    symlink_kernelname=`echo $symlink | sed 's#.*/kernel-##'`
-    dir_of_symlink=`echo $symlink | sed 's#/kernel-.*$##'`
+for symlink in $(find $dkms_tree -type l -name "kernel*" -mindepth 2 -maxdepth 2); do
+    symlink_kernelname=$(echo $symlink | sed 's#.*/kernel-##')
+    dir_of_symlink=$(echo $symlink | sed 's#/kernel-.*$##')
     cd $dir_of_symlink
     if [ $(readlink -e "$symlink" | sed 's#/# #g' | wc -w | awk {'print $1'}) -lt 3 ]; then
 	echo "Updating $symlink..."
