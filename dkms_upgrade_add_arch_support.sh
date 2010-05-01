@@ -44,7 +44,7 @@ dkms_frameworkconf="/etc/dkms_framework.conf"
 echo ""
 echo "Fixing directories."
 for directory in $(find $dkms_tree -type d -name "module" -mindepth 3 -maxdepth 4); do
-    dir_to_fix=$(echo $directory | sed 's#/module$##')
+    dir_to_fix=${directory%module}
     echo "Creating $dir_to_fix/$arch_used..."
     mkdir $dir_to_fix/$arch_used
     mv -f $dir_to_fix/* $dir_to_fix/$arch_used 2>/dev/null
@@ -54,10 +54,12 @@ done
 echo ""
 echo "Fixing symlinks."
 for symlink in $(find $dkms_tree -type l -name "kernel*" -mindepth 2 -maxdepth 2); do
-    symlink_kernelname=$(echo $symlink | sed 's#.*/kernel-##')
-    dir_of_symlink=$(echo $symlink | sed 's#/kernel-.*$##')
+    symlink_kernelname=${symlink/*\/kernel-//}
+    dir_of_symlink=${symlink/\/kernel-*//}
     cd $dir_of_symlink
-    if [ $(readlink -e "$symlink" | sed 's#/# #g' | wc -w | awk {'print $1'}) -lt 3 ]; then
+    split_symlink=$(readlink -e "$symlink")
+    split_symlink=(${split_symlink//\// })
+    if ((${#split_symlink[@]} < 3)); then
 	echo "Updating $symlink..."
 	ln -sf $read_link/$arch_used kernel-$symlink_kernelname-$arch_used
 	rm -f $symlink
