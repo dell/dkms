@@ -92,7 +92,8 @@ set_kernel_source_dir()
 setup_kernels_arches()
 {
     # Error if # of arches doesn't match # of kernels
-    if [ ${#kernelver_array[@]} -ne ${#arch_array[@]} ] && [ ${#arch_array[@]} -gt 1 ]; then
+    if (( ${#kernelver_array[@]} != ${#arch_array[@]} && \
+	${#arch_array[@]} > 1 )); then
         echo $"" >&2
         echo $"Error!  If more than one arch is specified on the command line, then there" >&2
         echo $"must be an equal number of kernel versions also specified (1:1 relationship)." >&2
@@ -100,7 +101,7 @@ setup_kernels_arches()
     fi
 
     # Check that kernel version and all aren't both set simultaneously
-    if [ -n "${kernelver_array[0]}" ] && [ -n "$all" ]; then
+    if [[ ${kernelver_array[0]} && $all ]]; then
         echo $"" >&2
         echo $"Error!  You cannot specify a kernel version and also specify" >&2
         echo $"--all on the command line." >&2
@@ -108,7 +109,7 @@ setup_kernels_arches()
     fi
 
     # Check that arch and all aren't both set simultaneously
-    if [ -n "${arch_array[0]}" ] && [ -n "$all" ]; then
+    if [[ ${arch_array[0]} && $all ]]; then
         echo $"" >&2
         echo $"Error!  You cannot specify an arch and also specify" >&2
         echo $"--all on the command line." >&2
@@ -118,13 +119,13 @@ setup_kernels_arches()
     # Check that the actions supports multiple kernels
     case "$1" in
     add | build | install | match | uninstall | mkkmp )
-        if [ ${#kernelver_array[@]} -gt 1 ]; then
+        if (( ${#kernelver_array[@]} > 1 )); then
             echo $"" >&2
             echo $"Error! The action $1 does not support multiple kernel version" >&2
             echo $"parameters on the command line." >&2
             exit 4
         fi
-        if [ -n "$all" ]; then
+        if [[ $all ]]; then
             echo $"" >&2
             echo $"Error! The action $1 does not support the --all" >&2
             echo $"parameter." >&2
@@ -134,26 +135,28 @@ setup_kernels_arches()
     esac
 
     # If all is set, use dkms status to fill the arrays
-    if [ -n "$all" ] && [ "$1" != "status" ]; then
+    if [[ $all && $1 != status ]]; then
         local i=0
-        while read line; do
+        while read -a line; do
             # (I would leave out the delimiters in the status output
             #  in the first place.)
-            kernelver_array[$i]=`echo $line | awk {'print $3'} | sed 's/,$//'`
-            arch_array[$i]=`echo $line | awk {'print $4'} | sed 's/:$//'`
+            kernelver_array[$i]=${line[2]%,}
+            arch_array[$i]=${line[3]%:}
             i=$(($i + 1))
         done < <($0 status -m "$module" -v "$module_version" 2>/dev/null | \
             egrep "built|installed" | egrep -v 'installed-weak')
     fi
 
     # Set default kernel version and arch, if none set (but only --all isn't set)
-    if [ "$1" != "status" ]; then
-        [ -z "${kernelver_array[0]}" ] && [ -z "$all" ] && kernelver_array[0]=`uname -r`
-        if [ -z "${arch_array[0]}" ] && [ -n "${kernelver_array[0]}" ]; then
-            kernelver_rpm=`rpm -qf "/lib/modules/${kernelver_array[0]}" 2>/dev/null | grep -v "not owned by any package" | grep kernel | head -n 1`
-            if ! arch_array[0]=`rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null`; then
-                arch_array[0]=`uname -m`
-                if [ ${arch_array[0]} == "x86_64" ] && \
+    if [[ $1 != status ]]; then
+        [[ ! ${kernelver_array[0]} && ! $all ]] && \
+	    kernelver_array[0]=$(uname -r)
+        if [[ ! ${arch_array[0]} && ${kernelver_array[0]} ]]; then
+            kernelver_rpm=$(rpm -qf "/lib/modules/${kernelver_array[0]}" 2>/dev/null | \
+		grep -v "not owned by any package" | grep kernel | head -n 1)
+            if ! arch_array[0]=$(rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null); then
+                arch_array[0]=$(uname -m)
+                if [[ ${arch_array[0]} = x86_64 ]] && \
                     grep -q Intel /proc/cpuinfo && \
                     ls $install_tree/${kernelver_array[0]}/build/configs \
                     2>/dev/null | grep -q "ia32e"; then
@@ -164,8 +167,8 @@ setup_kernels_arches()
     fi
 
     # If only one arch is specified, make it so for all the kernels
-    if [ ${#arch_array[@]} -eq 1 ] && [ ${#kernelver_array[@]} -gt 1 ]; then
-        while [ ${#arch_array[@]} -lt ${#kernelver_array[@]} ]; do
+    if ((${#arch_array[@]} == 1 && ${#kernelver_array[@]} > 1)); then
+        while ((${#arch_array[@]} < ${#kernelver_array[@]})); do
             arch_array[${#arch_array[@]}]=${arch_array[0]}
         done
     fi
@@ -173,8 +176,11 @@ setup_kernels_arches()
     # Set global multi_arch
     multi_arch=""
     local i=0
-    while [ $i -lt ${#arch_array[@]} ]; do
-        [ "${arch_array[0]}" != "${arch_array[$i]}" ] && multi_arch="true"
+    while (($i < ${#arch_array[@]})); do
+        [[ ${arch_array[0]} != ${arch_array[$i]} ]] && {
+	    multi_arch="true"
+	    break
+	}
         i=$(($i + 1))
     done
 }
