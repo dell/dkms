@@ -283,82 +283,32 @@ remake_initrd()
 
 distro_version_rpm()
 {
-    local whatprovides_redhat
-    local whatprovides_suse
-    local whatprovides_sles
-    local whatprovides_ovm
-    local DISTRO
-    local VER
-    local dist=unknown
+    which rpm > /dev/null 2>&1 || { echo unknown; return; }
+    local r wp ver dist
 
-    if ! which rpm > /dev/null 2>&1 ; then
-        echo "${dist}"
-        return
-    fi
-
-    whatprovides_redhat=$(rpm -q --whatprovides redhat-release)
-    if [ $? -eq 0 ]; then
-        case "${whatprovides_redhat}" in
-        redhat*)     DISTRO=redhat ;;
-        centos*)     DISTRO=centos ;;
-        enterprise*) DISTRO=oel ;; # Oracle Enterprise Linux
-        sl*)         DISTRO=sl ;;  # Scientific Linux
-        fedora*)     DISTRO=fedora ;;
-        *) ;;
-        esac
-    fi
-    whatprovides_sles=$(rpm -q --whatprovides sles-release)
-    [ $? -eq 0 ] && DISTRO=sles
-    whatprovides_suse=$(rpm -q --whatprovides suse-release)
-    [ $? -eq 0 ] && DISTRO=suse
-    whatprovides_ovm=$(rpm -q --whatprovides ovs-release)
-    [ $? -eq 0 ] && DISTRO=ovm
-
-    case "${DISTRO}" in
-    redhat)
-        VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
-        # format is 3AS, 4AS, 5Desktop...
-        VER=$(echo "${VER}" | sed -e 's/^\([[:digit:]]*\).*/\1/g')
-        dist=el${VER}
-        ;;
-    centos)
-        VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
-        # format is 3, 4, ...
-        dist=el${VER}
-        ;;
-    oel)
-        VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
-        # format is 3, 4, ...
-        dist=el${VER}
-        ;;
-    ovm)
-        VER=$(rpm -q --qf "%{version}\n" ${whatprovides_ovm})
-        # format is 2.1
-        dist=ovm${VER}
-        ;;
-    sl)
-        VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
-        # format is 4.7, 5.3
-        VER=$(echo "${VER}" | sed -e 's/^\([[:digit:]]*\).*/\1/g')
-        dist=el${VER}
-        ;;
-    fedora)
-        VER=$(rpm -q --qf "%{version}\n" ${whatprovides_redhat})
-        dist=fc${VER}
-        ;;
-    sles)
-        VER=$(rpm -q --qf "%{version}\n" ${whatprovides_sles})
-        dist=sles${VER}
-        ;;
-    suse)
-        VER=$(rpm -q --qf "%{version}\n" ${whatprovides_suse})
-        dist=suse${VER}
-        ;;
-    *)
-        dist=unknown
-        ;;
-    esac
-    echo "$dist"
+    for r in redhat-release sles-release suse-release ovs-release; do
+	wp=$(rpm -q --whatprovides "$r") || continue
+	ver=$(rpm -q --qf "%{version}\n" ${wp})
+	case $r in
+	    sles*) echo sles${ver};;
+	    suse*) echo suse${ver};;
+	    ovs*)  echo ovm${ver};;
+	    redhat*)
+		case $wp in
+		    redhat*|sl*)
+			ver=$(echo $ver | \
+			sed -e 's/^\([[:digit:]]*\).*/\1/g')
+			echo el${ver};;
+		    centos*|enterprise*) echo el${ver};;
+		    fedora*) echo fc${ver};;
+		    *) echo unknown ;;
+		esac
+	       ;;
+	    *) echo unknown;;
+	esac
+	return
+    done
+    echo unknown
 }
 
 distro_version()
