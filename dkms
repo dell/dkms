@@ -352,22 +352,22 @@ distro_version()
 override_dest_module_location()
 {
     local orig_location="$1"
-    [ -n "${addon_modules_dir}" ] && echo "/${addon_modules_dir}" && return
+    [[ ${addon_modules_dir} ]] && echo "/${addon_modules_dir}" && return
 
     case "$running_distribution" in
-    fc[12345]) ;;
-    el[1234]) ;;
-    sles[123456789]) ;;
-    suse[123456789]) ;;
-    suse10\.[01]) ;;
-    fc*) echo "/extra" && return ;;
-    el*) echo "/extra" && return ;;
-    ovm*) echo "/extra" && return ;;
-    sles*) echo "/updates" && return ;;
-    suse*) echo "/updates" && return ;;
-    Ubuntu*) echo "/updates/dkms" && return ;;
-    Debian*) echo "/updates/dkms" && return ;;
-    *) ;;
+	fc[12345]) ;;
+	el[1234]) ;;
+	sles[123456789]) ;;
+	suse[123456789]) ;;
+	suse10\.[01]) ;;
+	fc*) echo "/extra" && return ;;
+	el*) echo "/extra" && return ;;
+	ovm*) echo "/extra" && return ;;
+	sles*) echo "/updates" && return ;;
+	suse*) echo "/updates" && return ;;
+	Ubuntu*) echo "/updates/dkms" && return ;;
+	Debian*) echo "/updates/dkms" && return ;;
+	*) ;;
     esac
     echo "$orig_location"
 }
@@ -379,16 +379,11 @@ read_conf()
     # $3 dkms.conf location (optional)
 
     local return_value=0
-    local read_conf_file
+    local read_conf_file="$dkms_tree/$module/$module_version/source/dkms.conf"
 
     # Find which conf file to check
-    if [ -n "$3" ]; then
-        read_conf_file="$3"
-    elif [ -n "$conf" ]; then
-        read_conf_file="$conf"
-    else
-        read_conf_file="$dkms_tree/$module/$module_version/source/dkms.conf"
-    fi
+    [[ $conf ]] && read_conf_file="$conf"
+    [[ $3 ]] && read_conf_file="$3"
 
     # Clear variables
     MAKE=""
@@ -444,7 +439,7 @@ read_conf()
     # check environment for directives
     # You can't have an array of variables exported
     # so look for DKMS_DIRECTIVE0, DKMS_DIRECTIVE1, ...
-    for directive in `set | grep ^DKMS_DIRECTIVE | cut -d = -f 2-3`; do
+    for directive in $(set | grep ^DKMS_DIRECTIVE | cut -d = -f 2-3); do
         directive_name=${directive%%=*}
         directive_value=${directive#*=}
         export $directive_name="$directive_value"
@@ -472,9 +467,14 @@ read_conf()
     obsolete_by="$OBSOLETE_BY"
 
     # Set module naming/location arrays
-    local index=0
-    array_size=`echo -e "${#BUILT_MODULE_NAME[@]}\n${#BUILT_MODULE_LOCATION[@]}\n${#DEST_MODULE_NAME[@]}\n${#DEST_MODULE_LOCATION[@]}\n" | sort -n | tail -n 1`
-    while [ "$index" -lt "$array_size" ]; do
+    local index=0 array_size=0 s
+    for s in ${#BUILT_MODULE_NAME[@]} \
+	${#BUILT_MODULE_LOCATION[@]} \
+	${#DEST_MODULE_NAME[@]} \
+	${#DEST_MODULE_LOCATION[@]}; do
+	((s > array_size)) && array_size=$s
+    done
+    for ((index=0; index < array_size; index++)); do
         # Set values
         built_module_name[$index]=${BUILT_MODULE_NAME[$index]}
         built_module_location[$index]=${BUILT_MODULE_LOCATION[$index]}
@@ -482,45 +482,41 @@ read_conf()
         dest_module_location[$index]=${DEST_MODULE_LOCATION[$index]}
         modules_conf_obsoletes[$index]=${MODULES_CONF_OBSOLETES[$index]}
         modules_conf_alias_type[$index]=${MODULES_CONF_ALIAS_TYPE[$index]}
-        case "${MODULES_CONF_OBSOLETE_ONLY[$index]}" in
-        [yY]*)
-            modules_conf_obsolete_only[$index]="yes"
-            ;;
+        case ${MODULES_CONF_OBSOLETE_ONLY[$index]} in
+            [yY]*) modules_conf_obsolete_only[$index]="yes";;
         esac
-        case "${STRIP[$index]}" in
-        [nN]*)
-            strip[$index]="no"
-            ;;
-        *)
-            strip[$index]="yes"
-            ;;
+        case ${STRIP[$index]} in
+            [nN]*) strip[$index]="no";;
+            *)     strip[$index]="yes";;
         esac
 
         # If unset, set by defaults
-        [ -z "${built_module_name[$index]}" ] && [ ${#DEST_MODULE_LOCATION[@]} -eq 1 ] && built_module_name[$index]=$module
-        [ -z "${dest_module_name[$index]}" ] && dest_module_name[$index]=${built_module_name[$index]}
-        if [ -n "${built_module_location[$index]}" ] && \
-           [ "${built_module_location[$index]:(-1)}" != "/" ]; then
+        [[ ! ${built_module_name[$index]} ]] && \
+	    ((${#DEST_MODULE_LOCATION[@]} == 1)) && \
+	    built_module_name[$index]=$module
+        [[ ! ${dest_module_name[$index]} ]] && \
+	    dest_module_name[$index]=${built_module_name[$index]}
+        [[ ${built_module_location[$index]} && \
+            ${built_module_location[$index]:(-1)} != / ]] && \
             built_module_location[$index]="${built_module_location[$index]}/"
-        fi
 
         # FAIL if no built_module_name
-        if [ -z "${built_module_name[$index]}" ]; then
+        if [[ ! ${built_module_name[$index]} ]]; then
             echo $"dkms.conf: Error! No 'BUILT_MODULE_NAME' directive specified for record #$index." >&2
             return_value=1
         fi
 
         # FAIL if built_module_name ends in .o or .ko
-        case "${built_module_name[$index]}" in
-        *.o | *.ko)
+        case ${built_module_name[$index]} in
+        *.o|*.ko)
             echo $"dkms.conf: Error! 'BUILT_MODULE_NAME' directive ends in '.o' or '.ko' in record #$index." >&2
             return_value=1
             ;;
         esac
 
         # FAIL if dest_module_name ends in .o or .ko
-        case "${dest_module_name[$index]}" in
-        *.o | *.ko)
+        case ${dest_module_name[$index]} in
+        *.o|*.ko)
             echo $"dkms.conf: Error! 'DEST_MODULE_NAME' directive ends in '.o' or '.ko' in record #$index." >&2
             return_value=1
             ;;
@@ -530,106 +526,88 @@ read_conf()
         dest_module_location[$index]="$(override_dest_module_location ${dest_module_location[$index]})"
 
         # Fail if no DEST_MODULE_LOCATION
-        if [ -z "${DEST_MODULE_LOCATION[$index]}" ]; then
+        if [[ ! ${DEST_MODULE_LOCATION[$index]} ]]; then
             echo $"dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified for record #$index.">&2
             return_value=1
         fi
             # Fail if bad DEST_MODULE_LOCATION
-        case "${DEST_MODULE_LOCATION[$index]}" in
-        /kernel*) ;;
-        /updates*) ;;
-        /extra*) ;;
-        *)
-            echo $"dkms.conf: Error! Directive 'DEST_MODULE_LOCATION' does not begin with">&2
-            echo $"'/kernel', '/updates', or '/extra' in record #$index.">&2
-            return_value=1
-            ;;
+        case ${DEST_MODULE_LOCATION[$index]} in
+            /kernel*) ;;
+            /updates*) ;;
+            /extra*) ;;
+            *)
+		echo $"dkms.conf: Error! Directive 'DEST_MODULE_LOCATION' does not begin with">&2
+		echo $"'/kernel', '/updates', or '/extra' in record #$index.">&2
+		return_value=1
+		;;
         esac
-
-        index=$(($index+1))
     done
-
+    
     # Get the correct make command
-    index=0
-    [ -z "${MAKE_MATCH[0]}" ] && make_command="${MAKE[0]}"
-    while [ "$index" -lt ${#MAKE[@]} ]; do
-        if [ -n "${MAKE[$index]}" ] && \
-            [ -n "${MAKE_MATCH[$index]}" ] && \
-            echo $1 | egrep -q "${MAKE_MATCH[$index]}"; then
+    [[ ${MAKE_MATCH[0]} ]] || make_command="${MAKE[0]}"
+    for ((index=0; index < ${#MAKE[@]}; index++)); do
+        [[ ${MAKE[$index]} && ${MAKE_MATCH[$index]} && \
+	    $1 =~ ${MAKE_MATCH[$index]} ]] && \
             make_command="${MAKE[$index]}"
-        fi
-        index=$(($index+1))
     done
 
     # Use the generic make and make clean commands if not specified
     if [[ $(VER $1) < $(VER 2.6.6) ]]; then
-        if [ -z "$make_command" ]; then
+        [[ ! $make_command ]] && \
             make_command="make -C $kernel_source_dir SUBDIRS=$dkms_tree/$module/$module_version/build modules"
-        fi
-        if [ -z "$clean" ]; then
+        [[ ! $clean ]] && \
             clean="make -C $kernel_source_dir SUBDIRS=$dkms_tree/$module/$module_version/build clean"
-        fi
     else
-        if [ -z "$make_command" ]; then
+        [[ ! $make_command ]] && \
             make_command="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build"
-        fi
-        if [ -z "$clean" ]; then
-            clean="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build clean"
-        fi
+         [[ ! $clean ]] && \
+             clean="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build clean"
     fi
 
     # Set modules_conf_array
-    index=0
-    while [ "$index" -lt ${#MODULES_CONF[@]} ]; do
-        [ -n "${MODULES_CONF[$index]}" ] && modules_conf_array[$index]="${MODULES_CONF[$index]}"
-        index=$(($index+1))
+    for ((index=0; index < ${#MODULES_CONF[@]}; index++)); do
+        [[ ${MODULES_CONF[$index]} ]] && modules_conf_array[$index]="${MODULES_CONF[$index]}"
     done
 
     # Set patch_array (including kernel specific patches)
-    index=0
     count=0
-    while [ "$index" -lt ${#PATCH[@]} ]; do
-        if [ -n "${PATCH[$index]}" ]; then
-            if [ -z "${PATCH_MATCH[$index]}" ] || \
-                echo $1 | egrep -q "${PATCH_MATCH[$index]}"; then
-                patch_array[$count]="${PATCH[$index]}"
-                count=$(($count+1))
-            fi
+    for ((index=0; index < ${#PATCH[@]}; index++)); do
+        if [[ ${PATCH[$index]} && (! ${PATCH_MATCH[$index]} || \
+                $1 =~ ${PATCH_MATCH[$index]}) ]]; then
+            patch_array[$count]="${PATCH[$index]}"
+            count=$(($count+1))
         fi
-        index=$(($index+1))
     done
 
     # Set remake_initrd
-    [ `echo "$REMAKE_INITRD" | grep -ic "^y"` -gt 0 ] && remake_initrd="yes"
+    [[ $REMAKE_INITRD =~ ^(Y|y) ]] && remake_initrd="yes"
 
     # Set build_exclude
-    if [ -n "$BUILD_EXCLUSIVE_KERNEL" ]; then
-        echo $1 | egrep -q "$BUILD_EXCLUSIVE_KERNEL" || build_exclude="yes"
-    fi
-    if [ -n "$BUILD_EXCLUSIVE_ARCH" ]; then
-        echo $2 | egrep -q "$BUILD_EXCLUSIVE_ARCH" || build_exclude="yes"
-    fi
+    [[ $BUILD_EXCLUSIVE_KERNEL && ! $1 =~ $BUILD_EXCLUSIVE_KERNEL ]] && \
+       build_exclude="yes"
+    [[ $BUILD_EXCLUSIVE_ARCH && ! $2 =~ $BUILD_EXCLUSIVE_ARCH ]] && \
+	build_exclude="yes"
 
     # Fail if absolutely no DEST_MODULE_LOCATION
-    if [ ${#dest_module_location[@]} -eq 0 ]; then
+    if ((${#dest_module_location[@]} == 0)); then
         echo $"dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified." >&2
         return_value=1
     fi
 
     # Fail if no PACKAGE_NAME
-    if [ -z "$package_name" ]; then
+    if [[ ! $package_name ]]; then
         echo $"dkms.conf: Error! No 'PACKAGE_NAME' directive specified.">&2
         return_value=1
     fi
 
     # Fail if no PACKAGE_VERSION
-    if [ -z "$package_version" ]; then
+    if [[ ! $package_version ]]; then
         echo $"dkms.conf: Error! No 'PACKAGE_VERSION' directive specified.">&2
         return_value=1
     fi
 
     # Set clean
-    [ -z "$clean" ] && clean="make clean"
+    [[ $clean ]] || clean="make clean"
 
     return $return_value
 }
