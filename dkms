@@ -313,60 +313,40 @@ distro_version_rpm()
 
 distro_version()
 {
-# What distribution are we running?
-    local LSB_RELEASE
-    local LSB_DESCRIPTION
-    local DISTRIB_ID
-    local DISTRIB_RELEASE
-    local VER
-    local dist=unknown
+    # What distribution are we running?
+    local LSB_DESCRIPTION DISTRIB_ID DISTRIB_RELEASE ver
 
-# try the LSB-provided strings first
+    # try the LSB-provided strings first
     if [ -r /etc/lsb-release ]; then
         . /etc/lsb-release
-        LSB_RELEASE=1
     elif type lsb_release >/dev/null 2>&1; then
         DISTRIB_ID=$(lsb_release -i -s)
         DISTRIB_RELEASE=$(lsb_release -r -s)
-        LSB_RELEASE=1
     fi
 
-    case "${DISTRIB_ID}" in
-    Fedora)     dist=fc${DISTRIB_RELEASE} ;;
-    RedHatEnterprise*)  # OEL also reports as such
+    case ${DISTRIB_ID} in
+	Fedora)     echo fc${DISTRIB_RELEASE} ;;
+	RedHatEnterprise*|CentOS|ScientificSL)  # OEL also reports as such
         # format is 4.7, 5.3
-        VER=$(echo "${DISTRIB_RELEASE}" | sed -e 's/^\([[:digit:]]*\).*/\1/g')
-        dist=el${VER}
-        ;;
-    CentOS)
-        # format is 4.7, 5.3
-        VER=$(echo "${DISTRIB_RELEASE}" | sed -e 's/^\([[:digit:]]*\).*/\1/g')
-        dist=el${VER}
-        ;;
-    ScientificSL)
-        # format is 4.7, 5.3
-        VER=$(echo "${DISTRIB_RELEASE}" | sed -e 's/^\([[:digit:]]*\).*/\1/g')
-        dist=el${VER}
-        ;;
-    SUSE*)
-        LSB_DESCRIPTION="$(lsb_release -d -s)"
-        if echo "${LSB_DESCRIPTION}" | grep Enterprise > /dev/null 2>&1; then
-            dist=sles${DISTRIB_RELEASE}
-        else
-            dist=suse${DISTRIB_RELEASE}
-        fi
-        ;;
-    *)
-        if [ -n "${LSB_RELEASE}" -a -n "${DISTRIB_ID}" -a -n "${DISTRIB_RELEASE}" ]; then
-            dist="${DISTRIB_ID}${DISTRIB_RELEASE}"
-        fi
-        ;;
+            ver=$(echo "${DISTRIB_RELEASE}" | \
+		sed -e 's/^\([[:digit:]]*\).*/\1/g')
+            echo el${ver}
+            ;;
+	SUSE*)
+            if [[ $(lsb_release -d -s) =~ Enterprise ]]; then
+		echo sles${DISTRIB_RELEASE}
+            else
+		echo suse${DISTRIB_RELEASE}
+            fi
+            ;;
+	*)
+            if [[ ${DISTRIB_ID} && ${DISTRIB_RELEASE} ]]; then
+		echo "${DISTRIB_ID}${DISTRIB_RELEASE}"
+            else
+		distro_version_rpm
+	    fi
+            ;;
     esac
-
-    if [ "${dist}" == "unknown" ]; then
-        dist=$(distro_version_rpm)
-    fi
-    echo "$dist"
 }
 
 override_dest_module_location()
