@@ -703,57 +703,73 @@ check_version_sanity()
 }
 
 
+moduleconfig_update_obsoletes()
+{
+    # $@ = files to process
+    # do nothing if we have no obsoletes
+    [[ ${modules_conf_obsoletes[@]} ]] || return 0
+    # generate sed args to remove obsolete modules
+    local mod_diff
+    for ((index=0; index < ${#dest_module_name[@]}; index++)); do
+	[[ ${modules_conf_obsoletes[$index]} ]] || continue
+	for obsolete_module in ${modules_conf_obsoletes[$index]//,/ }; do
+	    # for module.conf style syntax
+	    sa_mc_o[${#sa_mc_o[@]}]="-e"
+	    sa_mc_o[${#sa_mc_o[@]}]="s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) $obsolete_module$/\1 ${dest_module_name[$index]}/g"
+	    
+	    # for /etc/sysconfig/kernel style syntax
+	    sa_sck_o[${#sa_sck_o[@]}]="-e"
+	    sa_sck_o[${#sa_sck_o[@]}]="s/\(INITRD_MODULES.*\)$obsolete_module\b\(.*\)/\1${dest_module_name[$index]}\2/"
+	done
+    done
+    
+    # do all the changes at once, record the diffs for posterity
+    for file in "$@"; do
+	[[ $file && -w $file ]] || continue
+	if [[ $file = /etc/sysconfig/kernel ]]; then
+	    sed "${sa_sck_o[@]}" "$file" > "$temp_dir_name/${file##*/}.new"
+	else
+	    sed "${sa_mc_o[@]}" "$file" > "$temp_dir_name/${file##*/}.new"
+	fi
+	if ! mod_diff=$(diff -u "$temp_dir_name/${file##*/}.new" "$file"); then
+	    echo $"$file updated to replace obsoleted module references:"
+	    echo "$mod_diff"
+	    cp -fp "$temp_dir_name/${file##*/}.new" "$file"
+	    rm -f "$temp_dir_name/${file##*/}.new"
+	fi
+    done
+}
+       
+	    
 moduleconfig_add()
 {
     # $1 = kernel version
 
-    local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
-    modconfig_files=""
-    [ -e /etc/modprobe.d/dkms.conf ] && modconfig_files="/etc/modprobe.d/dkms.conf"
-    [ -e /etc/modprobe.d/dkms ] && modconfig_files="/etc/modprobe.d/dkms"
-    [ -e /etc/modules.conf ] && modconfig_files="$modconfig_files /etc/modules.conf"
-    [ -e /etc/modprobe.conf ] && modconfig_files="$modconfig_files /etc/modprobe.conf"
-    [ -e /etc/modprobe.d/$package_name.conf ] && modconfig_files="/etc/modprobe.d/$package_name.conf"
+    local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX) 
+    local sa_mc_o=() sa_sck_o=()
+    modconfig_files="/etc/modprobe.d/dkms.conf
+                     /etc/modprobe.d/dkms 
+                     /etc/modules.conf
+                     /etc/modprobe.conf
+                     /etc/modprobe.d/$package_name.conf
+                     /etc/sysconfig/kernel"
 
-    if [ -z "$modconfig_files" ]; then
-        modconfig_files="/etc/modprobe.d/$package_name.conf"
-    fi
-
+    moduleconfig_update_obsoletes $modconfig_files
 
     for moduleconfig in $modconfig_files; do
-        local index=0
-        while [ $index -lt ${#dest_module_name[@]} ]; do
-            # Replace obsolete references in module-config-file with the new module name
-            if [ -n "${modules_conf_obsoletes[$index]}" ]; then
-                for obsolete_module in ${modules_conf_obsoletes[$index]//,/ }; do
-                    sed "s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) $obsolete_module$/\1 ${dest_module_name[$index]}/g" $moduleconfig > $temp_dir_name/moduleconfig.new
-                    if ! diff $moduleconfig $temp_dir_name/moduleconfig.new >/dev/null 2>&1; then
-                        cp -fp $temp_dir_name/moduleconfig.new $moduleconfig 2>/dev/null
-                        rm -f $temp_dir_name/moduleconfig.new 2>/dev/null
-                        echo $"$moduleconfig: obsolete alias '$obsolete_module' changed to '${dest_module_name[$index]}'"
-                    fi
-                    if [ -e /etc/sysconfig/kernel ]; then
-                       sed -e "s/\(INITRD_MODULES.*\)$obsolete_module\b\(.*\)/\1${dest_module_name[$index]}\2/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
-                       if ! diff $temp_dir_name/kernel.new /etc/sysconfig/kernel >/dev/null 2>&1; then
-                           cp -fp $temp_dir_name/kernel.new /etc/sysconfig/kernel 2>/dev/null
-                           rm -f $temp_dir_name/kernel.new 2>/dev/null
-                           echo $"/etc/sysconfig/kernel: obsolete alias '$obsolete_module' changed to '${dest_module_name[$index]}'"
-                       fi
-                    fi
-                done
-            fi
-
+	[[ -e $moduleconfig ]] || continue
+        for ((index=0; index < ${#dest_module_name[@]}; index++)); do
             # Only add it if it can't be found already in config file
-            if [ -n "${modules_conf_alias_type[$index]}" ] && \
+            if [[ ${modules_conf_alias_type[$index]} ]] && \
                ! grep -qs "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}\b" $moduleconfig && \
-               [ "${modules_conf_obsolete_only[$index]}" != "yes" ]; then
-                if [ "$modconfig_files" == "/etc/modprobe.d/$package_name.conf" ] && \
-                    [ ! -e /etc/modprobe.d/$package_name.conf ]; then
+               [[ ${modules_conf_obsolete_only[$index]} != yes ]]; then
+                if [[ $modconfig_files = /etc/modprobe.d/$package_name.conf ]] && \
+                    [[ ! -e /etc/modprobe.d/$package_name.conf ]]; then
                     touch /etc/modprobe.d/$package_name.conf
                     echo $"created /etc/modprobe.d/$package_name.conf.">&2
-                fi
+                fi 
                 aliases=$(awk "/^alias ${modules_conf_alias_type[$index]}/ {print \$2}" $moduleconfig)
-                if [ -n "$aliases" ]; then
+                if [[ $aliases ]]; then
                     alias_number=$(($(echo "$aliases" | sed "s/${modules_conf_alias_type[$index]}//" | sort -n | tail -n 1) + 1))
                 else
                     alias_number=0
@@ -761,19 +777,15 @@ moduleconfig_add()
                 echo -e "alias ${modules_conf_alias_type[$index]}${alias_number} ${dest_module_name[$index]}" >> $moduleconfig
                 echo $"$moduleconfig: added alias reference for '${dest_module_name[$index]}'"
             fi
-
-            index=$(($index+1))
         done
 
         # Add anything else
-        index=0
-        while [ $index -lt ${#modules_conf_array[@]} ]; do
+        for ((index=0; index < ${#modules_conf_array[@]}; index++)); do
             if [ -n "${modules_conf_array[$index]}" ] && \
             ! grep -q "${modules_conf_array[$index]}" "$moduleconfig"; then
             echo -e $"$moduleconfig: added '${modules_conf_array[$index]}'"
             echo -e "${modules_conf_array[$index]}" >> $moduleconfig
             fi
-            index=$(($index+1))
         done
     done
 
