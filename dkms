@@ -208,6 +208,11 @@ function remake_initrd()
     local mkinitrd='mkinitrd'
 
 
+    # Support dracut distributions
+    if [ -x "/sbin/dracut" ]; then
+        mkinitrd='dracut'
+    fi
+
     # Support initramfs distributions (Debian/Ubuntu).
     if [ -x "/usr/sbin/update-initramfs" ]; then
         mkinitrd='update-initramfs'
@@ -258,6 +263,17 @@ function remake_initrd()
             cp -f "$initrd_dir/initrd.img-$1" "$initrd_dir/initrd.img-$1.bak"
             invoke_command "$mkinitrd -o $initrd_dir/initrd.img-$1 $1" "$mkinitrd" background
         fi
+        exitval="$?"
+    elif [ "$mkinitrd" == "dracut" ]; then
+        echo $""
+        initrd_dir="/boot"
+        echo $"Updating initramfs with dracut:"
+        echo $"Saving old initramfs as $initrd_dir/initramfs-$1.img.bak"
+        cp -f "$initrd_dir/initramfs-$1.img" "$initrd_dir/initramfs-$1.img.bak"
+
+        echo $"Making new initramfs as $initrd_dir/initramfs-$1.img"
+        echo $"(If next boot fails, revert to the .bak initramfs image)"
+        invoke_command "$mkinitrd $1" "$mkinitrd" background
         exitval="$?"
     else
         echo $""
