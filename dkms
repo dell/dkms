@@ -798,7 +798,7 @@ moduleconfig_remove()
 {
     # $1 = kernel version
 
-    local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+    local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
     modconfig_files=""
     [ -e /etc/modprobe.d/dkms.conf ] && modconfig_files="/etc/modprobe.d/dkms.conf"
     [ -e /etc/modprobe.d/dkms ] && modconfig_files="/etc/modprobe.d/dkms"
@@ -807,47 +807,39 @@ moduleconfig_remove()
     [ -e /etc/modprobe.d/$package_name.conf ] && modconfig_files="/etc/modprobe.d/$package_name.conf"
 
     for moduleconfig in $modconfig_files; do
-        index=0
-        while [ $index -lt ${#dest_module_name[@]} ]; do
-
+        for ((index=0; index < ${#dest_module_name[@]}; index++)); do
             # Remove/Replace aliases (maybe)
-            if [ -n "${modules_conf_alias_type[$index]}" ] && [ `find $install_tree/$1/ -name "${dest_module_name[$index]}.*" 2>/dev/null | wc -l | awk '{print $1}'` -eq 0 ]; then
+	    [[ ${modules_conf_alias_type[$index]} ]] || continue 
+	    find "$install_tree/$1/" -name "${dest_module_name[$index]}.*" -quit 2>/dev/null && continue
 
-                local conf_replacement=""
-                for obsolete_module in ${modules_conf_obsoletes[$index]//,/ }; do
-                    if [ `find $install_tree/$1/ -name "$obsolete_module.*" 2>/dev/null | wc -l | awk '{print $1}'` -gt 0 ] && [ -z "$conf_replacement" ]; then
-                        conf_replacement=$obsolete_module
-                    fi
-                done
+            local conf_replacement=""
+            for obsolete_module in ${modules_conf_obsoletes[$index]//,/ }; do
+                find $install_tree/$1/ -name "$obsolete_module.*" -quit 2>/dev/null || continue
+                conf_replacement=$obsolete_module
+                break
+            done
 
-                if [ -n "$conf_replacement" ] && \
-                    grep -q "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}$" $moduleconfig; then
-                    sed "s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) ${dest_module_name[$index]}$/\1 $conf_replacement/g" $moduleconfig > $temp_dir_name/moduleconfig.new
-                    mv -f $temp_dir_name/moduleconfig.new $moduleconfig
-                    echo $"$moduleconfig: alias for '${dest_module_name[$index]}' changed back to '$conf_replacement'"
-                elif [ -z "$conf_replacement" ]; then
-                    grep -v "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}" $moduleconfig > $temp_dir_name/moduleconfig.new
-                    mv -f $temp_dir_name/moduleconfig.new $moduleconfig
-                    echo $"$moduleconfig: removed alias for '${dest_module_name[$index]}'"
-                    if [ "$modconfig_files" == "/etc/modprobe.d/$package_name.conf" ]; then
-                        rm -f /etc/modprobe.d/$package_name.conf
-                        echo $"$moduleconfig: deleted /etc/modprobe.d/$package_name.conf file"
-                    fi
+	    if [[ ! $conf_replacement ]]; then
+                grep -v "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}" $moduleconfig > $temp_dir_name/moduleconfig.new
+                mv -f $temp_dir_name/moduleconfig.new $moduleconfig
+                echo $"$moduleconfig: removed alias for '${dest_module_name[$index]}'"
+                if [[ $modconfig_files = /etc/modprobe.d/$package_name.conf ]]; then
+                    rm -f /etc/modprobe.d/$package_name.conf
+                    echo $"$moduleconfig: deleted /etc/modprobe.d/$package_name.conf file"
                 fi
+            elif grep -q "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}$" $moduleconfig; then
+                sed "s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) ${dest_module_name[$index]}$/\1 $conf_replacement/g" $moduleconfig > $temp_dir_name/moduleconfig.new
+                mv -f $temp_dir_name/moduleconfig.new $moduleconfig
+                echo $"$moduleconfig: alias for '${dest_module_name[$index]}' changed back to '$conf_replacement'"
             fi
-
-            index=$(($index+1))
         done
 
         # Remove static conf entries
-        index=0
-        while [ $index -lt ${#modules_conf_array[@]} ]; do
-            if [ -n "${modules_conf_array[$index]}" ]; then
+        for ((index=0; index < ${#modules_conf_array[@]}; index++)); do
+            [[ ${modules_conf_array[$index]} ]] || continue
             grep -v "${modules_conf_array[$index]}" "$moduleconfig" > $temp_dir_name/moduleconfig.new
             echo $"$moduleconfig: removed '${modules_conf_array[$index]}'"
             mv -f $temp_dir_name/moduleconfig.new $moduleconfig
-            fi
-            index=$(($index+1))
         done
     done
 
