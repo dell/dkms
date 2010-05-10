@@ -847,46 +847,31 @@ moduleconfig_remove()
     rm -rf $temp_dir_name
 }
 
-# Does string word exist as a word in string list?
-# returns 0 if word present, 1 if word not present
-is_word_in_list()
-{
-    for l in $2; do
-        [ "$1" = "${l}" ] && return 0
-    done
-    return 1
-}
-
 etc_sysconfig_kernel_modify()
-{
+(
+    [[ -e /etc/sysconfig/kernel && $remake_initrd ]] || return 0
+
     # Make a temp directory to store files
-    local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
-
-    if [ -e "/etc/sysconfig/kernel" ] && [ -n "$remake_initrd" ]; then
-        # Make /etc/sysconfig/kernel changes as necessary
-        if [ "$1" == "add" ]; then
-            unset INITRD_MODULES
-            eval `grep ^INITRD_MODULES= /etc/sysconfig/kernel`
-            for module_name_after in "${dest_module_name[@]}"; do
-                if ! is_word_in_list "${module_name_after}" "${INITRD_MODULES}"; then
-                    sed -e "s/INITRD_MODULES=\"\(.*\)\"/INITRD_MODULES=\"\1 $module_name_after\"/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
-                    mv $temp_dir_name/kernel.new /etc/sysconfig/kernel
-                fi
-            done
-        unset INITRD_MODULES
-
-        # Remove /etc/sysconfig/kernel entries
-        elif [ "$1" == "delete" ]; then
-            for module_name_after in "${dest_module_name[@]}"; do
-                sed -e "s/\(INITRD_MODULES.*\)$module_name_after\b\(.*\)/\1\2/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
-                mv $temp_dir_name/kernel.new /etc/sysconfig/kernel
-            done
-        fi
+    local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    if [[ $1 = add ]]; then
+        . /etc/sysconfig/kernel
+        for m in "${dest_module_name[@]}"; do
+	    for l in "${INITRD_MODULES}"; do
+		[[ $m = $l ]] && continue 2
+	    done
+            sed -e "s/INITRD_MODULES=\"\(.*\)\"/INITRD_MODULES=\"\1 $m\"/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
+            mv $temp_dir_name/kernel.new /etc/sysconfig/kernel
+        done
+    # Remove /etc/sysconfig/kernel entries
+    elif [[ $1 = delete ]]; then
+        for m in "${dest_module_name[@]}"; do
+            sed -e "s/\(INITRD_MODULES.*\)$m\b\(.*\)/\1\2/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
+            mv $temp_dir_name/kernel.new /etc/sysconfig/kernel
+        done
     fi
-
     # Delete the temp dir
     rm -rf $temp_dir_name
-}
+)
 
 add_module()
 {
