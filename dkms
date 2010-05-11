@@ -878,19 +878,17 @@ add_module()
     setup_kernels_arches "add"
 
     # Check that we have all the arguments
-    if [ -z "$module" ] || [ -z "$module_version" ]; then
+    if ! [[ $module && $module_version ]]; then
         echo $"" >&2
         echo $"Error! Invalid number of arguments passed." >&2
         echo $"Usage: add -m <module> -v <module-version>" >&2
         exit 1
     fi
 
-    if [ -z "$conf" ]; then
-        conf="$source_tree/$module-$module_version/dkms.conf"
-    fi
+    [[ $conf ]] || conf="$source_tree/$module-$module_version/dkms.conf"
 
     # Check that /usr/src/$module-$module_version exists
-    if ! [ -d "$source_tree/$module-$module_version" ]; then
+    if ! [[ -d $source_tree/$module-$module_version ]]; then
         echo $"" >&2
         echo $"Error! Could not find module source directory." >&2
         echo $"Directory: $source_tree/$module-$module_version does not exist." >&2
@@ -898,15 +896,15 @@ add_module()
     fi
 
     # Do stuff for --rpm_safe_upgrade
-    if [ -n "$rpm_safe_upgrade" ]; then
-        local pppid=`sed -ne 's/PPid:[ \t]*//p' /proc/$PPID/status`
-        local temp_dir_name=`mktemp $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.XXXXXX 2>/dev/null`
-        echo "$module-$module_version" >> $temp_dir_name
-        ps -o lstart --no-headers -p $pppid 2>/dev/null >> $temp_dir_name
+    if [[ $rpm_safe_upgrade ]]; then
+        local pppid=$(awk '/PPid:/ {print $2}' /proc/$PPID/status)
+        local lock_name=$(mktemp $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.XXXXXX 2>/dev/null)
+        echo "$module-$module_version" >> $lock_name
+        ps -o lstart --no-headers -p $pppid 2>/dev/null >> $lock_name
     fi
 
     # Check that this module-version hasn't already been added
-    if [ -d "$dkms_tree/$module/$module_version" ]; then
+    if [[ -d $dkms_tree/$module/$module_version ]]; then
         echo $"" >&2
         echo $"Error! DKMS tree already contains: $module-$module_version" >&2
         echo $"You cannot add the same module/version combo more than once." >&2
@@ -914,7 +912,7 @@ add_module()
     fi
 
     # Check that the conf file exists or any other script specified
-    if ! [ -e "$conf" ]; then
+    if ! [[ -e $conf ]]; then
         echo $"" >&2
         echo $"Error! Could not locate dkms.conf file." >&2
         echo $"File: $conf does not exist." >&2
@@ -922,14 +920,13 @@ add_module()
     fi
 
     # Check the conf file for sanity
-    read_conf "${kernelver_array[0]}" "${arch_array[0]}" "$conf"
-    if [ "$?" -ne 0 ]; then
+    read_conf "${kernelver_array[0]}" "${arch_array[0]}" "$conf" || {
         echo $"" >&2
         echo $"Error! Bad conf file." >&2
         echo $"File: $conf" >&2
         echo $"does not represent a valid dkms.conf file." >&2
         exit 8
-    fi
+    }
 
     # Create the necessary dkms tree structure
     echo $""
@@ -939,7 +936,7 @@ add_module()
     ln -s "$source_tree/$module-$module_version" "$dkms_tree/$module/$module_version/source"
 
     # Run the post_add script
-    if [ -n "$post_add" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$post_add" | sed 's/ .*//'` ]; then
+    if [[ $post_add && -x $dkms_tree/$module/$module_version/source/${post_add%% *} ]]; then
         echo $""
         echo $"Running the post_add script:"
         $dkms_tree/$module/$module_version/source/$post_add
@@ -2315,7 +2312,6 @@ make_redhat_driver_disk()
         fi
     done
     [ -e ./modules.alias ] && cp -f ./modules.alias "$driver_disk_dir/"
-
     # FIXME: add rpms/ directory, copy in KMP RPMs, run createrepo --pretty
 
     cd - >/dev/null
