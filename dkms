@@ -954,27 +954,22 @@ prepare_kernel()
     set_kernel_source_dir "$1"
 
     # Check that kernel-source exists
-    if ! [ -e "$kernel_source_dir/include" ]; then
+    [[ -e $kernel_source_dir/include ]] || {
         echo $"" >&2
         echo $"Error! Your kernel headers for kernel $1 cannot be found at" >&2
         echo $"/lib/modules/$1/build or /lib/modules/$1/source." >&2
         echo -n $"You can use the --kernelsourcedir option to tell DKMS where it's located"
         case "$running_distribution" in
-        Debian* | Ubuntu* )
-            echo $", or you could install the linux-headers-$1 package."
-            ;;
-        * )
-            echo $"."
-            ;;
+            Debian* | Ubuntu* )
+		echo $", or you could install the linux-headers-$1 package.";;
+            * ) echo $"." ;;
         esac
         exit 1
-    fi
+    }
 
-    if [ -n "$no_prepare_kernel" ]; then
-        return
-    fi
+    [[ $no_prepare_kernel ]] && return
 
-    if [[ (! ( $(VER $1) < $(VER 2.6.5) ) || (-d /etc/SuSEconfig)) && \
+    if [[ (! ( $(VER $1) < $(VER 2.6.5) ) || -d /etc/SuSEconfig) && \
        -d "$kernel_source_dir" && \
        -z "$ksourcedir_fromcli" ]]; then
         echo $""
@@ -988,36 +983,41 @@ prepare_kernel()
     echo $"Preparing kernel $1 for module build:"
     echo $"(This is not compiling a kernel, just preparing kernel symbols)"
     cd $kernel_source_dir
-    config_contents=`cat .config 2>/dev/null`
-    [ -n "$config_contents" ] && echo $"Storing current .config to be restored when complete"
+    [[ -r .config ]] && {
+	config_contents=$(cat .config)
+	echo $"Storing current .config to be restored when complete"
+    }
 
     # Set kernel_config
-    if [ -e /etc/redhat-release ] || [ -e /etc/fedora-release ]; then
+    if [[ -e /etc/redhat-release || -e /etc/fedora-release ]]; then
         # Note this also applies to VMware 3.x
-        if [ -z "$kernel_config" ] && [ -d "$kernel_source_dir/configs" ]; then
-            local kernel_trunc=`echo $1 | sed 's/-.*//'`
-            for config_type in debug summit smp enterprise bigmem hugemem BOOT vmnix; do
-                [ `echo "$1" | grep "$config_type"` ] && kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$2-$config_type.config"
-                [ ! -e "$kernel_config" ] && kernel_config=""
-            done
-            [ -z "$kernel_config" ] && kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$2.config"
-            [ ! -e "$kernel_config" ] && kernel_config=""
+        if [[ -z $kernel_config && -d $kernel_source_dir/configs ]]; then
+            local kernel_trunc=${1%%-*}
+	    # Try a .config specific to whatever kernel we are running
+	    if [[ $1 =~ (debug|summit|smp|enterprise|bigmem|hugemem|BOOT|vmnix) && \
+		-e $kernel_source_dir/configs/kernel-$kernel_trunc-$2-${BASH_REMATCH[1]}.config ]]; then
+		kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$2-${BASH_REMATCH[1]}.config"
+	    elif [[ -e $kernel_source_dir/configs/kernel-$kernel_trunc-$2.config ]]; then
+                # If that one does not exist, try a generic one.
+		kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$2.config"
+	    else
+                # If that does not exist, fall back to no config file
+		kernel_config=""
+	    fi
         fi
-    elif [ -e /etc/SuSE-release ] || [ -d /etc/SuSEconfig ]; then
-        if [ -z "$kernel_config" ] && [ -d "$kernel_source_dir/arch" ]; then
-            local kernel_trunc=`echo $1 | sed 's/-.*//'`
-            if [ "$2" == "i586" ] || [ "$2" == "i686" ]; then
-                config_arch="i386"
-            else
-                config_arch=$2
-            fi
+    elif [[ (-e /etc/SuSE-release || -d /etc/SuSEconfig) && \
+        -z $kernel_config && -d $kernel_source_dir/arch ]]; then
+            local kernel_trunc=${1%%-*}
+	    case $2 in
+		i586|i686) config_arch="i386";;
+		*) config_arch=$2;;
+            esac
             for config_type in default smp bigsmp; do
-                [ `echo "$1" | grep "$config_type"` ] && kernel_config="$kernel_source_dir/arch/$config_arch/defconfig.$config_type"
-                [ ! -e "$kernel_config" ] && kernel_config=""
+                [[ $1 =~ $config_type ]] && kernel_config="$kernel_source_dir/arch/$config_arch/defconfig.$config_type"
+                [[ -e $kernel_config ]] || kernel_config=""
             done
-            [ -z "$kernel_config" ] && kernel_config="$kernel_source_dir/arch/$config_arch/defconfig.default"
-            [ ! -e "$kernel_config" ] && kernel_config=""
-        fi
+            [[ $kernel_config ]] || kernel_config="$kernel_source_dir/arch/$config_arch/defconfig.default"
+            [[ -e $kernel_config ]] || kernel_config=""
     fi
 
     # Do preparation
@@ -1025,7 +1025,7 @@ prepare_kernel()
         echo $"Running UnitedLinux preparation routine"
         local kernel_config="/boot/vmlinuz.config"
         invoke_command "make mrproper" "make mrproper" background
-        [ -n "$config_contents" ] && echo "$config_contents" > .config
+        [[ $config_contents ]] && echo "$config_contents" > .config
         invoke_command "cp /boot/vmlinuz.version.h include/linux/version.h" "using /boot/vmlinux.version.h"
         invoke_command "cp -f $kernel_config .config" "using $kernel_config"
         invoke_command "make KERNELRELEASE=$1 cloneconfig" "make cloneconfig" background
@@ -1033,12 +1033,12 @@ prepare_kernel()
     elif grep -q rhconfig.h $kernel_source_dir/include/linux/{modversions,version}.h 2>/dev/null; then
         echo $"Running Red Hat style preparation routine"
         invoke_command "make clean" "make clean" background
-        [ -n "$config_contents" ] && echo "$config_contents" > .config
+        [[ $config_contents ]] && echo "$config_contents" > .config
 
-        if [ -n "$kernel_config" ]; then
+        if [[ $kernel_config ]]; then
             echo $"using $kernel_config"
             cp -f "$kernel_config" .config
-        elif [ -e .config ]; then
+        elif [[ -e .config ]]; then
             echo $"using $kernel_source_dir/.config"
             echo $"(I hope this is the correct config for this kernel)"
         else
@@ -1055,17 +1055,17 @@ prepare_kernel()
         fi
 
         invoke_command "make KERNELRELEASE=$1 oldconfig" "make oldconfig" background
-        kerneldoth_contents=`cat /boot/kernel.h 2>/dev/null`
+        kerneldoth_contents=$(cat /boot/kernel.h 2>/dev/null)
         invoke_command "/usr/lib/dkms/mkkerneldoth --kernelver $1 --targetarch $2 --output /boot/kernel.h" "running mkkerneldoth" background
     else
         echo $"Running Generic preparation routine"
         invoke_command "make mrproper" "make mrproper" background
-        [ -n "$config_contents" ] && echo "$config_contents" > .config
+        [[ $config_contents ]] && echo "$config_contents" > .config
 
-        if [ -n "$kernel_config" ]; then
+        if [[ $kernel_config ]]; then
             echo $"using $kernel_config"
             cp -f "$kernel_config" .config
-        elif [ -e .config ]; then
+        elif [[ -e .config ]]; then
             echo $"using $kernel_source_dir/.config"
             echo $"(I hope this is the correct config for this kernel)"
         else
