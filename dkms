@@ -385,6 +385,13 @@ read_conf()
     [[ $conf ]] && read_conf_file="$conf"
     [[ $3 ]] && read_conf_file="$3"
 
+    if ! [[ -r $read_conf_file ]]; then
+	echo $"" >&2
+        echo $"Error! Could not locate dkms.conf file." >&2
+        echo $"File: $conf does not exist." >&2
+        exit 4
+    fi
+
     # Clear variables
     MAKE=""
     CLEAN=""
@@ -881,6 +888,15 @@ check_module_args() {
     exit 1
 }
 
+read_conf_or_die() {
+    read_conf "$@" && return
+    echo $"" >&2
+    echo $"Error! Bad conf file." >&2
+    echo $"File: $conf" >&2
+    echo $"does not represent a valid dkms.conf file." >&2
+    exit 8
+}
+
 add_module()
 {
     setup_kernels_arches "add"
@@ -914,22 +930,8 @@ add_module()
         exit 3
     fi
 
-    # Check that the conf file exists or any other script specified
-    if ! [[ -e $conf ]]; then
-        echo $"" >&2
-        echo $"Error! Could not locate dkms.conf file." >&2
-        echo $"File: $conf does not exist." >&2
-        exit 4
-    fi
-
     # Check the conf file for sanity
-    read_conf "${kernelver_array[0]}" "${arch_array[0]}" "$conf" || {
-        echo $"" >&2
-        echo $"Error! Bad conf file." >&2
-        echo $"File: $conf" >&2
-        echo $"does not represent a valid dkms.conf file." >&2
-        exit 8
-    }
+    read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}" "$conf"
 
     # Create the necessary dkms tree structure
     echo $""
@@ -1108,6 +1110,14 @@ set_weak_modules()
     [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 }
 
+check_module_exists() {
+    [[ -d $dkms_tree/$module/$module_version/source ]] && return
+    echo $"" >&2
+    echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
+    echo $"Build cannot continue without the proper tree." >&2
+    exit 2
+}
+
 install_module()
 {
     setup_kernels_arches "install"
@@ -1116,12 +1126,7 @@ install_module()
     check_module_args install
     
     # Check that $module-$module_version exists by checking the source symlink
-    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
-        echo $"" >&2
-        echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
-        echo $"Build cannot continue without the proper tree." >&2
-        exit 2
-    fi
+    check_module_exists
 
     # Make sure that kernel exists to install into
     if ! [ -e "$install_tree/${kernelver_array[0]}" ]; then
@@ -1132,13 +1137,7 @@ install_module()
     fi
 
     # Read the conf file
-    read_conf "${kernelver_array[0]}" "${arch_array[0]}"
-    if [ "$?" -ne 0 ]; then
-        echo $"" >&2
-        echo $"Error! Bad conf file." >&2
-        echo $"Your dkms.conf is not valid." >&2
-        exit 3
-    fi
+    read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}"
 
     # Make sure the $module_name_after exists
     set_module_suffix "${kernelver_array[0]}"
@@ -1332,13 +1331,8 @@ prepare_build()
     check_module_args build
 
     # Check that source symlink works
-    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
-        echo $"" >&2
-        echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
-        echo $"Build cannot continue without the proper tree." >&2
-        exit 2
-    fi
-
+    check_module_exists
+    
     # Check that the module has not already been built for this kernel
     if [ -d "$base_dir" ]; then
         echo $"" >&2
@@ -1350,13 +1344,7 @@ prepare_build()
 
     # Read the conf file
     set_module_suffix "${kernelver_array[0]}"
-    read_conf "${kernelver_array[0]}" "${arch_array[0]}"
-    if [ "$?" -ne 0 ]; then
-        echo $"" >&2
-        echo $"Error! Bad conf file." >&2
-        echo $"Your dkms.conf is not valid." >&2
-        exit 4
-    fi
+    read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}"
 
     # Error out if build_exclude is set
     if [ -n "$build_exclude" ]; then
@@ -1687,13 +1675,7 @@ uninstall_module()
     fi
 
     # Read the conf file
-    read_conf "${kernelver_array[0]}" "${arch_array[0]}"
-    if [ "$?" -ne 0 ]; then
-        echo $"" >&2
-        echo $"Error! Bad conf file." >&2
-        echo $"Your dkms.conf is not valid." >&2
-        exit 4
-    fi
+    read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}"
 
     # Only do stuff if module/module version is currently installed
     local kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}")
@@ -1756,14 +1738,7 @@ remove_module()
         fi
 
         # Read the conf file
-        read_conf "${kernelver_array[$i]}" "${arch_array[$i]}"
-        if [ "$?" -ne 0 ]; then
-            echo $"" >&2
-            echo $"Error! Bad conf file." >&2
-            echo $"File: $dkms_tree/$module/$module_version/source/dkms.conf does not represent" >&2
-            echo $"a valid dkms.conf file." >&2
-            exit 5
-        fi
+        read_conf_or_die "${kernelver_array[$i]}" "${arch_array[$i]}"
 
         do_uninstall "${kernelver_array[$i]}" "${arch_array[$i]}"
 
@@ -2047,12 +2022,7 @@ make_driver_disk()
     fi
 
     # Check that source symlink works
-    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
-        echo $"" >&2
-        echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
-        echo $"Build cannot continue without the proper tree." >&2
-        exit 2
-    fi
+    check_module_exists
 
     # Confirm that distro is supported
     case "$distro" in
@@ -2068,13 +2038,7 @@ make_driver_disk()
     esac
 
     # Read the conf file
-    read_conf "${kernelver_array[0]}" "${arch_array[0]}"
-    if [ "$?" -ne 0 ]; then
-        echo $"" >&2
-        echo $"Error! Bad conf file." >&2
-        echo $"Your dkms.conf is not valid." >&2
-        exit 4
-    fi
+    read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}"
 
     case "$distro" in
     redhat*)
@@ -2632,13 +2596,7 @@ make_tarball()
     fi
 
     # Read the conf file
-    read_conf "${kernelver_array[0]}" "${arch_array[0]}"
-    if [ "$?" -ne 0 ]; then
-        echo $"" >&2
-        echo $"Error! Bad conf file." >&2
-        echo $"Your dkms.conf is not valid." >&2
-        exit 5
-    fi
+    read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}"
 
     temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
     mkdir -p $temp_dir_name/dkms_main_tree
@@ -2778,14 +2736,7 @@ load_tarball()
             rm -rf $temp_dir_name
             exit 3
         fi
-        read_conf "${kernelver_array[0]}" "${arch_array[0]}" "$conf"
-        if [ "$?" -ne 0 ]; then
-            echo $"" >&2
-            echo $"Error! Bad conf file." >&2
-            echo $"File: $conf does not represent a valid dkms.conf file" >&2
-            rm -rf $temp_dir_name
-            exit 4
-        fi
+        read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}" "$conf"
         tarball_source_tree_name=`echo $conf | sed "s#$temp_dir_name\/##" | sed 's/dkms.conf//' | sed 's/\/$//'`
     elif ! [ -d "$temp_dir_name/dkms_source_tree" ] && [ -d "$temp_dir_name/dkms_binaries_only" ]; then
         PACKAGE_NAME=`cat $temp_dir_name/dkms_binaries_only/PACKAGE_NAME 2>/dev/null`
@@ -3023,13 +2974,7 @@ make_rpm()
     fi
 
     # Read the conf file
-    read_conf "${kernelver_array[0]}" "${arch_array[0]}"
-    if [ "$?" -ne 0 ]; then
-        echo $"" >&2
-        echo $"Error! Bad conf file." >&2
-        echo $"Your dkms.conf is not valid." >&2
-        exit 4
-    fi
+    read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}"
 
     local rpm_basedir="$dkms_tree/$module/$module_version/rpm"
 
@@ -3170,13 +3115,7 @@ make_debian()
     fi
 
     # Read the conf file
-    read_conf "${kernelver_array[0]}" "${arch_array[0]}"
-    if [ "$?" -ne 0 ]; then
-        echo $"" >&2
-        echo $"Error! Bad conf file." >&2
-        echo $"Your dkms.conf is not valid." >&2
-        exit 4
-    fi
+    read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}"
 
     #test if we are missing dependencies that are needed during package build
     INSTALL_PACKAGES="`make_debian_test_depends`"
@@ -3317,12 +3256,7 @@ make_common_test()
     check_module_args $create_type
  
     # Check that source symlink works
-    if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
-        echo $"" >&2
-        echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
-        echo $"Build cannot continue without the proper tree." >&2
-        exit 2
-    fi
+    check_module_exists
 
     # Make sure that its installed in the first place
     if ! [ -d "$dkms_tree/$module/$module_version" ]; then
@@ -3397,13 +3331,7 @@ make_kmp()
     make_common_test "mkkmp"
 
     # Read the conf file
-    read_conf "${kernelver_array[0]}" "${arch_array[0]}"
-    if [ "$?" -ne 0 ]; then
-        echo $"" >&2
-        echo $"Error! Bad conf file." >&2
-        echo $"Your dkms.conf is not valid." >&2
-        exit 4
-    fi
+    read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}"
 
     echo $""
     if [ -n "$specfile" -a -e "$dkms_tree/$module/$module_version/source/$specfile" ]; then
