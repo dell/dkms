@@ -1100,7 +1100,7 @@ list_each_installed_module()
 
 set_weak_modules()
 {
-    [ -n "${weak_modules}" ] && return
+    [[ ${weak_modules} ]] && return
     [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
     [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 }
