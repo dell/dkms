@@ -1474,10 +1474,10 @@ possible_dest_module_locations()
 
     local location
     location[0]="${dest_module_location[$count]}"
-    [ "${DEST_MODULE_LOCATION[$count]}" != "${dest_module_location[$count]}" ] && \
+    [[ ${DEST_MODULE_LOCATION[$count]} != ${dest_module_location[$count]} ]] && \
     location[1]="${DEST_MODULE_LOCATION[$count]}"
 
-    echo "${location[0]} ${location[1]}"
+    echo "${location[@]}"
 }
 
 find_actual_dest_module_location()
