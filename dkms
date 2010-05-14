@@ -873,17 +873,20 @@ etc_sysconfig_kernel_modify()
     rm -rf $temp_dir_name
 )
 
+check_module_args() {
+    [[ $module && $module_version ]] && return
+    echo $"" >&2
+    echo $"Error! Invalid number of arguments passed." >&2
+    echo $"Usage: $1 -m <module> -v <module-version>" >&2
+    exit 1
+}
+
 add_module()
 {
     setup_kernels_arches "add"
 
     # Check that we have all the arguments
-    if ! [[ $module && $module_version ]]; then
-        echo $"" >&2
-        echo $"Error! Invalid number of arguments passed." >&2
-        echo $"Usage: add -m <module> -v <module-version>" >&2
-        exit 1
-    fi
+    check_module_args add
 
     [[ $conf ]] || conf="$source_tree/$module-$module_version/dkms.conf"
 
@@ -1110,14 +1113,8 @@ install_module()
     setup_kernels_arches "install"
     local base_dir="$dkms_tree/$module/$module_version/${kernelver_array[0]}/${arch_array[0]}"
 
-    # Check that the right arguments were passed
-    if [ -z "$module" ] || [ -z "$module_version" ]; then
-        echo $"" >&2
-        echo $"Error! Invalid number of parameters passed." >&2
-        echo $"Usage: install -m <module> -v <module-version>" >&2
-        exit 1
-    fi
-
+    check_module_args install
+    
     # Check that $module-$module_version exists by checking the source symlink
     if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
         echo $"" >&2
@@ -1332,12 +1329,7 @@ prepare_build()
     local base_dir="$dkms_tree/$module/$module_version/${kernelver_array[0]}/${arch_array[0]}"
 
     # Check that the right arguments were passed
-    if [ -z "$module" ] || [ -z "$module_version" ]; then
-        echo $"" >&2
-        echo $"Error! Invalid number of parameters passed." >&2
-        echo $"Usage: build -m <module> -v <module-version>" >&2
-        exit 1
-    fi
+    check_module_args build
 
     # Check that source symlink works
     if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
@@ -1676,14 +1668,8 @@ uninstall_module()
     setup_kernels_arches "uninstall"
 
     # Check that the right arguments were passed
-    if [ -z "$module" ] || [ -z "$module_version" ]; then
-        echo $"" >&2
-        echo $"Error! Invalid number of parameters passed." >&2
-        echo $"Usage: uninstall -m <module> -v <module-version>" >&2
-        echo $"   or: uninstall -m <module> -v <module-version> -k <kernel-version>" >&2
-        exit 1
-    fi
-
+    check_module_args uninstall
+   
     # Check that $module is in the dkms tree
     if ! [ -d "$dkms_tree/$module" ]; then
         echo $"" >&2
@@ -3328,13 +3314,8 @@ make_common_test()
 {
     local create_type=$1
     # Error if $module_version is set but $module is not
-    if [ -z "$module" ] || [ -z "$module_version" ]; then
-        echo $"" >&2
-        echo $"Error! Invalid number of parameters passed." >&2
-        echo $"Usage: $create_type -m <module> -v <module-version>" >&2
-        exit 1
-    fi
-
+    check_module_args $create_type
+ 
     # Check that source symlink works
     if ! [ -d "$dkms_tree/$module/$module_version/source" ]; then
         echo $"" >&2
