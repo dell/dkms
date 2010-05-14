@@ -1615,7 +1615,7 @@ uninstall_module()
     check_module_args uninstall
    
     # Check that $module is in the dkms tree
-    if ! [ -d "$dkms_tree/$module" ]; then
+    if ! [[ -d $dkms_tree/$module ]]; then
         echo $"" >&2
         echo $"Error! There are no instances of module: $module" >&2
         echo $"located in the DKMS tree." >&2
@@ -1623,7 +1623,7 @@ uninstall_module()
     fi
 
     # Make sure that its installed in the first place
-    if ! [ -d "$dkms_tree/$module/$module_version" ]; then
+    if ! [[ -d $dkms_tree/$module/$module_version ]]; then
         echo $"" >&2
         echo $"Error! The module/version combo: $module-$module_version" >&2
         echo $"is not located in the DKMS tree." >&2
@@ -1635,14 +1635,13 @@ uninstall_module()
 
     # Only do stuff if module/module version is currently installed
     local kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}")
-    if [ "$kernel_symlink" == "$module_version/${kernelver_array[0]}/${arch_array[0]}" ]; then
-        do_uninstall "${kernelver_array[0]}" "${arch_array[0]}"
-    else
+    if [[ $kernel_symlink != $module_version/${kernelver_array[0]}/${arch_array[0]} ]]; then
         echo $"" >&2
         echo $"Error! The module $module $module_version is not currently installed." >&2
         echo $"This module is not currently ACTIVE for kernel ${kernelver_array[0]} (${arch_array[0]})." >&2
         exit 5
     fi
+    do_uninstall "${kernelver_array[0]}" "${arch_array[0]}"
 }
 
 remove_module()
