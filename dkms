@@ -1647,7 +1647,7 @@ uninstall_module()
 remove_module()
 {
     # Check that the right arguments were passed (must be done before setup_kernels_arches)
-    if [ -z "$module" ] || [ -z "$module_version" ] || $([ -z "${kernelver_array[0]}" ] && [ -z "$all" ]); then
+    if ! [[ $module && $module_version && ( ${kernelver_array[0]} || $all ) ]]; then
         echo $"" >&2
         echo $"Error! Invalid number of parameters passed." >&2
         echo $"Usage: remove -m <module> -v <module-version> --all" >&2
@@ -1658,18 +1658,17 @@ remove_module()
     setup_kernels_arches "remove"
 
     # Check that $module is in the dkms tree
-    if ! [ -d "$dkms_tree/$module/$module_version" ]; then
+    if ! [[ -d $dkms_tree/$module/$module_version ]]; then
         echo $"" >&2
         echo $"Error! There are no instances of module: $module" >&2
         echo $"$module_version located in the DKMS tree." >&2
         exit 3
     fi
 
-    local i=0
-    while [ $i -lt ${#kernelver_array[@]} ]; do
-
+    local i
+    for ((i=0; i < ${#kernelver_array[@]}; i++)); do
         # make sure its there first before removing
-        if ! [ -d "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}" ]; then
+        if ! [[ -d $dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]} ]]; then
             echo $"" >&2
             echo $"Error! There is no instance of $module $module_version" >&2
             echo $"for kernel ${kernelver_array[$i]} (${arch_array[$i]}) located in the DKMS tree." >&2
@@ -1677,18 +1676,18 @@ remove_module()
         fi
 
         # Do --rpm_safe_upgrade check (exit out and don't do remove if inter-release RPM upgrade scenario occurs)
-        if [ -n "$rpm_safe_upgrade" ]; then
-            local pppid=`cat /proc/$PPID/status | grep PPid: | awk {'print $2'}`
-            local time_stamp=`ps -o lstart --no-headers -p $pppid 2>/dev/null`
-            for lock_file in `ls $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.* 2>/dev/null`; do
-                lock_head=`head -n 1 $lock_file 2>/dev/null`
-                lock_tail=`tail -n 1 $lock_file 2>/dev/null`
-                if [ "$lock_head" == "$module-$module_version" ] && [ "$lock_tail" == "$time_stamp" ] && [ -n "$time_stamp" ]; then
-                    echo $""
-                    echo $"DKMS: Remove cancelled because --rpm_safe_upgrade scenario detected."
-                    rm -f $lock_file
-                    exit 0
-                fi
+        if [[ $rpm_safe_upgrade ]]; then
+            local pppid=$(awk '/PPid:/ {print $2}' /proc/$PPID/status)
+            local time_stamp=$(ps -o lstart --no-headers -p $pppid 2>/dev/null)
+            for lock_file in $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.*; do
+		[[ -f $lock_file ]] || continue
+                lock_head=$(head -n 1 $lock_file 2>/dev/null)
+                lock_tail=$(tail -n 1 $lock_file 2>/dev/null)
+                [[ $lock_head = $module-$module_version && $time_stamp && $lock_tail = $time_stamp ]] || continue
+                echo $""
+                echo $"DKMS: Remove cancelled because --rpm_safe_upgrade scenario detected."
+                rm -f $lock_file
+                exit 0
             done
         fi
 
@@ -1699,13 +1698,13 @@ remove_module()
 
         # Delete the $kernel_version/$arch_used part of the tree
         rm -rf "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}"
-        [ -z "`find $dkms_tree/$module/$module_version/${kernelver_array[$i]}/* -maxdepth 0 -type d 2>/dev/null`" ] && rm -rf "$dkms_tree/$module/$module_version/${kernelver_array[$i]}"
-
-        i=$(($i + 1))
+        [[ $(find $dkms_tree/$module/$module_version/${kernelver_array[$i]}/* \
+	    -maxdepth 0 -type d 2>/dev/null) ]] || \
+	    rm -rf "$dkms_tree/$module/$module_version/${kernelver_array[$i]}"
     done
 
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
-    if [ -z "$(find $dkms_tree/$module/$module_version/* -maxdepth 0 -type d 2>/dev/null | egrep -v "(build|tarball|driver_disk|rpm|deb|source)$")"  ]; then
+    if ! find $dkms_tree/$module/$module_version/* -maxdepth 0 -type d 2>/dev/null | egrep -qv "(build|tarball|driver_disk|rpm|deb|source)$"; then
         echo $""
         echo $"------------------------------"
         echo $"Deleting module version: $module_version"
@@ -1716,7 +1715,7 @@ remove_module()
     fi
 
     # Get rid of any remnant directories if necessary
-    if [ `ls "$dkms_tree/$module" | wc -w | awk '{print $1}'` -eq 0 ]; then
+    if (($(ls "$dkms_tree/$module" | wc -w | awk '{print $1}') == 0)); then
         rm -rf "$dkms_tree/$module" 2>/dev/null
 
         # Its now safe to completely remove references in /etc/sysconfig/kernel for SuSE
