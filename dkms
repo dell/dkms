@@ -1439,15 +1439,15 @@ clean_build()
     cd - >/dev/null
 
     if [[ ! ( $(VER ${kernelver_array[0]}) < $(VER 2.6.6) ) && \
-       -d "$kernel_source_dir" && \
-       ! -h "$kernel_source_dir" && \
-       -z "$ksourcedir_fromcli" ]]; then
+       -d $kernel_source_dir && \
+       ! -h $kernel_source_dir && \
+       ! $ksourcedir_fromcli ]]; then
         echo $"Kernel cleanup unnecessary for this kernel.  Skipping..."
-    elif [ -z "$no_clean_kernel" ]; then
+    elif [[ ! $no_clean_kernel ]]; then
         cd "$kernel_source_dir"
-        [ -z "$kerneldoth_contents" ] && invoke_command "make mrproper" "cleaning kernel tree (make mrproper)" background
-        [ -n "$config_contents" ] && echo "$config_contents" > .config
-        [ -n "$kerneldoth_contents" ] && echo "$kerneldoth_contents" > /boot/kernel.h
+        [[ $kerneldoth_contents ]] || invoke_command "make mrproper" "cleaning kernel tree (make mrproper)" background
+        [[ $config_contents ]] || echo "$config_contents" > .config
+        [[ $kerneldoth_contents ]] && echo "$kerneldoth_contents" > /boot/kernel.h
         cd - >/dev/null
     fi
 
