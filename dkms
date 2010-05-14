@@ -1391,7 +1391,7 @@ do_build()
     invoke_command "$clean" "cleaning build area" background
     echo $"DKMS make.log for $module-$module_version for kernel ${kernelver_array[0]} (${arch_array[0]})" >> "$dkms_tree/$module/$module_version/build/make.log"
     date >> "$dkms_tree/$module/$module_version/build/make.log"
-    local the_make_command=`echo $make_command | sed "s/^make/make KERNELRELEASE=${kernelver_array[0]}/"`
+    local the_make_command="${make_command/#make/make KERNELRELEASE=${kernelver_array[0]}}"
 
     invoke_command "$the_make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$the_make_command" background
 
