@@ -1494,7 +1494,7 @@ find_actual_dest_module_location()
 
     for l in $locations; do
         installed="${install_tree}/${kernelver}${l}/${dest_module_name[${count}]}${module_suffix}"
-        if [ -f "${installed}" ] && diff "${dkms_owned}" "${installed}" > /dev/null 2>&1; then
+        if [[ -f ${installed} ]] && diff "${dkms_owned}" "${installed}" > /dev/null 2>&1; then
             echo "${l}"
             return 0
         fi
