@@ -1191,7 +1191,7 @@ install_module()
 	if [[ -L $dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]} && \
 	    -e $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/${dest_module_name[$count]}$module_suffix ]]; then
             echo $"   - An original module was already stored during a previous install"
-        elif ! [[ -L $dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]} ]; then
+        elif ! [[ -L $dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]} ]]; then
             local archive_pref1="$lib_tree/extra/${dest_module_name[$count]}$module_suffix"
             local archive_pref2="$lib_tree/updates/${dest_module_name[$count]}$module_suffix"
             local archive_pref3="$lib_tree${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
@@ -1295,7 +1295,7 @@ install_module()
     fi
 
     # Do remake_initrd things (save old initrd)
-    if [[ $remake_initrd ]] && ! remake_initrd "${kernelver_array[0]}" "${arch_array[0]}"
+    if [[ $remake_initrd ]] && ! remake_initrd "${kernelver_array[0]}" "${arch_array[0]}"; then
         echo $"Problems with mkinitrd detected.  Automatically uninstalling this module."
         sleep 2
         do_uninstall "${kernelver_array[0]}" "${arch_array[0]}"
@@ -1321,7 +1321,7 @@ prepare_build()
     check_module_exists
     
     # Check that the module has not already been built for this kernel
-    if [ -d "$base_dir" ]; then
+    if [[ -d $base_dir ]]; then
         echo $"" >&2
         echo $"Error! This module/version has already been built on: ${kernelver_array[0]}" >&2
         echo $"Directory: $base_dir" >&2
@@ -1334,7 +1334,7 @@ prepare_build()
     read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}"
 
     # Error out if build_exclude is set
-    if [ -n "$build_exclude" ]; then
+    if [[ $build_exclude ]]; then
         echo "" >&2
         echo "Error!  The dkms.conf for this module includes a BUILD_EXCLUSIVE directive which" >&2
         echo "does not match this kernel/arch.  This indicates that it should not be built." >&2
@@ -1342,7 +1342,7 @@ prepare_build()
     fi
 
     # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
-    if [ `ls $dkms_tree/$module/$module_version/source | wc -l | awk {'print $1'}` -lt 2 ]; then
+    if (($(ls $dkms_tree/$module/$module_version/source | wc -l | awk {'print $1'}) < 2)); then
         echo "" >&2
         echo $"Error! The directory $dkms_tree/$module/$module_version/source/" >&2
         echo $"does not appear to have module source located within it.  Build halted." >&2
@@ -1356,7 +1356,7 @@ prepare_build()
     cp -rf "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
 
     # Run the pre_build script
-    if [ -n "$pre_build" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$pre_build" | sed 's/ .*//'` ]; then
+    if [[ $pre_build && -x $dkms_tree/$module/$module_version/source/${pre_build%% *} ]]; then
         echo $""
         echo $"Running the pre_build script:"
         $dkms_tree/$module/$module_version/source/$pre_build
@@ -1365,23 +1365,20 @@ prepare_build()
     cd "$dkms_tree/$module/$module_version/build"
 
     # Apply any patches
-    local index=0
-    while [ $index -lt ${#patch_array[@]} ]; do
-        if ! [ -e "$dkms_tree/$module/$module_version/build/patches/${patch_array[$index]}" ]; then
+    for p in "${patch_array[@]}"; do
+        if ! [ -e "$dkms_tree/$module/$module_version/build/patches/$p" ]; then
             echo $"" >&2
-            echo $"Error!  Patch ${patch_array[$index]} as specified in dkms.conf cannot be" >&2
+            echo $"Error!  Patch $p as specified in dkms.conf cannot be" >&2
             echo $"found in $dkms_tree/$module/$module_version/build/patches/." >&2
             exit 5
         fi
-        invoke_command "patch -p1 < ./patches/${patch_array[$index]}" "applying patch ${patch_array[$index]}"
-        if [ "$?" -ne 0 ]; then
+        if ! invoke_command "patch -p1 < ./patches/$p" "applying patch $p"; then
             echo $"" >&2
-            echo $"Error! Application of patch ${patch_array[$index]} failed." >&2
+            echo $"Error! Application of patch $p failed." >&2
             echo $"Check $dkms_tree/$module/$module_version/build/ for more information." >&2
-                report_build_problem
+            report_build_problem
             exit 6
         fi
-        index=$(($index+1))
     done
 }
 
