@@ -1090,12 +1090,11 @@ list_each_installed_module()
     # $1 = module
     # $2 = kernel version
     # $3 = arch
-    local count=0
+    local count
     local real_dest_module_location
-    while [ "$count" -lt "${#built_module_name[@]}" ]; do
+    for ((count=0; count < ${#built_module_name[@]}; count++)); do
         real_dest_module_location="$(find_actual_dest_module_location $1 $count $2 $3)"
         echo "$install_tree/$2${real_dest_module_location}/${dest_module_name[$count]}$module_suffix"
-        count=$(($count + 1))
     done
 }
 
