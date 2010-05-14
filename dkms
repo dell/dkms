@@ -897,6 +897,15 @@ read_conf_or_die() {
     exit 8
 }
 
+run_build_script() {
+    # $1 = script type
+    # $2 = script to run
+    [[ $2 && -x $dkms_tree/$module/$module_version/source/${2%% *} ]] || return 0
+    echo $""
+    echo $"Running the $1 script:"
+    $dkms_tree/$module/$module_version/source/$2
+}
+
 add_module()
 {
     setup_kernels_arches "add"
@@ -941,11 +950,7 @@ add_module()
     ln -s "$source_tree/$module-$module_version" "$dkms_tree/$module/$module_version/source"
 
     # Run the post_add script
-    if [[ $post_add && -x $dkms_tree/$module/$module_version/source/${post_add%% *} ]]; then
-        echo $""
-        echo $"Running the post_add script:"
-        $dkms_tree/$module/$module_version/source/$post_add
-    fi
+    run_build_script post_add "$post_add"
 
     echo $""
     echo $"DKMS: add Completed."
@@ -1175,16 +1180,11 @@ install_module()
         check_version_sanity "${kernelver_array[0]}" "${arch_array[0]}" \
 	    "$obsolete_by" "${dest_module_name[$count]}" || continue
 
-        if ((count == 0)) && [[ $pre_install && \
-	    -x $dkms_tree/$module/$module_version/source/${pre_install%% *} ]]; then
-            echo $""
-            echo $"Running the pre_install script:"
-            if ! $dkms_tree/$module/$module_version/source/$pre_install && \
-		! [[ $force ]]; then
-                echo $"pre_install failed, aborting install." >&2
-                echo $"You may override by specifying --force." >&2
-                exit 101
-            fi
+        if ((count == 0)) && ! run_build_script pre_install "$pre_install" && \
+	    ! [[ $force ]]; then
+            echo $"pre_install failed, aborting install." >&2
+            echo $"You may override by specifying --force." >&2
+            exit 101
         fi
         local module_count=$(find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f | wc -l | awk {'print $1'})
         echo $" - Original module"
@@ -1268,11 +1268,7 @@ install_module()
     fi
 
     # Run the post_install script
-    if [[ $post_install && -x $dkms_tree/$module/$module_version/source/${post_install%% *} ]]; then
-        echo $""
-        echo $"Running post_install:"
-        $dkms_tree/$module/$module_version/source/$post_install
-    fi
+    run_build_script post_install "$post_install"
 
     # Make modules.conf changes as necessary
     echo $""
@@ -1356,11 +1352,7 @@ prepare_build()
     cp -rf "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
 
     # Run the pre_build script
-    if [[ $pre_build && -x $dkms_tree/$module/$module_version/source/${pre_build%% *} ]]; then
-        echo $""
-        echo $"Running the pre_build script:"
-        $dkms_tree/$module/$module_version/source/$pre_build
-    fi
+    run_build_script pre_build "$pre_build"
 
     cd "$dkms_tree/$module/$module_version/build"
 
@@ -1393,10 +1385,8 @@ do_build()
     date >> "$dkms_tree/$module/$module_version/build/make.log"
     local the_make_command="${make_command/#make/make KERNELRELEASE=${kernelver_array[0]}}"
 
-    invoke_command "$the_make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$the_make_command" background
-
-    # Make sure good return status
-    if [ "$?" -ne 0 ]; then
+    if ! invoke_command "$the_make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$the_make_command" background; then
+        # Make sure good return status
         echo $"" >&2
         echo $"Error! Bad return status for module build on kernel: ${kernelver_array[0]} (${arch_array[0]})" >&2
         echo $"Consult the make.log in the build directory" >&2
@@ -1414,40 +1404,31 @@ do_build()
     fi
 
     # Make sure all the modules built successfully
-    local count=0
-    while [ "$count" -lt "${#built_module_name[@]}" ]; do
-        if ! [ -e "${built_module_location[$count]}${built_module_name[$count]}$module_suffix" ]; then
-            echo $"" >&2
-            echo $"Error!  Build of ${built_module_name[$count]}$module_suffix failed for: ${kernelver_array[0]} (${arch_array[0]})" >&2
-            echo $"Consult the make.log in the build directory" >&2
-            echo $"$dkms_tree/$module/$module_version/build/ for more information." >&2
-            report_build_problem
-            exit 7
-        fi
-        count=$(($count+1))
+    for ((count=0; count < ${#built_module_name[@]}; count++)); do
+        [[ -e ${built_module_location[$count]}${built_module_name[$count]}$module_suffix ]] && continue
+        echo $"" >&2
+        echo $"Error!  Build of ${built_module_name[$count]}$module_suffix failed for: ${kernelver_array[0]} (${arch_array[0]})" >&2
+        echo $"Consult the make.log in the build directory" >&2
+        echo $"$dkms_tree/$module/$module_version/build/ for more information." >&2
+        report_build_problem
+        exit 7
     done
     cd - >/dev/null
 
     # Build success, so create DKMS structure for a built module
     mkdir -p "$base_dir/log"
-    [ -n "$kernel_config" ] && cp -f "$kernel_config" "$base_dir/log/"
+    [[ $kernel_config ]] && cp -f "$kernel_config" "$base_dir/log/"
     mv -f "$dkms_tree/$module/$module_version/build/make.log" "$base_dir/log/make.log" 2>/dev/null
 
     # Save a copy of the new module
     mkdir "$base_dir/module" >/dev/null
-    local count=0
-    while [ "$count" -lt "${#built_module_name[@]}" ]; do
-        [ "${strip[$count]}" != "no" ] && strip -g "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix"
+    for ((count=0; count < ${#built_module_name[@]}; count++)); do
+        [[ ${strip[$count]} != no ]] && strip -g "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix"
         cp -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix" "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
-        count=$(($count+1))
     done
 
     # Run the post_build script
-    if [ -n "$post_build" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$post_build" | sed 's/ .*//'` ]; then
-        echo $""
-        echo $"Running the post_build script:"
-        $dkms_tree/$module/$module_version/source/$post_build
-    fi
+    run_build_script post_build "$post_build"
 }
 
 clean_build()
@@ -1592,11 +1573,7 @@ do_uninstall()
     fi
 
     # Run the post_remove script
-    if [ -n "$post_remove" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$post_remove" | sed 's/ .*//'` ]; then
-        echo $""
-        echo $"Running the post_remove script:"
-        $dkms_tree/$module/$module_version/source/$post_remove
-    fi
+    run_build_script post_remove "$post_remove"
 
     # Run depmod because we changed /lib/modules
     invoke_command "do_depmod $1" "depmod" background
