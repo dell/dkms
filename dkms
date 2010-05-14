@@ -1520,20 +1520,19 @@ do_uninstall()
     local was_active="" 
     local kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-$1-$2")
     local real_dest_module_location
-    if [ "$kernel_symlink" == "$module_version/$1/$2" ]; then
+    if [[ $kernel_symlink = $module_version/$1/$2 ]]; then
         was_active="true"
         echo $""
         echo $"Status: Before uninstall, this module version was ACTIVE on this kernel."
         # remove kabi-tracking if last instance removed
         set_weak_modules
-        if [ -n "${weak_modules}" ] &&
-            [ `$0 status -m $module -v $module_version | grep -v "installed-weak" | grep -c "installed"` -eq 1 ]; then
+        if [[ ${weak_modules} ]] && \
+	    ($0 status -m $module -v $module_version | grep -v "installed-weak" | grep -q "installed"); then
             echo $"Removing any linked weak-modules"
             list_each_installed_module "$module" "$1" "$2" | ${weak_modules} --remove-modules
         fi
 
-        count=0
-        while [ "$count" -lt "${#built_module_name[@]}" ]; do
+        for ((count=0; count < ${#built_module_name[@]}; count++)); do
             real_dest_module_location="$(find_actual_dest_module_location $module $count $1 $2)"
             echo $""
             echo $"${dest_module_name[$count]}$module_suffix:"
@@ -1541,7 +1540,7 @@ do_uninstall()
             echo $"   - Deleting from: $install_tree/$1${real_dest_module_location}/"
             rm -f "$install_tree/$1${real_dest_module_location}/${dest_module_name[$count]}$module_suffix"
             echo $" - Original module"
-            if [ -e "$dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix" ]; then
+            if [[ -e $dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix ]]; then
                 case "$running_distribution" in
                 Debian* | Ubuntu* ) ;;
                 *)
@@ -1557,14 +1556,12 @@ do_uninstall()
                 echo $"   - Use the dkms install command to reinstall any previous module version."
 
                 # Remove modules_conf entries from /etc/modules.conf if remake_initrd is set or if this is last instance removed
-                if [ -n "$remake_initrd" ] || \
-                    [ `$0 status -m $module -v $module_version | \
-                    grep -c "installed"` -eq 1 ]; then
+                if [[ $remake_initrd ]] || \
+                    ($0 status -m $module -v $module_version | grep -q "installed"); then
                     echo $""
                     moduleconfig_remove "$1"
                 fi
             fi
-            count=$(($count+1))
         done
         rm -f "$dkms_tree/$module/kernel-$1-$2"
     else
@@ -1579,34 +1576,32 @@ do_uninstall()
     invoke_command "do_depmod $1" "depmod" background
 
     # Do remake_initrd things (remake initrd)
-    if [ -n "$remake_initrd" ] && [ -n "$was_active" ]; then
-        remake_initrd "$1" "$2"
-        if [ "$?" -ne 0 ]; then
-            echo $""
-            echo $"WARNING! WARNING! WARNING!"
-            echo $"There was a problem remaking your initrd.  You must manually remake it"
-            echo $"before booting into this kernel."
-            echo $""
-        fi
+    if [[ $remake_initrd && $was_active ]] && ! remake_initrd "$1" "$2"; then
+        echo $""
+        echo $"WARNING! WARNING! WARNING!"
+        echo $"There was a problem remaking your initrd.  You must manually remake it"
+        echo $"before booting into this kernel."
+        echo $""
     fi
 
     # Delete the original_module if nothing for this kernel is installed anymore
-    if [ -n "$was_active" ] && [ -d "$dkms_tree/$module/original_module/$1/$2" ] && ! [ -d "$dkms_tree/$module/original_module/$1/$2/collisions" ]; then
+    if [[ $was_active && -d $dkms_tree/$module/original_module/$1/$2 && \
+	! -d $dkms_tree/$module/original_module/$1/$2/collisions ]]; then
         echo $""
         echo $"Removing original_module from DKMS tree for kernel $1 ($2)"
         rm -rf "$dkms_tree/$module/original_module/$1/$2" 2>/dev/null
-        [ -z "`find $dkms_tree/$module/original_module/$1/* -maxdepth 0 -type d 2>/dev/null`" ] && rm -rf "$dkms_tree/$module/original_module/$1"
-    elif [ -n "$was_active" ] && [ -d "$dkms_tree/$module/original_module/$1/$2/collisions" ]; then
+        [[ $(find $dkms_tree/$module/original_module/$1/* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module/$1"
+    elif [[ $was_active && -d $dkms_tree/$module/original_module/$1/$2/collisions ]]; then
         echo $""
         echo $"Keeping directory $dkms_tree/$module/original_module/$1/$2/collisions/"
         echo $"for your reference purposes.  Your kernel originally contained multiple"
         echo $"same-named modules and this directory is now where these are located."
     fi
-    [ -z "`find $dkms_tree/$module/original_module/* -maxdepth 0 -type d 2>/dev/null`" ] && rm -rf "$dkms_tree/$module/original_module"
+    [[ $(find $dkms_tree/$module/original_module/* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module"
 
     # Re-add entries to modules.conf if this module/version is still installed on another kernel
     # But only do this if it was just ACTIVE on the kernel we just uninstalled from
-    [ -n "$was_active" ] && [ -n "$remake_initrd" ] && $0 status -m $module -v $module_version | grep -q "installed" && moduleconfig_add "$1"
+    [[ $was_active && $remake_initrd ]] && $0 status -m $module -v $module_version | grep -q "installed" && moduleconfig_add "$1"
 
     echo $""
     echo $"DKMS: uninstall Completed."
