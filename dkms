@@ -1129,7 +1129,7 @@ install_module()
     check_module_exists
 
     # Make sure that kernel exists to install into
-    if ! [ -e "$install_tree/${kernelver_array[0]}" ]; then
+    if ! [[ -e $install_tree/${kernelver_array[0]} ]]; then
         echo $"" >&2
         echo $"Error! The directory $install_tree/${kernelver_array[0]} doesn't exist." >&2
         echo $"You cannot install a module onto a non-existant kernel." >&2
@@ -1142,7 +1142,7 @@ install_module()
     # Make sure the $module_name_after exists
     set_module_suffix "${kernelver_array[0]}"
     for module_name_after in "${dest_module_name[@]}"; do
-        if ! [ -e "$base_dir/module/$module_name_after$module_suffix" ]; then
+        if ! [[ -e $base_dir/module/$module_name_after$module_suffix ]]; then
             echo $"" >&2
             echo $"Error! Could not locate $module_name_after$module_suffix for module $module in the DKMS tree." >&2
             echo $"You must run a dkms build for kernel ${kernelver_array[0]} (${arch_array[0]}) first." >&2
@@ -1152,7 +1152,7 @@ install_module()
 
     # Check that its not already installed (kernel symlink)
     kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}")
-    if [ "$kernel_symlink" == "$module_version/${kernelver_array[0]}/${arch_array[0]}" ]; then
+    if [[ $kernel_symlink = $module_version/${kernelver_array[0]}/${arch_array[0]} ]]; then
         echo $"" >&2
         echo $"Error! This module/version combo is already installed" >&2
         echo $"for kernel: ${kernelver_array[0]} (${arch_array[0]})" >&2
@@ -1163,85 +1163,80 @@ install_module()
     # else we can wind up with the first half of an upgrade failing to install anything,
     # while the second half of the upgrade, the removal, then succeeds, leaving us with
     # nothing installed.
-    if [ -n "$rpm_safe_upgrade" ]; then
-        force="true"
-    fi
+    [[ $rpm_safe_upgrade ]] && force="true"
 
     # Save the original_module if one exists, none have been saved before, and this is the first module for this kernel
     local lib_tree="$install_tree/${kernelver_array[0]}"
-    local count=0
-    while [ "$count" -lt ${#built_module_name[@]} ]; do
+    local count
+    for ((count=0; count < ${#built_module_name[@]}; count++)); do
         echo $""
         echo $"${dest_module_name[$count]}$module_suffix:"
         # Check this version against what is already in the kernel
-        if ! check_version_sanity "${kernelver_array[0]}" "${arch_array[0]}" "$obsolete_by" "${dest_module_name[$count]}"; then
-            count=$(($count + 1))
-            continue
-        fi
+        check_version_sanity "${kernelver_array[0]}" "${arch_array[0]}" \
+	    "$obsolete_by" "${dest_module_name[$count]}" || continue
 
-        if [ "$count" -eq 0 ]; then
-            # Run the pre_install script
-            if [ -n "$pre_install" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$pre_install" | sed 's/ .*//'` ]; then
-                echo $""
-                echo $"Running the pre_install script:"
-                $dkms_tree/$module/$module_version/source/$pre_install
-                if [ "$?" -ne 0 -a -z "$force" ]; then
-                    echo $"pre_install failed, aborting install." >&2
-                    echo $"You may override by specifying --force." >&2
-                    exit 101
-                fi
+        if ((count == 0)) && [[ $pre_install && \
+	    -x $dkms_tree/$module/$module_version/source/${pre_install%% *} ]]; then
+            echo $""
+            echo $"Running the pre_install script:"
+            if ! $dkms_tree/$module/$module_version/source/$pre_install && \
+		! [[ $force ]]; then
+                echo $"pre_install failed, aborting install." >&2
+                echo $"You may override by specifying --force." >&2
+                exit 101
             fi
         fi
-        local module_count=`find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f | wc -l | awk {'print $1'}`
+        local module_count=$(find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f | wc -l | awk {'print $1'})
         echo $" - Original module"
-        if ! [ -L "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}" ]; then
+	if [[ -L $dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]} && \
+	    -e $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/${dest_module_name[$count]}$module_suffix ]]; then
+            echo $"   - An original module was already stored during a previous install"
+        elif ! [[ -L $dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]} ]; then
             local archive_pref1="$lib_tree/extra/${dest_module_name[$count]}$module_suffix"
             local archive_pref2="$lib_tree/updates/${dest_module_name[$count]}$module_suffix"
             local archive_pref3="$lib_tree${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
             local archive_pref4=""
-            [ "$module_count" -eq 1 ] && archive_pref4="`find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f`"
+            ((module_count == 1)) && archive_pref4=$(find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f)
             local original_module=""
             local found_orginal=""
             for original_module in $archive_pref1 $archive_pref2 $archive_pref3 $archive_pref4; do
-                if [ -f "$original_module" ]; then
-                    case "$running_distribution" in
-                        Debian* | Ubuntu* ) ;;
-                        *)
-                            echo $"   - Found $original_module"
-                            echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/"
-                            echo $"   - Archiving for uninstallation purposes"
-                            mkdir -p "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}"
-                            mv -f "$original_module" "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/"
-                            ;;
-                    esac
-                    found_original="yes"
-                    break
-                fi
+                [[ -f $original_module ]] || continue
+                case "$running_distribution" in
+                    Debian* | Ubuntu* ) ;;
+                    *)
+                        echo $"   - Found $original_module"
+                        echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/"
+                        echo $"   - Archiving for uninstallation purposes"
+                        mkdir -p "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}"
+                        mv -f "$original_module" "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/"
+                        ;;
+                esac
+                found_original="yes"
+                break
             done
-            if [ -z "$found_original" ] && [ "$module_count" -gt 1 ]; then
+            if [[ ! $found_original ]] && ((module_count > 1)); then
                 echo $"   - Multiple original modules exist but DKMS does not know which to pick"
                 echo $"   - Due to the confusion, none will be considered during a later uninstall"
-            elif [ -z "$found_original" ]; then
+            elif [[ ! $found_original ]]; then
                 echo $"   - No original module exists within this kernel"
             fi
-        elif [ -L "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}" ] && [ -e "$dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/${dest_module_name[$count]}$module_suffix" ]; then
-            echo $"   - An original module was already stored during a previous install"
         else
             echo $"   - This kernel never originally had a module by this name"
         fi
 
-        if [ "$module_count" -gt 1 ]; then
+        if ((module_count > 1)); then
             echo $" - Multiple same named modules!"
             echo $"   - $module_count named ${dest_module_name[$count]}$module_suffix in $lib_tree/"
             case "$running_distribution" in
-            Debian* | Ubuntu* ) ;;
-            *)
-                echo $"   - All instances of this module will now be stored for reference purposes ONLY"
-                echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/collisions/"
-                ;;
+		Debian* | Ubuntu* ) ;;
+		*)
+                    echo $"   - All instances of this module will now be stored for reference purposes ONLY"
+                    echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array[0]}/${arch_array[0]}/collisions/"
+                    ;;
             esac
-            for module_dup in `find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f`; do
-                dup_tree=`echo $module_dup | sed "s#^$lib_tree##" | sed "s#${dest_module_name[$count]}$module_suffix##"`
+            for module_dup in $(find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f); do
+                dup_tree="${module_dup#$lib_tree}"; 
+		dup_tree="${dup_tree/${dest_module_name[$count]}$module_suffix}"
                 case "$running_distribution" in
                 Debian* | Ubuntu* ) ;;
                 *)
@@ -1259,7 +1254,6 @@ install_module()
         mkdir -p $install_tree/${kernelver_array[0]}${dest_module_location[$count]}
         cp -f "$base_dir/module/${dest_module_name[$count]}$module_suffix" "$install_tree/${kernelver_array[0]}${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
 
-        count=$(($count + 1))
     done
 
     # Create the kernel-<kernelver> symlink to designate this version as active
@@ -1268,13 +1262,13 @@ install_module()
 
     # add to kabi-tracking
     set_weak_modules
-    if [ -n "${weak_modules}" ]; then
+    if [[ ${weak_modules} ]]; then
         echo $"Adding any weak-modules"
         list_each_installed_module "$module" "${kernelver_array[0]}" "${arch_array[0]}" | ${weak_modules} --add-modules
     fi
 
     # Run the post_install script
-    if [ -n "$post_install" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$post_install" | sed 's/ .*//'` ]; then
+    if [[ $post_install && -x $dkms_tree/$module/$module_version/source/${post_install%% *} ]]; then
         echo $""
         echo $"Running post_install:"
         $dkms_tree/$module/$module_version/source/$post_install
@@ -1285,41 +1279,34 @@ install_module()
     moduleconfig_add "${kernelver_array[0]}"
     etc_sysconfig_kernel_modify "add"
 
-    invoke_command "do_depmod ${kernelver_array[0]}" "depmod" background
-    if [ "$?" -ne 0 ]; then
+    if ! invoke_command "do_depmod ${kernelver_array[0]}" "depmod" background; then
         local unresolved_symbols="$(do_depmod ${kernelver_array[0]} 2>&1)"
-        local count=0
-        while [ "$count" -lt "${#built_module_name[@]}" ]; do
-            if echo "$unresolved_symbols" | grep -q "${dest_module_name[$count]}$module_suffix$"; then
-                echo $""
-                echo $"Problems with depmod detected.  Automatically uninstalling this module."
-                sleep 2
-                do_uninstall "${kernelver_array[0]}" "${arch_array[0]}"
-                echo $""
-                echo $"DKMS: Install Failed (depmod problems).  Module rolled back to built state."
-                exit 6
-            fi
-            count=$(($count + 1))
+        local count
+	for ((count=0; count<${#built_module_name[@]}; count++)); do
+            [[ $unresolved_symbols =~ ${dest_module_name[$count]}$module_suffix$ ]] || continue
+            echo $""
+            echo $"Problems with depmod detected.  Automatically uninstalling this module."
+            sleep 2
+            do_uninstall "${kernelver_array[0]}" "${arch_array[0]}"
+            echo $""
+            echo $"DKMS: Install Failed (depmod problems).  Module rolled back to built state."
+            exit 6
         done
     fi
 
     # Do remake_initrd things (save old initrd)
-    if [ -n "$remake_initrd" ]; then
-        remake_initrd "${kernelver_array[0]}" "${arch_array[0]}"
-        if [ "$?" -ne 0 ]; then
-            echo $"Problems with mkinitrd detected.  Automatically uninstalling this module."
-            sleep 2
-            do_uninstall "${kernelver_array[0]}" "${arch_array[0]}"
-            echo $""
-            echo $"DKMS: Install Failed (mkinitrd problems).  Module rolled back to built state."
-            exit 7
-        fi
+    if [[ $remake_initrd ]] && ! remake_initrd "${kernelver_array[0]}" "${arch_array[0]}"
+        echo $"Problems with mkinitrd detected.  Automatically uninstalling this module."
+        sleep 2
+        do_uninstall "${kernelver_array[0]}" "${arch_array[0]}"
+        echo $""
+        echo $"DKMS: Install Failed (mkinitrd problems).  Module rolled back to built state."
+        exit 7
     fi
 
     echo $""
     echo $"DKMS: install Completed."
 }
-
 
 prepare_build()
 {
