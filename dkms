@@ -1742,27 +1742,19 @@ find_module_from_ko()
 declare -a string_array
 add_string_to_array_unique()
 {
-    # string="$1"
-    local count=0
-    local found=0
-    while [ "$count" -lt "${#string_array[@]}" ]; do
-        if [ "$1" == "${string_array[$count]}" ]; then
-            found=1
-            break
-        fi
-        count=$(($count + 1))
+    local s
+    for s in "${string_array[@]}"; do
+        [[ $1 = $s ]] || continue
+	return
     done
-    if [ "${found}" -eq 0 ]; then
-        string_array[${#string_array[@]}]="$1"
-    fi
+    string_array[${#string_array[@]}]="$1"
 }
 
 print_string_array()
 {
-    local count=0
-    while [ "$count" -lt "${#string_array[@]}" ]; do
+    local s
+    for s in "${string_array[@]}"; do
         echo "${string_array[$count]}"
-        count=$(($count + 1))
     done
 }
 
