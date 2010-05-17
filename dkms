@@ -1996,27 +1996,20 @@ make_driver_disk_isotar()
     local image_name="$2"
     local source_dir="$3"
     local file
-    if [ "$type" == "iso" ]; then
-        invoke_command "mkisofs -v -r -J -pad -V $module -o $image_name ." "mkisofs" background
-    elif [ "$type" == "tar" ]; then
-        invoke_command "tar cvf $image_name ." "tar" background
-    fi
+    case $type in
+	iso) invoke_command "mkisofs -v -r -J -pad -V $module -o $image_name ." "mkisofs" background;;
+	tar) invoke_command "tar cvf $image_name ." "tar" background;;
+    esac
 }
 
 make_driver_disk_media()
 {
     echo "Copying files $2"
 
-    case "$media" in
-    floppy*)
-        make_driver_disk_floppy "$1" "$2"
-        ;;
-    iso*)
-        make_driver_disk_isotar "iso" "$1" "$2"
-        ;;
-    tar*)
-        make_driver_disk_isotar "tar" "$1" "$2"
-        ;;
+    case $media in
+	floppy*) make_driver_disk_floppy "$1" "$2";;
+	iso*) make_driver_disk_isotar "iso" "$1" "$2";;
+	tar*) make_driver_disk_isotar "tar" "$1" "$2";;
     esac
 }
 
