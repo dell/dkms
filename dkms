@@ -1866,33 +1866,28 @@ show_status()
 {
     setup_kernels_arches "status"
 
-    local j=0
+    local j
     if [ ${#kernelver_array[@]} -eq 0 ]; then
         do_status "$module" "$module_version" "${kernelver_array[0]}" "${arch_array[0]}" 0
         do_status_weak "$module" "$module_version" "${kernelver_array[0]}" "${arch_array[0]}"
     else
-        while [ $j -lt ${#kernelver_array[@]} ]; do
+	for ((j=0; j < ${#kernelver_array[@]}; j++)); do
             do_status "$module" "$module_version" "${kernelver_array[$j]}" "${arch_array[$j]}" 0
             do_status_weak "$module" "$module_version" "${kernelver_array[$j]}" "${arch_array[$j]}"
-            j=$(($j + 1))
         done
     fi
 }
 
 create_temporary_trees()
 {
-    if [ -n "$module" ] || [ -n "$module_version" ]; then
-        return
-    fi
-
-    [ -r dkms.conf ] || return
+    [[ $module || $module_version || ! -r dkms.conf ]] && return
 
     . dkms.conf
     module="$PACKAGE_NAME"
     module_version="$PACKAGE_VERSION"
 
-    source_tree=`mktemp -d`
-    dkms_tree=`mktemp -d`
+    source_tree=$(mktemp -d)
+    dkms_tree=$(mktemp -d)
 
     local source_tree_dir="$source_tree/$PACKAGE_NAME-$PACKAGE_VERSION"
     mkdir -p "$source_tree_dir"
