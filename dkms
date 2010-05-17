@@ -1968,31 +1968,26 @@ make_driver_disk_floppy()
     local source_dir="$2"
     local file
     local fs='ext2'
-    case "$distro" in
-    redhat*)
-        fs='vfat'
-        ;;
-    esac
+    [[ $distro = redhat* ]] && fs='vfat'
 
     rm -f "$image_name"
     invoke_command "dd if=/dev/zero of=$image_name bs=$(($size/20))k count=20" "making a blank floppy image" background
-    if [ "$fs" == 'vfat' ]; then
-        invoke_command "mkdosfs $image_name" "mkdosfs" background
-    elif [ "$fs" == 'ext2' ]; then
-        invoke_command "mke2fs -F $image_name" "mke2fs" background
-    fi
+    case $fs in
+	vfat) invoke_command "mkdosfs $image_name" "mkdosfs" background;;
+	ext2) invoke_command "mke2fs -F $image_name" "mke2fs" background;;
+    esac
 
-    local mntdir=`mktemp -d $tmp_location/dkms.XXXXXX`
-    if [ -z "$mntdir" ]; then
+    local mntdir=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    if [[ ! $mntdir ]]; then
         echo $""
         echo $"Error: Could not create a temporary directory, failing."
         return
     fi
     invoke_command "mount -o loop -t $fs $image_name $mntdir >/dev/null 2>&1" "loopback mounting disk image"
-    [ -d "$mntdir/lost+found" ] && rmdir "$mntdir/lost+found"
+    [[ -d $mntdir/lost+found ]] && rmdir "$mntdir/lost+found"
     invoke_command "cp -r $source_dir/* $mntdir/" "  copying files to floppy disk image"
     invoke_command "umount $mntdir" "unmounting disk image"
-    rm -rf $mntdir
+    rm -rf "$mntdir"
 }
 
 make_driver_disk_isotar()
