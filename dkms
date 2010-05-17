@@ -1898,14 +1898,13 @@ create_temporary_trees()
 
 delete_temporary_trees()
 {
+    [[ $temporary_trees_del_command ]] || return
     $temporary_trees_del_command
-    if [ -n "$temporary_trees_del_command" ]; then
-        module=
-        module_version=
-        source_tree=
-        dkms_tree=
-        temporary_trees_del_command=
-    fi
+    module=
+    module_version=
+    source_tree=
+    dkms_tree=
+    temporary_trees_del_command=
 }
 
 in_temporary_trees()
