@@ -2015,19 +2015,11 @@ make_driver_disk_media()
 
 driver_disk_suffix()
 {
-    local suffix
-    case "$media" in
-    floppy*)
-        suffix="img"
-        ;;
-    iso*)
-        suffix="iso"
-        ;;
-    tar*)
-        suffix="tar"
-        ;;
+    case $media in
+	floppy*) echo "img";;
+	iso*) echo "iso";;
+	tar*) echo "tar";;
     esac
-    echo $suffix
 }
 
 make_redhat_driver_disk()
