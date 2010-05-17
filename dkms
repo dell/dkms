@@ -1911,12 +1911,8 @@ in_temporary_trees() { [[ $temporary_trees_del_command ]] ;}
 
 media_valid()
 {
-    if [ "$media" == "floppy" ] ||
-        [ "$media" == "iso"   ] ||
-        [ "$media" == "tar" ]; then
-        return 0
-    fi
-    return 1
+    local mrx='^(floppy|iso|tar)$'
+    [[ $media =~ $mrx ]]
 }
 
 make_driver_disk()
@@ -1924,7 +1920,7 @@ make_driver_disk()
     setup_kernels_arches "mkdriverdisk"
 
     # Check that the right arguments were passed
-    if [ -z "$module" ] || [ -z "$module_version" ] || [ -z "$distro" ] || [ -z "${kernelver_array[0]}" ]; then
+    if ! [[ $module && $module_version && $distro && ${kernelver_array[0]} ]]; then
         echo $"" >&2
         echo $"Error! Invalid number of parameters passed." >&2
         echo $"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver> [--media floppy|iso|tar]" >&2
@@ -1932,9 +1928,8 @@ make_driver_disk()
     fi
 
     # default to floppy media
-    [ -z "$media" ] && media="floppy"
-    media_valid
-    if [ $? -eq 1 ]; then
+    [[ $media ]] || media="floppy"
+    if ! media_valid; then
         echo $"" >&2
         echo "$Error! Media $media is invalid." >&2
         echo $"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver> [--media floppy|iso|tar]" >&2
@@ -1945,31 +1940,24 @@ make_driver_disk()
     check_module_exists
 
     # Confirm that distro is supported
-    case "$distro" in
-    redhat | redhat[12] | suse | UnitedLinux | ubuntu)
-        ;;
-    *)
-        echo $"" >&2
-        echo $"Error! Invalid distro argument. Currently, the distros" >&2
-        echo $"supported are: redhat, redhat1, redhat2, suse, UnitedLinux" >&2
-        echo $"               ubuntu" >&2
-        exit 3
+    case $distro in
+	redhat | redhat[12] | suse | UnitedLinux | ubuntu) ;;
+	*)
+            echo $"" >&2
+            echo $"Error! Invalid distro argument. Currently, the distros" >&2
+            echo $"supported are: redhat, redhat1, redhat2, suse, UnitedLinux" >&2
+            echo $"               ubuntu" >&2
+            exit 3
         ;;
     esac
 
     # Read the conf file
     read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}"
 
-    case "$distro" in
-    redhat*)
-        make_redhat_driver_disk
-        ;;
-    ubuntu)
-        make_ubuntu_driver_disk
-        ;;
-    *)
-        make_suse_driver_disk
-        ;;
+    case $distro in
+	redhat*) make_redhat_driver_disk;;
+	ubuntu) make_ubuntu_driver_disk;;
+	*) make_suse_driver_disk;;
     esac
 }
 
