@@ -2015,7 +2015,7 @@ make_driver_disk_media()
 
 driver_disk_suffix()
 {
-    case $media in
+    case $media in 
 	floppy*) echo "img";;
 	iso*) echo "iso";;
 	tar*) echo "tar";;
@@ -2024,29 +2024,25 @@ driver_disk_suffix()
 
 make_redhat_driver_disk()
 {
+    local i count
     # kludge to allow redhat1 driver disks with BOOT kernel modules (arch i386)
-    if [ "$distro" == "redhat1" ] && [ "$multi_arch" == "true" ]; then
-        local i=0
+    if [[ $distro = redhat1 && $multi_arch = true ]]; then
         local redhat1_okay="true"
         local other_arch=""
-        while [ $i -lt ${#kernelver_array[@]} ]; do
-            if [ "${arch_array[$i]}" != "i386" ] && [ "$other_arch" != "${arch_array[$i]}" ] && [ -n "$other_arch" ]; then
-                redhat1_okay="false"
-            elif [ "${arch_array[$i]}" != "i386" ] && [ "$other_arch" != "${arch_array[$i]}" ] && [ -z "$other_arch" ]; then
+	for ((i=0; i < ${#kernelver_array[@]}; i++)); do
+            if [[ ${arch_array[$i]} != i386 && $other_arch != ${arch_array[$i]} && $other_arch ]]; then
+                echo $"" >&2
+		echo $"Error! You have specified a Red Hat version 1 driver disk, but have also"  >&2
+		echo $"specified multiple architectures.  Version 1 does not support this." >&2
+		echo $"Use 'redhat2' instead (only OSes >= RHEL3, FC1 support version 2)." >&2
+		exit 3
+            elif [[ ${arch_array[$i]} != i386 && $other_arch != ${arch_array[$i]} && ! $other_arch ]]; then
                 other_arch="${arch_array[$i]}"
             fi
-            i=$(($i+1))
         done
-        if [ "$redhat1_okay" == "false" ]; then
-            echo $"" >&2
-            echo $"Error! You have specified a Red Hat version 1 driver disk, but have also"  >&2
-            echo $"specified multiple architectures.  Version 1 does not support this." >&2
-            echo $"Use 'redhat2' instead (only OSes >= RHEL3, FC1 support version 2)." >&2
-            exit 3
-        fi
     fi
 
-    if [ "$distro" == "redhat2" ] || [ "$multi_arch" == "true" ] && [ -z "$redhat1_okay" ]; then
+    if [[ ($distro = redhat2 || $multi_arch = true) && ! $redhat1_okay ]]; then
         echo $"Creating Red Hat v2 driver disk (arch support)."
         echo $""
         local rhdd_filename="rhdd"
@@ -2056,32 +2052,29 @@ make_redhat_driver_disk()
         local rhdd_filename="rhdd-6.1"
     fi
 
-    cpioarchive_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
-    if [ -z "$cpioarchive_dir_name" ]; then
+    cpioarchive_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    if [[ ! $cpioarchive_dir_name ]]; then
         echo $""
         echo $"Error: Could not create a temporary directory, failing."
         return
     fi
 
-    local i=0
-    while [ $i -lt ${#kernelver_array[@]} ]; do
+    for ((i=0; i < ${#kernelver_array[@]}; i++)); do
         set_module_suffix "${kernelver_array[$i]}"
-        local count=0
 
         local dd_prefix="${kernelver_array[$i]}"
-        [ "$distro" == "redhat2" ] && dd_prefix="${kernelver_array[$i]}/${arch_array[$i]}"
-        [ "$multi_arch" == "true" ] && [ -z "$redhat1_okay" ] && dd_prefix="${kernelver_array[$i]}/${arch_array[$i]}"
-
-        while [ "$count" -lt "${#dest_module_name[@]}" ]; do
+        [[ $distro = redhat2 ]] && dd_prefix="${kernelver_array[$i]}/${arch_array[$i]}"
+        [[ $multi_arch = true && -z $redhat1_okay ]] && dd_prefix="${kernelver_array[$i]}/${arch_array[$i]}"
+	for ((count=0; count < ${#dest_module_name[@]}; count++)); do
             if ! [ -e "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" ]; then
                 echo $"" >&2
                 echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver_array[$i]} (${arch_array[$i]})." >&2
                 echo $"Module/version must be in built state before making a driver disk." >&2
-                rm -rf $cpioarchive_dir_name
+                rm -rf "$cpioarchive_dir_name"
                 exit 5
             fi
             # FIXME: add check for KMP binary RPMs to include in the driver disk
-            if [ -z "$kernel_version_list" ]; then
+            if [[ ! $kernel_version_list ]]; then
                 kernel_version_list="kernel${kernelver_array[$i]}-${arch_array[$i]}"
             else
                 kernel_version_list="$kernel_version_list-kernel${kernelver_array[$i]}-${arch_array[$i]}"
@@ -2090,16 +2083,14 @@ make_redhat_driver_disk()
             echo "Marking ${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix..."
             cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$cpioarchive_dir_name/$dd_prefix/"
 
-            modules_cgz_list="$dd_prefix/${dest_module_name[$count]}$module_suffix\n${modules_cgz_list}"
-            count=$(($count+1))
+            modules_cgz_list="$dd_prefix/${dest_module_name[$count]}$module_suffix ${modules_cgz_list}"
         done
 
-        i=$(($i + 1))
     done
 
     # Create directory and necessary files
-    driver_disk_dir=`mktemp -d $tmp_location/dkms.XXXXXX`
-    if [ -z "$driver_disk_dir" ]; then
+    driver_disk_dir=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    if [[ ! $driver_disk_dir ]]; then
         echo $""
         echo $"Error: Could not create a temporary directory, failing."
         return
@@ -2113,17 +2104,17 @@ make_redhat_driver_disk()
 
     local files_into_driverdisk="modules.cgz $rhdd_filename modules.alias"
     for file in $files_for_driverdisk; do
-        if ! [ -e "$dkms_tree/$module/$module_version/source/redhat_driver_disk/$file" ]; then
-            echo $"Warning! File: $file not found in $dkms_tree/$module/$module_version/source/redhat_driver_disk/" >&2
-        else
-            files_into_driverdisk="$file $files_into_driverdisk"
+        if [[ -e $dkms_tree/$module/$module_version/source/redhat_driver_disk/$file ]]; then
+	    files_into_driverdisk="$file $files_into_driverdisk"
             cp -f "$dkms_tree/$module/$module_version/source/redhat_driver_disk/$file" "$driver_disk_dir/" 2>/dev/null
+	else
+            echo $"Warning! File: $file not found in $dkms_tree/$module/$module_version/source/redhat_driver_disk/" >&2
         fi
     done
     echo "$module-$module_version driver disk" > "$driver_disk_dir/$rhdd_filename"
 
     # Make sure the kernel_version_list is not too long
-    if [ `echo $kernel_version_list | wc -m | awk {'print $1'}` -gt 200 ]; then
+    if (( $(echo $kernel_version_list | wc -m | awk {'print $1'}) > 200 )); then
         kernel_version_list="manykernels"
     fi
 
@@ -2133,22 +2124,22 @@ make_redhat_driver_disk()
     echo $""
     echo $"Creating driver disk on $media media:"
     cd "$cpioarchive_dir_name"
-    invoke_command "echo -e '$modules_cgz_list' | cpio -oH crc 2>/dev/null | gzip -9 > ./modules.cgz" "compressing modules.cgz" background
+    invoke_command "echo '$modules_cgz_list' | cpio -oH crc 2>/dev/null | gzip -9 > ./modules.cgz" "compressing modules.cgz" background
     cp -f ./modules.cgz "$driver_disk_dir/"
 
     # generate modules.alias file
     # On 2.4 kernels and kernels with no aliases. this won't yield anything.
     touch ./modules.alias
-    for f in $(echo -e ${modules_cgz_list}); do
+    for f in ${modules_cgz_list}; do
         module_wo_suffix=$(basename ${f} ${module_suffix})
         tmp_alias="./modules.alias.${module_wo_suffix}"
         f="./${f}"
         depmod -n ${f} 2>/dev/null | grep ^alias > ${tmp_alias}
-        if [ -s ${tmp_alias} ]; then
-            cat ${tmp_alias} >> ./modules.alias
+        if [[ -s ${tmp_alias} ]]; then
+            cat "${tmp_alias}" >> ./modules.alias
         fi
     done
-    [ -e ./modules.alias ] && cp -f ./modules.alias "$driver_disk_dir/"
+    [[ -e ./modules.alias ]] && cp -f ./modules.alias "$driver_disk_dir/"
     # FIXME: add rpms/ directory, copy in KMP RPMs, run createrepo --pretty
 
     cd - >/dev/null
