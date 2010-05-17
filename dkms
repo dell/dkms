@@ -1907,11 +1907,7 @@ delete_temporary_trees()
     temporary_trees_del_command=
 }
 
-in_temporary_trees()
-{
-    [ -n "$temporary_trees_del_command" ]
-    return $?
-}
+in_temporary_trees() { [[ $temporary_trees_del_command ]] ;}
 
 media_valid()
 {
