@@ -2187,7 +2187,7 @@ find_external_dependencies()
 
 make_suse_driver_disk()
 {
-    if [ -z "$release" ]; then
+    if [[ ! $release ]]; then
         echo $"" >&2
         echo $"Error! Invalid number of parameters passed for suse/UnitedLinux driver disk." >&2
         echo $"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver>" >&2
@@ -2195,8 +2195,8 @@ make_suse_driver_disk()
         exit 3
     fi
 
-    local driver_disk_dir=`mktemp -d $tmp_location/dkms.XXXXXX`
-    if [ -z "$driver_disk_dir" ]; then
+    local driver_disk_dir=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    if [[ ! $driver_disk_dir ]]; then
         echo $""
         echo $"Error: Could not create a temporary directory, failing."
         return
@@ -2211,32 +2211,27 @@ make_suse_driver_disk()
     local deps="$(find_external_dependencies)"
 
     local offset=0
-    if [ -n "${deps[*]}" ]; then
-        # reserve a place for dependencies
-        local offset=1
-    fi
+    # reserve a place for dependencies
+    [[ ${deps[@]} ]] && offset=1
 
-    local count=0
-    while [ "$count" -lt "${#dest_module_name[@]}" ]; do
-
-        local i=0
-        local topdir=`printf "%02d" $(($count+1+offset))`
-        while [ "$i" -lt "${#kernelver_array[@]}" ]; do
+    local count
+    for ((count=0; count < ${#dest_module_name[@]}; count++)); do
+        local i
+        local topdir=$(printf "%02d" $(($count+1+offset)))
+	for ((i=0; i < ${#kernelver_array[@]}; i++)); do
             set_module_suffix "${kernelver_array[$i]}"
 
-            if ! [ -e "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" ]; then
+            if ! [[ -e $dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix ]]; then
                 echo $"" >&2
                 echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver_array[$i]} (${arch_array[$i]})." >&2
                 echo $"Module/version must be in built state before making a driver disk." >&2
                 rm -rf $temp_dir_name
                 exit 5
             fi
-                        # FIXME: add check for KMP binary RPMs to include in the driver disk
+            # FIXME: add check for KMP binary RPMs to include in the driver disk
             suse_arch=${arch_array[$i]}
             case $suse_arch in
-            i?86)
-                    suse_arch=i386
-                    ;;
+		i?86) suse_arch=i386;;
             esac
 
             echo "Marking ${kernelver_array[$i]}/${arch_array[$i]}/modules/${dest_module_name[$count]}$module_suffix..."
@@ -2251,13 +2246,12 @@ make_suse_driver_disk()
             esac
 
             # create directory for dependency information
-            [ -n "${deps[*]}" ] && mkdir -p "$driver_disk_dir/01/linux/$distro/$suse_arch-$release/modules"
+            [[ ${deps[@]} ]] && mkdir -p "$driver_disk_dir/01/linux/$distro/$suse_arch-$release/modules"
 
-            i=$(($i+1))
         done
 
         # ---
-        for arch_release in `find $driver_disk_dir/$topdir -maxdepth 1 -mindepth 1 -type d | sed "s#$driver_disk_dir\/$topdir\/##"`; do
+        for arch_release in $(find $driver_disk_dir/$topdir -maxdepth 1 -mindepth 1 -type d | sed "s#$driver_disk_dir\/$topdir\/##"); do
             cd "$driver_disk_dir/$topdir/$arch_release/install/"
             invoke_command "tar cvzf update.tar.gz lib/" "making update.tar.gz for $arch_release" background
             cd - >/dev/null
@@ -2268,35 +2262,33 @@ make_suse_driver_disk()
             echo $"  copying update.tar.gz for $arch_release to disk image..."
             cp -f "$driver_disk_dir/$topdir/$arch_release/install/update.tar.gz" "$driver_disk_dir/$topdir/linux/$distro/$arch_release/install/"
 
-            i=0
             postkernels=
-            archtest=`echo ${arch_release} | sed 's/-.*//'`
-            while [ "$i" -lt "${#kernelver_array[@]}" ]; do
-                if [ "${arch_array[$i]}" = "${archtest}" ]; then
+            archtest=${arch_release/-*}
+	    for ((i=0; i<${#kernelver_array[@]}; i++)); do
+                [[ ${arch_array[$i]} = ${archtest} ]] && \
                     postkernels="${postkernels} ${kernelver_array[$i]}"
-                fi
-                i=$(($i+1))
             done
 
-            if [ -n "${postkernels}" ]; then
+            if [[ ${postkernels} ]]; then
                 dstfile="$driver_disk_dir/$topdir/linux/$distro/$arch_release/install/update.post"
                 echo $"  creating update.post for $arch_release..."
                 (cat << EOF
 #!/bin/sh
 
+kernlist="${postkernels}"
+
+for kernel in \${kernlist}; do
+    if [ -e /boot/System.map-\${kernel} ]; then
+        depmod -a -F /boot/System.map-\${kernel} \${kernel}
+    fi
+done
+                
 EOF
-                 echo "kernlist=\"${postkernels}\""
-                 echo
-                 echo 'for kernel in ${kernlist}; do'
-                 echo '	if [ -e /boot/System.map-${kernel} ]; then'
-                 echo '		depmod -a -F /boot/System.map-${kernel} ${kernel}'
-                 echo '	fi'
-                 echo 'done'
-                ) > ${dstfile}
+		) > ${dstfile}
                 chmod a+x ${dstfile}
             fi
 
-            if [ -d "$driver_disk_dir/$topdir/$arch_release/modules/" ]; then
+            if [[ -d $driver_disk_dir/$topdir/$arch_release/modules/ ]]; then
                 echo $"  copying kernel modules for installation kernel to disk image..."
                 cp -f $driver_disk_dir/$topdir/$arch_release/modules/* $driver_disk_dir/$topdir/linux/$distro/$arch_release/modules/ 2>/dev/null
             else
@@ -2305,15 +2297,12 @@ EOF
 
             rm -fr "$driver_disk_dir/$topdir/$arch_release"
         done
-
-        # ---
-        count=$(($count+1))
     done
 
     local dir
-    if [ -n "${deps[*]}" ]; then
+    if [[ ${deps[@]} ]]; then
         for dir in "$driver_disk_dir/01/linux/$distro/"*"/modules"; do
-            for dep in ${deps[@]}; do
+            for dep in "${deps[@]}"; do
                 echo $dep >> "$dir/module.order"
             done
         done
