@@ -2427,7 +2427,7 @@ make_tarball()
     make_common_test "mktarball"
 
     # Check for dkms_dbversion
-    if ! [ -e "$dkms_tree/dkms_dbversion" ]; then
+    if ! [[ -e $dkms_tree/dkms_dbversion ]]; then
         echo $"" >&2
         echo $"Could not find the file $dkms_tree/dkms_dbversion." >&2
         echo $"Creating w/ default contents." >&2
@@ -2445,7 +2445,7 @@ make_tarball()
     esac
 
     # Error out if binaries-only is set and source-only is set
-    if [ -n "$binaries_only" ] && [ -n "$source_only" ]; then
+    if [[ $binaries_only && $source_only ]]; then
         echo $"" >&2
         echo $"Error!  You have specified both --binaries-only and --source-only." >&2
         echo $"You cannot do this." >&2
@@ -2455,35 +2455,32 @@ make_tarball()
     # Read the conf file
     read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}"
 
-    temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+    temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
     mkdir -p $temp_dir_name/dkms_main_tree
 
-    if [ -n "$source_only" ]; then
-    kernel_version_list="source-only"
+    if [[ $source_only ]]; then
+	kernel_version_list="source-only"
     else
-    local i=0
-    while [ $i -lt ${#kernelver_array[@]} ]; do
+	local i
+	for ((i=0; i<${#kernelver_array[@]}; i++)); do
+            if ! [[ -d $dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]} ]]; then
+		echo $"" >&2
+		echo $"Error! No modules built for ${kernelver_array[$i]} (${arch_array[$i]})." >&2
+		echo $"Modules must already be in the built state before using mktarball." >&2
+		rm -rf "$temp_dir_name" 2>/dev/null
+		exit 6
+            fi
 
-        if ! [ -d "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}" ]; then
-            echo $"" >&2
-            echo $"Error! No modules built for ${kernelver_array[$i]} (${arch_array[$i]})." >&2
-            echo $"Modules must already be in the built state before using mktarball." >&2
-            rm -rf "$temp_dir_name" 2>/dev/null
-            exit 6
-        fi
+            set_module_suffix "${kernelver_array[$i]}"
 
-        set_module_suffix "${kernelver_array[$i]}"
-
-        echo "Marking modules for ${kernelver_array[$i]} (${arch_array[$i]}) for archiving..."
-        if [ -z "$kernel_version_list" ]; then
-            kernel_version_list="kernel${kernelver_array[$i]}-${arch_array[$i]}"
-        else
-            kernel_version_list="${kernel_version_list}-kernel${kernelver_array[$i]}-${arch_array[$i]}"
-        fi
-        mkdir -p "$temp_dir_name/dkms_main_tree/${kernelver_array[$i]}/${arch_array[$i]}"
-        cp -rf "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}" "$temp_dir_name/dkms_main_tree/${kernelver_array[$i]}"
-
-        i=$(($i + 1))
+            echo "Marking modules for ${kernelver_array[$i]} (${arch_array[$i]}) for archiving..."
+            if [[ ! $kernel_version_list ]]; then
+		kernel_version_list="kernel${kernelver_array[$i]}-${arch_array[$i]}"
+            else
+		kernel_version_list="${kernel_version_list}-kernel${kernelver_array[$i]}-${arch_array[$i]}"
+            fi
+            mkdir -p "$temp_dir_name/dkms_main_tree/${kernelver_array[$i]}/${arch_array[$i]}"
+            cp -rf "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}" "$temp_dir_name/dkms_main_tree/${kernelver_array[$i]}"
     done
     fi
 
@@ -2491,31 +2488,29 @@ make_tarball()
     cp -f "$dkms_tree/dkms_dbversion" "$temp_dir_name/dkms_main_tree/"
 
     # Copy the source_tree or make special binaries-only structure
-    if [ -z "$binaries_only" ]; then
-        echo $""
-        echo $"Marking $dkms_tree/$module/$module_version/source for archiving..."
-        mkdir -p $temp_dir_name/dkms_source_tree
-        cp -rf $dkms_tree/$module/$module_version/source/* $temp_dir_name/dkms_source_tree
-    else
+    if [[ $binaries_only ]]; then
         echo $""
         echo $"Creating special tarball structure to accomodate only binaries."
         mkdir $temp_dir_name/dkms_binaries_only
         echo "$module" > $temp_dir_name/dkms_binaries_only/PACKAGE_NAME
         echo "$module_version" > $temp_dir_name/dkms_binaries_only/PACKAGE_VERSION
-        [ -z "$conf" ] && conf="$dkms_tree/$module/$module_version/source/dkms.conf"
+        [[ ! $conf ]] && conf="$dkms_tree/$module/$module_version/source/dkms.conf"
         cp -f $conf $temp_dir_name/dkms_binaries_only/ 2>/dev/null
+    else
+	echo $""
+        echo $"Marking $dkms_tree/$module/$module_version/source for archiving..."
+        mkdir -p $temp_dir_name/dkms_source_tree
+        cp -rf $dkms_tree/$module/$module_version/source/* $temp_dir_name/dkms_source_tree
     fi
 
     # Make the tarball
     cd $temp_dir_name
-    if [ `echo $kernel_version_list | wc -m | awk {'print $1'}` -gt 200 ]; then
+    if (( $(echo $kernel_version_list | wc -m | awk {'print $1'}) > 200 )); then
         kernel_version_list="manykernels"
     fi
     local tarball_name="$module-$module_version-$kernel_version_list.dkms.tar.gz"
-    [ -n "$archive_location" ] && tarball_name="$archive_location"
-    tar -czf $temp_dir_name/$tarball_name ./* 2>/dev/null
-    cd - >/dev/null
-    if [ "$?" -eq 0 ]; then
+    [[ $archive_location ]] && tarball_name="$archive_location"
+    if tar -czf $temp_dir_name/$tarball_name ./* 2>/dev/null; then
         echo $""
         mkdir -p $dkms_tree/$module/$module_version/tarball 2>/dev/null
         mv -f $temp_dir_name/$tarball_name $dkms_tree/$module/$module_version/tarball/
@@ -2523,10 +2518,12 @@ make_tarball()
         echo $"Tarball location: $dkms_tree/$module/$module_version/tarball/$tarball_name"
         echo $""
         echo $"DKMS: mktarball Completed."
+	cd - >/dev/null
         rm -rf $temp_dir_name
     else
         echo $"" >&2
         echo $"Error! Failed to make tarball." >&2
+	cd - >/dev/null
         rm -rf $temp_dir_name
         exit 6
     fi
