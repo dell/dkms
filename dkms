@@ -1738,33 +1738,13 @@ find_module_from_ko()
     echo ""
 }
 
-# be careful.  string_array is global
-declare -a string_array
-add_string_to_array_unique()
-{
-    local s
-    for s in "${string_array[@]}"; do
-        [[ $1 = $s ]] || continue
-	return
-    done
-    string_array[${#string_array[@]}]="$1"
-}
-
-print_string_array()
-{
-    local s
-    for s in "${string_array[@]}"; do
-        echo "${string_array[$count]}"
-    done
-}
-
 do_status_weak()
 {
     # these are the requested mod/ver/kern/arch fields
-    local r_mod="$1"; shift
-    local r_ver="$1"; shift
-    local r_kern="$1"; shift
-    local r_arch="$1"; shift
+    local r_mod="$1"
+    local r_ver="$2"
+    local r_kern="$3"
+    local r_arch="$4"
     local installedkern
     local ko
     local basename_ko
@@ -1772,45 +1752,46 @@ do_status_weak()
     local tree_ver
     local tree_kern
     local tree_arch
-    local f
+    local f s su
+    local string_array=()
     local depth=1
     [ -z "$r_mod" ] && depth=2
     # recognize weak modules.  These are in $kern/weak-updates but are symlinks to another $kern/extra file.
 
     for installedkern in $(find "$install_tree" -maxdepth 1 -mindepth 1 -type d 2>/dev/null); do
         for ko in $(find "$installedkern/weak-updates" -type l 2>/dev/null); do
-            installedkernver=$(basename $installedkern)
-            basename_ko=$(basename $ko)
+            installedkernver=${installedkern##*/}
+            basename_ko=${ko##*/}
             installed_ko=$(readlink -e $ko)
-            if [ ! -e "$installed_ko" ]; then
-                # dangling symlink, ouch, but is somebody else's problem so ignore it
-                continue
-            fi
+
+            # dangling symlink, ouch, but is somebody else's problem so ignore it
+	    [[ ! -e $installed_ko ]] && continue
+
             # remember, installed_ko is probably a relative path, so $kernelversion isn't present in its link
             # is $installed_ko in /var/lib/dkms as installed?  Find which module has it
             for f in $(find $dkms_tree/$r_mod -maxdepth $depth -mindepth $depth -name kernel-\* -type l 2>/dev/null); do
-                if [ -z "$r_mod" ]; then
-                    mod=$(find_module_from_ko "$depth" "$ko")
-                else
-                    mod="$r_mod"
-                fi
+		mod="$r_mod"
+		[[ $mod ]] || mod=$(find_module_from_ko "$depth" "$ko")
 		local q=$(readlink -e "$f");
-                tree_ver=$(echo "$q" | awk -F / '{print $1}')
-                tree_kern=$(echo "$q" | awk -F / '{print $2}')
-                tree_arch=$(echo "$q" | awk -F / '{print $3}')
+		q=(${q//\/})
+                tree_ver=${q[0]}
+                tree_kern=${q[1]}
+                tree_arch=${q[2]}
                 if diff $dkms_tree/$mod/$tree_ver/$tree_kern/$tree_arch/module/$basename_ko  \
-                    $installed_ko >/dev/null 2>&1; then
-                    if [ "$r_mod" == "$mod" -o -z "$r_mod" ] && \
-                        [ "$r_ver" == "$tree_ver" -o -z "$r_ver" ] && \
-                        [ "$r_kern" == "$installedkernver" -o -z "$r_kern" ] && \
-                        [ "$r_arch" == "$tree_arch" -o -z "$r_arch" ]; then
-                        add_string_to_array_unique "$mod, $tree_ver, $installedkernver, $tree_arch: installed-weak from $tree_kern"
-                    fi
+                    $installed_ko >/dev/null 2>&1 && [[ ($r_mod = $mod || ! $r_mod) && 
+                            ($r_ver = $tree_ver || ! $r_ver) && \
+				($r_kern = $installedkernver || ! $r_kern) && \
+				($r_arch = $tree_arch || ! $r_arch) ]]; then
+		    su="$mod, $tree_ver, $installedkernver, $tree_arch: installed-weak from $tree_kern"
+		    for s in "${string_array[@]}"; do
+			[[ $s = $su ]] && continue 2
+		    done
+		    string_array[${#string_array[@]}]="$su"
+		    echo "$su" 
                 fi
             done
         done
     done
-    print_string_array
 }
 
 do_status()
@@ -1823,11 +1804,14 @@ do_status()
 
     local next
     local working_dir
-    [ $tree_depth -eq 0 ] && next="mod"  && working_dir="$dkms_tree"
-    [ $tree_depth -eq 1 ] && next="ver"  && working_dir="$dkms_tree/$mod"
-    [ $tree_depth -eq 2 ] && next="kern" && working_dir="$dkms_tree/$mod/$ver"
-    [ $tree_depth -eq 3 ] && next="arch" && working_dir="$dkms_tree/$mod/$ver/$kern"
-    [ $tree_depth -eq 4 ] && next="done" && working_dir="$dkms_tree/$mod/$ver/$kern/$arch"
+
+    case $tree_depth in
+	0) next="mod"; working_dir="$dkms_tree";;
+	1) next="ver"; working_dir="$dkms_tree/$mod";;
+	2) next="kern"; working_dir="$dkms_tree/$mod/$ver";;
+	3) next="arch"; working_dir="$dkms_tree/$mod/$ver/$kern";;
+	4) next="done"; working_dir="$dkms_tree/$mod/$ver/$kern/$arch";;
+    esac
 
     if [ -n "${!next}" ] && [ "$next" != "done" ]; then
         do_status "$mod" "$ver" "$kern" "$arch" "$(($tree_depth + 1))"
