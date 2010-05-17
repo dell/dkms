@@ -2329,8 +2329,8 @@ make_ubuntu_driver_disk()
     local image_dir="$dkms_tree/$module/$module_version/driver_disk"
     local image_name="$module-$module_version-$distro-dd.$suffix"
 
-    local tempdir=`mktemp -d $tmp_location/dkms.XXXXXX`
-    if [ -z "$tempdir" ]; then
+    local tempdir=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    if [[ ! $tempdir ]]; then
         echo $""
         echo $"Error: Could not create a temporary directory, failing."
         return
@@ -2344,18 +2344,18 @@ make_ubuntu_driver_disk()
         exit 1
    fi
 
-   local i=0
-   while [ $i -lt ${#kernelver_array[@]} ]; do
+   local i
+   for ((i=0; i < ${#kernelver_array[@]}; i++)); do
       set_module_suffix "${kernelver_array[$i]}"
       # Driver disks only recognize i386 as package arch
-      local arch=$(echo ${arch_array[$i]} | sed -e 's/i.86/i386/')
-      local kvers=$(echo ${kernelver_array[$i]} | sed -e 's/[-_].*//')
+      local arch=${arch_array[$i]/i?86/i386}
+      local kvers=${kernelver_array[$i]/-/_}; kvers=${kvers%%_*}
        # ubuntu-drivers/<kver>/*_<debarch>.deb
       local dd_prefix="ubuntu-drivers/$kvers"
       local dd_suffix="_${arch}.deb"
-      local count=0
-      while [ "$count" -lt "${#dest_module_name[@]}" ]; do
-        if ! [ -e "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" ]; then
+      local count
+      for ((count=0; count < ${#dest_module_name[@]}; count++)); do
+        if ! [[ -e $dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix ]]; then
             echo $"" >&2
             echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver_array[$i]} (${arch_array[$i]})." >&2
             echo $"Module/version must be in built state before making a driver disk." >&2
@@ -2370,7 +2370,6 @@ make_ubuntu_driver_disk()
          local deb_lib_dir="$deb_dir/lib/modules/${kernelver_array[$i]}/updates/dkms"
          mkdir -p "$deb_lib_dir"
          cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$deb_lib_dir"
-         count=$(($count+1))
        done
 
        pushd "$deb_dir" > /dev/null 2>&1
@@ -2392,19 +2391,17 @@ EOF
        # Generate the DEBIAN/preinst file.
        # This is tricky as we need some parts evaluated now
        # and some parts evaluated at runtime
-       echo '#!/bin/bash' > DEBIAN/preinst
-       echo -n '[ "$(uname -r)" == ' >> DEBIAN/preinst
-       echo -n "\"${kernelver_array[$i]}\"" >> DEBIAN/preinst
-       echo  ' ] || exit 1' >> DEBIAN/preinst
-       echo 'exit 0' >> DEBIAN/preinst
-
+cat >DEBIAN/preinst <<EOF
+#!/bin/bash
+[[ \$(uname -r) = ${kernelver_array[$i]} ]] || exit 1
+exit 0
+EOF
        chmod 0775 DEBIAN/preinst
        cd "$tempdir/$dd_prefix"
        dpkg-deb --build debian
        mv debian.deb "${module}_${module_version}-${kernelver_array[$i]}${dd_suffix}"
        rm -rf debian
        popd > /dev/null 2>&1
-       i=$(($i+1))
    done
 
    echo "Copying source..."
