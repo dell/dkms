@@ -2534,7 +2534,7 @@ load_tarball()
     setup_kernels_arches "mktarball"
 
     # Error out of --archive was not set with the tarball location
-    if [ -z "$archive_location" ]; then
+    if [[ ! $archive_location ]]; then
         echo $"" >&2
         echo $"Error! Invalid number of parameters passed." >&2
         echo $"Usage: ldtarball --archive=<tarball-location>" >&2
@@ -2542,7 +2542,7 @@ load_tarball()
     fi
 
     # Error out if $archive_location does not exist
-    if ! [ -e "$archive_location" ]; then
+    if ! [[ -e $archive_location ]]; then
         echo $"" >&2
         echo $"Error! Cannot locate $archive_location." >&2
         echo $"File does not exist." >&2
@@ -2551,28 +2551,30 @@ load_tarball()
 
     # Figure out what kind of archive it is (tar.gz, tar, tar.bz, etc)
     local tar_options=""
-    if `gzip -t $archive_location 2>/dev/null`; then
-        tar_options="${tar_options}z"
-    fi
-    if `bzip2 -t $archive_location 2>/dev/null`; then
-        tar_options="${tar_options}j"
-    fi
+    for xpand in gzip bzip xz; do
+	$xpand -t $archive_location 2>/dev/null || continue
+	case $xpand in
+	    gzip) tar_options=z;;
+	    bzip2) tar_options=j;;
+	    xz) tar_options=J;;
+	esac
+	break
+    done
 
     # Untar it into $tmp_location
-    local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+    local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
     tar -${tar_options}xf $archive_location -C $temp_dir_name
 
     # Check that dkms_dbversion is not a future version
-    db_from_tarball="`cat $temp_dir_name/dkms_main_tree/dkms_dbversion 2>/dev/null`"
-    db_from_dkms="`cat $dkms_tree/dkms_dbversion 2>/dev/null`"
-    if [ -n "$db_from_tarball" ] && [ -n "$db_from_dkms" ]; then
-        if [[ $(VER "$db_from_tarball") > $(VER "$db_from_dkms") ]]; then
-            echo $"" >&2
-            echo $"Error! The tarball you are trying to load indicates it is database version" >&2
-            echo $"$db_from_tarball.  This version of DKMS only supports $db_from_dkms or lower.">&2
-            rm -rf $temp_dir_name
-            exit 9
-        fi
+    db_from_tarball=$(cat $temp_dir_name/dkms_main_tree/dkms_dbversion 2>/dev/null)
+    db_from_dkms=$(cat $dkms_tree/dkms_dbversion 2>/dev/null)
+    if [[ $db_from_tarball && $db_from_dkms && \
+	$(VER "$db_from_tarball") > $(VER "$db_from_dkms") ]]; then
+        echo $"" >&2
+        echo $"Error! The tarball you are trying to load indicates it is database version" >&2
+        echo $"$db_from_tarball.  This version of DKMS only supports $db_from_dkms or lower.">&2
+        rm -rf $temp_dir_name
+        exit 9
     fi
 
     # Make sure its a sane tarball
@@ -2581,9 +2583,9 @@ load_tarball()
     local is_from_mktarball=""
     local is_binaries_only=""
     local is_not_arch_aware=""
-    if ! [ -d "$temp_dir_name/dkms_main_tree" ]; then
-        conf=`find $temp_dir_name/ -name dkms.conf 2>/dev/null | head -n 1`
-        if [ -z "$conf" ]; then
+    if ! [[ -d $temp_dir_name/dkms_main_tree ]]; then
+        conf=$(find $temp_dir_name/ -name dkms.conf 2>/dev/null | head -n 1)
+        if [[ ! $conf ]]; then
             echo $"" >&2
             echo $"Error! Tarball does not appear to be a correctly formed" >&2
             echo $"DKMS archive. No dkms.conf found within it." >&2
@@ -2591,19 +2593,19 @@ load_tarball()
             exit 3
         fi
         read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}" "$conf"
-        tarball_source_tree_name=`echo $conf | sed "s#$temp_dir_name\/##" | sed 's/dkms.conf//' | sed 's/\/$//'`
-    elif ! [ -d "$temp_dir_name/dkms_source_tree" ] && [ -d "$temp_dir_name/dkms_binaries_only" ]; then
-        PACKAGE_NAME=`cat $temp_dir_name/dkms_binaries_only/PACKAGE_NAME 2>/dev/null`
-        PACKAGE_VERSION=`cat $temp_dir_name/dkms_binaries_only/PACKAGE_VERSION 2>/dev/null`
-        if [ -z "$PACKAGE_NAME" ] || [ -z "$PACKAGE_VERSION" ]; then
+        tarball_source_tree_name=$(echo $conf | sed "s#$temp_dir_name\/##" | sed 's/dkms.conf//' | sed 's/\/$//')
+    elif ! [[ -d $temp_dir_name/dkms_source_tree && -d $temp_dir_name/dkms_binaries_only ]]; then
+        PACKAGE_NAME=$(cat $temp_dir_name/dkms_binaries_only/PACKAGE_NAME 2>/dev/null)
+        PACKAGE_VERSION=$(cat $temp_dir_name/dkms_binaries_only/PACKAGE_VERSION 2>/dev/null)
+        if ! [[ $PACKAGE_NAME && $PACKAGE_VERSION ]]; then
             echo $"" >&2
             echo $"Error! Tarball does not appear to be a correctly formed" >&2
             echo $"DKMS archive." >&2
             rm -rf $temp_dir_name
             exit 5
         fi
-        if [ "`$0 status -m $PACKAGE_NAME -v $PACKAGE_VERSION 2>/dev/null`" == "" ]; then
-            if [ -e "$temp_dir_name/dkms_binaries_only/dkms.conf" ]; then
+        if [[ ! $($0 status -m $PACKAGE_NAME -v $PACKAGE_VERSION 2>/dev/null ) ]]; then
+            if [[ -e $temp_dir_name/dkms_binaries_only/dkms.conf ]]; then
             echo $""
             echo $"Binaries-only DKMS tarball to be loaded for $PACKAGE_NAME-$PACKAGE_VERSION"
             echo $"even though source for this module is not added to the DKMS tree.  "
@@ -2621,9 +2623,9 @@ load_tarball()
         fi
         is_from_mktarball="true"
         is_binaries_only="true"
-    elif [ -d "$temp_dir_name/dkms_source_tree" ]; then
+    elif [[ -d $temp_dir_name/dkms_source_tree ]]; then
         . $temp_dir_name/dkms_source_tree/dkms.conf 2>/dev/null
-        if [ -z "$PACKAGE_NAME" ] || [ -z "$PACKAGE_VERSION" ]; then
+        if ! [[ $PACKAGE_NAME && $PACKAGE_VERSION ]]; then
             echo $"" >&2
             echo $"Error! Tarball does not appear to be a correctly formed" >&2
             echo $"DKMS archive." >&2
@@ -2641,7 +2643,7 @@ load_tarball()
     fi
 
     # Is tarball from before DKMS 2.0 (prior to arch support)
-    if [ "$is_from_mktarball" == "true" ] && ! [ -e "$temp_dir_name/dkms_main_tree/dkms_dbversion" ]; then
+    if [[ $is_from_mktarball = true && ! -e $temp_dir_name/dkms_main_tree/dkms_dbversion ]]; then
         is_not_arch_aware="true"
         echo $"" >&2
         echo $"Warning!  This tarball was created with dkms < 2.0 and contains" >&2
@@ -2657,8 +2659,8 @@ load_tarball()
     echo $""
 
     # Load the source from the tarball or build it's structure (for binaries only)
-    if [ -z "$is_binaries_only" ]; then
-        if [ "`$0 status -m $module -v $module_version 2>/dev/null`" != "" ] && [ -z "$force" ]; then
+    if [[ ! $is_binaries_only ]]; then
+        if [[ $($0 status -m $module -v $module_version 2>/dev/null) && ! $force ]]; then
             echo $"Warning! Source for $module-$module_version already exists.  Skipping..." >&2
         else
             echo $"Loading $source_tree/$module-$module_version..."
@@ -2676,19 +2678,14 @@ load_tarball()
     fi
 
     # Load kernel directories
-    [ -n "$is_not_arch_aware" ] && dirs_to_load=`find $temp_dir_name/dkms_main_tree -type d -maxdepth 1 -mindepth 1 2>/dev/null`
-    [ -z "$is_not_arch_aware" ] && dirs_to_load=`find $temp_dir_name/dkms_main_tree -type d -maxdepth 2 -mindepth 2 2>/dev/null`
+    [[ $is_not_arch_aware ]] && dirs_to_load=$(find $temp_dir_name/dkms_main_tree -type d -maxdepth 1 -mindepth 1 2>/dev/null)
+    [[ $is_not_arch_aware ]] || dirs_to_load=$(find $temp_dir_name/dkms_main_tree -type d -maxdepth 2 -mindepth 2 2>/dev/null)
     for directory in $dirs_to_load; do
-        dirs_to_parse=`echo $directory | sed "s#.*dkms_main_tree/##"`
-        kernel_to_load=`echo $dirs_to_parse | sed "s#/.*##"`
-        # arch_to_load="${arch_array[0]##*/}"
-        [ `echo $dirs_to_parse | grep -c "/"` -gt 0 ] && arch_to_load=`echo $dirs_to_parse | sed "s#.*/##"` || arch_to_load="${arch_array[0]}"
-
+        dirs_to_parse=${directory/*dkms_main_tree\/}
+        kernel_to_load=${dirs_to_parse/\/*}
+        arch_to_load=${arch_array[0]/*\/}
         dkms_dir_location="$dkms_tree/$module/$module_version/$kernel_to_load/$arch_to_load"
-
-
-        dkms_dir_location="$dkms_tree/$module/$module_version/$kernel_to_load/$arch_to_load"
-        if [ -d "$dkms_dir_location" ] && [ -z "$force" ]; then
+        if [[ -d $dkms_dir_location && ! $force ]]; then
             echo $"Warning! $dkms_dir_location already exists.  Skipping..." >&2
         else
             echo $"Loading $dkms_dir_location..."
@@ -2699,8 +2696,8 @@ load_tarball()
     done
 
     # Create source symlink (if there isn't a real directory there)
-    if [ ! -h "$dkms_tree/$module/$module_version/source" ] && \
-       [ ! -d "$dkms_tree/$module/$module_version/source" ] || [ ! -z "$force" ]; then
+    if [[ ! -h $dkms_tree/$module/$module_version/source && \
+       ! -d $dkms_tree/$module/$module_version/source || $force ]]; then
         echo $"Creating $dkms_tree/$module/$module_version/source symlink..."
         rm -f "$dkms_tree/$module/$module_version/source"
         ln -s "$source_tree/$module-$module_version" "$dkms_tree/$module/$module_version/source"
