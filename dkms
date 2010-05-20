@@ -3140,6 +3140,24 @@ report_build_problem()
     fi
 }
 
+read_arg() {
+    # $1 = arg name
+    # $2 = arg value
+    # $3 = arg parameter
+    local rematch='^[^=]*=(.*)$'
+    if [[ $2 =~ $rematch ]]; then
+	read "$1" <<< "${BASH_REMATCH[1]}"
+    else
+	read "$1" <<< "$3"
+	return 1
+    fi
+}
+
+check_root() {
+    ((UID == 0)) && return
+    echo $"You must be root to use this command." >&2
+    exit 1
+}
 
 make_kmp()
 {
@@ -3188,22 +3206,8 @@ make_kmp()
 ####                     ####
 #############################
 
-# Set Path
-case ":$PATH:" in
-:/usr/sbin:)
-    ;;
-*)
-    PATH="$PATH:/usr/sbin"
-    ;;
-esac
-case ":$PATH:" in
-:/sbin:)
-    ;;
-*)
-    PATH="$PATH:/sbin"
-    ;;
-esac
-PATH="$PATH:/usr/lib/dkms"
+# Set a standard path
+PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/lib/dkms"
 
 # Ensure files and directories we create are readable to anyone,
 # since we aim to build as a non-root user
@@ -3213,7 +3217,7 @@ umask 022
 unset CC CXX CFLAGS CXXFLAGS LDFLAGS
 
 # Set important variables
-current_kernel=`uname -r`
+current_kernel=$(uname -r)
 dkms_tree="/var/lib/dkms"
 source_tree="/usr/src"
 install_tree="/lib/modules"
@@ -3222,9 +3226,9 @@ verbose=""
 dkms_frameworkconf="/etc/dkms/framework.conf"
 
 # these can come from the environment or the config file
-[ -z "${ADDON_MODULES_DIR}" -a -e /etc/sysconfig/module-init-tools ] && . /etc/sysconfig/module-init-tools
+[[ ! ${ADDON_MODULES_DIR} && -e /etc/sysconfig/module-init-tools ]] && . /etc/sysconfig/module-init-tools
 addon_modules_dir="${ADDON_MODULES_DIR}"
-[ -z "${addon_modules_dir}" ] && running_distribution="$(distro_version)"
+[[ ! ${addon_modules_dir} ]] && running_distribution="$(distro_version)"
 weak_modules="${WEAK_MODULES_BIN}"
 
 # Source in /etc/dkms_framework.conf
@@ -3259,211 +3263,50 @@ unset kernelver_array
 unset arch_array
 
 # Parse command line arguments
-while [ $# -gt 0 ]; do
+while (($# > 0)); do
     case $1 in
-    --dkmsframework*)
-        if echo $1 | grep '=' >/dev/null ; then
-            dkms_frameworkconf=`echo $1 | sed 's/^.*=//'`
-        else
-            dkms_frameworkconf="$2"
-            shift
-        fi
-        #immediately load this config
-        . $dkms_frameworkconf 2> /dev/null
-        ;;
-    --module*|-m)
-        if echo $1 | grep '=' >/dev/null ; then
-            module=`echo $1 | sed 's/^.*=//'`
-        else
-            module="$2"
-            shift
-        fi
-        ;;
-    -v)
-        if echo $1 | grep '=' >/dev/null ; then
-            module_version=`echo $1 | sed 's/^.*=//'`
-        else
-            module_version="$2"
-            shift
-        fi
-        ;;
-    --kernelver*|-k)
-        if echo $1 | grep '=' >/dev/null ; then
-            kernelver_array[${#kernelver_array[@]}]=`echo $1 | sed 's/^.*=//'`
-        else
-            kernelver_array[${#kernelver_array[@]}]="$2"
-            shift
-        fi
-        ;;
-    --distro*|-d)
-        if echo $1 | grep '=' >/dev/null ; then
-            distro=`echo $1 | sed 's/^.*=//'`
-        else
-            distro="$2"
-            shift
-        fi
-        ;;
-    --media*)
-        if echo $1 | grep '=' >/dev/null ; then
-            media=`echo $1 | sed 's/^.*=//'`
-        else
-            media="$2"
-            shift
-        fi
-        ;;
-    --release*|-r)
-        if echo $1 | grep '=' >/dev/null ; then
-            release=`echo $1 | sed 's/^.*=//'`
-        else
-            release="$2"
-            shift
-        fi
-        ;;
-    --templatekernel*)
-        if echo $1 | grep '=' >/dev/null ; then
-            template_kernel=`echo $1 | sed 's/^.*=//'`
-        else
-            template_kernel="$2"
-            shift
-        fi
-        ;;
-    -c)
-        if echo $1 | grep '=' >/dev/null ; then
-            conf=`echo $1 | sed 's/^.*=//'`
-        else
-            conf="$2"
-            shift
-        fi
-        ;;
-    --quiet|-q)
-        exec >/dev/null 2>&1
-        ;;
-    --version|-V)
-        echo $"dkms: [INSERT_VERSION_HERE]"
-        exit 0
-        ;;
-    --no-prepare-kernel)
-        no_prepare_kernel="no-prepare-kernel"
-        ;;
-    --no-clean-kernel)
-        no_clean_kernel="no-clean-kernel"
-        ;;
-    --binaries-only)
-        binaries_only="binaries-only"
-        ;;
-    --source-only)
-        source_only="source-only"
-        ;;
-    --force)
-        force="true"
-        ;;
-    --all)
-        all="true"
-        ;;
-    --verbose)
-        verbose="true"
-        ;;
-    --rpm_safe_upgrade)
-        rpm_safe_upgrade="true"
-        ;;
-    --dkmstree*)
-        if echo $1 | grep '=' >/dev/null ; then
-            dkms_tree=`echo $1 | sed 's/^.*=//'`
-        else
-            dkms_tree="$2"
-            shift
-        fi
-        ;;
-    --sourcetree*)
-        if echo $1 | grep '=' >/dev/null ; then
-            source_tree=`echo $1 | sed 's/^.*=//'`
-        else
-            source_tree="$2"
-            shift
-        fi
-        ;;
-    --installtree*)
-        if echo $1 | grep '=' >/dev/null ; then
-            install_tree=`echo $1 | sed 's/^.*=//'`
-        else
-            install_tree="$2"
-            shift
-        fi
-        ;;
-    --config*)
-        if echo $1 | grep '=' >/dev/null ; then
-            kernel_config=`echo $1 | sed 's/^.*=//'`
-        else
-            kernel_config="$2"
-            shift
-        fi
-        ;;
-    --archive*)
-        if echo $1 | grep '=' >/dev/null ; then
-            archive_location=`echo $1 | sed 's/^.*=//'`
-        else
-            archive_location="$2"
-            shift
-        fi
-        ;;
-    --legacy-postinst*)
-        if echo $1 | grep "=" >/dev/null ; then
-            legacy_postinst=`echo $1 | sed 's/^.*=//'`
-        else
-            legacy_postinst="$2"
-            shift
-        fi
-        ;;
-    --arch*|-a)
-        if echo $1 | grep '=' >/dev/null ; then
-            arch_array[${#arch_array[@]}]=`echo $1 | sed 's/^.*=//'`
-        else
-            arch_array[${#arch_array[@]}]="$2"
-            shift
-        fi
-        ;;
-    --size*)
-        if echo $1 | grep '=' >/dev/null ; then
-            size=`echo $1 | sed 's/^.*=//'`
-        else
-            size="$2"
-            shift
-        fi
-        ;;
-    --kernelsourcedir*)
-        if echo $1 | grep '=' >/dev/null ; then
-            kernel_source_dir=`echo $1 | sed 's/^.*=//'`
-        else
-            kernel_source_dir="$2"
-            shift
-        fi
-        ksourcedir_fromcli="true"
-        ;;
-    --directive*)
-        if echo $1 | grep '=' >/dev/null ; then
-            directive_array[${#directive_array[@]}]=`echo $1 | sed 's/[^=]\+=//'`
-        else
-            directive_array[${#directive_array[@]}]="$2"
-            shift
-        fi
-        ;;
-    --spec*)
-        if echo $1 | grep '=' >/dev/null ; then
-            specfile=`echo $1 | sed 's/^.*=//'`
-        else
-            specfile="$2"
-            shift
-        fi
-        ;;
-    -*|--*)
-        echo $"" >&2
-        echo $"Error!  Unknown option: $1" >&2
-        show_usage
-        exit 2
-        ;;
-    *)
-        action="$action $1"
-        ;;
+	--dkmsframework*)    read_arg dkms_frameworkconf "$1" "$2" || shift
+                             #immediately load this config
+                             . $dkms_frameworkconf 2> /dev/null;;
+	--module*|-m)        read_arg module "$1" "$2" || shift;;
+	-v)                  read_arg module_version "$1" "$2" || shift;;
+	--kernelver*|-k)     read_arg _kv "$1" "$2" || shift
+                             kernelver_array[${#kernelver_array[@]}]="$_kv";;
+	--distro*|-d)        read_arg distro "$1" "$2" || shift;;
+	--media*)            read_arg media "$1" "$2" ||shift;;
+	--release*|-r)       read_arg release "$1" "$2" || shift;;
+	--templatekernel*)   read_arg template_kernel "$1" "$2" || shift;;
+	-c)                  read_arg conf "$1" "$2" || shift;;
+	--quiet|-q)          exec >/dev/null 2>&1;;
+	--version|-V)        echo $"dkms: [INSERT_VERSION_HERE]"
+                             exit 0;;
+	--no-prepare-kernel) no_prepare_kernel="no-prepare-kernel";;
+	--no-clean-kernel)   no_clean_kernel="no-clean-kernel";;
+	--binaries-only)     binaries_only="binaries-only";;
+	--source-only)       source_only="source-only";;
+	--force)             force="true";;
+	--all)               all="true";;
+	--verbose)           verbose="true";;
+	--rpm_safe_upgrade)  rpm_safe_upgrade="true";;
+	--dkmstree*)         read_arg dkms_tree "$1" "$2" || shift;;
+	--sourcetree*)       read_arg source_tree "$1" "$2" || shift;;
+	--installtree*)      read_arg install_tree "$1" "$2" || shift;;
+	--config*)           read_arg kernel_config "$1" "$2" || shift;;
+	--archive*)          read_arg archive_location "$1" "$2" || shift;;
+	--legacy-postinst*)  read_arg legacy_postinst "$1" "$2" || shift;;
+	--arch*|-a)          read_arg _aa "$1" "$2" || shift
+                             arch_array[${#arch_array[@]}]="$_aa";;
+	--size*)             read_arg size "$1" "$2" || shift;;
+	--kernelsourcedir*)  read_arg kernel_source_dir "$1" "$2" || shift
+                             ksourcedir_fromcli="true";;
+	--directive*)        read_arg _da "$1" "$2" || shift
+	                     directive_array[${#directive_array[@]}]="$_da";;
+	--spec*)             read_arg specfile "$1" "$2" || shift;;
+	-*|--*)              echo $"" >&2
+                             echo $"Error!  Unknown option: $1" >&2
+                             show_usage
+                             exit 2;;
+	*)                   action="$action $1";;
     esac
     shift
 done
@@ -3471,87 +3314,30 @@ done
 # Run the specified action
 for action_to_run in $action; do
     case "$action_to_run" in
-    add)
-        add_module
-        ;;
-    remove)
-        # Make sure they're root
-        if [ `id -u` -ne 0 ]; then
-        echo $"You must be root to use this command." >&2
-        exit 1
-        fi
-        remove_module
-        ;;
-    build)
-        build_module
-        ;;
-    install)
-            # Make sure they're root
-        if [ `id -u` -ne 0 ]; then
-        echo $"You must be root to use this command." >&2
-        exit 1
-        fi
-        install_module
-        ;;
-    match)
-        # Make sure they're root
-        if [ `id -u` -ne 0 ]; then
-        echo $"You must be root to use this command." >&2
-        exit 1
-        fi
-        run_match
-        ;;
-    uninstall)
-        # Make sure they're root
-        if [ `id -u` -ne 0 ]; then
-        echo $"You must be root to use this command." >&2
-        exit 1
-        fi
-        uninstall_module
-        ;;
-    mkdriverdisk)
-        # Make sure they're root
-        if [ `id -u` -ne 0 ]; then
-        echo $"You must be root to use this command." >&2
-        exit 1
-        fi
-        make_driver_disk
-        ;;
-    mktarball)
-        make_tarball
-        ;;
-    mkrpm)
-        make_rpm
-        ;;
-    mkdeb)
-        make_debian "deb"
-        ;;
-    mkdsc)
-        make_debian "dsc"
-        ;;
-    mkkmp)
-        make_kmp
-        ;;
-    ldtarball)
-        # Make sure they're root if we're using --force
-        if [ `id -u` -ne 0 ] && [ "$force" == "true" ]; then
-        echo $"You must be root to use this command with the --force option." >&2
-        exit 1
-        fi
-        load_tarball
-        ;;
-    status)
-        show_status
-        ;;
-    '')
-        echo "" >&2
-        echo $"Error! No action was specified.">&2
-        show_usage
-        ;;
-    *)
-        echo "" >&2
-        echo $"Error! Unknown action specified: $action_to_run" >&2
-        show_usage
-        ;;
+	remove)       check_root && remove_module;;
+	install)      check_root && install_module;;
+	match)        check_root && run_match;;
+	uninstall)    check_root && uninstall_module;;
+	mkdriverdisk) check_root && make_driver_disk;;
+	build)        build_module;;
+	add)          add_module;;
+	mktarball)    make_tarball;;
+	mkrpm)        make_rpm;;
+	mkdeb)        make_debian "deb";;
+	mkdsc)        make_debian "dsc";;
+	mkkmp)        make_kmp;;
+	status)       show_status;;
+	ldtarball) # Make sure they're root if we're using --force
+            if ((UID != 0)) && [[ $force = true ]]; then
+		echo $"You must be root to use this command with the --force option." >&2
+		exit 1
+            fi
+            load_tarball ;;
+	'') echo "" >&2
+            echo $"Error! No action was specified.">&2
+            show_usage;;
+	*)  echo "" >&2
+            echo $"Error! Unknown action specified: $action_to_run" >&2
+            show_usage;;
     esac
 done
