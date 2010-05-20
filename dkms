@@ -2828,21 +2828,22 @@ make_rpm()
     local rpm_basedir="$dkms_tree/$module/$module_version/rpm"
 
     echo $""
-    if [ -e "$dkms_tree/$module/$module_version/source/$module-dkms-mkrpm.spec" ]; then
-        echo $"Using $dkms_tree/$module/$module_version/source/$module-dkms-mkrpm.spec"
-        SPECFILE="$dkms_tree/$module/$module_version/source/$module-dkms-mkrpm.spec"
-    elif [ -e "/etc/dkms/template-dkms-mkrpm.spec" ]; then
-        echo $"Using /etc/dkms/template-dkms-mkrpm.spec"
-        SPECFILE="/etc/dkms/template-dkms-mkrpm.spec"
-    else
+    local sp
+    for sp in "$dkms_tree/$module/$module_version/source/$module-dkms-mkrpm.spec" \
+	"/etc/dkms/template-dkms-mkrpm.spec"; do
+	[[ -e $sp ]] || continue
+	SPECFILE="$sp"
+	break
+    done
+    if [[ ! $SPECFILE ]]; then
         echo $"" >&2
-        echo $"Cannot find /etc/dkms/template-dkms-mkrpm.spec which is needed by" >&2
+        echo $"Cannot find $sp which is needed by" >&2
         echo $"DKMS in order use mkrpm." >&2
         exit 5
     fi
 
     # Error out if binaries-only is set and source-only is set
-    if [ -n "$binaries_only" ] && [ -n "$source_only" ]; then
+    if [[ $binaries_only && $source_only ]]; then
         echo $"" >&2
         echo $"Error!  You have specified both --binaries-only and --source-only." >&2
         echo $"You cannot do this." >&2
@@ -2851,12 +2852,12 @@ make_rpm()
 
     # Run a dkms mktarball for use in the rpm
     local mktarball_line
-    if [ ! -n "$source_only" ] || [ -n "$binaries_only" ]; then
+    if [[ ! $source_only || $binaries_only ]]; then
         mktarball_line="--binaries-only"
-        local i=0
+        local i
         echo $""
-        while [ $i -lt ${#kernelver_array[@]} ]; do
-            if ! [ -d "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}" ]; then
+	for ((i=0; i<${#kernelver_array[@]}; i++)); do
+            if ! [[ -d $dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]} ]]; then
             echo $"" >&2
             echo $"You do not seem to have $module $module_version built for" >&2
             echo $"${kernelver_array[$i]} (${arch_array[$i]}).  All modules must be in" >&2
@@ -2865,30 +2866,27 @@ make_rpm()
             fi
             echo $"Marking ${kernelver_array[$i]} (${arch_array[$i]}) for RPM..."
             mktarball_line="-k ${kernelver_array[$i]} -a ${arch_array[$i]} $mktarball_line"
-            i=$(($i + 1))
         done
     else
         mktarball_line="none"
     fi
 
-    local RC=0
-    local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+    local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
     trap 'rm -rf $temp_dir_name' EXIT HUP TERM
     mkdir -p ${temp_dir_name}/{BUILD,RPMS,SRPMS,SPECS,SOURCES}
     cp ${SPECFILE} ${temp_dir_name}/SPECS/dkms_mkrpm.spec
 
     #if using legacy mode, install common postinst
-    if [ "$legacy_postinst" != "0" ]; then
+    if ((legacy_postinst != 0)); then
         invoke_command "cp '$PREFIX/usr/lib/dkms/common.postinst' '${temp_dir_name}/SOURCES'" "copying legacy postinstall template"
     fi
 
     #Copy in the source tree
-    if [ ! -n "$binaries_only" ]; then
+    if [[ ! $binaries_only ]]; then
         invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '${temp_dir_name}/SOURCES/$module-$module_version'" "Copying source tree"
     fi
 
-    invoke_command "LC_ALL=C rpmbuild --define \"_topdir ${temp_dir_name}\" --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  /usr/lib/dkms/find-provides\" --define \"_use_internal_dependency_generator 0\" -ba ${temp_dir_name}/SPECS/dkms_mkrpm.spec > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
-    if [ "$?" -eq 0 ]; then
+    if invoke_command "LC_ALL=C rpmbuild --define \"_topdir ${temp_dir_name}\" --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  /usr/lib/dkms/find-provides\" --define \"_use_internal_dependency_generator 0\" -ba ${temp_dir_name}/SPECS/dkms_mkrpm.spec > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"; then
         mkdir -p ${rpm_basedir}
         cp -a ${temp_dir_name}/SRPMS/* ${temp_dir_name}/RPMS/*/* ${rpm_basedir}/
         echo $""
@@ -2899,11 +2897,10 @@ make_rpm()
         echo $"" >&2
         echo $"Error! There was a problem creating your rpm." >&2
         cat ${temp_dir_name}/rpmbuild.log >&2
-        RC=7
+        exit 7
     fi
     rm -rf $temp_dir_name
     trap > /dev/null 2>&1
-    [ ${RC} -ne 0 ] && exit ${RC}
 }
 
 preproc_file()
