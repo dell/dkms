@@ -1867,7 +1867,7 @@ show_status()
     setup_kernels_arches "status"
 
     local j
-    if [ ${#kernelver_array[@]} -eq 0 ]; then
+    if ((${#kernelver_array[@]} == 0)); then
         do_status "$module" "$module_version" "${kernelver_array[0]}" "${arch_array[0]}" 0
         do_status_weak "$module" "$module_version" "${kernelver_array[0]}" "${arch_array[0]}"
     else
@@ -2716,7 +2716,7 @@ run_match()
     set_kernel_source_dir "${kernelver_array[0]}"
 
     # Error if $template_kernel is unset
-    if [ -z "$template_kernel" ]; then
+    if [[ ! $template_kernel ]]; then
         echo $"" >&2
         echo $"Error! Invalid number of parameters passed." >&2
         echo $"Usage: match --templatekernel=<kernel-version> -k <kernel-version>" >&2
@@ -2725,26 +2725,24 @@ run_match()
     fi
 
     # Error out if $template_kernel = $kernel_version
-    if [ "$template_kernel" == "${kernelver_array[0]}" ]; then
+    if [[ $template_kernel = ${kernelver_array[0]} ]]; then
         echo $"" >&2
         echo $"Error! The templatekernel and the specified kernel version are the same." >&2
         exit 2
     fi
 
     # Read in the status of template_kernel
-    local template_kernel_status=`$0 status -k $template_kernel -a ${arch_array[0]} | grep ": installed"`
+    local template_kernel_status=$($0 status -k $template_kernel -a ${arch_array[0]} | grep ": installed")
 
     # If $module is set, grep the status only for that module
-    if [ -n "$module" ]; then
-
+    if [[ $module ]]; then
         # Make sure that its installed in the first place
-        if ! [ -d "$dkms_tree/$module/" ]; then
+        if ! [[ -d $dkms_tree/$module/ ]; then
             echo $"" >&2
             echo $"Error! The module: $module is not located in the DKMS tree." >&2
             exit 3
         fi
-
-        template_kernel_status=`echo "$template_kernel_status" | grep "^$module,"`
+        template_kernel_status=$(echo "$template_kernel_status" | grep "^$module,")
     fi
 
     echo $""
@@ -2752,7 +2750,7 @@ run_match()
     echo $"to the configuration of kernel: $template_kernel (${arch_array[0]})"
 
     # Prepare the kernel just once but only if there is actual work to do
-    if [ -z "$template_kernel_status" ]; then
+    if [[ ! $template_kernel_status ]]; then
         echo $""
         echo $"There is nothing to be done for this match."
     else
