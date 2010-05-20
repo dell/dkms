@@ -2737,7 +2737,7 @@ run_match()
     # If $module is set, grep the status only for that module
     if [[ $module ]]; then
         # Make sure that its installed in the first place
-        if ! [[ -d $dkms_tree/$module/ ]; then
+        if ! [[ -d $dkms_tree/$module/ ]]; then
             echo $"" >&2
             echo $"Error! The module: $module is not located in the DKMS tree." >&2
             exit 3
@@ -2794,11 +2794,11 @@ run_match()
             ! -h "$kernel_source_dir" && \
             -z "$ksourcedir_fromcli" ]]; then
             echo $"Kernel cleanup unnecessary for this kernel.  Skipping..."
-        elif [ -z "$no_clean_kernel" ]; then
+        elif [[ ! $no_clean_kernel ]]; then
             cd "$kernel_source_dir"
-            [ -z "$kerneldoth_contents" ] && invoke_command "make mrproper" "cleaning kernel tree (make mrproper)" background
-            [ -n "$config_contents" ] && echo "$config_contents" > .config
-            [ -n "$kerneldoth_contents" ] && echo "$kerneldoth_contents" > /boot/kernel.h
+            [[ $kerneldoth_contents ]] || invoke_command "make mrproper" "cleaning kernel tree (make mrproper)" background
+            [[ $config_contents ]] && echo "$config_contents" > .config
+            [[ $kerneldoth_contents ]] && echo "$kerneldoth_contents" > /boot/kernel.h
             cd - >/dev/null
         fi
     fi
