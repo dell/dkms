@@ -3076,7 +3076,7 @@ make_common_test()
     check_module_exists
 
     # Make sure that its installed in the first place
-    if ! [ -d "$dkms_tree/$module/$module_version" ]; then
+    if ! [[ -d $dkms_tree/$module/$module_version ]]; then
         echo $"" >&2
         echo $"Error! The module/version combo: $module-$module_version" >&2
         echo $"is not located in the DKMS tree." >&2
@@ -3094,7 +3094,7 @@ make_common_test()
     esac
 
     # Error out if binaries-only is set and source-only is set
-    if [ -n "$binaries_only" ] && [ -n "$source_only" ]; then
+    if [[ $binaries_only && $source_only ]]; then
         echo $"" >&2
         echo $"Error!  You have specified both --binaries-only and --source-only." >&2
         echo $"You cannot do this." >&2
