@@ -2914,19 +2914,45 @@ preproc_file()
     mv "$1.dkms-pp" "$1"
 }
 
-make_debian_test_depends()
-{
-    INSTALL_PACKAGES=""
-    # Check that the fakeroot command is present
-    if ! which fakeroot >/dev/null 2>&1 ; then
-        INSTALL_PACKAGES="fakeroot $INSTALL_PACKAGES"
-    fi
 
-    # Check that the dh_make command is present
-    if ! which dpkg-buildpackage >/dev/null 2>&1 ; then
-        INSTALL_PACKAGES="dpkg-dev $INSTALL_PACKAGES"
+debian_install()
+{
+    local getroot packages=("$@") tmpfile i
+    for ((i=0; i < ${#packages[@]}; i++)); do
+	dpkg-query -s "${packages[$i]}"| egrep -q '^Status:.* installed$' || continue
+	unset package[$i]
+    done
+    # if they are already installed, we are OK.
+    [[ ${package[@]} ]] || return
+    if ((UID != 0)); then
+	# figure out how to get root
+	for getroot in su-to-root gksudo kdesu sudo; do
+	    which $getroot >/dev/null 2>&1 || continue
+	    case $getroot in
+		su-to-root) getroot="$getroot -c";;
+		gksudo) [[ $DISPLAY ]] || continue
+		    getroot="$getroot --description 'DKMS Debian package builder' ";;
+		kdesu) [[ $DISPLAY ]] || continue;;
+	    esac
+	    break
+	done
     fi
-    echo "$INSTALL_PACKAGES"
+    if [[ -x /usr/sbin/synaptic && $DISPLAY ]] && tmpfile=$(mktemp); then
+	# Pretty GUI install.
+	trap 'rm -f "$tmpfile"' RET EXIT
+	for ((i=0; i=${#packages[@]}; i++)); do
+	    [[ ${packages[$i]} ]] && echo "install ${packages[$i]}" >>$tmpfile
+	done
+	$getroot "sh -c '/usr/sbin/synaptic --set-selections --non-interactive --hide-main-window < $tmpfile'"
+    else
+	$getroot apt-get -y install "${packages[@]}"
+    fi
+    if (( $? != 0)); then
+	echo $"" >&2
+        echo $"Error! Missing $INSTALL_PACKAGES" >&2
+        echo $"and unable to install.  Please ask an admin to install for you." >&2
+        exit 4
+    fi
 }
 
 make_debian()
@@ -2940,56 +2966,9 @@ make_debian()
 
     debian_package=$(echo $module | sed s/_/-/g)
 
-    SYNAPTIC=""
-    #Synaptic availablity
-    if [ -x /usr/sbin/synaptic ]; then
-        SYNAPTIC="TRUE"
-    fi
-
-    #test who we are
-    ROOT=""
-    if [ "$USER" != "root" ]; then
-        if [ -x /usr/sbin/su-to-root ]; then
-            ROOT="/usr/sbin/su-to-root -c"
-        elif [ -x /usr/bin/gksudo ] && [ ! -z "$DISPLAY" ]; then
-            ROOT="/usr/bin/gksudo --description 'DKMS Debian package builder' "
-        elif [ -x /usr/bin/kdesu ] && [ ! -z "$DISPLAY" ]; then
-            ROOT="/usr/bin/kdesu"
-        elif [ -x /usr/bin/sudo ]; then
-            ROOT="/usr/bin/sudo"
-        fi
-    fi
-
     # Read the conf file
     read_conf_or_die "${kernelver_array[0]}" "${arch_array[0]}"
-
-    #test if we are missing dependencies that are needed during package build
-    INSTALL_PACKAGES="`make_debian_test_depends`"
-    if [ ! -z "$INSTALL_PACKAGES" ]; then
-        if [ -z "$ROOT" ]; then
-            echo $"" >&2
-            echo $"Error! Missing $INSTALL_PACKAGES" >&2
-            echo $"and unable to install.  Please ask an admin to install for you." >&2
-            exit 4
-        fi
-        if [ ! -z "$SYNAPTIC" ] && [ ! -z "$DISPLAY" ]; then
-            local TEMPFILE=`/bin/tempfile`
-            echo $INSTALL_PACKAGES | sed 's/|/\ install\/g' > $TEMPFILE
-            $ROOT "sh -c '/usr/sbin/synaptic --set-selections --non-interactive --hide-main-window < $TEMPFILE'"
-            trap "rm -f $TEMPFILE; delete_temporary_trees" EXIT HUP TERM
-        else
-            $ROOT apt-get -y install $INSTALL_PACKAGES
-        fi
-
-        INSTALL_PACKAGES="`make_debian_test_depends`"
-        #Retest packages
-        if [ ! -z "$INSTALL_PACKAGES" ]; then
-            echo $"" >&2
-            echo $"Error! Missing $INSTALL_PACKAGES" >&2
-            echo $"and unable to install.  Please ask an admin to install for you." >&2
-            exit 4
-        fi
-    fi
+    debian_install fakeroot dpkg-dev
 
     #skeleton to load templates from
     local system_mk="$dkms_tree/$module/$module_version/source/$module-dkms-mk${create_type}"
