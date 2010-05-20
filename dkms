@@ -3104,7 +3104,7 @@ make_common_test()
 
 make_kmp_srpm()
 {
-    local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
+    local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
     trap 'rm -rf $temp_dir_name' EXIT HUP TERM
     mkdir -p $temp_dir_name/{BUILD,RPMS,SRPMS,SPECS,SOURCES}
     pushd "$dkms_tree/$module/$module_version" > /dev/null 2>&1
@@ -3118,10 +3118,10 @@ make_kmp_srpm()
     invoke_command "rpmbuild --define \"_topdir ${temp_dir_name}\" --target=${arch_array[0]} -bs ${SPECFILE} > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
     grep ^Wrote $temp_dir_name/rpmbuild.log > /dev/null 2>&1
     local RC="$?"
-    if [ "${RC}" -eq 0 ]; then
+    if ((RC == 0)); then
         local kmp_basedir="$dkms_tree/$module/$module_version/rpm"
         mkdir -p $kmp_basedir
-        RPMS=`LANG=C cp -va ${temp_dir_name}/SRPMS/* $kmp_basedir | awk '{print $NF}'`
+        RPMS=$(LANG=C cp -va ${temp_dir_name}/SRPMS/* $kmp_basedir | awk '{print $NF}')
     else
         echo $"rpmbuild error log:"
         cat $temp_dir_name/rpmbuild.log
