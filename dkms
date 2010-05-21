@@ -474,7 +474,7 @@ read_conf()
     obsolete_by="$OBSOLETE_BY"
 
     # Set module naming/location arrays
-    local index=0 array_size=0 s
+    local index array_size=0 s
     for s in ${#BUILT_MODULE_NAME[@]} \
 	${#BUILT_MODULE_LOCATION[@]} \
 	${#DEST_MODULE_NAME[@]} \
@@ -766,6 +766,7 @@ moduleconfig_add()
     for moduleconfig in $modconfig_files; do
 	[[ -e $moduleconfig ]] || continue
         for ((index=0; index < ${#dest_module_name[@]}; index++)); do
+
             # Only add it if it can't be found already in config file
             if [[ ${modules_conf_alias_type[$index]} ]] && \
                ! grep -qs "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}\b" $moduleconfig && \
@@ -3325,6 +3326,9 @@ while (($# > 0)); do
 	--directive*)        read_arg _da "$1" "$2" || shift
 	                     directive_array[${#directive_array[@]}]="$_da";;
 	--spec*)             read_arg specfile "$1" "$2" || shift;;
+	--debug)              
+	    export PS4='${BASH_SOURCE}@${LINENO}(${FUNCNAME[0]}): '
+	    set -x;;
 	-*|--*)              echo $"" >&2
                              echo $"Error!  Unknown option: $1" >&2
                              show_usage
