@@ -1725,14 +1725,15 @@ remove_module()
 
 find_module_from_ko()
 {
-    local depth="$1"
     local ko="$2"
-    local basename_ko=$(basename "${ko}")
+    local basename_ko="${ko##*/}"
     local module
     local kernellink
 
-    for kernellink in $(find $dkms_tree -maxdepth $depth -mindepth $depth -name kernel-\* -type l); do
-        module=$(echo "$kernellink" | awk -F / '{print $(NF-1)}')
+    for kernellink in "$dkms_tree"/*/kernel-*; do
+	[[ -L $kernellink ]] || continue
+	module=${kernellink%/*}
+	module=${kernellink##*/}
         diff "$kernellink/module/${basename_ko}" "${ko}" >/dev/null 2>&1 && echo "$module" && break
     done
     echo ""
@@ -1754,43 +1755,40 @@ do_status_weak()
     local tree_arch
     local f s su
     local string_array=()
-    local depth=1
-    [ -z "$r_mod" ] && depth=2
     # recognize weak modules.  These are in $kern/weak-updates but are symlinks to another $kern/extra file.
 
-    for installedkern in $(find "$install_tree" -maxdepth 1 -mindepth 1 -type d 2>/dev/null); do
-        for ko in $(find "$installedkern/weak-updates" -type l 2>/dev/null); do
+    for installedkern in "$install_tree"/*; do
+	[[ -d $installedkern/weak-updates ]] || continue
+        for ko in "$installedkern/weak-updates"/*; do
+	    [[ -L $ko ]] || continue
             installedkernver=${installedkern##*/}
             basename_ko=${ko##*/}
-            installed_ko=$(readlink -e $ko)
+	    installed_ko=$(readlink -e $ko)
 
             # dangling symlink, ouch, but is somebody else's problem so ignore it
-	    [[ ! -e $installed_ko ]] && continue
-
-            # remember, installed_ko is probably a relative path, so $kernelversion isn't present in its link
-            # is $installed_ko in /var/lib/dkms as installed?  Find which module has it
-            for f in $(find $dkms_tree/$r_mod -maxdepth $depth -mindepth $depth -name kernel-\* -type l 2>/dev/null); do
-		mod="$r_mod"
-		[[ $mod ]] || mod=$(find_module_from_ko "$depth" "$ko")
-		local q=$(readlink -e "$f");
-		q=(${q//\/})
-                tree_ver=${q[0]}
-                tree_kern=${q[1]}
-                tree_arch=${q[2]}
-                if diff $dkms_tree/$mod/$tree_ver/$tree_kern/$tree_arch/module/$basename_ko  \
-                    $installed_ko >/dev/null 2>&1 && \
-		    [[ ($r_mod = $mod || ! $r_mod) && \
-		    ($r_ver = $tree_ver || ! $r_ver) && \
-		    ($r_kern = $installedkernver || ! $r_kern) && \
-		    ($r_arch = $tree_arch || ! $r_arch) ]]; then
-		    su="$mod, $tree_ver, $installedkernver, $tree_arch: installed-weak from $tree_kern"
-		    for s in "${string_array[@]}"; do
-			[[ $s = $su ]] && continue 2
-		    done
-		    string_array[${#string_array[@]}]="$su"
-		    echo "$su" 
-                fi
-            done
+	    [[ -e $installed_ko ]] || continue
+	    kver=(${installed_ko/\// })
+	    kver=${kver[2]}
+	    mod="$r_mod"
+	    [[ $mod ]] || mod=$(find_module_from_ko "$depth" "$ko")
+	    local q=$(readlink -e "$dkms_tree/$mod/$kver");
+	    q=(${q//\// })
+            tree_ver=${q[0]}
+            tree_kern=${q[1]}
+            tree_arch=${q[2]}
+            if diff $dkms_tree/$mod/$tree_ver/$tree_kern/$tree_arch/module/$basename_ko  \
+                $installed_ko >/dev/null 2>&1 && \
+		[[ ($r_mod = $mod || ! $r_mod) && \
+		($r_ver = $tree_ver || ! $r_ver) && \
+		($r_kern = $installedkernver || ! $r_kern) && \
+		($r_arch = $tree_arch || ! $r_arch) ]]; then
+		su="$mod, $tree_ver, $installedkernver, $tree_arch: installed-weak from $tree_kern"
+		for s in "${string_array[@]}"; do
+		    [[ $s = $su ]] && continue 2
+		done
+		string_array[${#string_array[@]}]="$su"
+		echo "$su"
+            fi
         done
     done
 }
@@ -1818,7 +1816,8 @@ do_status()
         do_status "$mod" "$ver" "$kern" "$arch" "$(($tree_depth + 1))"
     elif [[ $next != done ]]; then
         local keep_traversing="no"
-        for directory in $(find "$working_dir" -type d -maxdepth 1 -mindepth 1 2>/dev/null); do
+        for directory in "$working_dir"/*; do
+	    [[ -d $directory ]] || continue
             local next_value=${directory#$working_dir/}
             [[ $next_value =~ build|original_module|tarball|driver_disk|rpm ]] && continue
             keep_traversing="yes"
@@ -3153,6 +3152,29 @@ read_arg() {
     fi
 }
 
+parse_kernelarch(){
+    local ka_re='^([^/]*)/(.*)$'
+    if [[ $1 =~ $ka_re ]]; then
+	kernelver_array[${#kernelver_array[@]}]="${BASH_REMATCH[1]}"
+	arch_array[${#arch_array[@]}]="${BASH_REMATCH[2]}"
+    else
+	kernelver_array[${#kernelver_array[@]}]="$1"
+    fi
+}
+
+parse_moduleversion(){
+    # split on / if it is in $1, otherwise split on -
+    local mv_re='^([^-]*)-(.*)$'
+    [[ $1 =~ / ]] && mv_re='^([^/]*)/(.*)$'
+    if [[ $1 =~ $mv_re ]]; then
+	module="${BASH_REMATCH[1]}"
+	module_version="${BASH_REMATCH[2]}"
+    else
+	module="$1"
+    fi
+}
+
+
 check_root() {
     ((UID == 0)) && return
     echo $"You must be root to use this command." >&2
@@ -3268,10 +3290,11 @@ while (($# > 0)); do
 	--dkmsframework*)    read_arg dkms_frameworkconf "$1" "$2" || shift
                              #immediately load this config
                              . $dkms_frameworkconf 2> /dev/null;;
-	--module*|-m)        read_arg module "$1" "$2" || shift;;
+	--module*|-m)        read_arg _mv "$1" "$2" || shift
+	                     parse_moduleversion "$_mv";;
 	-v)                  read_arg module_version "$1" "$2" || shift;;
-	--kernelver*|-k)     read_arg _kv "$1" "$2" || shift
-                             kernelver_array[${#kernelver_array[@]}]="$_kv";;
+	--kernelver*|-k)     read_arg _ka "$1" "$2" || shift
+	                     parse_kernelarch "$_ka";;
 	--distro*|-d)        read_arg distro "$1" "$2" || shift;;
 	--media*)            read_arg media "$1" "$2" ||shift;;
 	--release*|-r)       read_arg release "$1" "$2" || shift;;
