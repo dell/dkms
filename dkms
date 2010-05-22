@@ -143,8 +143,7 @@ setup_kernels_arches()
             kernelver_array[$i]=${line[2]%,}
             arch_array[$i]=${line[3]%:}
             i=$(($i + 1))
-        done < <($0 status -m "$module" -v "$module_version" 2>/dev/null | \
-            egrep "built|installed" | egrep -v 'installed-weak')
+        done < <(do_status_built "$module" "$module_version")
     fi
 
     # Set default kernel version and arch, if none set (but only --all isn't set)
@@ -1528,7 +1527,7 @@ do_uninstall()
         # remove kabi-tracking if last instance removed
         set_weak_modules
         if [[ ${weak_modules} ]] && \
-	    ($0 status -m $module -v $module_version | grep -v "installed-weak" | grep -q "installed"); then
+	    (do_status_built $module $module_version |grep -q "installed"); then
             echo $"Removing any linked weak-modules"
             list_each_installed_module "$module" "$1" "$2" | ${weak_modules} --remove-modules
         fi
@@ -1558,7 +1557,7 @@ do_uninstall()
 
                 # Remove modules_conf entries from /etc/modules.conf if remake_initrd is set or if this is last instance removed
                 if [[ $remake_initrd ]] || \
-                    ($0 status -m $module -v $module_version | grep -q "installed"); then
+                    (do_status $module $module_version | grep -q "installed"); then
                     echo $""
                     moduleconfig_remove "$1"
                 fi
@@ -1602,7 +1601,7 @@ do_uninstall()
 
     # Re-add entries to modules.conf if this module/version is still installed on another kernel
     # But only do this if it was just ACTIVE on the kernel we just uninstalled from
-    [[ $was_active && $remake_initrd ]] && $0 status -m $module -v $module_version | grep -q "installed" && moduleconfig_add "$1"
+    [[ $was_active && $remake_initrd ]] && do_status $module $module_version | grep -q "installed" && moduleconfig_add "$1"
 
     echo $""
     echo $"DKMS: uninstall Completed."
@@ -2578,7 +2577,7 @@ load_tarball()
             rm -rf $temp_dir_name
             exit 5
         fi
-        if [[ ! $($0 status -m $PACKAGE_NAME -v $PACKAGE_VERSION 2>/dev/null ) ]]; then
+        if [[ ! $(show_status $PACKAGE_NAME $PACKAGE_VERSION 2>/dev/null) ]]; then
             if [[ -e $temp_dir_name/dkms_binaries_only/dkms.conf ]]; then
             echo $""
             echo $"Binaries-only DKMS tarball to be loaded for $PACKAGE_NAME-$PACKAGE_VERSION"
@@ -2634,7 +2633,7 @@ load_tarball()
 
     # Load the source from the tarball or build it's structure (for binaries only)
     if [[ ! $is_binaries_only ]]; then
-        if [[ $($0 status -m $module -v $module_version 2>/dev/null) && ! $force ]]; then
+        if [[ $(show_status $module $module_version 2>/dev/null) && ! $force ]]; then
             echo $"Warning! Source for $module-$module_version already exists.  Skipping..." >&2
         else
             echo $"Loading $source_tree/$module-$module_version..."
@@ -2706,7 +2705,7 @@ run_match()
     fi
 
     # Read in the status of template_kernel
-    local template_kernel_status=$($0 status -k $template_kernel -a ${arch_array[0]} | grep ": installed")
+    local template_kernel_status=$(do_status '' '' $template_kernel ${arch_array[0]} | grep ": installed")
 
     # If $module is set, grep the status only for that module
     if [[ $module ]]; then
@@ -2743,10 +2742,10 @@ run_match()
             echo $"-------------------------"
 
             # Figure out what to do from here
-            if $0 status -m "$template_module" -v "$template_version" -k "${kernelver_array[0]}" -a "${arch_array[0]}" 2>/dev/null | grep -q ": installed"; then
+            if show_status "$template_module" "$template_version" "${kernelver_array[0]}" "${arch_array[0]}" 2>/dev/null | grep -q ": installed"; then
                 echo $""
                 echo $"This module/version combo is already installed.  Nothing to be done."
-            elif $0 status -m "$template_module" -v "$template_version" -k "${kernelver_array[0]}" -a "${arch_array[0]}" 2>/dev/null | grep -q ": built"; then
+            elif show_status "$template_module" "$template_version" "${kernelver_array[0]}" "${arch_array[0]}" 2>/dev/null | grep -q ": built"; then
                 echo $""
                 echo $"This module/version combo is built.  Installing it:"
                 module="$template_module"
