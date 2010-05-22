@@ -1655,8 +1655,6 @@ remove_module()
         exit 1
     fi
 
-    setup_kernels_arches "remove"
-
     # Check that $module is in the dkms tree
     if ! [[ -d $dkms_tree/$module/$module_version ]]; then
         echo $"" >&2
@@ -1664,6 +1662,8 @@ remove_module()
         echo $"$module_version located in the DKMS tree." >&2
         exit 3
     fi
+
+    setup_kernels_arches "remove"
 
     local i
     for ((i=0; i < ${#kernelver_array[@]}; i++)); do
@@ -3258,6 +3258,8 @@ unset directive_array
 unset kernelver_array
 unset arch_array
 
+action_re='^(remove|(un)?install|match|mk(driverdisk|tarball|rpm|deb|dsc|kmp)|build|add|status|ldtarball)$'
+
 # Parse command line arguments
 while (($# > 0)); do
     case $1 in
@@ -3306,7 +3308,13 @@ while (($# > 0)); do
                              echo $"Error!  Unknown option: $1" >&2
                              show_usage
                              exit 2;;
-	*)                   action="$action $1";;
+	*) if [[ $1 =~ $action_re ]]; then
+	    action="$action $1"
+	    elif [[ ! $module ]]; then
+	    parse_moduleversion "$1"
+	    else
+	    echo $"Warning: I do not know how to handle $1."
+	    fi;;
     esac
     shift
 done
