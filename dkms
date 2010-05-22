@@ -1754,20 +1754,16 @@ do_status_weak()
     local tree_ver
     local tree_kern
     local tree_arch
-    local f s su
+    local f s su kver
     local string_array=()
     # recognize weak modules.  These are in $kern/weak-updates but are symlinks to another $kern/extra file.
 
     for installedkern in "$install_tree"/*; do
 	[[ -d $installedkern/weak-updates ]] || continue
+        installedkernver=${installedkern##*/}
         for ko in "$installedkern/weak-updates"/*; do
-	    [[ -L $ko ]] || continue
-            installedkernver=${installedkern##*/}
+	    [[ -L $ko ]] && installed_ko=$(readlink -e $ko) || continue
             basename_ko=${ko##*/}
-	    installed_ko=$(readlink -e $ko)
-
-            # dangling symlink, ouch, but is somebody else's problem so ignore it
-	    [[ -e $installed_ko ]] || continue
 	    kver=(${installed_ko/\// })
 	    kver=${kver[2]}
 	    mod="$r_mod"
@@ -1794,73 +1790,51 @@ do_status_weak()
     done
 }
 
-do_status()
-{
-    local mod="$1"
-    local ver="$2"
-    local kern="$3"
-    local arch="$4"
-    local tree_depth="$5"
-
-    local next
-    local working_dir
-
-    case $tree_depth in
-	0) next="mod"; working_dir="$dkms_tree";;
-	1) next="ver"; working_dir="$dkms_tree/$mod";;
-	2) next="kern"; working_dir="$dkms_tree/$mod/$ver";;
-	3) next="arch"; working_dir="$dkms_tree/$mod/$ver/$kern";;
-	4) next="done"; working_dir="$dkms_tree/$mod/$ver/$kern/$arch";;
-    esac
-
-    if [[ ${!next} && $next != done ]]; then
-        do_status "$mod" "$ver" "$kern" "$arch" "$(($tree_depth + 1))"
-    elif [[ $next != done ]]; then
-        local keep_traversing="no"
-        for directory in "$working_dir"/*; do
-	    [[ -d $directory ]] || continue
-            local next_value=${directory#$working_dir/}
-            [[ $next_value =~ build|original_module|tarball|driver_disk|rpm ]] && continue
-            keep_traversing="yes"
-	    case $next in
-		mod) mod=$next_value;;
-		ver) ver=$next_value;;
-		kern) kern=$next_value;;
-		arch) arch=$next_value;;
-	    esac
-            do_status "$mod" "$ver" "$kern" "$arch" "$(($tree_depth + 1))"
-        done
-    fi
-    # Bail out if we are not ready actually run the display logic.
-    # This could use some more explanation.
-    [[ $keep_traversing = no && $tree_depth -eq 2 && -z $arch || $next = done ]] || return
-    local state="added" && stat_display="$mod, $ver:"
-    [[ -d $working_dir/module ]] && state="built" && stat_display="$mod, $ver, $kern, $arch:"
-    [[ -h $dkms_tree/$mod/kernel-$kern-$arch && \
-        $(readlink -e $dkms_tree/$mod/kernel-$kern-$arch) = $ver/$kern/$arch ]] && \
-	state="installed"
-    if [[ $state = built || $state = installed ]]; then
-        set_module_suffix "$kern"
+do_status_built()
+(
+    ret=1 m="$1" v="$2"
+    for directory in "$dkms_tree/$m/$v/"${3:-*}/${4:-*}; do
+	[[ -d $directory/module ]] || continue
+	[[ $directory =~ build|original_module|tarball|driver_disk|rpm|source ]] && continue
+	mvka="${directory#$dkms_tree/}"
+	mvka=(${mvka//\// })
+	k="${mvka[2]}"
+	a="${mvka[3]}"
+	state="built"
+	[[ -L $dkms_tree/$m/kernel-$k-$a && \
+            $(readlink -e $dkms_tree/$m/kernel-$k-$a) = $directory ]] && \
+	    state="installed"
+	ret=0
+        set_module_suffix "$k"
         local extra_status=""
-        conf="$dkms_tree/$mod/$ver/source/dkms.conf"
-        read_conf "$kern" "$arch" "$conf"
-        [[ -d $dkms_tree/$mod/original_module/$kern/$arch ]] && extra_status="(original_module exists)"
+        conf="$dkms_tree/$m/$v/source/dkms.conf"
+        read_conf "$k" "$a" "$conf"
+        [[ -d $dkms_tree/$m/original_module/$k/$a ]] && extra_status="(original_module exists)"
         local count real_dest_module_location
 	for ((count=0; count < ${#dest_module_name[@]}; count++)); do
-            tree_mod="$dkms_tree/$mod/$ver/$kern/$arch/module/${dest_module_name[$count]}$module_suffix"
-            if ! [[ -e $tree_mod ]]; then
+	    tree_mod="$dkms_tree/$m/$v/$k/$a/module/${dest_module_name[$count]}$module_suffix"
+	    if ! [[ -e $tree_mod ]]; then
                 extra_status="$extra_status (WARNING! Missing some built modules!)"
-            elif [[ $state = installed ]]; then
-                real_dest_module_location="$(find_actual_dest_module_location $mod $count $kern $arch)"
-                if ! diff -q "$tree_mod" "$install_tree/$kern${real_dest_module_location}/${dest_module_name[$count]}$module_suffix" >/dev/null 2>&1; then
-                    extra_status="$extra_status (WARNING! Diff between built and installed module!)"
+	    elif [[ $state = installed ]]; then
+                real_dest_module_location="$(find_actual_dest_module_location $m $count $k $a)"
+                if ! diff -q "$tree_mod" "$install_tree/$k${real_dest_module_location}/${dest_module_name[$count]}$module_suffix" >/dev/null 2>&1; then
+		    extra_status="$extra_status (WARNING! Diff between built and installed module!)"
                 fi
-            fi
+	    fi
         done
-    fi
+	echo "$m, $v, $k, $a: $state $extra_status"
+    done
+    return $ret
+)
 
-    [[ -d $working_dir ]] && echo "$stat_display $state $extra_status"
-}
+do_status() (
+    for directory in $dkms_tree/${1:-*}/${2:-*}; do
+	[[ -d $directory/build ]] || continue
+	mv="${directory#$dkms_tree/}"
+	mv=(${mv//\// })
+	do_status_built "${mv[@]}" "$3" "$4" || echo "${mv[0]}, ${mv[1]}: added"
+    done
+)
 
 show_status()
 {
@@ -1868,11 +1842,11 @@ show_status()
 
     local j
     if ((${#kernelver_array[@]} == 0)); then
-        do_status "$module" "$module_version" "${kernelver_array[0]}" "${arch_array[0]}" 0
+        do_status "$module" "$module_version" "${kernelver_array[0]}" "${arch_array[0]}"
         do_status_weak "$module" "$module_version" "${kernelver_array[0]}" "${arch_array[0]}"
     else
 	for ((j=0; j < ${#kernelver_array[@]}; j++)); do
-            do_status "$module" "$module_version" "${kernelver_array[$j]}" "${arch_array[$j]}" 0
+            do_status "$module" "$module_version" "${kernelver_array[$j]}" "${arch_array[$j]}"
             do_status_weak "$module" "$module_version" "${kernelver_array[$j]}" "${arch_array[$j]}"
         done
     fi
