@@ -3313,6 +3313,8 @@ while (($# > 0)); do
                              exit 2;;
 	*) if [[ $1 =~ $action_re ]]; then
 	    action="$action $1"
+	    elif [[ -f $1 ]]; then
+	    archive_location="$1"
 	    elif [[ ! $module ]]; then
 	    parse_moduleversion "$1"
 	    else
