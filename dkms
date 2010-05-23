@@ -194,7 +194,7 @@ do_depmod()
     fi
 }
 
-remake_initrd()
+make_initrd()
 {
     # $1 = kernel version
     # $2 = arch
@@ -1291,7 +1291,7 @@ install_module()
     fi
 
     # Do remake_initrd things (save old initrd)
-    if [[ $remake_initrd ]] && ! remake_initrd "${kernelver_array[0]}" "${arch_array[0]}"; then
+    if [[ $remake_initrd ]] && ! make_initrd "${kernelver_array[0]}" "${arch_array[0]}"; then
         echo $"Problems with mkinitrd detected.  Automatically uninstalling this module."
         sleep 2
         do_uninstall "${kernelver_array[0]}" "${arch_array[0]}"
@@ -1576,7 +1576,7 @@ do_uninstall()
     invoke_command "do_depmod $1" "depmod" background
 
     # Do remake_initrd things (remake initrd)
-    if [[ $remake_initrd && $was_active ]] && ! remake_initrd "$1" "$2"; then
+    if [[ $remake_initrd && $was_active ]] && ! make_initrd "$1" "$2"; then
         echo $""
         echo $"WARNING! WARNING! WARNING!"
         echo $"There was a problem remaking your initrd.  You must manually remake it"
