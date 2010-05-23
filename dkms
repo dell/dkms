@@ -198,86 +198,57 @@ make_initrd()
 {
     # $1 = kernel version
     # $2 = arch
+    local mkinitrd kernel_file initrd_dir="/boot"
+    for mkinitrd in dracut update-initramfs mkinitrd ''; do
+	[[ $mkinitrd ]] && which "$mkinitrd" >/dev/null 2>&1 && break
+    done
 
-    local exitval="0"
-    local mkinitrd='mkinitrd'
+    # no mkinitrd? Just return.
+    [[ $mkinitrd ]] || return 0
 
-
-    # Support dracut distributions
-    if [ -x "/sbin/dracut" ]; then
-        mkinitrd='dracut'
+    # back up our current initrd
+    echo $""
+    [[ $2 = ia64 && -d /boot/efi/efi/redhat ]] && initrd_dir="/boot/efi/efi/redhat"
+    # find out what the proper filename will be
+    for initrd in "initrd-$1.img" "initramfs-$1.img" "initrd.img-$1" "initrd-$1" ''; do
+	[[ $initrd && -f $initrd_dir/$initrd ]] && break
+    done
+    if ! [[ $initrd ]]; then
+	# Return if we cannot find an initrd.
+	echo $"Warning: unable to find an initial ram disk that I know how to handle."
+	echo $"Will not try to make an initrd."
+	return 0
     fi
+    echo $"Backing up $initrd to $initrd_dir/$initrd.old-dkms"
+    cp -f "$initrd_dir/$initrd" "$initrd_dir/$initrd.old-dkms"
+    echo $"Making new $initrd"
+    echo $"(If next boot fails, revert to $initrd.old-dkms image)"
 
-    # Support initramfs distributions (Debian/Ubuntu).
-    if [ -x "/usr/sbin/update-initramfs" ]; then
-        mkinitrd='update-initramfs'
-    fi
-
-    $mkinitrd --version >/dev/null 2>&1
-    if [ "$?" -eq 0 ]; then
-        echo $""
-        initrd_dir="/boot"
-        [ "$2" == "ia64" ] && [ -d "/boot/efi/efi/redhat" ] && initrd_dir="/boot/efi/efi/redhat"
-        echo $"Saving old initrd as $initrd_dir/initrd-$1_old.img"
-        cp -f "$initrd_dir/initrd-$1.img" "$initrd_dir/initrd-$1_old.img"
-        echo $"Making new initrd as $initrd_dir/initrd-$1.img"
-        echo $"(If next boot fails, revert to the _old initrd image)"
-        invoke_command "$mkinitrd -f $initrd_dir/initrd-$1.img $1" "$mkinitrd" background
-        exitval="$?"
-    elif [ -e /etc/SuSE-release ] || [ -d /etc/SuSEconfig ]; then
-        echo $""
-        initrd_dir="/boot"
-        kernel_file="vmlinuz"
-        if [ ! -f "$initrd_dir/$kernel_file-$1" ]; then
-            kernel_file="vmlinux"
-            if [ ! -f "$initrd_dir/$kernel_file-$1" ]; then
-                echo $"Error! Unable to find valid kernel file under " >&2
-                echo $"$initrd_dir for kernel version $1" >&2
-                echo $"" >&2
-                return 1;
-            fi
-        fi
-        echo $"Saving old initrd as $initrd_dir/initrd-$1_old"
-        cp -f "$initrd_dir/initrd-$1" "$initrd_dir/initrd-$1_old"
-        echo $"Making new initrd as $initrd_dir/initrd-$1"
-        echo $"(If next boot fails, revert to the _old initrd image)"
-        invoke_command "$mkinitrd -k $kernel_file-$1 -i initrd-$1" "$mkinitrd" background
-        exitval="$?"
-    elif [ -e /etc/debian_version ]; then
-        echo $""
-        initrd_dir="/boot"
-        echo $"Updating initrd"
-        echo $"Making new initrd as $initrd_dir/initrd.img-$1"
-        echo $"(If next boot fails, revert to the .bak initrd image)"
-        if [ "$mkinitrd" == "update-initramfs" ]; then
-            invoke_command "$mkinitrd -u" "$mkinitrd" background
-        else
-            echo $"Saving old initrd as $initrd_dir/initrd.img-$1.bak"
-            # we use the same convention as update-initramfs, so that we just
-            # print the warning once
-            cp -f "$initrd_dir/initrd.img-$1" "$initrd_dir/initrd.img-$1.bak"
-            invoke_command "$mkinitrd -o $initrd_dir/initrd.img-$1 $1" "$mkinitrd" background
-        fi
-        exitval="$?"
-    elif [ "$mkinitrd" == "dracut" ]; then
-        echo $""
-        initrd_dir="/boot"
-        echo $"Updating initramfs with dracut:"
-        echo $"Saving old initramfs as $initrd_dir/initramfs-$1.img.bak"
-        cp -f "$initrd_dir/initramfs-$1.img" "$initrd_dir/initramfs-$1.img.bak"
-
-        echo $"Making new initramfs as $initrd_dir/initramfs-$1.img"
-        echo $"(If next boot fails, revert to the .bak initramfs image)"
+    if [[ $mkinitrd = dracut ]]; then
         invoke_command "$mkinitrd $1" "$mkinitrd" background
-        exitval="$?"
+    elif [[ $mkinitrd = update-initramfs ]]; then
+        invoke_command "$mkinitrd -u" "$mkinitrd" background
+    elif $mkinitrd --version >/dev/null 2>&1; then
+        invoke_command "$mkinitrd -f $initrd_dir/$initrd $1" "$mkinitrd" background
+    elif [[ -e /etc/SuSE-release || -d /etc/SuSEconfig ]]; then
+	for kernel_file in vmlinuz vmlinux ''; do
+	    [[ $kernel_file && -f $initrd_dir ]] && break
+	done
+        if [[ ! $kernel_file ]]; then
+            echo $"Error! Unable to find valid kernel file under " >&2
+            echo $"$initrd_dir for kernel version $1" >&2
+            echo $"" >&2
+            return 1;
+        fi
+        invoke_command "$mkinitrd -k $kernel_file-$1 -i $initrd" "$mkinitrd" background
+    elif [[ -e /etc/debian_version ]]; then
+        invoke_command "$mkinitrd -o $initrd_dir/$initrd $1" "$mkinitrd" background
     else
         echo $""
         echo $"Calling $mkinitrd (bad exit status 9 may occur)"
         invoke_command "$mkinitrd" "$mkinitrd" background
-        exitval="$?"
     fi
-
-    return $exitval
+    return
 }
 
 distro_version_rpm()
