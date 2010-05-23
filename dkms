@@ -1772,7 +1772,7 @@ do_status_weak()
             tree_ver=${q[0]}
             tree_kern=${q[1]}
             tree_arch=${q[2]}
-            if diff $dkms_tree/$mod/$tree_ver/$tree_kern/$tree_arch/module/$basename_ko  \
+            if diff "$dkms_tree/$mod/$tree_ver/$tree_kern/$tree_arch/module/$basename_ko"  \
                 $installed_ko >/dev/null 2>&1 && \
 		[[ ($r_mod = $mod || ! $r_mod) && \
 		($r_ver = $tree_ver || ! $r_ver) && \
@@ -1791,32 +1791,31 @@ do_status_weak()
 
 do_status_built()
 (
-    ret=1 m="$1" v="$2"
+    m="$1" v="$2" oifs="$IFS" IFS='' ret=1
     for directory in "$dkms_tree/$m/$v/"${3:-*}/${4:-*}; do
-	[[ -d $directory/module ]] || continue
+	IFS="$oifs"
 	[[ $directory =~ build|original_module|tarball|driver_disk|rpm|source ]] && continue
-	mvka="${directory#$dkms_tree/}"
-	mvka=(${mvka//\// })
-	k="${mvka[2]}"
-	a="${mvka[3]}"
+	[[ -d $directory/module ]] || continue
+	ret=0
+	ka="${directory#$dkms_tree/$m/$v/}"
+	k="${ka%/*}"
+	a="${ka#*/}"
 	state="built"
 	[[ -L $dkms_tree/$m/kernel-$k-$a && \
             $(readlink -e $dkms_tree/$m/kernel-$k-$a) = $directory ]] && \
 	    state="installed"
-	ret=0
         set_module_suffix "$k"
         local extra_status=""
         conf="$dkms_tree/$m/$v/source/dkms.conf"
         read_conf "$k" "$a" "$conf"
         [[ -d $dkms_tree/$m/original_module/$k/$a ]] && extra_status="(original_module exists)"
-        local count real_dest_module_location
 	for ((count=0; count < ${#dest_module_name[@]}; count++)); do
-	    tree_mod="$dkms_tree/$m/$v/$k/$a/module/${dest_module_name[$count]}$module_suffix"
+	    tree_mod="$directory/module/${dest_module_name[$count]}$module_suffix"
 	    if ! [[ -e $tree_mod ]]; then
                 extra_status="$extra_status (WARNING! Missing some built modules!)"
 	    elif [[ $state = installed ]]; then
-                real_dest_module_location="$(find_actual_dest_module_location $m $count $k $a)"
-                if ! diff -q "$tree_mod" "$install_tree/$k${real_dest_module_location}/${dest_module_name[$count]}$module_suffix" >/dev/null 2>&1; then
+                real_dest="$(find_actual_dest_module_location "$m" $count "$k" "$a")"
+                if ! diff -q "$tree_mod" "$install_tree/$k${real_dest}/${dest_module_name[$count]}$module_suffix" >/dev/null 2>&1; then
 		    extra_status="$extra_status (WARNING! Diff between built and installed module!)"
                 fi
 	    fi
@@ -1827,11 +1826,15 @@ do_status_built()
 )
 
 do_status() (
-    for directory in $dkms_tree/${1:-*}/${2:-*}; do
+    # supress word splitting when expanding directory names here
+    local oifs="$IFS" IFS='' mv m v
+    for directory in "$dkms_tree/"${1:-*}/${2:-*}; do
+	IFS="$oifs"
 	[[ -d $directory/build ]] || continue
 	mv="${directory#$dkms_tree/}"
-	mv=(${mv//\// })
-	do_status_built "${mv[@]}" "$3" "$4" || echo "${mv[0]}, ${mv[1]}: added"
+	m="${mv%/*}"
+	v="${mv#*/}"
+	do_status_built "$m" "$v" "$3" "$4" || echo "$m, $v: added"
     done
 )
 
@@ -1839,7 +1842,7 @@ show_status()
 {
     setup_kernels_arches "status"
 
-    local j
+    local j state_array
     if ((${#kernelver_array[@]} == 0)); then
         do_status "$module" "$module_version" "${kernelver_array[0]}" "${arch_array[0]}"
         do_status_weak "$module" "$module_version" "${kernelver_array[0]}" "${arch_array[0]}"
