@@ -184,7 +184,11 @@ setup_kernels_arches()
 do_depmod()
 {
     # $1 = kernel version
-    /sbin/depmod -au "$1" -F "/boot/System.map-$1"
+    if [[ -f /boot/System.map-$1 ]]; then
+	/sbin/depmod -a "$1" -F "/boot/System.map-$1"
+    else
+	/sbin/depmod -a "$1"
+    fi
 }
 
 remake_initrd()
