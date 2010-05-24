@@ -2382,22 +2382,21 @@ make_tarball()
         echo "2.0.0" > $dkms_tree/dkms_dbversion
     fi
 
-    # Error out if archive_location is set and contains a "/" in it
-    case "$archive_location" in
-        */*)
-        echo $"" >&2
-        echo $"Error!  The name you have specified for your tarball contains a '/'." >&2
-        echo $"You may only specify a simple filename with no preceding path."
-        exit 7
-        ;;
-    esac
+    local tarball_name="$module-$module_version-$kernel_version_list.dkms.tar.gz"
+    local tarball_dest="$dkms_tree/$module/$module_version/tarball/"
 
-    # Error out if binaries-only is set and source-only is set
-    if [[ $binaries_only && $source_only ]]; then
-        echo $"" >&2
-        echo $"Error!  You have specified both --binaries-only and --source-only." >&2
-        echo $"You cannot do this." >&2
-        exit 8
+    # Die if we will not be able to create the tarball due to permissions.
+    if [[ $archive_location ]]; then
+	tarball_name="${archive_name##*/}"
+	if [[ ${archive_location%/*} != $archive_location && \
+	    -d ${archive_location%/*} && -w ${archive_location%/*} ]]; then
+	    tarball_dest="${archive_location%/*}"
+	else
+	    echo $"Error! Will not be able to create $archive_location."
+	    exit 9
+	fi
+    else
+	mkdir -p "$dkms_tree/$module/$module_version/tarball/"
     fi
 
     # Read the conf file
@@ -2451,27 +2450,24 @@ make_tarball()
         cp -rf $dkms_tree/$module/$module_version/source/* $temp_dir_name/dkms_source_tree
     fi
 
-    # Make the tarball
-    cd $temp_dir_name
     if (( $(echo $kernel_version_list | wc -m | awk {'print $1'}) > 200 )); then
         kernel_version_list="manykernels"
     fi
-    local tarball_name="$module-$module_version-$kernel_version_list.dkms.tar.gz"
-    [[ $archive_location ]] && tarball_name="$archive_location"
+    # Make the tarball
+    cd $temp_dir_name
     if tar -czf $temp_dir_name/$tarball_name ./* 2>/dev/null; then
+	cd - >/dev/null
         echo $""
-        mkdir -p $dkms_tree/$module/$module_version/tarball 2>/dev/null
-        mv -f $temp_dir_name/$tarball_name $dkms_tree/$module/$module_version/tarball/
+        mv -f "$temp_dir_name/$tarball_name" "$tarball_dest/$tarball_name"
         echo $""
-        echo $"Tarball location: $dkms_tree/$module/$module_version/tarball/$tarball_name"
+        echo $"Tarball location: $tarball_dest/$tarball_name"
         echo $""
         echo $"DKMS: mktarball Completed."
-	cd - >/dev/null
         rm -rf $temp_dir_name
     else
-        echo $"" >&2
+        cd - >/dev/null
+	echo $"" >&2
         echo $"Error! Failed to make tarball." >&2
-	cd - >/dev/null
         rm -rf $temp_dir_name
         exit 6
     fi
@@ -2481,20 +2477,11 @@ load_tarball()
 {
     setup_kernels_arches "mktarball"
 
-    # Error out of --archive was not set with the tarball location
-    if [[ ! $archive_location ]]; then
-        echo $"" >&2
-        echo $"Error! Invalid number of parameters passed." >&2
-        echo $"Usage: ldtarball --archive=<tarball-location>" >&2
-        exit 1
-    fi
-
     # Error out if $archive_location does not exist
-    if ! [[ -e $archive_location ]]; then
-        echo $"" >&2
-        echo $"Error! Cannot locate $archive_location." >&2
-        echo $"File does not exist." >&2
-        exit 2
+    if [[ ! -e $archive_location ]]; then
+	echo $"" >&2
+	echo $"Error! $archive_location does not exist." >&2
+	exit 2
     fi
 
     # Figure out what kind of archive it is (tar.gz, tar, tar.bz, etc)
@@ -2790,14 +2777,6 @@ make_rpm()
         exit 5
     fi
 
-    # Error out if binaries-only is set and source-only is set
-    if [[ $binaries_only && $source_only ]]; then
-        echo $"" >&2
-        echo $"Error!  You have specified both --binaries-only and --source-only." >&2
-        echo $"You cannot do this." >&2
-        exit 8
-    fi
-
     # Run a dkms mktarball for use in the rpm
     local mktarball_line
     if [[ ! $source_only || $binaries_only ]]; then
@@ -3031,23 +3010,6 @@ make_common_test()
         exit 3
     fi
 
-    # Error out if archive_location is set and contains a "/" in it
-    case "$archive_location" in
-        */*)
-        echo $"" >&2
-        echo $"Error!  The name you have specified for your archive contains a '/'." >&2
-        echo $"You may only specify a simple filename with no preceding path."
-        exit 7
-        ;;
-    esac
-
-    # Error out if binaries-only is set and source-only is set
-    if [[ $binaries_only && $source_only ]]; then
-        echo $"" >&2
-        echo $"Error!  You have specified both --binaries-only and --source-only." >&2
-        echo $"You cannot do this." >&2
-        exit 8
-    fi
 }
 
 make_kmp_srpm()
@@ -3296,6 +3258,16 @@ while (($# > 0)); do
     esac
     shift
 done
+
+# Sanity checking
+
+# Error out if binaries-only is set and source-only is set
+if [[ $binaries_only && $source_only ]]; then
+    echo $"" >&2
+    echo $"Error!  You have specified both --binaries-only and --source-only." >&2
+    echo $"You cannot do this." >&2
+    exit 8
+fi
 
 # Run the specified action
 for action_to_run in $action; do
