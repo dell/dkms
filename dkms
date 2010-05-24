@@ -89,51 +89,23 @@ set_kernel_source_dir()
 	kernel_source_dir="$install_tree/$1/build"
 }
 
+have_one_kernel() {
+    if (( ${#kernelver_array[@]} > 1 )); then
+        echo $"" >&2
+        echo $"Error! The action $1 does not support multiple kernel version" >&2
+        echo $"parameters on the command line." >&2
+        exit 4
+    fi
+    if [[ $all ]]; then
+        echo $"" >&2
+        echo $"Error! The action $1 does not support the --all" >&2
+        echo $"parameter." >&2
+        exit 5
+    fi
+}
+
 setup_kernels_arches()
 {
-    # Error if # of arches doesn't match # of kernels
-    if (( ${#kernelver_array[@]} != ${#arch_array[@]} && \
-	${#arch_array[@]} > 1 )); then
-        echo $"" >&2
-        echo $"Error!  If more than one arch is specified on the command line, then there" >&2
-        echo $"must be an equal number of kernel versions also specified (1:1 relationship)." >&2
-        exit 1
-    fi
-
-    # Check that kernel version and all aren't both set simultaneously
-    if [[ ${kernelver_array[0]} && $all ]]; then
-        echo $"" >&2
-        echo $"Error!  You cannot specify a kernel version and also specify" >&2
-        echo $"--all on the command line." >&2
-        exit 2
-    fi
-
-    # Check that arch and all aren't both set simultaneously
-    if [[ ${arch_array[0]} && $all ]]; then
-        echo $"" >&2
-        echo $"Error!  You cannot specify an arch and also specify" >&2
-        echo $"--all on the command line." >&2
-        exit 3
-    fi
-
-    # Check that the actions supports multiple kernels
-    case "$1" in
-    add | build | install | match | uninstall | mkkmp )
-        if (( ${#kernelver_array[@]} > 1 )); then
-            echo $"" >&2
-            echo $"Error! The action $1 does not support multiple kernel version" >&2
-            echo $"parameters on the command line." >&2
-            exit 4
-        fi
-        if [[ $all ]]; then
-            echo $"" >&2
-            echo $"Error! The action $1 does not support the --all" >&2
-            echo $"parameter." >&2
-            exit 5
-        fi
-        ;;
-    esac
-
     # If all is set, use dkms status to fill the arrays
     if [[ $all && $1 != status ]]; then
         local i=0
@@ -148,9 +120,11 @@ setup_kernels_arches()
 
     # Set default kernel version and arch, if none set (but only --all isn't set)
     if [[ $1 != status ]]; then
-        [[ ! ${kernelver_array[0]} && ! $all ]] && \
+        if [[ ! ${kernelver_array[0]} && ! $all ]]; then
 	    kernelver_array[0]=$(uname -r)
-        if [[ ! ${arch_array[0]} && ${kernelver_array[0]} ]]; then
+	    kernels_arches_default="yes"
+	fi
+        if [[ ! ${arch_array[0]} ]]; then
             kernelver_rpm=$(rpm -qf "/lib/modules/${kernelver_array[0]}" 2>/dev/null | \
 		grep -v "not owned by any package" | grep kernel | head -n 1)
             if ! arch_array[0]=$(rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null); then
@@ -175,12 +149,11 @@ setup_kernels_arches()
     # Set global multi_arch
     multi_arch=""
     local i=0
-    while (($i < ${#arch_array[@]})); do
+    for ((i=0; $i < ${#arch_array[@]}; i++)); do
         [[ ${arch_array[0]} != ${arch_array[$i]} ]] && {
 	    multi_arch="true"
 	    break
 	}
-        i=$(($i + 1))
     done
 }
 
@@ -880,8 +853,6 @@ run_build_script() {
 
 add_module()
 {
-    setup_kernels_arches "add"
-
     # Check that we have all the arguments
     check_module_args add
 
@@ -1097,7 +1068,6 @@ check_module_exists() {
 
 install_module()
 {
-    setup_kernels_arches "install"
     local base_dir="$dkms_tree/$module/$module_version/${kernelver_array[0]}/${arch_array[0]}"
 
     check_module_args install
@@ -1278,7 +1248,6 @@ install_module()
 
 prepare_build()
 {
-    setup_kernels_arches "build"
     set_kernel_source_dir "${kernelver_array[0]}"
     local base_dir="$dkms_tree/$module/$module_version/${kernelver_array[0]}/${arch_array[0]}"
 
@@ -1581,8 +1550,6 @@ do_uninstall()
 
 uninstall_module()
 {
-    setup_kernels_arches "uninstall"
-
     # Check that the right arguments were passed
     check_module_args uninstall
    
@@ -1618,8 +1585,8 @@ uninstall_module()
 
 remove_module()
 {
-    # Check that the right arguments were passed (must be done before setup_kernels_arches)
-    if ! [[ $module && $module_version && ( ${kernelver_array[0]} || $all ) ]]; then
+    # Check that the right arguments were passed
+    if [[ ! ($module && $module_version) || $kernels_arches_default  ]]; then
         echo $"" >&2
         echo $"Error! Invalid number of parameters passed." >&2
         echo $"Usage: remove -m <module> -v <module-version> --all" >&2
@@ -1634,8 +1601,6 @@ remove_module()
         echo $"$module_version located in the DKMS tree." >&2
         exit 3
     fi
-
-    setup_kernels_arches "remove"
 
     local i
     for ((i=0; i < ${#kernelver_array[@]}; i++)); do
@@ -1812,8 +1777,6 @@ do_status() (
 
 show_status()
 {
-    setup_kernels_arches "status"
-
     local j state_array
     if ((${#kernelver_array[@]} == 0)); then
         do_status "$module" "$module_version" "${kernelver_array[0]}" "${arch_array[0]}"
@@ -1865,8 +1828,6 @@ media_valid()
 
 make_driver_disk()
 {
-    setup_kernels_arches "mkdriverdisk"
-
     # Check that the right arguments were passed
     if ! [[ $module && $module_version && $distro && ${kernelver_array[0]} ]]; then
         echo $"" >&2
@@ -2370,8 +2331,6 @@ EOF
 
 make_tarball()
 {
-    setup_kernels_arches "mktarball"
-
     make_common_test "mktarball"
 
     # Check for dkms_dbversion
@@ -2475,8 +2434,6 @@ make_tarball()
 
 load_tarball()
 {
-    setup_kernels_arches "mktarball"
-
     # Error out if $archive_location does not exist
     if [[ ! -e $archive_location ]]; then
 	echo $"" >&2
@@ -2647,7 +2604,6 @@ load_tarball()
 
 run_match()
 {
-    setup_kernels_arches "match"
     set_kernel_source_dir "${kernelver_array[0]}"
 
     # Error if $template_kernel is unset
@@ -2745,8 +2701,6 @@ run_match()
 
 make_rpm()
 {
-    setup_kernels_arches "mkrpm"
-
     make_common_test "mkrpm"
 
     # Check that the rpmbuild command is present
@@ -2925,7 +2879,7 @@ make_debian()
     done
     popd > /dev/null 2>&1
 
-    #if using legacy mode, install common postinst
+     #if using legacy mode, install common postinst
     if ((legacy_postinst != 0)); then
         invoke_command "cp '$PREFIX/usr/lib/dkms/common.postinst' '$temp_dir_debian'" "copying legacy postinstall template"
     fi
@@ -3094,8 +3048,6 @@ check_root() {
 
 make_kmp()
 {
-    setup_kernels_arches "mkkmp"
-
     make_common_test "mkkmp"
 
     # Read the conf file
@@ -3269,21 +3221,47 @@ if [[ $binaries_only && $source_only ]]; then
     exit 8
 fi
 
+# Error if # of arches doesn't match # of kernels
+if (( ${#kernelver_array[@]} != ${#arch_array[@]} && \
+    ${#arch_array[@]} > 1 )); then
+    echo $"" >&2
+    echo $"Error!  If more than one arch is specified on the command line, then there" >&2
+    echo $"must be an equal number of kernel versions also specified (1:1 relationship)." >&2
+    exit 1
+fi
+
+# Check that kernel version and all aren't both set simultaneously
+if [[ ${kernelver_array[0]} && $all ]]; then
+    echo $"" >&2
+    echo $"Error!  You cannot specify a kernel version and also specify" >&2
+    echo $"--all on the command line." >&2
+    exit 2
+fi
+
+# Check that arch and all aren't both set simultaneously
+if [[ ${arch_array[0]} && $all ]]; then
+    echo $"" >&2
+    echo $"Error!  You cannot specify an arch and also specify" >&2
+    echo $"--all on the command line." >&2
+    exit 3
+fi
+
 # Run the specified action
 for action_to_run in $action; do
+    setup_kernels_arches "$action_to_run"
     case "$action_to_run" in
 	remove)       check_root && remove_module;;
-	install)      check_root && install_module;;
-	match)        check_root && run_match;;
-	uninstall)    check_root && uninstall_module;;
+	install)      check_root && have_one_kernel && install_module;;
+	match)        check_root && have_one_kernel && run_match;;
+	uninstall)    check_root && have_one_kernel && uninstall_module;;
 	mkdriverdisk) check_root && make_driver_disk;;
-	build)        build_module;;
-	add)          add_module;;
+	build)        have_one_kernel && build_module;;
+	add)          have_one_kernel && add_module;;
 	mktarball)    make_tarball;;
 	mkrpm)        make_rpm;;
 	mkdeb)        make_debian "deb";;
 	mkdsc)        make_debian "dsc";;
-	mkkmp)        make_kmp;;
+	mkkmp)        have_one_kernel && make_kmp;;
 	status)       show_status;;
 	ldtarball) # Make sure they're root if we're using --force
             if ((UID != 0)) && [[ $force = true ]]; then
