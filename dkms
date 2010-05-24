@@ -76,7 +76,7 @@ VER()
 set_module_suffix()
 {
     # $1 = the kernel to base the module_suffix on
-    kernel_test="${1:=$(uname -r)}"
+    kernel_test="${1-:$(uname -r)}"
     module_suffix=".ko"
     [[ $(VER $kernel_test) < $(VER 2.5) ]] && module_suffix=".o"
 }
