@@ -52,7 +52,7 @@ show_usage()
     echo $"              [-d distro] [-c dkms.conf-location] [-q] [--force] [--all]"
     echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
     echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"
-    echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel]"
+    echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel] [--no-initrd]"
     echo $"              [--binaries-only] [--source-only] [-r release (SuSE)] [--verbose]"
     echo $"              [--size] [--spec=specfile] [--media=floppy|iso|tar] [--legacy-postinst=0|1]"
 }
@@ -198,6 +198,7 @@ make_initrd()
 {
     # $1 = kernel version
     # $2 = arch
+    [[ $no_initrd ]] && return
     local mkinitrd kernel_file initrd_dir="/boot"
     for mkinitrd in dracut update-initramfs mkinitrd ''; do
 	[[ $mkinitrd ]] && which "$mkinitrd" >/dev/null 2>&1 && break
@@ -3255,6 +3256,7 @@ while (($# > 0)); do
                              exit 0;;
 	--no-prepare-kernel) no_prepare_kernel="no-prepare-kernel";;
 	--no-clean-kernel)   no_clean_kernel="no-clean-kernel";;
+	--no-initrd)         no_initrd="no-initrd";;
 	--binaries-only)     binaries_only="binaries-only";;
 	--source-only)       source_only="source-only";;
 	--force)             force="true";;
