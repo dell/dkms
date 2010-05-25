@@ -1100,7 +1100,7 @@ install_module()
 
     # Check that its not already installed (kernel symlink)
     kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}")
-    if [[ $kernel_symlink = $module_version/${kernelver_array[0]}/${arch_array[0]} ]]; then
+    if [[ $kernel_symlink = $dkms_tree/$module/$module_version/${kernelver_array[0]}/${arch_array[0]} ]]; then
         echo $"" >&2
         echo $"Error! This module/version combo is already installed" >&2
         echo $"for kernel: ${kernelver_array[0]} (${arch_array[0]})" >&2
@@ -1462,7 +1462,7 @@ do_uninstall()
     local was_active="" 
     local kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-$1-$2")
     local real_dest_module_location
-    if [[ $kernel_symlink = $module_version/$1/$2 ]]; then
+    if [[ $kernel_symlink = $dkms_tree/$module/$module_version/$1/$2 ]]; then
         was_active="true"
         echo $""
         echo $"Status: Before uninstall, this module version was ACTIVE on this kernel."
@@ -1575,7 +1575,7 @@ uninstall_module()
 
     # Only do stuff if module/module version is currently installed
     local kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-${kernelver_array[0]}-${arch_array[0]}")
-    if [[ $kernel_symlink != $module_version/${kernelver_array[0]}/${arch_array[0]} ]]; then
+    if [[ $kernel_symlink != $dkms_tree/$module/$module_version/${kernelver_array[0]}/${arch_array[0]} ]]; then
         echo $"" >&2
         echo $"Error! The module $module $module_version is not currently installed." >&2
         echo $"This module is not currently ACTIVE for kernel ${kernelver_array[0]} (${arch_array[0]})." >&2
