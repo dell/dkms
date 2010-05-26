@@ -90,7 +90,7 @@ set_kernel_source_dir()
 }
 
 have_one_kernel() {
-    if (( ${#kernelver_array[@]} > 1 )); then
+    if (( ${#kernelver[@]} > 1 )); then
         echo $"" >&2
         echo $"Error! The action $1 does not support multiple kernel version" >&2
         echo $"parameters on the command line." >&2
@@ -113,45 +113,45 @@ setup_kernels_arches()
 	    line=${line#*/}; line=${line#*/}; line=${line#*/}
             # (I would leave out the delimiters in the status output
             #  in the first place.)
-            kernelver_array[$i]=${line%/*}
-            arch_array[$i]=${line#*/}
+            kernelver[$i]=${line%/*}
+            arch[$i]=${line#*/}
             i=$(($i + 1))
         done < <(module_status_built "$module" "$module_version")
     fi
 
     # Set default kernel version and arch, if none set (but only --all isn't set)
     if [[ $1 != status ]]; then
-        if [[ ! ${kernelver_array} && ! $all ]]; then
-	    kernelver_array[0]=$(uname -r)
+        if [[ ! $kernelver && ! $all ]]; then
+	    kernelver[0]=$(uname -r)
 	    kernels_arches_default="yes"
 	fi
-        if [[ ! ${arch_array} ]]; then
-            kernelver_rpm=$(rpm -qf "/lib/modules/${kernelver_array}" 2>/dev/null | \
+        if [[ ! $arch ]]; then
+            kernelver_rpm=$(rpm -qf "/lib/modules/$kernelver" 2>/dev/null | \
 		grep -v "not owned by any package" | grep kernel | head -n 1)
-            if ! arch_array[0]=$(rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null); then
-                arch_array[0]=$(uname -m)
-                if [[ ${arch_array} = x86_64 ]] && \
+            if ! arch[0]=$(rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null); then
+                arch[0]=$(uname -m)
+                if [[ $arch = x86_64 ]] && \
                     grep -q Intel /proc/cpuinfo && \
-                    ls $install_tree/${kernelver_array}/build/configs \
+                    ls $install_tree/$kernelver/build/configs \
                     2>/dev/null | grep -q "ia32e"; then
-                    arch_array[0]="ia32e"
+                    arch[0]="ia32e"
                 fi
             fi
         fi
     fi
 
     # If only one arch is specified, make it so for all the kernels
-    if ((${#arch_array[@]} == 1 && ${#kernelver_array[@]} > 1)); then
-        while ((${#arch_array[@]} < ${#kernelver_array[@]})); do
-            arch_array[${#arch_array[@]}]=${arch_array}
+    if ((${#arch[@]} == 1 && ${#kernelver[@]} > 1)); then
+        while ((${#arch[@]} < ${#kernelver[@]})); do
+            arch[${#arch[@]}]=$arch
         done
     fi
 
     # Set global multi_arch
     multi_arch=""
     local i=0
-    for ((i=0; $i < ${#arch_array[@]}; i++)); do
-        [[ ${arch_array} != ${arch_array[$i]} ]] && {
+    for ((i=0; $i < ${#arch[@]}; i++)); do
+        [[ $arch != ${arch[$i]} ]] && {
 	    multi_arch="true"
 	    break
 	}
@@ -317,6 +317,31 @@ override_dest_module_location()
     echo "$orig_location"
 }
 
+safe_source() {
+    # $1 = file to source
+    # $@ = environment variables to echo out
+    local to_source_file="$1"; shift
+    declare -a -r export_envs=("$@")
+    . <(
+	. "$to_source_file"
+        # This is really ugly, but a neat hack
+        # Remember, in bash 2.0 and greater all variables are really arrays.
+	for _export_env in "${export_envs[@]}"; do
+	    for _i in $(eval echo \${!$_export_env[@]}); do
+		eval echo '$_export_env[$_i]=\"${'$_export_env'[$_i]}\"'
+	    done
+	done
+	
+	# handle DKMS_DIRECTIVE stuff specially.
+	for directive in $(set | grep ^DKMS_DIRECTIVE | cut -d = -f 2-3); do
+            directive_name=${directive%%=*}
+            directive_value=${directive#*=}
+        echo "$directive_name=\"$directive_value\""
+    done
+    )
+}
+
+
 read_conf()
 {
     # $1 kernel version (required)
@@ -325,6 +350,12 @@ read_conf()
 
     local return_value=0
     local read_conf_file="$dkms_tree/$module/$module_version/source/dkms.conf"
+
+    # Set variables supported in dkms.conf files (eg. $kernelver)
+    local kernelver="$1"
+    local arch="$2"
+    set_kernel_source_dir "$1"
+
 
     # Find which conf file to check
     [[ $conf ]] && read_conf_file="$conf"
@@ -336,67 +367,28 @@ read_conf()
         echo $"File: $conf does not exist." >&2
         exit 4
     fi
-
-    # Clear variables
-    MAKE=""
-    CLEAN=""
-    REMAKE_INITRD=""
-    remake_initrd=""
-    PACKAGE_NAME=""
-    PACKAGE_VERSION=""
-    POST_ADD=""
-    POST_BUILD=""
-    POST_INSTALL=""
-    POST_REMOVE=""
-    PRE_BUILD=""
-    PRE_INSTALL=""
-    BUILD_EXCLUSIVE_KERNEL=""
-    BUILD_EXCLUSIVE_ARCH=""
-    build_exclude=""
-    OBSOLETE_BY=""
-
-    # Clear arrays
-    unset MAKE
-    unset MAKE_MATCH
-    unset MODULES_CONF
-    unset modules_conf_array
-    unset PATCH
-    unset PATCH_MATCH
-    unset patch_array
-    unset BUILT_MODULE_NAME
-    unset built_module_name
-    unset BUILT_MODULE_LOCATION
-    unset built_module_location
-    unset DEST_MODULE_NAME
-    unset dest_module_name
-    unset DEST_MODULE_LOCATION
-    unset dest_module_location
-    unset MODULES_CONF_OBSOLETES
-    unset modules_conf_obsoletes
-    unset MODULES_CONF_ALIAS_TYPE
-    unset modules_conf_alias_type
-    unset MODULES_CONF_OBSOLETE_ONLY
-    unset modules_conf_obsolete_only
-    unset STRIP
-    unset strip
-
-    # Set variables supported in dkms.conf files (eg. $kernelver)
-    kernelver="$1"
-    arch="$2"
-    set_kernel_source_dir "$1"
+    
+    # All of the variables we will accept from dkms.conf.
+    # Does not include directives
+    readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
+       PACKAGE_VERSION POST_ADD POST_INSTALL POST_REMOVE PRE_BUILD 
+       PRE_INSTALL BUILD_EXCLUSIVE_KERNEL BUILD_EXCLUSIVE_ARCH 
+       build_exclude OBSOLETE_BY MAKE MAKE_MATCH MODULES_CONF 
+       modules_conf_array PATCH PATCH_MATCH patch_array BUILT_MODULE_NAME
+       built_module_name BUILT_MODULE_LOCATION built_module_location 
+       DEST_MODULE_NAME dest_module_name MODULES_CONF_OBSOLETES
+       DEST_MODULE_LOCATION dest_module_location 
+       modules_conf_obsoletes MODULES_CONF_ALIAS_TYPE 
+       modules_conf_alias_type STRIP strip MODULES_CONF_OBSOLETE_ONLY 
+       modules_conf_obsolete_only "
+    
+    # Clear variables and arrays
+    for v in $dkms_conf_variables; do
+	unset $v
+    done
 
     # Source in the dkms.conf
-    . $read_conf_file 2>/dev/null
-
-    # check environment for directives
-    # You can't have an array of variables exported
-    # so look for DKMS_DIRECTIVE0, DKMS_DIRECTIVE1, ...
-    for directive in $(set | grep ^DKMS_DIRECTIVE | cut -d = -f 2-3); do
-        directive_name=${directive%%=*}
-        directive_value=${directive#*=}
-        export $directive_name="$directive_value"
-        echo $"DIRECTIVE: $directive_name=\"$directive_value\""
-    done
+    safe_source $read_conf_file $dkms_conf_variables
 
     # Source in the directive_array
     for directive in "${directive_array[@]}"; do
@@ -884,7 +876,7 @@ add_module()
     fi
 
     # Check the conf file for sanity
-    read_conf_or_die "${kernelver_array}" "${arch_array}" "$conf"
+    read_conf_or_die "$kernelver" "$arch" "$conf"
 
     # Create the necessary dkms tree structure
     echo $""
@@ -1069,7 +1061,7 @@ check_module_exists() {
 
 install_module()
 {
-    local base_dir="$dkms_tree/$module/$module_version/${kernelver_array}/${arch_array}"
+    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
 
     check_module_args install
     
@@ -1077,33 +1069,33 @@ install_module()
     check_module_exists
 
     # Make sure that kernel exists to install into
-    if ! [[ -e $install_tree/${kernelver_array} ]]; then
+    if ! [[ -e $install_tree/$kernelver ]]; then
         echo $"" >&2
-        echo $"Error! The directory $install_tree/${kernelver_array} doesn't exist." >&2
+        echo $"Error! The directory $install_tree/$kernelver doesn't exist." >&2
         echo $"You cannot install a module onto a non-existant kernel." >&2
         exit 6
     fi
 
     # Read the conf file
-    read_conf_or_die "${kernelver_array}" "${arch_array}"
+    read_conf_or_die "$kernelver" "$arch"
 
     # Make sure the $module_name_after exists
-    set_module_suffix "${kernelver_array}"
+    set_module_suffix "$kernelver"
     for module_name_after in "${dest_module_name[@]}"; do
         if ! [[ -e $base_dir/module/$module_name_after$module_suffix ]]; then
             echo $"" >&2
             echo $"Error! Could not locate $module_name_after$module_suffix for module $module in the DKMS tree." >&2
-            echo $"You must run a dkms build for kernel ${kernelver_array} (${arch_array}) first." >&2
+            echo $"You must run a dkms build for kernel $kernelver ($arch) first." >&2
             exit 4
         fi
     done
 
     # Check that its not already installed (kernel symlink)
-    kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-${kernelver_array}-${arch_array}")
-    if [[ $kernel_symlink = $dkms_tree/$module/$module_version/${kernelver_array}/${arch_array} ]]; then
+    kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-$kernelver-$arch")
+    if [[ $kernel_symlink = $dkms_tree/$module/$module_version/$kernelver/$arch ]]; then
         echo $"" >&2
         echo $"Error! This module/version combo is already installed" >&2
-        echo $"for kernel: ${kernelver_array} (${arch_array})" >&2
+        echo $"for kernel: $kernelver ($arch)" >&2
         exit 5
     fi
 
@@ -1114,13 +1106,13 @@ install_module()
     [[ $rpm_safe_upgrade ]] && force="true"
 
     # Save the original_module if one exists, none have been saved before, and this is the first module for this kernel
-    local lib_tree="$install_tree/${kernelver_array}"
+    local lib_tree="$install_tree/$kernelver"
     local count
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
         echo $""
         echo $"${dest_module_name[$count]}$module_suffix:"
         # Check this version against what is already in the kernel
-        check_version_sanity "${kernelver_array}" "${arch_array}" \
+        check_version_sanity "$kernelver" "$arch" \
 	    "$obsolete_by" "${dest_module_name[$count]}" || continue
 
         if ((count == 0)) && ! run_build_script pre_install "$pre_install" && \
@@ -1131,10 +1123,10 @@ install_module()
         fi
         local module_count=$(find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f | wc -l | awk {'print $1'})
         echo $" - Original module"
-	if [[ -L $dkms_tree/$module/kernel-${kernelver_array}-${arch_array} && \
-	    -e $dkms_tree/$module/original_module/${kernelver_array}/${arch_array}/${dest_module_name[$count]}$module_suffix ]]; then
+	if [[ -L $dkms_tree/$module/kernel-$kernelver-$arch && \
+	    -e $dkms_tree/$module/original_module/$kernelver/$arch/${dest_module_name[$count]}$module_suffix ]]; then
             echo $"   - An original module was already stored during a previous install"
-        elif ! [[ -L $dkms_tree/$module/kernel-${kernelver_array}-${arch_array} ]]; then
+        elif ! [[ -L $dkms_tree/$module/kernel-$kernelver-$arch ]]; then
             local archive_pref1="$lib_tree/extra/${dest_module_name[$count]}$module_suffix"
             local archive_pref2="$lib_tree/updates/${dest_module_name[$count]}$module_suffix"
             local archive_pref3="$lib_tree${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
@@ -1148,10 +1140,10 @@ install_module()
                     Debian* | Ubuntu* ) ;;
                     *)
                         echo $"   - Found $original_module"
-                        echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array}/${arch_array}/"
+                        echo $"   - Storing in $dkms_tree/$module/original_module/$kernelver/$arch/"
                         echo $"   - Archiving for uninstallation purposes"
-                        mkdir -p "$dkms_tree/$module/original_module/${kernelver_array}/${arch_array}"
-                        mv -f "$original_module" "$dkms_tree/$module/original_module/${kernelver_array}/${arch_array}/"
+                        mkdir -p "$dkms_tree/$module/original_module/$kernelver/$arch"
+                        mv -f "$original_module" "$dkms_tree/$module/original_module/$kernelver/$arch/"
                         ;;
                 esac
                 found_original="yes"
@@ -1174,7 +1166,7 @@ install_module()
 		Debian* | Ubuntu* ) ;;
 		*)
                     echo $"   - All instances of this module will now be stored for reference purposes ONLY"
-                    echo $"   - Storing in $dkms_tree/$module/original_module/${kernelver_array}/${arch_array}/collisions/"
+                    echo $"   - Storing in $dkms_tree/$module/original_module/$kernelver/$arch/collisions/"
                     ;;
             esac
             for module_dup in $(find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f); do
@@ -1184,8 +1176,8 @@ install_module()
                 Debian* | Ubuntu* ) ;;
                 *)
                    echo $"     - Stored $module_dup"
-                   mkdir -p "$dkms_tree/$module/original_module/${kernelver_array}/${arch_array}/collisions/$dup_tree"
-                   mv -f $module_dup "$dkms_tree/$module/original_module/${kernelver_array}/${arch_array}/collisions/$dup_tree"
+                   mkdir -p "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
+                   mv -f $module_dup "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
                    ;;
                 esac
             done
@@ -1193,21 +1185,21 @@ install_module()
 
         # Copy module to its location
         echo $" - Installation"
-        echo $"   - Installing to $install_tree/${kernelver_array}${dest_module_location[$count]}/"
-        mkdir -p $install_tree/${kernelver_array}${dest_module_location[$count]}
-        cp -f "$base_dir/module/${dest_module_name[$count]}$module_suffix" "$install_tree/${kernelver_array}${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+        echo $"   - Installing to $install_tree/$kernelver${dest_module_location[$count]}/"
+        mkdir -p $install_tree/$kernelver${dest_module_location[$count]}
+        cp -f "$base_dir/module/${dest_module_name[$count]}$module_suffix" "$install_tree/$kernelver${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
 
     done
 
     # Create the kernel-<kernelver> symlink to designate this version as active
-    rm -f "$dkms_tree/$module/kernel-${kernelver_array}-${arch_array}" 2>/dev/null
-    ln -s "$module_version/${kernelver_array}/${arch_array}" "$dkms_tree/$module/kernel-${kernelver_array}-${arch_array}" 2>/dev/null
+    rm -f "$dkms_tree/$module/kernel-$kernelver-$arch" 2>/dev/null
+    ln -s "$module_version/$kernelver/$arch" "$dkms_tree/$module/kernel-$kernelver-$arch" 2>/dev/null
 
     # add to kabi-tracking
     set_weak_modules
     if [[ ${weak_modules} ]]; then
         echo $"Adding any weak-modules"
-        list_each_installed_module "$module" "${kernelver_array}" "${arch_array}" | ${weak_modules} --add-modules
+        list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} --add-modules
     fi
 
     # Run the post_install script
@@ -1215,18 +1207,18 @@ install_module()
 
     # Make modules.conf changes as necessary
     echo $""
-    moduleconfig_add "${kernelver_array}"
+    moduleconfig_add "$kernelver"
     etc_sysconfig_kernel_modify "add"
 
-    if ! invoke_command "do_depmod ${kernelver_array}" "depmod" background; then
-        local unresolved_symbols="$(do_depmod ${kernelver_array} 2>&1)"
+    if ! invoke_command "do_depmod $kernelver" "depmod" background; then
+        local unresolved_symbols="$(do_depmod $kernelver 2>&1)"
         local count
 	for ((count=0; count<${#built_module_name[@]}; count++)); do
             [[ $unresolved_symbols =~ ${dest_module_name[$count]}$module_suffix$ ]] || continue
             echo $""
             echo $"Problems with depmod detected.  Automatically uninstalling this module."
             sleep 2
-            do_uninstall "${kernelver_array}" "${arch_array}"
+            do_uninstall "$kernelver" "$arch"
             echo $""
             echo $"DKMS: Install Failed (depmod problems).  Module rolled back to built state."
             exit 6
@@ -1234,10 +1226,10 @@ install_module()
     fi
 
     # Do remake_initrd things (save old initrd)
-    if [[ $remake_initrd ]] && ! make_initrd "${kernelver_array}" "${arch_array}"; then
+    if [[ $remake_initrd ]] && ! make_initrd "$kernelver" "$arch"; then
         echo $"Problems with mkinitrd detected.  Automatically uninstalling this module."
         sleep 2
-        do_uninstall "${kernelver_array}" "${arch_array}"
+        do_uninstall "$kernelver" "$arch"
         echo $""
         echo $"DKMS: Install Failed (mkinitrd problems).  Module rolled back to built state."
         exit 7
@@ -1249,8 +1241,8 @@ install_module()
 
 prepare_build()
 {
-    set_kernel_source_dir "${kernelver_array}"
-    local base_dir="$dkms_tree/$module/$module_version/${kernelver_array}/${arch_array}"
+    set_kernel_source_dir "$kernelver"
+    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
 
     # Check that the right arguments were passed
     check_module_args build
@@ -1261,15 +1253,15 @@ prepare_build()
     # Check that the module has not already been built for this kernel
     if [[ -d $base_dir ]]; then
         echo $"" >&2
-        echo $"Error! This module/version has already been built on: ${kernelver_array}" >&2
+        echo $"Error! This module/version has already been built on: $kernelver" >&2
         echo $"Directory: $base_dir" >&2
         echo $"already exists.  Use the dkms remove function before trying to build again." >&2
         exit 3
     fi
 
     # Read the conf file
-    set_module_suffix "${kernelver_array}"
-    read_conf_or_die "${kernelver_array}" "${arch_array}"
+    set_module_suffix "$kernelver"
+    read_conf_or_die "$kernelver" "$arch"
 
     # Error out if build_exclude is set
     if [[ $build_exclude ]]; then
@@ -1287,7 +1279,7 @@ prepare_build()
         exit 8
     fi
 
-    prepare_kernel "${kernelver_array}" "${arch_array}"
+    prepare_kernel "$kernelver" "$arch"
 
     # Set up temporary build directory for build
     rm -rf "$dkms_tree/$module/$module_version/build"
@@ -1318,19 +1310,19 @@ prepare_build()
 
 do_build()
 {
-    local base_dir="$dkms_tree/$module/$module_version/${kernelver_array}/${arch_array}"
+    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
     echo $""
     echo $"Building module:"
 
     invoke_command "$clean" "cleaning build area" background
-    echo $"DKMS make.log for $module-$module_version for kernel ${kernelver_array} (${arch_array})" >> "$dkms_tree/$module/$module_version/build/make.log"
+    echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$dkms_tree/$module/$module_version/build/make.log"
     date >> "$dkms_tree/$module/$module_version/build/make.log"
-    local the_make_command="${make_command/#make/make KERNELRELEASE=${kernelver_array}}"
+    local the_make_command="${make_command/#make/make KERNELRELEASE=$kernelver}"
 
     if ! invoke_command "$the_make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$the_make_command" background; then
         # Make sure good return status
         echo $"" >&2
-        echo $"Error! Bad return status for module build on kernel: ${kernelver_array} (${arch_array})" >&2
+        echo $"Error! Bad return status for module build on kernel: $kernelver ($arch)" >&2
         echo $"Consult the make.log in the build directory" >&2
         echo $"$dkms_tree/$module/$module_version/build/ for more information." >&2
         if grep -ic "gcc: Command not found" "$dkms_tree/$module/$module_version/build/make.log"; then
@@ -1349,7 +1341,7 @@ do_build()
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
         [[ -e ${built_module_location[$count]}${built_module_name[$count]}$module_suffix ]] && continue
         echo $"" >&2
-        echo $"Error!  Build of ${built_module_name[$count]}$module_suffix failed for: ${kernelver_array} (${arch_array})" >&2
+        echo $"Error!  Build of ${built_module_name[$count]}$module_suffix failed for: $kernelver ($arch)" >&2
         echo $"Consult the make.log in the build directory" >&2
         echo $"$dkms_tree/$module/$module_version/build/ for more information." >&2
         report_build_problem
@@ -1380,7 +1372,7 @@ clean_build()
     invoke_command "$clean" "cleaning build area" background
     cd - >/dev/null
 
-    if [[ ! ( $(VER ${kernelver_array}) < $(VER 2.6.6) ) && \
+    if [[ ! ( $(VER $kernelver) < $(VER 2.6.6) ) && \
        -d $kernel_source_dir && \
        ! -h $kernel_source_dir && \
        ! $ksourcedir_fromcli ]]; then
@@ -1571,17 +1563,17 @@ uninstall_module()
     fi
 
     # Read the conf file
-    read_conf_or_die "${kernelver_array}" "${arch_array}"
+    read_conf_or_die "$kernelver" "$arch"
 
     # Only do stuff if module/module version is currently installed
-    local kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-${kernelver_array}-${arch_array}")
-    if [[ $kernel_symlink != $dkms_tree/$module/$module_version/${kernelver_array}/${arch_array} ]]; then
+    local kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-$kernelver-$arch")
+    if [[ $kernel_symlink != $dkms_tree/$module/$module_version/$kernelver/$arch ]]; then
         echo $"" >&2
         echo $"Error! The module $module $module_version is not currently installed." >&2
-        echo $"This module is not currently ACTIVE for kernel ${kernelver_array} (${arch_array})." >&2
+        echo $"This module is not currently ACTIVE for kernel $kernelver ($arch)." >&2
         exit 5
     fi
-    do_uninstall "${kernelver_array}" "${arch_array}"
+    do_uninstall "$kernelver" "$arch"
 }
 
 remove_module()
@@ -1604,12 +1596,12 @@ remove_module()
     fi
 
     local i
-    for ((i=0; i < ${#kernelver_array[@]}; i++)); do
+    for ((i=0; i < ${#kernelver[@]}; i++)); do
         # make sure its there first before removing
-        if ! [[ -d $dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]} ]]; then
+        if ! [[ -d $dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]} ]]; then
             echo $"" >&2
             echo $"Error! There is no instance of $module $module_version" >&2
-            echo $"for kernel ${kernelver_array[$i]} (${arch_array[$i]}) located in the DKMS tree." >&2
+            echo $"for kernel ${kernelver[$i]} (${arch[$i]}) located in the DKMS tree." >&2
             exit 4
         fi
 
@@ -1630,15 +1622,15 @@ remove_module()
         fi
 
         # Read the conf file
-        read_conf_or_die "${kernelver_array[$i]}" "${arch_array[$i]}"
+        read_conf_or_die "${kernelver[$i]}" "${arch[$i]}"
 
-        do_uninstall "${kernelver_array[$i]}" "${arch_array[$i]}"
+        do_uninstall "${kernelver[$i]}" "${arch[$i]}"
 
         # Delete the $kernel_version/$arch_used part of the tree
-        rm -rf "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}"
-        [[ $(find $dkms_tree/$module/$module_version/${kernelver_array[$i]}/* \
+        rm -rf "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}"
+        [[ $(find $dkms_tree/$module/$module_version/${kernelver[$i]}/* \
 	    -maxdepth 0 -type d 2>/dev/null) ]] || \
-	    rm -rf "$dkms_tree/$module/$module_version/${kernelver_array[$i]}"
+	    rm -rf "$dkms_tree/$module/$module_version/${kernelver[$i]}"
     done
 
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
@@ -1814,13 +1806,13 @@ do_status() {
 show_status()
 {
     local j state_array
-    if ((${#kernelver_array[@]} == 0)); then
-        do_status "$module" "$module_version" "${kernelver_array}" "${arch_array}"
-        do_status_weak "$module" "$module_version" "${kernelver_array}" "${arch_array}"
+    if ((${#kernelver[@]} == 0)); then
+        do_status "$module" "$module_version" "$kernelver" "$arch"
+        do_status_weak "$module" "$module_version" "$kernelver" "$arch"
     else
-	for ((j=0; j < ${#kernelver_array[@]}; j++)); do
-            do_status "$module" "$module_version" "${kernelver_array[$j]}" "${arch_array[$j]}"
-            do_status_weak "$module" "$module_version" "${kernelver_array[$j]}" "${arch_array[$j]}"
+	for ((j=0; j < ${#kernelver[@]}; j++)); do
+            do_status "$module" "$module_version" "${kernelver[$j]}" "${arch[$j]}"
+            do_status_weak "$module" "$module_version" "${kernelver[$j]}" "${arch[$j]}"
         done
     fi
 }
@@ -1865,7 +1857,7 @@ media_valid()
 make_driver_disk()
 {
     # Check that the right arguments were passed
-    if ! [[ $module && $module_version && $distro && ${kernelver_array} ]]; then
+    if ! [[ $module && $module_version && $distro && $kernelver ]]; then
         echo $"" >&2
         echo $"Error! Invalid number of parameters passed." >&2
         echo $"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver> [--media floppy|iso|tar]" >&2
@@ -1897,7 +1889,7 @@ make_driver_disk()
     esac
 
     # Read the conf file
-    read_conf_or_die "${kernelver_array}" "${arch_array}"
+    read_conf_or_die "$kernelver" "$arch"
 
     case $distro in
 	redhat*) make_redhat_driver_disk;;
@@ -1974,15 +1966,15 @@ make_redhat_driver_disk()
     if [[ $distro = redhat1 && $multi_arch = true ]]; then
         local redhat1_okay="true"
         local other_arch=""
-	for ((i=0; i < ${#kernelver_array[@]}; i++)); do
-            if [[ ${arch_array[$i]} != i386 && $other_arch != ${arch_array[$i]} && $other_arch ]]; then
+	for ((i=0; i < ${#kernelver[@]}; i++)); do
+            if [[ ${arch[$i]} != i386 && $other_arch != ${arch[$i]} && $other_arch ]]; then
                 echo $"" >&2
 		echo $"Error! You have specified a Red Hat version 1 driver disk, but have also"  >&2
 		echo $"specified multiple architectures.  Version 1 does not support this." >&2
 		echo $"Use 'redhat2' instead (only OSes >= RHEL3, FC1 support version 2)." >&2
 		exit 3
-            elif [[ ${arch_array[$i]} != i386 && $other_arch != ${arch_array[$i]} && ! $other_arch ]]; then
-                other_arch="${arch_array[$i]}"
+            elif [[ ${arch[$i]} != i386 && $other_arch != ${arch[$i]} && ! $other_arch ]]; then
+                other_arch="${arch[$i]}"
             fi
         done
     fi
@@ -2004,29 +1996,29 @@ make_redhat_driver_disk()
         return
     fi
 
-    for ((i=0; i < ${#kernelver_array[@]}; i++)); do
-        set_module_suffix "${kernelver_array[$i]}"
+    for ((i=0; i < ${#kernelver[@]}; i++)); do
+        set_module_suffix "${kernelver[$i]}"
 
-        local dd_prefix="${kernelver_array[$i]}"
-        [[ $distro = redhat2 ]] && dd_prefix="${kernelver_array[$i]}/${arch_array[$i]}"
-        [[ $multi_arch = true && -z $redhat1_okay ]] && dd_prefix="${kernelver_array[$i]}/${arch_array[$i]}"
+        local dd_prefix="${kernelver[$i]}"
+        [[ $distro = redhat2 ]] && dd_prefix="${kernelver[$i]}/${arch[$i]}"
+        [[ $multi_arch = true && -z $redhat1_okay ]] && dd_prefix="${kernelver[$i]}/${arch[$i]}"
 	for ((count=0; count < ${#dest_module_name[@]}; count++)); do
-            if ! [ -e "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" ]; then
+            if ! [ -e "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix" ]; then
                 echo $"" >&2
-                echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver_array[$i]} (${arch_array[$i]})." >&2
+                echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver[$i]} (${arch[$i]})." >&2
                 echo $"Module/version must be in built state before making a driver disk." >&2
                 rm -rf "$cpioarchive_dir_name"
                 exit 5
             fi
             # FIXME: add check for KMP binary RPMs to include in the driver disk
             if [[ ! $kernel_version_list ]]; then
-                kernel_version_list="kernel${kernelver_array[$i]}-${arch_array[$i]}"
+                kernel_version_list="kernel${kernelver[$i]}-${arch[$i]}"
             else
-                kernel_version_list="$kernel_version_list-kernel${kernelver_array[$i]}-${arch_array[$i]}"
+                kernel_version_list="$kernel_version_list-kernel${kernelver[$i]}-${arch[$i]}"
             fi
             mkdir -p $cpioarchive_dir_name/$dd_prefix
-            echo "Marking ${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix..."
-            cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$cpioarchive_dir_name/$dd_prefix/"
+            echo "Marking ${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix..."
+            cp "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix" "$cpioarchive_dir_name/$dd_prefix/"
 
             modules_cgz_list="$dd_prefix/${dest_module_name[$count]}$module_suffix ${modules_cgz_list}"
         done
@@ -2110,9 +2102,9 @@ find_external_dependencies()
 
     # find all module dependencies
     for ((count=0; count < ${#dest_module_name[@]}; count++)); do
-	for ((i=0; i < ${#kernelver_array[@]}; i++)); do
-            set_module_suffix "${kernelver_array[$i]}"
-            mod="$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix"
+	for ((i=0; i < ${#kernelver[@]}; i++)); do
+            set_module_suffix "${kernelver[$i]}"
+            mod="$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix"
             deps=(${deps[@]} $(modinfo "$mod" | sed -n 's/,/ /g; s/^depends: *//p'))
         done
     done
@@ -2163,30 +2155,30 @@ make_suse_driver_disk()
     for ((count=0; count < ${#dest_module_name[@]}; count++)); do
         local i
         local topdir=$(printf "%02d" $(($count+1+offset)))
-	for ((i=0; i < ${#kernelver_array[@]}; i++)); do
-            set_module_suffix "${kernelver_array[$i]}"
+	for ((i=0; i < ${#kernelver[@]}; i++)); do
+            set_module_suffix "${kernelver[$i]}"
 
-            if ! [[ -e $dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix ]]; then
+            if ! [[ -e $dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix ]]; then
                 echo $"" >&2
-                echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver_array[$i]} (${arch_array[$i]})." >&2
+                echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver[$i]} (${arch[$i]})." >&2
                 echo $"Module/version must be in built state before making a driver disk." >&2
                 rm -rf $temp_dir_name
                 exit 5
             fi
             # FIXME: add check for KMP binary RPMs to include in the driver disk
-            suse_arch=${arch_array[$i]}
+            suse_arch=${arch[$i]}
             case $suse_arch in
 		i?86) suse_arch=i386;;
             esac
 
-            echo "Marking ${kernelver_array[$i]}/${arch_array[$i]}/modules/${dest_module_name[$count]}$module_suffix..."
-            mkdir -p "$driver_disk_dir/$topdir/$suse_arch-$release/install/lib/modules/${kernelver_array[$i]}${dest_module_location[$count]}"
-            cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$driver_disk_dir/$topdir/$suse_arch-$release/install/lib/modules/${kernelver_array[$i]}${dest_module_location[$count]}/"
+            echo "Marking ${kernelver[$i]}/${arch[$i]}/modules/${dest_module_name[$count]}$module_suffix..."
+            mkdir -p "$driver_disk_dir/$topdir/$suse_arch-$release/install/lib/modules/${kernelver[$i]}${dest_module_location[$count]}"
+            cp "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix" "$driver_disk_dir/$topdir/$suse_arch-$release/install/lib/modules/${kernelver[$i]}${dest_module_location[$count]}/"
 
-            case ${kernelver_array[$i]} in
+            case ${kernelver[$i]} in
                 *-default)
                     mkdir -p "$driver_disk_dir/$topdir/$suse_arch-$release/modules/"
-                    cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$driver_disk_dir/$topdir/$suse_arch-$release/modules/"
+                    cp "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix" "$driver_disk_dir/$topdir/$suse_arch-$release/modules/"
                     ;;
             esac
 
@@ -2209,9 +2201,9 @@ make_suse_driver_disk()
 
             postkernels=
             archtest=${arch_release/-*}
-	    for ((i=0; i<${#kernelver_array[@]}; i++)); do
-                [[ ${arch_array[$i]} = ${archtest} ]] && \
-                    postkernels="${postkernels} ${kernelver_array[$i]}"
+	    for ((i=0; i<${#kernelver[@]}; i++)); do
+                [[ ${arch[$i]} = ${archtest} ]] && \
+                    postkernels="${postkernels} ${kernelver[$i]}"
             done
 
             if [[ ${postkernels} ]]; then
@@ -2290,41 +2282,41 @@ make_ubuntu_driver_disk()
    fi
 
    local i
-   for ((i=0; i < ${#kernelver_array[@]}; i++)); do
-      set_module_suffix "${kernelver_array[$i]}"
+   for ((i=0; i < ${#kernelver[@]}; i++)); do
+      set_module_suffix "${kernelver[$i]}"
       # Driver disks only recognize i386 as package arch
-      local arch=${arch_array[$i]/i?86/i386}
-      local kvers=${kernelver_array[$i]/-/_}; kvers=${kvers%%_*}
+      local karch=${arch[$i]/i?86/i386}
+      local kvers=${kernelver[$i]/-/_}; kvers=${kvers%%_*}
        # ubuntu-drivers/<kver>/*_<debarch>.deb
       local dd_prefix="ubuntu-drivers/$kvers"
-      local dd_suffix="_${arch}.deb"
+      local dd_suffix="_${karch}.deb"
       local count
       for ((count=0; count < ${#dest_module_name[@]}; count++)); do
-        if ! [[ -e $dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix ]]; then
+        if ! [[ -e $dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix ]]; then
             echo $"" >&2
-            echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver_array[$i]} (${arch_array[$i]})." >&2
+            echo $"Error! Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver[$i]} (${arch[$i]})." >&2
             echo $"Module/version must be in built state before making a driver disk." >&2
             rm -rf "$tempdir"
             exit 5
          fi
 
          mkdir -p "$tempdir/$dd_prefix"
-         echo "Marking ${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix..."
+         echo "Marking ${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix..."
 
          local deb_dir="$tempdir/$dd_prefix/debian"
-         local deb_lib_dir="$deb_dir/lib/modules/${kernelver_array[$i]}/updates/dkms"
+         local deb_lib_dir="$deb_dir/lib/modules/${kernelver[$i]}/updates/dkms"
          mkdir -p "$deb_lib_dir"
-         cp "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}/module/${dest_module_name[$count]}$module_suffix" "$deb_lib_dir"
+         cp "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix" "$deb_lib_dir"
        done
 
        pushd "$deb_dir" > /dev/null 2>&1
        mkdir DEBIAN
        cat > DEBIAN/control <<EOF
-Package: ${module}-modules-${kernelver_array[$i]}
+Package: ${module}-modules-${kernelver[$i]}
 Version: ${module_version}-1
 Section: misc
 Priority: optional
-Architecture: $arch
+Architecture: $karch
 Depends:
 Maintainer: DKMS <dkms-devel@dell.com>
 Description: DKMS packaged binary driver update
@@ -2338,13 +2330,13 @@ EOF
        # and some parts evaluated at runtime
 cat >DEBIAN/preinst <<EOF
 #!/bin/bash
-[[ \$(uname -r) = ${kernelver_array[$i]} ]] || exit 1
+[[ \$(uname -r) = ${kernelver[$i]} ]] || exit 1
 exit 0
 EOF
        chmod 0775 DEBIAN/preinst
        cd "$tempdir/$dd_prefix"
        dpkg-deb --build debian
-       mv debian.deb "${module}_${module_version}-${kernelver_array[$i]}${dd_suffix}"
+       mv debian.deb "${module}_${module_version}-${kernelver[$i]}${dd_suffix}"
        rm -rf debian
        popd > /dev/null 2>&1
    done
@@ -2395,7 +2387,7 @@ make_tarball()
     fi
 
     # Read the conf file
-    read_conf_or_die "${kernelver_array}" "${arch_array}"
+    read_conf_or_die "$kernelver" "$arch"
 
     temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
     mkdir -p $temp_dir_name/dkms_main_tree
@@ -2404,25 +2396,25 @@ make_tarball()
 	kernel_version_list="source-only"
     else
 	local i
-	for ((i=0; i<${#kernelver_array[@]}; i++)); do
-            if ! [[ -d $dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]} ]]; then
+	for ((i=0; i<${#kernelver[@]}; i++)); do
+            if ! [[ -d $dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]} ]]; then
 		echo $"" >&2
-		echo $"Error! No modules built for ${kernelver_array[$i]} (${arch_array[$i]})." >&2
+		echo $"Error! No modules built for ${kernelver[$i]} (${arch[$i]})." >&2
 		echo $"Modules must already be in the built state before using mktarball." >&2
 		rm -rf "$temp_dir_name" 2>/dev/null
 		exit 6
             fi
 
-            set_module_suffix "${kernelver_array[$i]}"
+            set_module_suffix "${kernelver[$i]}"
 
-            echo "Marking modules for ${kernelver_array[$i]} (${arch_array[$i]}) for archiving..."
+            echo "Marking modules for ${kernelver[$i]} (${arch[$i]}) for archiving..."
             if [[ ! $kernel_version_list ]]; then
-		kernel_version_list="kernel${kernelver_array[$i]}-${arch_array[$i]}"
+		kernel_version_list="kernel${kernelver[$i]}-${arch[$i]}"
             else
-		kernel_version_list="${kernel_version_list}-kernel${kernelver_array[$i]}-${arch_array[$i]}"
+		kernel_version_list="${kernel_version_list}-kernel${kernelver[$i]}-${arch[$i]}"
             fi
-            mkdir -p "$temp_dir_name/dkms_main_tree/${kernelver_array[$i]}/${arch_array[$i]}"
-            cp -rf "$dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]}" "$temp_dir_name/dkms_main_tree/${kernelver_array[$i]}"
+            mkdir -p "$temp_dir_name/dkms_main_tree/${kernelver[$i]}/${arch[$i]}"
+            cp -rf "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}" "$temp_dir_name/dkms_main_tree/${kernelver[$i]}"
     done
     fi
 
@@ -2520,7 +2512,7 @@ load_tarball()
             rm -rf $temp_dir_name
             exit 3
         fi
-        read_conf_or_die "${kernelver_array}" "${arch_array}" "$conf"
+        read_conf_or_die "$kernelver" "$arch" "$conf"
         tarball_source_tree_name=$(echo $conf | sed "s#$temp_dir_name\/##" | sed 's/dkms.conf//' | sed 's/\/$//')
     elif ! [[ -d $temp_dir_name/dkms_source_tree && -d $temp_dir_name/dkms_binaries_only ]]; then
         PACKAGE_NAME=$(cat $temp_dir_name/dkms_binaries_only/PACKAGE_NAME 2>/dev/null)
@@ -2575,7 +2567,7 @@ load_tarball()
         is_not_arch_aware="true"
         echo $"" >&2
         echo $"Warning!  This tarball was created with dkms < 2.0 and contains" >&2
-        echo $"no arch info. DKMS will assume the arch: ${arch_array}" >&2
+        echo $"no arch info. DKMS will assume the arch: $arch" >&2
     fi
 
     # Make sure we got what we needed from the tarball
@@ -2611,7 +2603,7 @@ load_tarball()
     for directory in $dirs_to_load; do
         dirs_to_parse=${directory/*dkms_main_tree\/}
         kernel_to_load=${dirs_to_parse/\/*}
-        arch_to_load=${arch_array/*\/}
+        arch_to_load=${arch/*\/}
         dkms_dir_location="$dkms_tree/$module/$module_version/$kernel_to_load/$arch_to_load"
         if [[ -d $dkms_dir_location && ! $force ]]; then
             echo $"Warning! $dkms_dir_location already exists.  Skipping..." >&2
@@ -2640,7 +2632,7 @@ load_tarball()
 
 run_match()
 {
-    set_kernel_source_dir "${kernelver_array}"
+    set_kernel_source_dir "$kernelver"
 
     # Error if $template_kernel is unset
     if [[ ! $template_kernel ]]; then
@@ -2652,14 +2644,14 @@ run_match()
     fi
 
     # Error out if $template_kernel = $kernel_version
-    if [[ $template_kernel = ${kernelver_array} ]]; then
+    if [[ $template_kernel = $kernelver ]]; then
         echo $"" >&2
         echo $"Error! The templatekernel and the specified kernel version are the same." >&2
         exit 2
     fi
 
     # Read in the status of template_kernel
-    local template_kernel_status=$(do_status '' '' $template_kernel ${arch_array} | grep ": installed")
+    local template_kernel_status=$(do_status '' '' $template_kernel $arch | grep ": installed")
 
     # If $module is set, grep the status only for that module
     if [[ $module ]]; then
@@ -2673,15 +2665,15 @@ run_match()
     fi
 
     echo $""
-    echo $"Matching modules in kernel: ${kernelver_array} (${arch_array})"
-    echo $"to the configuration of kernel: $template_kernel (${arch_array})"
+    echo $"Matching modules in kernel: $kernelver ($arch)"
+    echo $"to the configuration of kernel: $template_kernel ($arch)"
 
     # Prepare the kernel just once but only if there is actual work to do
     if [[ ! $template_kernel_status ]]; then
         echo $""
         echo $"There is nothing to be done for this match."
     else
-        prepare_kernel "${kernelver_array}" "${arch_array}"
+        prepare_kernel "$kernelver" "$arch"
 
         # Iterate over the kernel_status and match kernel to the template_kernel
         while read template_line; do
@@ -2696,10 +2688,10 @@ run_match()
             echo $"-------------------------"
 
             # Figure out what to do from here
-            if show_status "$template_module" "$template_version" "${kernelver_array}" "${arch_array}" 2>/dev/null | grep -q ": installed"; then
+            if show_status "$template_module" "$template_version" "$kernelver" "$arch" 2>/dev/null | grep -q ": installed"; then
                 echo $""
                 echo $"This module/version combo is already installed.  Nothing to be done."
-            elif show_status "$template_module" "$template_version" "${kernelver_array}" "${arch_array}" 2>/dev/null | grep -q ": built"; then
+            elif show_status "$template_module" "$template_version" "$kernelver" "$arch" 2>/dev/null | grep -q ": built"; then
                 echo $""
                 echo $"This module/version combo is built.  Installing it:"
                 module="$template_module"
@@ -2716,7 +2708,7 @@ run_match()
         done < <(echo "$template_kernel_status")
 
         # Clean up the kernel tree
-        if [[ ! ( $(VER ${kernelver_array}) < $(VER 2.6.6) ) && \
+        if [[ ! ( $(VER $kernelver) < $(VER 2.6.6) ) && \
             -d "$kernel_source_dir" && \
             ! -h "$kernel_source_dir" && \
             -z "$ksourcedir_fromcli" ]]; then
@@ -2748,7 +2740,7 @@ make_rpm()
     fi
 
     # Read the conf file
-    read_conf_or_die "${kernelver_array}" "${arch_array}"
+    read_conf_or_die "$kernelver" "$arch"
 
     local rpm_basedir="$dkms_tree/$module/$module_version/rpm"
 
@@ -2773,16 +2765,16 @@ make_rpm()
         mktarball_line="--binaries-only"
         local i
         echo $""
-	for ((i=0; i<${#kernelver_array[@]}; i++)); do
-            if ! [[ -d $dkms_tree/$module/$module_version/${kernelver_array[$i]}/${arch_array[$i]} ]]; then
+	for ((i=0; i<${#kernelver[@]}; i++)); do
+            if ! [[ -d $dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]} ]]; then
             echo $"" >&2
             echo $"You do not seem to have $module $module_version built for" >&2
-            echo $"${kernelver_array[$i]} (${arch_array[$i]}).  All modules must be in" >&2
+            echo $"${kernelver[$i]} (${arch[$i]}).  All modules must be in" >&2
             echo $"the built state before you can use mkrpm." >&2
             exit 5
             fi
-            echo $"Marking ${kernelver_array[$i]} (${arch_array[$i]}) for RPM..."
-            mktarball_line="-k ${kernelver_array[$i]} -a ${arch_array[$i]} $mktarball_line"
+            echo $"Marking ${kernelver[$i]} (${arch[$i]}) for RPM..."
+            mktarball_line="-k ${kernelver[$i]} -a ${arch[$i]} $mktarball_line"
         done
     else
         mktarball_line="none"
@@ -2803,7 +2795,7 @@ make_rpm()
         invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '${temp_dir_name}/SOURCES/$module-$module_version'" "Copying source tree"
     fi
 
-    if invoke_command "LC_ALL=C rpmbuild --define \"_topdir ${temp_dir_name}\" --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver_array[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  /usr/lib/dkms/find-provides\" --define \"_use_internal_dependency_generator 0\" -ba ${temp_dir_name}/SPECS/dkms_mkrpm.spec > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"; then
+    if invoke_command "LC_ALL=C rpmbuild --define \"_topdir ${temp_dir_name}\" --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  /usr/lib/dkms/find-provides\" --define \"_use_internal_dependency_generator 0\" -ba ${temp_dir_name}/SPECS/dkms_mkrpm.spec > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"; then
         mkdir -p ${rpm_basedir}
         cp -a ${temp_dir_name}/SRPMS/* ${temp_dir_name}/RPMS/*/* ${rpm_basedir}/
         echo $""
@@ -2884,7 +2876,7 @@ make_debian()
     debian_package=${module//_/-}
 
     # Read the conf file
-    read_conf_or_die "${kernelver_array}" "${arch_array}"
+    read_conf_or_die "$kernelver" "$arch"
     debian_install fakeroot dpkg-dev
 
     #skeleton to load templates from
@@ -3015,7 +3007,7 @@ make_kmp_srpm()
     rm -rf ${module}-${module_version}
     popd > /dev/null 2>&1
     pushd "$temp_dir_name" > /dev/null 2>&1
-    invoke_command "rpmbuild --define \"_topdir ${temp_dir_name}\" --target=${arch_array} -bs ${SPECFILE} > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
+    invoke_command "rpmbuild --define \"_topdir ${temp_dir_name}\" --target=$arch -bs ${SPECFILE} > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
     grep ^Wrote $temp_dir_name/rpmbuild.log > /dev/null 2>&1
     local RC="$?"
     if ((RC == 0)); then
@@ -3056,10 +3048,10 @@ read_arg() {
 parse_kernelarch(){
     local ka_re='^([^/]*)/(.*)$'
     if [[ $1 =~ $ka_re ]]; then
-	kernelver_array[${#kernelver_array[@]}]="${BASH_REMATCH[1]}"
-	arch_array[${#arch_array[@]}]="${BASH_REMATCH[2]}"
+	kernelver[${#kernelver[@]}]="${BASH_REMATCH[1]}"
+	arch[${#arch[@]}]="${BASH_REMATCH[2]}"
     else
-	kernelver_array[${#kernelver_array[@]}]="$1"
+	kernelver[${#kernelver[@]}]="$1"
     fi
 }
 
@@ -3087,7 +3079,7 @@ make_kmp()
     make_common_test "mkkmp"
 
     # Read the conf file
-    read_conf_or_die "${kernelver_array}" "${arch_array}"
+    read_conf_or_die "$kernelver" "$arch"
 
     echo $""
     if [[ $specfile && -e $dkms_tree/$module/$module_version/source/$specfile ]]; then
@@ -3180,8 +3172,8 @@ size="1440";
 specfile=""
 legacy_postinst="1"
 unset directive_array
-unset kernelver_array
-unset arch_array
+unset kernelver
+unset arch
 
 action_re='^(remove|(un)?install|match|mk(driverdisk|tarball|rpm|deb|dsc|kmp)|build|add|status|ldtarball)$'
 
@@ -3220,7 +3212,7 @@ while (($# > 0)); do
 	--archive*)          read_arg archive_location "$1" "$2" || shift;;
 	--legacy-postinst*)  read_arg legacy_postinst "$1" "$2" || shift;;
 	--arch*|-a)          read_arg _aa "$1" "$2" || shift
-                             arch_array[${#arch_array[@]}]="$_aa";;
+                             arch[${#arch[@]}]="$_aa";;
 	--size*)             read_arg size "$1" "$2" || shift;;
 	--kernelsourcedir*)  read_arg kernel_source_dir "$1" "$2" || shift
                              ksourcedir_fromcli="true";;
@@ -3258,8 +3250,8 @@ if [[ $binaries_only && $source_only ]]; then
 fi
 
 # Error if # of arches doesn't match # of kernels
-if (( ${#kernelver_array[@]} != ${#arch_array[@]} && \
-    ${#arch_array[@]} > 1 )); then
+if (( ${#kernelver[@]} != ${#arch[@]} && \
+    ${#arch[@]} > 1 )); then
     echo $"" >&2
     echo $"Error!  If more than one arch is specified on the command line, then there" >&2
     echo $"must be an equal number of kernel versions also specified (1:1 relationship)." >&2
@@ -3267,7 +3259,7 @@ if (( ${#kernelver_array[@]} != ${#arch_array[@]} && \
 fi
 
 # Check that kernel version and all aren't both set simultaneously
-if [[ ${kernelver_array} && $all ]]; then
+if [[ $kernelver && $all ]]; then
     echo $"" >&2
     echo $"Error!  You cannot specify a kernel version and also specify" >&2
     echo $"--all on the command line." >&2
@@ -3275,7 +3267,7 @@ if [[ ${kernelver_array} && $all ]]; then
 fi
 
 # Check that arch and all aren't both set simultaneously
-if [[ ${arch_array} && $all ]]; then
+if [[ $arch && $all ]]; then
     echo $"" >&2
     echo $"Error!  You cannot specify an arch and also specify" >&2
     echo $"--all on the command line." >&2
