@@ -1,3 +1,10 @@
+dkms (2.1.2.0-0ubuntu1) UNRELEASED; urgency=low
+
+  * Add a patch from Steffen Barszus that makes DKMS produce a '.changes' file so
+    that the resultant package is uploadable to launchpad.
+
+ -- Mario Limonciello <Mario_Limonciello@Dell.com>  Wed, 26 May 2010 15:47:45 -0500
+
 dkms (2.1.1.2-0ubuntu1) lucid; urgency=low
 
   [ Mario Limonciello ]
