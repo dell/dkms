@@ -849,6 +849,14 @@ add_module()
     # Check that we have all the arguments
     check_module_args add
 
+    # Check that this module-version hasn't already been added
+    if is_module_added "$module" "$module_version"; then
+        echo $"" >&2
+        echo $"Error! DKMS tree already contains: $module-$module_version" >&2
+        echo $"You cannot add the same module/version combo more than once." >&2
+        exit 3
+    fi 
+
     [[ $conf ]] || conf="$source_tree/$module-$module_version/dkms.conf"
 
     # Check that /usr/src/$module-$module_version exists
@@ -865,14 +873,6 @@ add_module()
         local lock_name=$(mktemp $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.XXXXXX 2>/dev/null)
         echo "$module-$module_version" >> $lock_name
         ps -o lstart --no-headers -p $pppid 2>/dev/null >> $lock_name
-    fi
-
-    # Check that this module-version hasn't already been added
-    if [[ -d $dkms_tree/$module/$module_version ]]; then
-        echo $"" >&2
-        echo $"Error! DKMS tree already contains: $module-$module_version" >&2
-        echo $"You cannot add the same module/version combo more than once." >&2
-        exit 3
     fi
 
     # Check the conf file for sanity
@@ -1031,32 +1031,163 @@ prepare_kernel()
     cd - >/dev/null
 }
 
-list_each_installed_module()
+prepare_build()
 {
-    # $1 = module
-    # $2 = kernel version
-    # $3 = arch
-    local count
-    local real_dest_module_location
-    for ((count=0; count < ${#built_module_name[@]}; count++)); do
-        real_dest_module_location="$(find_actual_dest_module_location $1 $count $2 $3)"
-        echo "$install_tree/$2${real_dest_module_location}/${dest_module_name[$count]}$module_suffix"
+    set_kernel_source_dir "$kernelver"
+    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
+
+    # Check that the right arguments were passed
+    check_module_args build
+
+    # Check that source symlink works
+    is_module_added "$module" "$module_version" || add_module
+    
+    # Check that the module has not already been built for this kernel
+    if [[ -d $base_dir ]]; then
+        echo $"" >&2
+        echo $"Error! This module/version has already been built on: $kernelver" >&2
+        echo $"Directory: $base_dir" >&2
+        echo $"already exists.  Use the dkms remove function before trying to build again." >&2
+        exit 3
+    fi
+
+    # Read the conf file
+    set_module_suffix "$kernelver"
+    read_conf_or_die "$kernelver" "$arch"
+
+    # Error out if build_exclude is set
+    if [[ $build_exclude ]]; then
+        echo "" >&2
+        echo "Error!  The dkms.conf for this module includes a BUILD_EXCLUSIVE directive which" >&2
+        echo "does not match this kernel/arch.  This indicates that it should not be built." >&2
+        exit 9
+    fi
+
+    # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
+    if (($(ls $dkms_tree/$module/$module_version/source | wc -l | awk {'print $1'}) < 2)); then
+        echo "" >&2
+        echo $"Error! The directory $dkms_tree/$module/$module_version/source/" >&2
+        echo $"does not appear to have module source located within it.  Build halted." >&2
+        exit 8
+    fi
+
+    prepare_kernel "$kernelver" "$arch"
+
+    # Set up temporary build directory for build
+    rm -rf "$dkms_tree/$module/$module_version/build"
+    cp -rf "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
+
+    # Run the pre_build script
+    run_build_script pre_build "$pre_build"
+
+    cd "$dkms_tree/$module/$module_version/build"
+
+    # Apply any patches
+    for p in "${patch_array[@]}"; do
+        if ! [ -e "$dkms_tree/$module/$module_version/build/patches/$p" ]; then
+            echo $"" >&2
+            echo $"Error!  Patch $p as specified in dkms.conf cannot be" >&2
+            echo $"found in $dkms_tree/$module/$module_version/build/patches/." >&2
+            exit 5
+        fi
+        if ! invoke_command "patch -p1 < ./patches/$p" "applying patch $p"; then
+            echo $"" >&2
+            echo $"Error! Application of patch $p failed." >&2
+            echo $"Check $dkms_tree/$module/$module_version/build/ for more information." >&2
+            report_build_problem
+            exit 6
+        fi
     done
 }
 
-set_weak_modules()
+do_build()
 {
-    [[ ${weak_modules} ]] && return
-    [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
-    [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
+    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
+    echo $""
+    echo $"Building module:"
+
+    invoke_command "$clean" "cleaning build area" background
+    echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$dkms_tree/$module/$module_version/build/make.log"
+    date >> "$dkms_tree/$module/$module_version/build/make.log"
+    local the_make_command="${make_command/#make/make KERNELRELEASE=$kernelver}"
+
+    if ! invoke_command "$the_make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$the_make_command" background; then
+        # Make sure good return status
+        echo $"" >&2
+        echo $"Error! Bad return status for module build on kernel: $kernelver ($arch)" >&2
+        echo $"Consult the make.log in the build directory" >&2
+        echo $"$dkms_tree/$module/$module_version/build/ for more information." >&2
+        if grep -ic "gcc: Command not found" "$dkms_tree/$module/$module_version/build/make.log"; then
+            echo $"" >&2
+            echo $"DO YOU HAVE gcc INSTALLED???" >&2
+        fi
+        if grep -ic "make: command not found" "$dkms_tree/$module/$module_version/build/make.log"; then
+            echo $"" >&2
+            echo $"DO YOU HAVE make INSTALLED???" >&2
+        fi
+        report_build_problem
+        exit 10
+    fi
+
+    # Make sure all the modules built successfully
+    for ((count=0; count < ${#built_module_name[@]}; count++)); do
+        [[ -e ${built_module_location[$count]}${built_module_name[$count]}$module_suffix ]] && continue
+        echo $"" >&2
+        echo $"Error!  Build of ${built_module_name[$count]}$module_suffix failed for: $kernelver ($arch)" >&2
+        echo $"Consult the make.log in the build directory" >&2
+        echo $"$dkms_tree/$module/$module_version/build/ for more information." >&2
+        report_build_problem
+        exit 7
+    done
+    cd - >/dev/null
+
+    # Build success, so create DKMS structure for a built module
+    mkdir -p "$base_dir/log"
+    [[ $kernel_config ]] && cp -f "$kernel_config" "$base_dir/log/"
+    mv -f "$dkms_tree/$module/$module_version/build/make.log" "$base_dir/log/make.log" 2>/dev/null
+
+    # Save a copy of the new module
+    mkdir "$base_dir/module" >/dev/null
+    for ((count=0; count < ${#built_module_name[@]}; count++)); do
+        [[ ${strip[$count]} != no ]] && strip -g "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix"
+        cp -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix" "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
+    done
+
+    # Run the post_build script
+    run_build_script post_build "$post_build"
 }
 
-check_module_exists() {
-    [[ -d $dkms_tree/$module/$module_version/source ]] && return
-    echo $"" >&2
-    echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
-    echo $"Build cannot continue without the proper tree." >&2
-    exit 2
+clean_build()
+{
+    # Run the clean commands
+    cd "$dkms_tree/$module/$module_version/build"
+    invoke_command "$clean" "cleaning build area" background
+    cd - >/dev/null
+
+    if [[ ! ( $(VER $kernelver) < $(VER 2.6.6) ) && \
+       -d $kernel_source_dir && \
+       ! -h $kernel_source_dir && \
+       ! $ksourcedir_fromcli ]]; then
+        echo $"Kernel cleanup unnecessary for this kernel.  Skipping..."
+    elif [[ ! $no_clean_kernel ]]; then
+        cd "$kernel_source_dir"
+        [[ $kerneldoth_contents ]] || invoke_command "make mrproper" "cleaning kernel tree (make mrproper)" background
+        [[ $config_contents ]] || echo "$config_contents" > .config
+        [[ $kerneldoth_contents ]] && echo "$kerneldoth_contents" > /boot/kernel.h
+        cd - >/dev/null
+    fi
+
+    # Clean the build directory
+    rm -rf "$dkms_tree/$module/$module_version/build/*"
+}
+
+build_module()
+{
+    prepare_build
+    do_build
+    clean_build
+    echo $""
+    echo $"DKMS: build Completed."
 }
 
 install_module()
@@ -1066,7 +1197,7 @@ install_module()
     check_module_args install
     
     # Check that $module-$module_version exists by checking the source symlink
-    check_module_exists
+    is_module_built "$module" "$module_version" "$kernelver" "$arch" || build_module
 
     # Make sure that kernel exists to install into
     if ! [[ -e $install_tree/$kernelver ]]; then
@@ -1239,163 +1370,52 @@ install_module()
     echo $"DKMS: install Completed."
 }
 
-prepare_build()
+list_each_installed_module()
 {
-    set_kernel_source_dir "$kernelver"
-    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
-
-    # Check that the right arguments were passed
-    check_module_args build
-
-    # Check that source symlink works
-    check_module_exists
-    
-    # Check that the module has not already been built for this kernel
-    if [[ -d $base_dir ]]; then
-        echo $"" >&2
-        echo $"Error! This module/version has already been built on: $kernelver" >&2
-        echo $"Directory: $base_dir" >&2
-        echo $"already exists.  Use the dkms remove function before trying to build again." >&2
-        exit 3
-    fi
-
-    # Read the conf file
-    set_module_suffix "$kernelver"
-    read_conf_or_die "$kernelver" "$arch"
-
-    # Error out if build_exclude is set
-    if [[ $build_exclude ]]; then
-        echo "" >&2
-        echo "Error!  The dkms.conf for this module includes a BUILD_EXCLUSIVE directive which" >&2
-        echo "does not match this kernel/arch.  This indicates that it should not be built." >&2
-        exit 9
-    fi
-
-    # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
-    if (($(ls $dkms_tree/$module/$module_version/source | wc -l | awk {'print $1'}) < 2)); then
-        echo "" >&2
-        echo $"Error! The directory $dkms_tree/$module/$module_version/source/" >&2
-        echo $"does not appear to have module source located within it.  Build halted." >&2
-        exit 8
-    fi
-
-    prepare_kernel "$kernelver" "$arch"
-
-    # Set up temporary build directory for build
-    rm -rf "$dkms_tree/$module/$module_version/build"
-    cp -rf "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
-
-    # Run the pre_build script
-    run_build_script pre_build "$pre_build"
-
-    cd "$dkms_tree/$module/$module_version/build"
-
-    # Apply any patches
-    for p in "${patch_array[@]}"; do
-        if ! [ -e "$dkms_tree/$module/$module_version/build/patches/$p" ]; then
-            echo $"" >&2
-            echo $"Error!  Patch $p as specified in dkms.conf cannot be" >&2
-            echo $"found in $dkms_tree/$module/$module_version/build/patches/." >&2
-            exit 5
-        fi
-        if ! invoke_command "patch -p1 < ./patches/$p" "applying patch $p"; then
-            echo $"" >&2
-            echo $"Error! Application of patch $p failed." >&2
-            echo $"Check $dkms_tree/$module/$module_version/build/ for more information." >&2
-            report_build_problem
-            exit 6
-        fi
-    done
-}
-
-do_build()
-{
-    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
-    echo $""
-    echo $"Building module:"
-
-    invoke_command "$clean" "cleaning build area" background
-    echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$dkms_tree/$module/$module_version/build/make.log"
-    date >> "$dkms_tree/$module/$module_version/build/make.log"
-    local the_make_command="${make_command/#make/make KERNELRELEASE=$kernelver}"
-
-    if ! invoke_command "$the_make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$the_make_command" background; then
-        # Make sure good return status
-        echo $"" >&2
-        echo $"Error! Bad return status for module build on kernel: $kernelver ($arch)" >&2
-        echo $"Consult the make.log in the build directory" >&2
-        echo $"$dkms_tree/$module/$module_version/build/ for more information." >&2
-        if grep -ic "gcc: Command not found" "$dkms_tree/$module/$module_version/build/make.log"; then
-            echo $"" >&2
-            echo $"DO YOU HAVE gcc INSTALLED???" >&2
-        fi
-        if grep -ic "make: command not found" "$dkms_tree/$module/$module_version/build/make.log"; then
-            echo $"" >&2
-            echo $"DO YOU HAVE make INSTALLED???" >&2
-        fi
-        report_build_problem
-        exit 10
-    fi
-
-    # Make sure all the modules built successfully
+    # $1 = module
+    # $2 = kernel version
+    # $3 = arch
+    local count
+    local real_dest_module_location
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
-        [[ -e ${built_module_location[$count]}${built_module_name[$count]}$module_suffix ]] && continue
-        echo $"" >&2
-        echo $"Error!  Build of ${built_module_name[$count]}$module_suffix failed for: $kernelver ($arch)" >&2
-        echo $"Consult the make.log in the build directory" >&2
-        echo $"$dkms_tree/$module/$module_version/build/ for more information." >&2
-        report_build_problem
-        exit 7
+        real_dest_module_location="$(find_actual_dest_module_location $1 $count $2 $3)"
+        echo "$install_tree/$2${real_dest_module_location}/${dest_module_name[$count]}$module_suffix"
     done
-    cd - >/dev/null
-
-    # Build success, so create DKMS structure for a built module
-    mkdir -p "$base_dir/log"
-    [[ $kernel_config ]] && cp -f "$kernel_config" "$base_dir/log/"
-    mv -f "$dkms_tree/$module/$module_version/build/make.log" "$base_dir/log/make.log" 2>/dev/null
-
-    # Save a copy of the new module
-    mkdir "$base_dir/module" >/dev/null
-    for ((count=0; count < ${#built_module_name[@]}; count++)); do
-        [[ ${strip[$count]} != no ]] && strip -g "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix"
-        cp -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix" "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
-    done
-
-    # Run the post_build script
-    run_build_script post_build "$post_build"
 }
 
-clean_build()
+set_weak_modules()
 {
-    # Run the clean commands
-    cd "$dkms_tree/$module/$module_version/build"
-    invoke_command "$clean" "cleaning build area" background
-    cd - >/dev/null
-
-    if [[ ! ( $(VER $kernelver) < $(VER 2.6.6) ) && \
-       -d $kernel_source_dir && \
-       ! -h $kernel_source_dir && \
-       ! $ksourcedir_fromcli ]]; then
-        echo $"Kernel cleanup unnecessary for this kernel.  Skipping..."
-    elif [[ ! $no_clean_kernel ]]; then
-        cd "$kernel_source_dir"
-        [[ $kerneldoth_contents ]] || invoke_command "make mrproper" "cleaning kernel tree (make mrproper)" background
-        [[ $config_contents ]] || echo "$config_contents" > .config
-        [[ $kerneldoth_contents ]] && echo "$kerneldoth_contents" > /boot/kernel.h
-        cd - >/dev/null
-    fi
-
-    # Clean the build directory
-    rm -rf "$dkms_tree/$module/$module_version/build/*"
+    [[ ${weak_modules} ]] && return
+    [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
+    [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 }
 
-build_module()
-{
-    prepare_build
-    do_build
-    clean_build
-    echo $""
-    echo $"DKMS: build Completed."
+is_module_added() { [[ -d $dkms_tree/$1/$2/build ]]; }
+
+is_module_built() {
+    [[ $1 && $2 && $3 && $4 ]] || return 1
+    local d="$dkms_tree/$1/$2/$3/$4"
+    [[ $d =~ build|original_module|tarball|driver_disk|rpm|source ]] && \
+	return 1
+    [[ -d $d/module ]]
+}
+
+_is_module_installed() {
+    [[ $1 && $2 && $3 && $4 ]] || return 1
+    local d="$dkms_tree/$1/$2/$3/$4"
+    local k="$dkms_tree/$1/kernel-$3-$4"
+    [[ -L $k && $(readlink -e $k) = $d ]]
+}
+
+is_module_installed() { is_module_built "$@" && _is_module_installed "$@"; }
+
+
+check_module_exists() {
+    is_module_added "$module" "module_version" && return
+    echo $"" >&2
+    echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
+    echo $"Build cannot continue without the proper tree." >&2
+    exit 2
 }
 
 possible_dest_module_locations()
@@ -1718,25 +1738,6 @@ do_status_weak()
         done
     done
 }
-
-is_module_added() { [[ -d $dkms_tree/$1/$2/build ]]; }
-
-is_module_built() {
-    [[ $1 && $2 && $3 && $4 ]] || return 1
-    local d="$dkms_tree/$1/$2/$3/$4"
-    [[ $d =~ build|original_module|tarball|driver_disk|rpm|source ]] && \
-	return 1
-    [[ -d $d/module ]]
-}
-
-_is_module_installed() {
-    [[ $1 && $2 && $3 && $4 ]] || return 1
-    local d="$dkms_tree/$1/$2/$3/$4"
-    local k="$dkms_tree/$1/kernel-$3-$4"
-    [[ -L $k && $(readlink -e $k) = $d ]]
-}
- 
-is_module_installed() { is_module_built "$@" && _is_module_installed "$@"; }
    
 module_status_built_extra() (
     set_module_suffix "$3"
