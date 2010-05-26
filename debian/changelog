@@ -2,6 +2,8 @@ dkms (2.1.2.0-0ubuntu1) UNRELEASED; urgency=low
 
   * Add a patch from Steffen Barszus that makes DKMS produce a '.changes' file so
     that the resultant package is uploadable to launchpad.
+  * In the mkdeb/mkdsc Makefile, don't modify the permissions to 644, but rather
+    append a readable bit to all files. (LP: #582670)
 
  -- Mario Limonciello <Mario_Limonciello@Dell.com>  Wed, 26 May 2010 15:47:45 -0500
 
