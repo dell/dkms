@@ -1687,6 +1687,7 @@ function do_uninstall()
     readlink "$dkms_tree/$module/kernel-$1-$2"
     local kernel_symlink="$read_link"
     local real_dest_module_location
+    local module_installed=`$0 status -m $module -v $module_version | grep -c "installed"`
     if [ "$kernel_symlink" == "$module_version/$1/$2" ]; then
         was_active="true"
         echo $""
@@ -1724,9 +1725,7 @@ function do_uninstall()
                 echo $"   - Use the dkms install command to reinstall any previous module version."
 
                 # Remove modules_conf entries from /etc/modules.conf if remake_initrd is set or if this is last instance removed
-                if [ -n "$remake_initrd" ] || \
-                    [ `$0 status -m $module -v $module_version | \
-                    grep -c "installed"` -eq 1 ]; then
+                if [ -n "$remake_initrd" ] || [ $module_installed -eq 1 ]; then
                     echo $""
                     moduleconfig_remove "$1"
                 fi
