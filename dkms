@@ -323,7 +323,7 @@ safe_source() {
     local to_source_file="$1"; shift
     declare -a -r export_envs=("$@")
     . <(
-	. "$to_source_file"
+	. "$to_source_file" >/dev/null
         # This is really ugly, but a neat hack
         # Remember, in bash 2.0 and greater all variables are really arrays.
 	for _export_env in "${export_envs[@]}"; do
