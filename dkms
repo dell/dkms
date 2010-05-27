@@ -3068,11 +3068,37 @@ parse_moduleversion(){
     fi
 }
 
-
 check_root() {
     ((UID == 0)) && return
     echo $"You must be root to use this command." >&2
     exit 1
+}
+
+add_source_tree() {
+    local from=$(readlink -e $1)
+    if ! [[ $from && -f $from/dkms.conf ]]; then
+	echo
+	echo $"$1 must contain a dkms.conf file!"
+	exit 9
+    fi
+    check_root
+    setup_kernels_arches
+    read_conf "$kernelver" "$arch" "$from/dkms.conf"
+    if ! [[ $PACKAGE_NAME && $PACKAGE_VERSION ]]; then
+	echo
+	echo $"Malformed dkms.conf file. Cannot load source tree."
+	exit 10
+    fi
+    module="$PACKAGE_NAME"
+    module_version="$PACKAGE_VERSION"
+
+    # We are already installed, just return.
+    case $from in
+	"$source_tree/$module-$module_version") return;;
+        "$dkms_tree/$module/$version/source") return;;
+	"$dkms_tree/$module/$version/build") return;;
+    esac
+    cp -fr "$from" "$source_tree/$module-$module_version"
 }
 
 make_kmp()
@@ -3229,6 +3255,10 @@ while (($# > 0)); do
                              exit 2;;
 	*) if [[ $1 =~ $action_re ]]; then
 	    action="$action $1"
+	    elif [[ -f $1 && $1 = *dkms.conf ]]; then
+	    add_source_tree "${1%dkms.conf}./"
+	    elif [[ -d $1 && -f $1/dkms.conf ]]; then
+	    add_source_tree "$1"
 	    elif [[ -f $1 ]]; then
 	    archive_location="$1"
 	    elif [[ ! $module ]]; then
