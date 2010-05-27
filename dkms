@@ -1390,7 +1390,7 @@ set_weak_modules()
     [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 }
 
-is_module_added() { [[ -d $dkms_tree/$1/$2/build ]]; }
+is_module_added() { [[ -L $dkms_tree/$1/$2/source || -d $dkms_tree/$1/$2/source ]]; }
 
 is_module_built() {
     [[ $1 && $2 && $3 && $4 ]] || return 1
@@ -2461,6 +2461,12 @@ make_tarball()
     fi
 }
 
+get_pkginfo_from_conf() {
+    [[ -f $1 && $1 = *dkms.conf ]] || return
+    safe_source "$1" PACKAGE_NAME PACKAGE_VERSION
+    [[ $PACKAGE_NAME && $PACKAGE_VERSION ]]
+}
+
 load_tarball()
 {
     # Error out if $archive_location does not exist
@@ -2484,8 +2490,25 @@ load_tarball()
 
     # Untar it into $tmp_location
     local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    trap 'rm -rf $temp_dir_name' EXIT RET
     tar -${tar_options}xf $archive_location -C $temp_dir_name
 
+    if [[ ! $temp_dir_name/dkms_main_tree ]]; then
+	# Tarball was not generated from mktarball.
+	# Just find the dkms.conf file and load the source.
+	conf=$(find $temp_dir_name/ -name dkms.conf 2>/dev/null | head -n 1)
+	if [[ ! $conf ]]; then
+            echo $"" >&2
+            echo $"Error! Tarball does not appear to be a correctly formed" >&2
+            echo $"DKMS archive. No dkms.conf found within it." >&2
+            rm -rf $temp_dir_name
+            exit 3
+        fi
+	add_source_tree "${conf%dkms.conf}"
+	add_module
+	return
+    fi
+	
     # Check that dkms_dbversion is not a future version
     db_from_tarball=$(cat $temp_dir_name/dkms_main_tree/dkms_dbversion 2>/dev/null)
     db_from_dkms=$(cat $dkms_tree/dkms_dbversion 2>/dev/null)
@@ -2494,118 +2517,69 @@ load_tarball()
         echo $"" >&2
         echo $"Error! The tarball you are trying to load indicates it is database version" >&2
         echo $"$db_from_tarball.  This version of DKMS only supports $db_from_dkms or lower.">&2
-        rm -rf $temp_dir_name
         exit 9
     fi
 
     # Make sure its a sane tarball
-    PACKAGE_NAME=""
-    PACKAGE_VERSION=""
-    local is_from_mktarball=""
-    local is_binaries_only=""
-    local is_not_arch_aware=""
-    if ! [[ -d $temp_dir_name/dkms_main_tree ]]; then
-        conf=$(find $temp_dir_name/ -name dkms.conf 2>/dev/null | head -n 1)
-        if [[ ! $conf ]]; then
-            echo $"" >&2
-            echo $"Error! Tarball does not appear to be a correctly formed" >&2
-            echo $"DKMS archive. No dkms.conf found within it." >&2
-            rm -rf $temp_dir_name
-            exit 3
-        fi
-        read_conf_or_die "$kernelver" "$arch" "$conf"
-        tarball_source_tree_name=$(echo $conf | sed "s#$temp_dir_name\/##" | sed 's/dkms.conf//' | sed 's/\/$//')
-    elif ! [[ -d $temp_dir_name/dkms_source_tree && -d $temp_dir_name/dkms_binaries_only ]]; then
-        PACKAGE_NAME=$(cat $temp_dir_name/dkms_binaries_only/PACKAGE_NAME 2>/dev/null)
-        PACKAGE_VERSION=$(cat $temp_dir_name/dkms_binaries_only/PACKAGE_VERSION 2>/dev/null)
-        if ! [[ $PACKAGE_NAME && $PACKAGE_VERSION ]]; then
-            echo $"" >&2
-            echo $"Error! Tarball does not appear to be a correctly formed" >&2
-            echo $"DKMS archive." >&2
-            rm -rf $temp_dir_name
-            exit 5
-        fi
-        if [[ ! $(show_status $PACKAGE_NAME $PACKAGE_VERSION 2>/dev/null) ]]; then
-            if [[ -e $temp_dir_name/dkms_binaries_only/dkms.conf ]]; then
-            echo $""
-            echo $"Binaries-only DKMS tarball to be loaded for $PACKAGE_NAME-$PACKAGE_VERSION"
-            echo $"even though source for this module is not added to the DKMS tree.  "
-                    echo $"<<<<WARNING>>>>"
-            echo $"This will allow you to install the pre-built binaries contained within this"
-            echo $"tarball, but will prevent you from building new modules for other kernels."
-            echo $""
-            . $temp_dir_name/dkms_binaries_only/dkms.conf 2>/dev/null
-            else
-            echo $"" >&2
-            echo $"Binaries-only DKMS tarball does not seem to contain a dkms.conf file for" >&2
-            echo $"this module.  Unable to load this tarball into the DKMS tree." >&2
-            exit 7
-            fi
-        fi
-        is_from_mktarball="true"
-        is_binaries_only="true"
-    elif [[ -d $temp_dir_name/dkms_source_tree ]]; then
-        . $temp_dir_name/dkms_source_tree/dkms.conf 2>/dev/null
-        if ! [[ $PACKAGE_NAME && $PACKAGE_VERSION ]]; then
-            echo $"" >&2
-            echo $"Error! Tarball does not appear to be a correctly formed" >&2
-            echo $"DKMS archive." >&2
-            rm -rf $temp_dir_name
-            exit 8
-        fi
-        is_from_mktarball="true"
-        tarball_source_tree_name="dkms_source_tree"
-    else
-        echo $"" >&2
-        echo $"Error! Tarball does not appear to be a correctly formed" >&2
-        echo $"DKMS archive." >&2
-        rm -rf $temp_dir_name
-        exit 8
-    fi
+    for loc in dkms_source_tree dkms_binaries_only ''; do
+	if [[ ! $loc ]]; then
+	    echo >&2
+	    echo $"No valid dkms.conf in dkms_source_tree or dkms_binaries_only."
+	    echo $"$archive_location is not a valid DKMS tarball."
+	    exit 7
+	fi
+	local conf="$temp_dir_name/$loc/dkms.conf"
+	[[ -f $conf ]] || continue
+	if ! get_pkginfo_from_conf "$conf"; then
+	    echo >&2
+	    echo $"Malformed dkms.conf, refusing to load." >&2
+	    continue
+	fi
+	if is_module_added "$PACKAGE_NAME" "$PACKAGE_VERSION" && \
+	    [[ ! $force ]]; then
+	    echo >&2
+	    echo $"$PACKAGE_NAME-$PACKAGE_VERSION is already installed!"
+	    echo $"Aborting."
+	    exit 8
+	fi
+	module="$PACKAGE_NAME"; module_version="$PACKAGE_VERSION"
+	echo $""
+	echo $"Loading tarball for $module-$module_version"
+	case $loc in
+	    dkms_source_tree) 
+		add_source_tree "$temp_dir_name/dkms_source_tree"
+		add_module;;
+	    dkms_binaries_only)
+		echo $"Creating $dkms_tree/$module/$module_version/source"
+		mkdir -p "$dkms_tree/$module/$module_version/source"
+		echo $"Copying dkms.conf to $dkms_tree/$module/$module_version/source..."
+		cp -rf "$temp_dir_name/dkms_binaries_only/dkms.conf" "$dkms_tree/$module/$module_version/source";;
+	    *)  echo >&2
+		echo $"$FUNCNAME:$LINENO: Cannot happen."
+		echo $"Report this error to dkms-devel@dell.com"
+		exit 8;;
+	esac
+	break
+    done
+    
+    # at this point, the source has been copied to the appropriate location 
+    # and registered with dkms, or a binary-only config has been noted.
+    # Now, add any included precompiled modules.
 
     # Is tarball from before DKMS 2.0 (prior to arch support)
-    if [[ $is_from_mktarball = true && ! -e $temp_dir_name/dkms_main_tree/dkms_dbversion ]]; then
-        is_not_arch_aware="true"
+    if [[ ! -e $temp_dir_name/dkms_main_tree/dkms_dbversion ]]; then
         echo $"" >&2
-        echo $"Warning!  This tarball was created with dkms < 2.0 and contains" >&2
-        echo $"no arch info. DKMS will assume the arch: $arch" >&2
+        echo $"Error!  This tarball was created with dkms < 2.0 and contains" >&2
+        echo $"no arch info. DKMS is refusing to install precompiled modules." >&2
+	[[ $loc = dkms_binaries_only ]] && rm -rf "$dkms_tree/$module/$module_version/source"
+	exit 10
     fi
 
-    # Make sure we got what we needed from the tarball
-    module="$PACKAGE_NAME"
-    module_version="$PACKAGE_VERSION"
-
-    echo $""
-    echo $"Loading tarball for module: $module / version: $module_version"
-    echo $""
-
-    # Load the source from the tarball or build it's structure (for binaries only)
-    if [[ ! $is_binaries_only ]]; then
-        if [[ $(show_status $module $module_version 2>/dev/null) && ! $force ]]; then
-            echo $"Warning! Source for $module-$module_version already exists.  Skipping..." >&2
-        else
-            echo $"Loading $source_tree/$module-$module_version..."
-            rm -rf $source_tree/$module-$module_version
-            mkdir -p $source_tree/$module-$module_version
-            cp -rf $temp_dir_name/$tarball_source_tree_name/* $source_tree/$module-$module_version
-        fi
-
-        mkdir -p $dkms_tree/$module/$module_version
-    else
-        echo $"Creating $dkms_tree/$module/$module_version/source"
-        mkdir -p $dkms_tree/$module/$module_version/source
-        echo $"Copying dkms.conf to $dkms_tree/$module/$module_version/source..."
-        cp -rf $temp_dir_name/dkms_binaries_only/dkms.conf $dkms_tree/$module/$module_version/source
-    fi
-
-    # Load kernel directories
-    [[ $is_not_arch_aware ]] && dirs_to_load=$(find $temp_dir_name/dkms_main_tree -type d -maxdepth 1 -mindepth 1 2>/dev/null)
-    [[ $is_not_arch_aware ]] || dirs_to_load=$(find $temp_dir_name/dkms_main_tree -type d -maxdepth 2 -mindepth 2 2>/dev/null)
-    for directory in $dirs_to_load; do
-        dirs_to_parse=${directory/*dkms_main_tree\/}
-        kernel_to_load=${dirs_to_parse/\/*}
-        arch_to_load=${arch/*\/}
-        dkms_dir_location="$dkms_tree/$module/$module_version/$kernel_to_load/$arch_to_load"
+    # Load precompiled modules.
+    for directory in "$temp_dir_name/dkms_main_tree"/*/*; do
+	[[ -d $directory ]] && continue
+        kernel_arch_to_load=${directory/*dkms_main_tree\/}
+        dkms_dir_location="$dkms_tree/$module/$module_version/$kernel_arch_to_load"
         if [[ -d $dkms_dir_location && ! $force ]]; then
             echo $"Warning! $dkms_dir_location already exists.  Skipping..." >&2
         else
@@ -2615,17 +2589,6 @@ load_tarball()
             cp -rf $directory/* $dkms_dir_location/
         fi
     done
-
-    # Create source symlink (if there isn't a real directory there)
-    if [[ ! -h $dkms_tree/$module/$module_version/source && \
-       ! -d $dkms_tree/$module/$module_version/source || $force ]]; then
-        echo $"Creating $dkms_tree/$module/$module_version/source symlink..."
-        rm -f "$dkms_tree/$module/$module_version/source"
-        ln -s "$source_tree/$module-$module_version" "$dkms_tree/$module/$module_version/source"
-    fi
-
-    # Clean up /tmp
-    rm -rf $temp_dir_name
 
     echo $""
     echo $"DKMS: ldtarball Completed."
@@ -3083,14 +3046,18 @@ add_source_tree() {
     fi
     check_root
     setup_kernels_arches
-    read_conf "$kernelver" "$arch" "$from/dkms.conf"
-    if ! [[ $PACKAGE_NAME && $PACKAGE_VERSION ]]; then
+    if ! get_pkginfo_from_conf "$from/dkms.conf" ; then
 	echo
 	echo $"Malformed dkms.conf file. Cannot load source tree."
 	exit 10
     fi
     module="$PACKAGE_NAME"
     module_version="$PACKAGE_VERSION"
+    if [[ $force && -d $source_tree/$module-$module_version ]]; then
+	echo >&2
+	echo $"Forcing install of $module-$module_version"
+	rm -rf "$source_tree/$module-$module_version"
+    fi
 
     # We are already installed, just return.
     case $from in
