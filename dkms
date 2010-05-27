@@ -2370,23 +2370,6 @@ make_tarball()
         echo "2.0.0" > $dkms_tree/dkms_dbversion
     fi
 
-    local tarball_name="$module-$module_version-$kernel_version_list.dkms.tar.gz"
-    local tarball_dest="$dkms_tree/$module/$module_version/tarball/"
-
-    # Die if we will not be able to create the tarball due to permissions.
-    if [[ $archive_location ]]; then
-	tarball_name="${archive_name##*/}"
-	if [[ ${archive_location%/*} != $archive_location && \
-	    -d ${archive_location%/*} && -w ${archive_location%/*} ]]; then
-	    tarball_dest="${archive_location%/*}"
-	else
-	    echo $"Error! Will not be able to create $archive_location."
-	    exit 9
-	fi
-    else
-	mkdir -p "$dkms_tree/$module/$module_version/tarball/"
-    fi
-
     # Read the conf file
     read_conf_or_die "$kernelver" "$arch"
 
@@ -2441,16 +2424,36 @@ make_tarball()
     if (( $(echo $kernel_version_list | wc -m | awk {'print $1'}) > 200 )); then
         kernel_version_list="manykernels"
     fi
+
+    local tarball_name="$module-$module_version-$kernel_version_list.dkms.tar.gz"
+    local tarball_dest="$dkms_tree/$module/$module_version/tarball/"
+
+    # Die if we will not be able to create the tarball due to permissions.
+    if [[ $archive_location ]]; then
+	tarball_name="${archive_location##*/}"
+	if [[ ${archive_location%/*} != $archive_location && \
+	    -d ${archive_location%/*} && -w ${archive_location%/*} ]]; then
+	    tarball_dest="${archive_location%/*}"
+	else
+	    echo $"Error! Will not be able to create $archive_location."
+	    exit 9
+	fi
+    else
+	mkdir -p "$dkms_tree/$module/$module_version/tarball/"
+    fi
+
+    echo $""
+    echo $"Tarball location: $tarball_dest/$tarball_name"
+
+    local tarball_ext=${tarball_name##*.}
+    [[ $tarball_ext = tar ]] || tarball_name=${tarball_name%.$tarball_ext}
+
     # Make the tarball
     cd $temp_dir_name
-    if tar -czf $temp_dir_name/$tarball_name ./* 2>/dev/null; then
+    if tar -cf $temp_dir_name/$tarball_name ./* 2>/dev/null; then
 	cd - >/dev/null
         echo $""
         mv -f "$temp_dir_name/$tarball_name" "$tarball_dest/$tarball_name"
-        echo $""
-        echo $"Tarball location: $tarball_dest/$tarball_name"
-        echo $""
-        echo $"DKMS: mktarball Completed."
         rm -rf $temp_dir_name
     else
         cd - >/dev/null
@@ -2459,6 +2462,13 @@ make_tarball()
         rm -rf $temp_dir_name
         exit 6
     fi
+    case $tarball_ext in
+	gz) gzip -9 "$tarball_dest/$tarball_name";;
+	bz2) bzip2 -9 "$tarball_dest/$tarball_name";;
+	xz) xz -9 "$tarball_dest/$tarball_name";;
+    esac
+    echo $""
+    echo $"DKMS: mktarball Completed."
 }
 
 get_pkginfo_from_conf() {
