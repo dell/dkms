@@ -1411,7 +1411,7 @@ is_module_installed() { is_module_built "$@" && _is_module_installed "$@"; }
 
 
 check_module_exists() {
-    is_module_added "$module" "module_version" && return
+    is_module_added "$module" "$module_version" && return
     echo $"" >&2
     echo $"Error! DKMS tree does not contain: $module-$module_version" >&2
     echo $"Build cannot continue without the proper tree." >&2
