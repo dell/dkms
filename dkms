@@ -846,6 +846,10 @@ run_build_script() {
 
 add_module()
 {
+    # if $archive is set and $module and $module_version are not, 
+    # try loading the tarball passed first.
+    [[ $archive_location && ! $module && ! $module_version ]] && load_tarball
+    
     # Check that we have all the arguments
     check_module_args add
 
@@ -1033,14 +1037,13 @@ prepare_kernel()
 
 prepare_build()
 {
+    is_module_added "$module" "$module_version" || add_module
+
     set_kernel_source_dir "$kernelver"
     local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
 
     # Check that the right arguments were passed
     check_module_args build
-
-    # Check that source symlink works
-    is_module_added "$module" "$module_version" || add_module
     
     # Check that the module has not already been built for this kernel
     if [[ -d $base_dir ]]; then
@@ -1192,12 +1195,13 @@ build_module()
 
 install_module()
 {
-    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
 
+    is_module_built "$module" "$module_version" "$kernelver" "$arch" || build_module 
+    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
     check_module_args install
     
     # Check that $module-$module_version exists by checking the source symlink
-    is_module_built "$module" "$module_version" "$kernelver" "$arch" || build_module
+    
 
     # Make sure that kernel exists to install into
     if ! [[ -e $install_tree/$kernelver ]]; then
@@ -1390,7 +1394,10 @@ set_weak_modules()
     [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 }
 
-is_module_added() { [[ -L $dkms_tree/$1/$2/source || -d $dkms_tree/$1/$2/source ]]; }
+is_module_added() { 
+    [[ $1 && $2 ]] || return 1
+    [[ -L $dkms_tree/$1/$2/source || -d $dkms_tree/$1/$2/source ]]; 
+}
 
 is_module_built() {
     [[ $1 && $2 && $3 && $4 ]] || return 1
@@ -2515,7 +2522,6 @@ load_tarball()
             exit 3
         fi
 	add_source_tree "${conf%dkms.conf}"
-	add_module
 	return
     fi
 	
@@ -2557,8 +2563,7 @@ load_tarball()
 	echo $"Loading tarball for $module-$module_version"
 	case $loc in
 	    dkms_source_tree) 
-		add_source_tree "$temp_dir_name/dkms_source_tree"
-		add_module;;
+		add_source_tree "$temp_dir_name/dkms_source_tree";;
 	    dkms_binaries_only)
 		echo $"Creating $dkms_tree/$module/$module_version/source"
 		mkdir -p "$dkms_tree/$module/$module_version/source"
@@ -2602,6 +2607,7 @@ load_tarball()
 
     echo $""
     echo $"DKMS: ldtarball Completed."
+    [[ $loc != dkms_binaries_only ]]
 }
 
 run_match()
@@ -3304,7 +3310,7 @@ for action_to_run in $action; do
 		echo $"You must be root to use this command with the --force option." >&2
 		exit 1
             fi
-            load_tarball ;;
+            load_tarball && add_module;;
 	'') echo "" >&2
             echo $"Error! No action was specified.">&2
             show_usage;;
