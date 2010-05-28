@@ -34,6 +34,8 @@ readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
        modules_conf_alias_type STRIP strip MODULES_CONF_OBSOLETE_ONLY
        modules_conf_obsolete_only"
 
+readonly reserved_tree_names="build|original_module|tarball|driver_disk|rpm|source|kernel"
+
 invoke_command()
 {
     # $1 = command to be executed using eval.
@@ -61,7 +63,7 @@ invoke_command()
 show_usage()
 {
     echo $"Usage: $0 [action] [options]"
-    echo $"  [action]  = { add | remove | build | install | uninstall | match"
+    echo $"  [action]  = { add | remove | build | install | uninstall | match | autoinstall"
     echo $"               | mkdriverdisk | mktarball | ldtarball | mkrpm | mkkmp | mkdeb | status }"
     echo $"  [options] = [-m module] [-v module-version] [-k kernel-version] [-a arch]"
     echo $"              [-d distro] [-c dkms.conf-location] [-q] [--force] [--all]"
@@ -125,7 +127,7 @@ setup_kernels_arches()
     if [[ $all && $1 != status ]]; then
         local i=0
         while read line; do
-	    line=${line#*/}; line=${line#*/}; line=${line#*/}
+	    line=${line#*/}; line=${line#*/};
             # (I would leave out the delimiters in the status output
             #  in the first place.)
             kernelver[$i]=${line%/*}
@@ -1215,20 +1217,8 @@ install_module()
     # Read the conf file
     read_conf_or_die "$kernelver" "$arch"
 
-    # Make sure the $module_name_after exists
-    set_module_suffix "$kernelver"
-    for module_name_after in "${dest_module_name[@]}"; do
-        if ! [[ -e $base_dir/module/$module_name_after$module_suffix ]]; then
-            echo $"" >&2
-            echo $"Error! Could not locate $module_name_after$module_suffix for module $module in the DKMS tree." >&2
-            echo $"You must run a dkms build for kernel $kernelver ($arch) first." >&2
-            exit 4
-        fi
-    done
-
     # Check that its not already installed (kernel symlink)
-    kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-$kernelver-$arch")
-    if [[ $kernel_symlink = $dkms_tree/$module/$module_version/$kernelver/$arch ]]; then
+    if is_module_installed "$module" "$module_version" "$kernelver" "$arch"; then
         echo $"" >&2
         echo $"Error! This module/version combo is already installed" >&2
         echo $"for kernel: $kernelver ($arch)" >&2
@@ -1389,15 +1379,19 @@ list_each_installed_module()
 
 is_module_added() { 
     [[ $1 && $2 ]] || return 1
+    valid_search_tree "$dkms_tree/$1/$2" || return 1
     [[ -L $dkms_tree/$1/$2/source || -d $dkms_tree/$1/$2/source ]]; 
 }
 
 is_module_built() {
     [[ $1 && $2 && $3 && $4 ]] || return 1
-    local d="$dkms_tree/$1/$2/$3/$4"
-    [[ $d =~ build|original_module|tarball|driver_disk|rpm|source ]] && \
-	return 1
-    [[ -d $d/module ]]
+    local d="$dkms_tree/$1/$2/$3/$4" m=''
+    valid_search_tree "$d" || return
+    [[ -d $d/module ]] || return 1
+    safe_source "$dkms_tree/$1/$2/source/dkms.conf" "BUILT_MODULE_NAME"
+    for m in "${BUILT_MODULE_NAME[@]}"; do
+	[[ -f $d/module/$m.ko || -f $d/module/$m.o ]] || return 1
+    done
 }
 
 _is_module_installed() {
@@ -1672,6 +1666,10 @@ remove_module()
     fi
 }
 
+valid_search_tree() {
+    [[ -d $1 && ! ( $1 =~ $reserved_tree_names ) ]]
+}
+
 find_module_from_ko()
 {
     local ko="$2"
@@ -1758,8 +1756,9 @@ module_status_built_extra() (
 
 module_status_built() {
     local ret=1 directory ka k a state oifs="$IFS" IFS=''
-    for directory in "$dkms_tree/$1/$2/"${3:-*}/${4:-*}; do
+    for directory in "$dkms_tree/$1/$2/"${3:-*.*.*}/${4:-*}; do
 	IFS="$oifs"
+	valid_search_tree "$directory" || continue
 	ka="${directory#$dkms_tree/$1/$2/}"
 	k="${ka%/*}"
 	a="${ka#*/}"
@@ -1768,7 +1767,7 @@ module_status_built() {
 	state="built"
 	_is_module_installed "$1" "$2" "$k" "$a" && \
 	    state="installed"
-	echo "$state/$1/$2/$k/$a"
+	echo "$state $1/$2/$k/$a"
 	IFS=''
     done
     IFS="$oifs"
@@ -1779,29 +1778,28 @@ module_status() {
     local oifs="$IFS" IFS='' mv m v directory
     for directory in "$dkms_tree/"${1:-*}/${2:-*}; do
 	IFS="$oifs"
+	valid_search_tree "$directory" || continue
 	mv="${directory#$dkms_tree/}"
 	m="${mv%/*}"
 	v="${mv#*/}"
 	is_module_added "$m" "$v" || continue
-	module_status_built "$m" "$v" "$3" "$4" || echo "added/$m/$v"
+	module_status_built "$m" "$v" "$3" "$4" || echo "added $m/$v"
 	IFS=''
     done
     IFS="$oifs"
 }
 
 do_status() {
-    local status m v k a rest oifs oifs="$IFS"; IFS=/
-    while read status m v k a; do
-	IFS="$oifs"
+    local status mvka m v k a
+    while read status mvka; do
+	IFS=/ read m v k a <<< "$mvka"
 	case $status in
 	    added) echo "$m, $v: $status";;
 	    built|installed) echo -n "$m, $v, $k, $a: $status"
 		module_status_built_extra "$m" "$v" "$k" "$a"
 		echo;;
 	esac
-	IFS=/
-    done < <(IFS="$oifs" module_status "$@")
-    IFS="$oifs"
+    done < <(module_status "$@")
 }
 
 show_status()
@@ -3116,6 +3114,38 @@ make_kmp()
     # FIXME: hand SRPM to mock or build system to build
 }
 
+autoinstall() {
+    local status mv mvka m v k a last_v last_m tenative to_install=()
+    while read status mvka; do
+	# if it has not been built, do not try and build it now.
+	[[ $status = added ]] && continue
+	IFS='/' read m v k a <<< "$mvka"
+	[[ ! $last_m ]] && last_m="$m"
+	is_module_installed "$m" "$v" "$kernelver" "$arch" && continue
+	# if the module does not want to be autoinstalled, skip it.
+	safe_source "$dkms_tree/$m/$v/source/dkms.conf" "AUTOINSTALL"
+	if [[ ! $AUTOINSTALL ]]; then 
+	    continue
+	# otherwise, only autoinstall the latest version we have hanging around.
+	elif [[ $last_m != $m ]]; then 
+	    last_m="$m"
+	    last_v='0'
+	    [[ $tenative ]] && to_install[${#to_install[@]}]="$tenative"
+	    tenative=''
+	elif [[ $last_m = $m && ($(VER $v) > $(VER $last_v)) ]]; then
+	    last_v="$v"
+	    tenative="$m/$v"
+	fi
+    done < <(module_status)
+    [[ $tenative ]] && to_install[${#to_install[@]}]="$tenative"
+    [[ $to_install ]] || return
+    for mv in "${to_install[@]}"; do
+	IFS=/ read m v <<< "$mv"
+	(module="$m"; module_version="$v"; install_module) &
+    done
+    wait
+}
+
 #############################
 ####                     ####
 #### Program Starts Here ####
@@ -3182,7 +3212,7 @@ weak_modules=''
 [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
 [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 
-action_re='^(remove|(un)?install|match|mk(driverdisk|tarball|rpm|deb|dsc|kmp)|build|add|status|ldtarball)$'
+action_re='^(remove|(auto|un)?install|match|mk(driverdisk|tarball|rpm|deb|dsc|kmp)|build|add|status|ldtarball)$'
 
 # Parse command line arguments
 while (($# > 0)); do
@@ -3291,6 +3321,7 @@ for action_to_run in $action; do
     case "$action_to_run" in
 	remove)       check_root && remove_module;;
 	install)      check_root && have_one_kernel && install_module;;
+	autoinstall)  check_root && autoinstall;;
 	match)        check_root && have_one_kernel && run_match;;
 	uninstall)    check_root && have_one_kernel && uninstall_module;;
 	mkdriverdisk) check_root && make_driver_disk;;
