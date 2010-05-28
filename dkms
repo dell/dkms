@@ -1332,7 +1332,6 @@ install_module()
     ln -s "$module_version/$kernelver/$arch" "$dkms_tree/$module/kernel-$kernelver-$arch" 2>/dev/null
 
     # add to kabi-tracking
-    set_weak_modules
     if [[ ${weak_modules} ]]; then
         echo $"Adding any weak-modules"
         list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} --add-modules
@@ -1386,13 +1385,6 @@ list_each_installed_module()
         real_dest_module_location="$(find_actual_dest_module_location $1 $count $2 $3)"
         echo "$install_tree/$2${real_dest_module_location}/${dest_module_name[$count]}$module_suffix"
     done
-}
-
-set_weak_modules()
-{
-    [[ ${weak_modules} ]] && return
-    [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
-    [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 }
 
 is_module_added() { 
@@ -1487,7 +1479,6 @@ do_uninstall()
         echo $""
         echo $"Status: Before uninstall, this module version was ACTIVE on this kernel."
         # remove kabi-tracking if last instance removed
-        set_weak_modules
         if [[ ${weak_modules} ]] && \
 	    (module_status_built $module $module_version |grep -q "installed"); then
             echo $"Removing any linked weak-modules"
@@ -1699,6 +1690,7 @@ find_module_from_ko()
 
 do_status_weak()
 {
+    [[ $weak_modules ]] || return 0
     # these are the requested mod/ver/kern/arch fields
     local r_mod="$1"
     local r_ver="$2"
@@ -3182,9 +3174,13 @@ rpm_safe_upgrade=""
 size="1440";
 specfile=""
 legacy_postinst="1"
-unset directive_array
-unset kernelver
-unset arch
+directive_array=()
+kernelver=()
+arch=()
+weak_modules=''
+
+[ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
+[ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 
 action_re='^(remove|(un)?install|match|mk(driverdisk|tarball|rpm|deb|dsc|kmp)|build|add|status|ldtarball)$'
 
