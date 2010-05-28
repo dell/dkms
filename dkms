@@ -19,6 +19,21 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+    
+# All of the variables we will accept from dkms.conf.
+# Does not include directives
+readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
+       PACKAGE_VERSION POST_ADD POST_INSTALL POST_REMOVE PRE_BUILD
+       PRE_INSTALL BUILD_EXCLUSIVE_KERNEL BUILD_EXCLUSIVE_ARCH
+       build_exclude OBSOLETE_BY MAKE MAKE_MATCH MODULES_CONF
+       modules_conf_array PATCH PATCH_MATCH patch_array BUILT_MODULE_NAME
+       built_module_name BUILT_MODULE_LOCATION built_module_location
+       DEST_MODULE_NAME dest_module_name MODULES_CONF_OBSOLETES
+       DEST_MODULE_LOCATION dest_module_location
+       modules_conf_obsoletes MODULES_CONF_ALIAS_TYPE
+       modules_conf_alias_type STRIP strip MODULES_CONF_OBSOLETE_ONLY
+       modules_conf_obsolete_only"
+
 invoke_command()
 {
     # $1 = command to be executed using eval.
@@ -367,21 +382,7 @@ read_conf()
         echo $"File: $conf does not exist." >&2
         exit 4
     fi
-    
-    # All of the variables we will accept from dkms.conf.
-    # Does not include directives
-    readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
-       PACKAGE_VERSION POST_ADD POST_INSTALL POST_REMOVE PRE_BUILD 
-       PRE_INSTALL BUILD_EXCLUSIVE_KERNEL BUILD_EXCLUSIVE_ARCH 
-       build_exclude OBSOLETE_BY MAKE MAKE_MATCH MODULES_CONF 
-       modules_conf_array PATCH PATCH_MATCH patch_array BUILT_MODULE_NAME
-       built_module_name BUILT_MODULE_LOCATION built_module_location 
-       DEST_MODULE_NAME dest_module_name MODULES_CONF_OBSOLETES
-       DEST_MODULE_LOCATION dest_module_location 
-       modules_conf_obsoletes MODULES_CONF_ALIAS_TYPE 
-       modules_conf_alias_type STRIP strip MODULES_CONF_OBSOLETE_ONLY 
-       modules_conf_obsolete_only "
-    
+
     # Clear variables and arrays
     for v in $dkms_conf_variables; do
 	unset $v

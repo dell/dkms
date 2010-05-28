@@ -92,7 +92,7 @@ case "$1" in
             # Get the current state
             # a mod can be both built and installed-weak (stupid, but could be)
             # but installed-weak comes last, so use tail
-            current_state=$(dkms status -m $module_in_tree -v $version_in_tree -k $kernel -a $arch 2>/dev/null | awk {'print $5'} | tail -n 1)
+            current_state=$(dkms status -$module_in_tree/$version_in_tree -k $kernel/$arch 2>/dev/null | awk {'print $5'} | tail -n 1)
             [ "$current_state" = "installed" -o "$current_state" = "installed-weak" ] && already_installed="true" && already_installed_version=$version_in_tree
         done
 
@@ -106,7 +106,7 @@ case "$1" in
             continue
         elif [ -n "$already_installed" ]; then
             log_action_end_msg 0
-        elif [ -z "$do_autoinstall" ]; then
+        elif [ -z "$do_autoinstall" ]; thenq
             logger -t dkms_autoinstaller "$module_in_tree ($version_in_tree): AUTOINSTALL not set in its dkms.conf."
             log_action_end_msg 0
         elif [ -n "$do_autoinstall" ] && [ "$version_count" -gt 1 ]; then
@@ -118,17 +118,6 @@ case "$1" in
                 logger -t dkms_autoinstaller "  Kernel headers for $kernel are not installed.  Cannot install this module."
                 logger -t dkms_autoinstaller "  Try installing linux-headers-$kernel or equivalent."
                 log_action_end_msg 1
-            elif [ "$current_state" != "built" ] && [ -e /lib/modules/$kernel/build/include ]; then
-                return_status=""
-                if [ -z "$kernel_preparation_done" ]; then
-                    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q --no-clean-kernel" "." background
-                    return_status="$?"
-                    kernel_preparation_done="true"
-                else
-                    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel -a $arch --no-prepare-kernel --no-clean-kernel -q" "." background
-                    return_status="$?"
-                fi
-                if [ "$return_status" -eq 0 ]; then
                     invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch" "." background
                     log_action_end_msg 0
                 else
