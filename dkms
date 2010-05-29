@@ -32,7 +32,7 @@ readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
        DEST_MODULE_LOCATION dest_module_location
        modules_conf_obsoletes MODULES_CONF_ALIAS_TYPE
        modules_conf_alias_type STRIP strip MODULES_CONF_OBSOLETE_ONLY
-       modules_conf_obsolete_only"
+       modules_conf_obsolete_only AUTOINSTALL"
 
 readonly reserved_tree_names="build|original_module|tarball|driver_disk|rpm|source|kernel"
 readonly y_re='^(Y|y)'
@@ -388,6 +388,9 @@ read_conf()
         echo $"File: $conf does not exist." >&2
         exit 4
     fi
+    [[ $last_mvka = $module/$module_version/$1/$2 && \
+	$last_mvka_conf = $(readlink -f $read_conf_file) ]] && return
+    
 
     # Clear variables and arrays
     for v in $dkms_conf_variables; do
@@ -560,6 +563,8 @@ read_conf()
     # Set clean
     [[ $clean ]] || clean="make clean"
 
+    ((return_value == 0)) && last_mvka="$module/$module_version/$1/$2" && \
+	last_mvka_conf="$(readlink -f "$read_conf_file")"
     return $return_value
 }
 
@@ -857,7 +862,11 @@ add_module()
 {
     # if $archive is set and $module and $module_version are not, 
     # try loading the tarball passed first.
-    [[ $archive_location && ! $module && ! $module_version ]] && load_tarball
+    if [[ $archive_location && ! $module && ! $module_version ]]; then
+	load_tarball
+    elif [[ $try_source_tree && ! $module && ! $module_version ]]; then
+	add_source_tree "$try_source_tree"
+    fi
     
     # Check that we have all the arguments
     check_module_args add
@@ -1394,7 +1403,7 @@ is_module_built() {
     local d="$dkms_tree/$1/$2/$3/$4" m=''
     valid_search_tree "$d" || return
     [[ -d $d/module ]] || return 1
-    safe_source "$dkms_tree/$1/$2/source/dkms.conf" "BUILT_MODULE_NAME"
+    read_conf_or_die "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf"
     for m in "${BUILT_MODULE_NAME[@]}"; do
 	[[ -f $d/module/$m.ko || -f $d/module/$m.o ]] || return 1
     done
@@ -2477,7 +2486,7 @@ make_tarball()
 
 get_pkginfo_from_conf() {
     [[ -f $1 && $1 = *dkms.conf ]] || return
-    safe_source "$1" PACKAGE_NAME PACKAGE_VERSION
+    read_conf_or_die "$kernelver" "$arch" "$1"
     [[ $PACKAGE_NAME && $PACKAGE_VERSION ]]
 }
 
@@ -3131,7 +3140,7 @@ autoinstall() {
 	[[ ! $last_m ]] && last_m="$m"
 	is_module_installed "$m" "$v" "$kernelver" "$arch" && continue
 	# if the module does not want to be autoinstalled, skip it.
-	safe_source "$dkms_tree/$m/$v/source/dkms.conf" "AUTOINSTALL"
+	read_conf_or_die "$k" "$a" "$dkms_tree/$m/$v/source/dkms.conf"
 	if [[ ! $AUTOINSTALL ]]; then 
 	    continue
 	# otherwise, only autoinstall the latest version we have hanging around.
@@ -3214,7 +3223,9 @@ specfile=""
 legacy_postinst="1"
 declare -a directive_array=() kernelver=() arch=()
 weak_modules=''
-
+last_mvka=''
+last_mvka_conf=''
+try_source_tree=''
 [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
 [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 
@@ -3272,9 +3283,9 @@ while (($# > 0)); do
 	*) if [[ $1 =~ $action_re ]]; then
 	    action="$action $1"
 	    elif [[ -f $1 && $1 = *dkms.conf ]]; then
-	    add_source_tree "${1%dkms.conf}./"
+	    try_source_tree="${1%dkms.conf}./"
 	    elif [[ -d $1 && -f $1/dkms.conf ]]; then
-	    add_source_tree "$1"
+	    try_source_tree="$1"
 	    elif [[ -f $1 ]]; then
 	    archive_location="$1"
 	    elif [[ ! $module ]]; then
