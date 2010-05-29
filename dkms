@@ -565,7 +565,7 @@ read_conf()
 
 
 get_module_verinfo(){
-    local vals=()
+    local vals=
     while read -a vals; do
 	case ${vals[0]} in
 	    version:) res[0]=${vals[1]}; res[2]=${vals[2]};;
@@ -581,9 +581,10 @@ check_version_sanity()
     # $3 = obs by kernel version
     # $4 = dest_module_name
 
-    local lib_tree="$install_tree/$1" res=()
+    local lib_tree="$install_tree/$1" res=
     echo $"Running module version sanity check."
     local i=0
+    local -a kernels_info dkms_info
     set_module_suffix
     read -a kernels_module < <(find $lib_tree -name ${4}$module_suffix)
     [[ $kernels_module ]] || return 0
@@ -621,8 +622,8 @@ check_version_sanity()
     fi
     
     # magic split into array syntax saves trivial awk and cut calls.
-    local obs=(${3//-/ })
-    local my=(${1//-/ })
+    local -a obs=(${3//-/ })
+    local -a my=(${1//-/ })
     local obsolete=0
     if [[ ${obs} && ${my} ]]; then
         if [[ $(VER ${obs}) == $(VER ${my}) && ! $force ]]; then
@@ -698,7 +699,7 @@ moduleconfig_add()
     # $1 = kernel version
 
     local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX) 
-    local sa_mc_o=() sa_sck_o=()
+    local -a sa_mc_o=() sa_sck_o=()
     modconfig_files="/etc/modprobe.d/dkms.conf
                      /etc/modprobe.d/dkms 
                      /etc/modules.conf
@@ -1706,8 +1707,8 @@ do_status_weak()
     local tree_ver
     local tree_kern
     local tree_arch
-    local f s su kver
-    local string_array=()
+    local f s su
+    local -a string_array=() kver
     # recognize weak modules.  These are in $kern/weak-updates but are symlinks to another $kern/extra file.
 
     for ko in "$install_tree"/*/weak-updates/*; do
@@ -1716,12 +1717,12 @@ do_status_weak()
 	installedkernver=${ko%/weak-updates*}
 	[[ -L $ko ]] && installed_ko=$(readlink -f $ko) || continue
         basename_ko=${ko##*/}
-	kver=(${installed_ko/\// })
+	local -a kver=(${installed_ko/\// })
 	kver=${kver[2]}
 	mod="$r_mod"
 	[[ $mod ]] || mod=$(find_module_from_ko "$depth" "$ko")
 	local q=$(readlink -f "$dkms_tree/$mod/$kver");
-	q=(${q//\// })
+	local -a q=(${q//\// })
         tree_ver=${q[0]}
         tree_kern=${q[1]}
         tree_arch=${q[2]}
@@ -2101,7 +2102,8 @@ make_redhat_driver_disk()
 
 find_external_dependencies()
 {
-    local mod deps count i
+    local mod count i
+    local -a deps
 
     # find all module dependencies
     for ((count=0; count < ${#dest_module_name[@]}; count++)); do
@@ -2801,7 +2803,8 @@ preproc_file()
 
 debian_install()
 {
-    local getroot packages=("$@") tmpfile i
+    local getroot  tmpfile i
+    local -a packages=("$@")
     for ((i=0; i < ${#packages[@]}; i++)); do
 	dpkg-query -s "${packages[$i]}"| egrep -q '^Status:.* installed$' || continue
 	unset package[$i]
@@ -3119,7 +3122,8 @@ make_kmp()
 }
 
 autoinstall() {
-    local status mv mvka m v k a last_v last_m tenative to_install=()
+    local status mv mvka m v k a last_v last_m tenative 
+    local -a to_install=()
     while read status mvka; do
 	# if it has not been built, do not try and build it now.
 	[[ $status = added ]] && continue
@@ -3208,9 +3212,7 @@ rpm_safe_upgrade=""
 size="1440";
 specfile=""
 legacy_postinst="1"
-directive_array=()
-kernelver=()
-arch=()
+declare -a directive_array=() kernelver=() arch=()
 weak_modules=''
 
 [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
