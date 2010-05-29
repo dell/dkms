@@ -35,7 +35,8 @@ readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
        modules_conf_obsolete_only"
 
 readonly reserved_tree_names="build|original_module|tarball|driver_disk|rpm|source|kernel"
-
+readonly y_re='^(Y|y)'
+readonly rh_kernels='(debug|summit|smp|enterprise|bigmem|hugemem|BOOT|vmnix)'
 invoke_command()
 {
     # $1 = command to be executed using eval.
@@ -527,7 +528,7 @@ read_conf()
     done
 
     # Set remake_initrd
-    [[ $REMAKE_INITRD =~ ^(Y|y) ]] && remake_initrd="yes"
+    [[ $REMAKE_INITRD =~ $y_re ]] && remake_initrd="yes"
 
     # Set build_exclude
     [[ $BUILD_EXCLUSIVE_KERNEL && ! $1 =~ $BUILD_EXCLUSIVE_KERNEL ]] && \
@@ -947,7 +948,7 @@ prepare_kernel()
         if [[ -z $kernel_config && -d $kernel_source_dir/configs ]]; then
             local kernel_trunc=${1%%-*}
 	    # Try a .config specific to whatever kernel we are running
-	    if [[ $1 =~ (debug|summit|smp|enterprise|bigmem|hugemem|BOOT|vmnix) && \
+	    if [[ $1 =~ $rh_kernels && \
 		-e $kernel_source_dir/configs/kernel-$kernel_trunc-$2-${BASH_REMATCH[1]}.config ]]; then
 		kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$2-${BASH_REMATCH[1]}.config"
 	    elif [[ -e $kernel_source_dir/configs/kernel-$kernel_trunc-$2.config ]]; then
@@ -1705,35 +1706,34 @@ do_status_weak()
     local string_array=()
     # recognize weak modules.  These are in $kern/weak-updates but are symlinks to another $kern/extra file.
 
-    for installedkern in "$install_tree"/*; do
-	[[ -d $installedkern/weak-updates ]] || continue
-        installedkernver=${installedkern##*/}
-        for ko in "$installedkern/weak-updates"/*; do
-	    [[ -L $ko ]] && installed_ko=$(readlink -e $ko) || continue
-            basename_ko=${ko##*/}
-	    kver=(${installed_ko/\// })
-	    kver=${kver[2]}
-	    mod="$r_mod"
-	    [[ $mod ]] || mod=$(find_module_from_ko "$depth" "$ko")
-	    local q=$(readlink -e "$dkms_tree/$mod/$kver");
-	    q=(${q//\// })
-            tree_ver=${q[0]}
-            tree_kern=${q[1]}
-            tree_arch=${q[2]}
-            if diff "$dkms_tree/$mod/$tree_ver/$tree_kern/$tree_arch/module/$basename_ko"  \
-                $installed_ko >/dev/null 2>&1 && \
-		[[ ($r_mod = $mod || ! $r_mod) && \
-		($r_ver = $tree_ver || ! $r_ver) && \
-		($r_kern = $installedkernver || ! $r_kern) && \
-		($r_arch = $tree_arch || ! $r_arch) ]]; then
-		su="$mod, $tree_ver, $installedkernver, $tree_arch: installed-weak from $tree_kern"
-		for s in "${string_array[@]}"; do
-		    [[ $s = $su ]] && continue 2
-		done
-		string_array[${#string_array[@]}]="$su"
-		echo "$su"
-            fi
-        done
+    for ko in "$install_tree"/*/weak-updates/*; do
+	[[ -f $ko ]] || continue
+        installedkernver=${ko#$install_tree/}
+	installedkernver=${ko%/weak-updates*}
+	[[ -L $ko ]] && installed_ko=$(readlink -e $ko) || continue
+        basename_ko=${ko##*/}
+	kver=(${installed_ko/\// })
+	kver=${kver[2]}
+	mod="$r_mod"
+	[[ $mod ]] || mod=$(find_module_from_ko "$depth" "$ko")
+	local q=$(readlink -e "$dkms_tree/$mod/$kver");
+	q=(${q//\// })
+        tree_ver=${q[0]}
+        tree_kern=${q[1]}
+        tree_arch=${q[2]}
+        if diff "$dkms_tree/$mod/$tree_ver/$tree_kern/$tree_arch/module/$basename_ko"  \
+            $installed_ko >/dev/null 2>&1 && \
+	    [[ ($r_mod = $mod || ! $r_mod) && \
+	    ($r_ver = $tree_ver || ! $r_ver) && \
+	    ($r_kern = $installedkernver || ! $r_kern) && \
+	    ($r_arch = $tree_arch || ! $r_arch) ]]; then
+	    su="$mod, $tree_ver, $installedkernver, $tree_arch: installed-weak from $tree_kern"
+	    for s in "${string_array[@]}"; do
+		[[ $s = $su ]] && continue 2
+	    done
+	    string_array[${#string_array[@]}]="$su"
+	    echo "$su"
+        fi
     done
 }
    
