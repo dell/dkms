@@ -1399,7 +1399,7 @@ _is_module_installed() {
     [[ $1 && $2 && $3 && $4 ]] || return 1
     local d="$dkms_tree/$1/$2/$3/$4"
     local k="$dkms_tree/$1/kernel-$3-$4"
-    [[ -L $k && $(readlink -e $k) = $d ]]
+    [[ -L $k && $(readlink -f $k) = $d ]]
 }
 
 is_module_installed() { is_module_built "$@" && _is_module_installed "$@"; }
@@ -1467,7 +1467,7 @@ do_uninstall()
 
     # If kernel-<kernelver> symlink points to this module, check for original_module and put it back
     local was_active="" 
-    local kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-$1-$2")
+    local kernel_symlink=$(readlink -f "$dkms_tree/$module/kernel-$1-$2")
     local real_dest_module_location
     if [[ $kernel_symlink = $dkms_tree/$module/$module_version/$1/$2 ]]; then
         was_active="true"
@@ -1580,7 +1580,7 @@ uninstall_module()
     read_conf_or_die "$kernelver" "$arch"
 
     # Only do stuff if module/module version is currently installed
-    local kernel_symlink=$(readlink -e "$dkms_tree/$module/kernel-$kernelver-$arch")
+    local kernel_symlink=$(readlink -f "$dkms_tree/$module/kernel-$kernelver-$arch")
     if [[ $kernel_symlink != $dkms_tree/$module/$module_version/$kernelver/$arch ]]; then
         echo $"" >&2
         echo $"Error! The module $module $module_version is not currently installed." >&2
@@ -1710,13 +1710,13 @@ do_status_weak()
 	[[ -f $ko ]] || continue
         installedkernver=${ko#$install_tree/}
 	installedkernver=${ko%/weak-updates*}
-	[[ -L $ko ]] && installed_ko=$(readlink -e $ko) || continue
+	[[ -L $ko ]] && installed_ko=$(readlink -f $ko) || continue
         basename_ko=${ko##*/}
 	kver=(${installed_ko/\// })
 	kver=${kver[2]}
 	mod="$r_mod"
 	[[ $mod ]] || mod=$(find_module_from_ko "$depth" "$ko")
-	local q=$(readlink -e "$dkms_tree/$mod/$kver");
+	local q=$(readlink -f "$dkms_tree/$mod/$kver");
 	q=(${q//\// })
         tree_ver=${q[0]}
         tree_kern=${q[1]}
@@ -3045,7 +3045,7 @@ check_root() {
 }
 
 add_source_tree() {
-    local from=$(readlink -e $1)
+    local from=$(readlink -f $1)
     if ! [[ $from && -f $from/dkms.conf ]]; then
 	echo
 	echo $"$1 must contain a dkms.conf file!"
