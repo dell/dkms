@@ -34,9 +34,13 @@ readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
        modules_conf_alias_type STRIP strip MODULES_CONF_OBSOLETE_ONLY
        modules_conf_obsolete_only AUTOINSTALL"
 
+# Some important regular expressions.  Requires bash 3 or above.
+# Any poor souls still running bash 2 or older really need an upgrade.
 readonly reserved_tree_names="build|original_module|tarball|driver_disk|rpm|source|kernel"
 readonly y_re='^(Y|y)'
 readonly rh_kernels='(debug|summit|smp|enterprise|bigmem|hugemem|BOOT|vmnix)'
+
+# Run a command that we may or may not want to be detailed about.
 invoke_command()
 {
     # $1 = command to be executed using eval.
@@ -91,6 +95,8 @@ VER()
 		  -e 's: ::g'
 }
 
+# Figure out the correct module suffix for the kernel we are currently
+# dealing with, which may or may not be the currently installed kernel.
 set_module_suffix()
 {
     # $1 = the kernel to base the module_suffix on
@@ -107,6 +113,7 @@ set_kernel_source_dir()
 	kernel_source_dir="$install_tree/$1/build"
 }
 
+# A little test function for DKMS commands that only work on one kernel.
 have_one_kernel() {
     if (( ${#kernelver[@]} > 1 )); then
 	echo $"" >&2
@@ -122,6 +129,11 @@ have_one_kernel() {
     fi
 }
 
+# Set up the kernelver and arch arrays.  You must have a 1:1 correspondence --
+# if there is an entry in kernelver[$i], there must also be an entry in arch[$i]
+# Note the special casing for the status action -- the status functions just
+# report on what we already have, and will break with the preprocessing that
+# this function provides.
 setup_kernels_arches()
 {
     # If all is set, use dkms status to fill the arrays
@@ -186,6 +198,9 @@ do_depmod()
     fi
 }
 
+# This function is a little hairy -- every distro has slightly different tools
+# and naming conventions for creating initial ramdisks.  It should probably
+# be split out into one function per distro, with make_initrd left as a stub.
 make_initrd()
 {
     # $1 = kernel version
@@ -244,6 +259,7 @@ make_initrd()
     return
 }
 
+# Grab our distro information from RPM-based distros.
 distro_version_rpm()
 {
     which rpm > /dev/null 2>&1 || { echo unknown; return; }
@@ -274,6 +290,8 @@ distro_version_rpm()
     echo unknown
 }
 
+# Grab distro information from LSB compliant distros.
+# Falls back to distro_version_rpm if needed.
 distro_version()
 {
     # What distribution are we running?
@@ -335,6 +353,12 @@ override_dest_module_location()
     echo "$orig_location"
 }
 
+# Source a file safely.
+# We want to ensure that the .conf file we source does not stomp all over
+# parts of the environment we don't want them to.  This makes it so that
+# it is harder to accidentally corrupt our environment.  conf files can
+# still deliberatly trash the environment by abusing dkms_directive env
+# variables or by crafting special values that will make eval do evil things.
 safe_source() {
     # $1 = file to source
     # $@ = environment variables to echo out
@@ -362,7 +386,9 @@ safe_source() {
     rm "$tmpfile"
 }
 
-
+# Source a dkms.conf file and perform appropriate postprocessing on it.
+# Do our best to not repeatedly source the same .conf file -- this can happen
+# when chaining module installtion functions or autoinstalling.
 read_conf()
 {
     # $1 kernel version (required)
@@ -568,7 +594,7 @@ read_conf()
     return $return_value
 }
 
-
+# Little helper function for parsing the output of modinfo.
 get_module_verinfo(){
     local vals=
     while read -a vals; do
@@ -579,6 +605,8 @@ get_module_verinfo(){
     done < <(modinfo $1)
 }
 
+# Perform some module version sanity checking whenever we are installing
+# or removing modules.
 check_version_sanity()
 {
     # $1 = kernel_version
@@ -660,7 +688,6 @@ check_version_sanity()
     return 0
 }
 
-
 moduleconfig_update_obsoletes()
 {
     # $@ = files to process
@@ -697,7 +724,6 @@ moduleconfig_update_obsoletes()
 	fi
     done
 }
-
 
 moduleconfig_add()
 {
@@ -751,7 +777,6 @@ moduleconfig_add()
     # Delete the temp dir
     rm -rf $temp_dir_name
 }
-
 
 moduleconfig_remove()
 {
@@ -858,6 +883,10 @@ run_build_script() {
     $dkms_tree/$module/$module_version/source/$2
 }
 
+# Register a DKMS-ified source tree with DKMS.
+# This function is smart enough to register the module if we
+# passed a source tree or a tarball instead of relying on the source tree
+# being unpacked into /usr/src/$module-$module_version.
 add_module()
 {
     # if $archive is set and $module and $module_version are not,
@@ -914,6 +943,9 @@ add_module()
     echo $"DKMS: add Completed."
 }
 
+# Prepare a kernel source or include tree for compiling a module.
+# Most modern-ish distros do not require this function at all,
+# so it will be removed in a future release.
 prepare_kernel()
 {
     # $1 = kernel version to prepare
@@ -1053,8 +1085,10 @@ prepare_kernel()
     cd - >/dev/null
 }
 
+# Get ready to build a module that has been registered with DKMS.
 prepare_build()
 {
+    # If the module has not been added, try to add it.
     is_module_added "$module" "$module_version" || add_module
 
     set_kernel_source_dir "$kernelver"
@@ -1121,6 +1155,8 @@ prepare_build()
     done
 }
 
+# Build our previously prepared source tree.  prepare_build must be called
+# before calling this function.
 do_build()
 {
     local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
@@ -1178,6 +1214,7 @@ do_build()
     run_build_script post_build "$post_build"
 }
 
+# Clean up after a build.
 clean_build()
 {
     # Run the clean commands
@@ -1211,15 +1248,15 @@ build_module()
     echo $"DKMS: build Completed."
 }
 
+# Install a previously built module
+# There are huge swaths of code here that special-case for various distros.
+# They should be split into their own functions.
 install_module()
 {
-
+    # If the module has not been built, try to build it first.
     is_module_built "$module" "$module_version" "$kernelver" "$arch" || build_module
     local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
     check_module_args install
-
-    # Check that $module-$module_version exists by checking the source symlink
-
 
     # Make sure that kernel exists to install into
     if ! [[ -e $install_tree/$kernelver ]]; then
@@ -1379,6 +1416,7 @@ install_module()
     echo $"DKMS: install Completed."
 }
 
+# List each kernel object that has been installed for a particular module.
 list_each_installed_module()
 {
     # $1 = module
@@ -1409,6 +1447,7 @@ is_module_built() {
     done
 }
 
+# This assumes we have already checked to see if the module has been built.
 _is_module_installed() {
     [[ $1 && $2 && $3 && $4 ]] || return 1
     local d="$dkms_tree/$1/$2/$3/$4"
@@ -1416,6 +1455,7 @@ _is_module_installed() {
     [[ -L $k && $(readlink -f $k) = $d ]]
 }
 
+# This does not.
 is_module_installed() { is_module_built "$@" && _is_module_installed "$@"; }
 
 
@@ -1465,6 +1505,7 @@ find_actual_dest_module_location()
 
 }
 
+# Remove compiled DKMS modules from any kernels they are installed in.
 do_uninstall()
 {
     # $1 = kernel version
@@ -1569,6 +1610,7 @@ do_uninstall()
     echo $"DKMS: uninstall Completed."
 }
 
+# Check our preconditions, and then let do_install do all the hard work.
 uninstall_module()
 {
     # Check that the right arguments were passed
@@ -1604,6 +1646,7 @@ uninstall_module()
     do_uninstall "$kernelver" "$arch"
 }
 
+# Unregister a DKMS module.  This uninstalls any installed modules along the way.
 remove_module()
 {
     # Check that the right arguments were passed
@@ -1681,10 +1724,13 @@ remove_module()
     fi
 }
 
+# Test to see if a pathname is a "valid" pathname
+# to use for searching on.
 valid_search_tree() {
     [[ -d $1 && ! ( $1 =~ $reserved_tree_names ) ]]
 }
 
+# Given a kernel object, figure out which DKMS module it is from.
 find_module_from_ko()
 {
     local ko="$1"
@@ -1704,8 +1750,12 @@ find_module_from_ko()
     return 1
 }
 
+# Check to see if modules meeting the passed parameters are weak-installed.
+# This function's calling convention is different from the usual DKMS status
+# checking functions -- the kernel version we usually have is the one we are currently
+# running on, not necessarily the one we compiled the module for.
 module_status_weak() {
-    # $1 = module, $2 = module version, $3 = kernel version weak installed to, 
+    # $1 = module, $2 = module version, $3 = kernel version weak installed to,
     # $4 = kernel arch, $5 = kernel version built for
     [[ $weak_modules ]] || return 1
     local weak_ko mod installed_ko f ret=1
@@ -1713,7 +1763,7 @@ module_status_weak() {
     for weak_ko in "$install_tree/"*/weak-updates/*; do
 	[[ -e $weak_ko ]] || continue
 	[[ -L $weak_ko ]] && installed_ko="$(readlink -f "$weak_ko")" || continue
-        IFS=/ read m v k a < <(find_module_from_ko "$weak_ko") || continue
+	IFS=/ read m v k a < <(find_module_from_ko "$weak_ko") || continue
 	kern=${weak_ko#$install_tree/}
 	kern=${kern%/weak-updates/*}
 	[[ $m = ${1:-*} && $v = ${2:-*} && $k = ${5:-*} && \
@@ -1729,6 +1779,7 @@ module_status_weak() {
     return $ret
 }
 
+# Print the requested status lines for weak-installed modules.
 do_status_weak()
 {
     local mvka m v k a kern status
@@ -1738,6 +1789,8 @@ do_status_weak()
     done < <(module_status_weak "$@")
 }
 
+# Spit out all the extra status information that people running DKMS are
+# interested in, but that the DKMS internals do not usually care about.
 module_status_built_extra() (
     set_module_suffix "$3"
     read_conf "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf"
@@ -1755,6 +1808,9 @@ module_status_built_extra() (
     done
 )
 
+# Return a list of all the modules that are either built or installed.
+# This and module_status do some juggling of $IFS to ensure that
+# we do not get word splitting where it would be inconvienent.
 module_status_built() {
     local ret=1 directory ka k a state oifs="$IFS" IFS=''
     for directory in "$dkms_tree/$1/$2/"${3:-*.*.*}/${4:-*}; do
@@ -1775,6 +1831,7 @@ module_status_built() {
     return $ret
 }
 
+# Return the status of all modules that have been added, built, or installed.
 module_status() {
     local oifs="$IFS" IFS='' mv m v directory ret=1
     for directory in "$dkms_tree/"${1:-*}/${2:-*}; do
@@ -1792,6 +1849,9 @@ module_status() {
     return $ret
 }
 
+# Print out the status in the format that people who call DKMS expect.
+# Internal callers should use the module_status functions, as their output
+# is easier to parse.
 do_status() {
     local status mvka m v k a
     while read status mvka; do
@@ -1805,6 +1865,8 @@ do_status() {
     done < <(module_status "$@")
 }
 
+# Show all our status in the format that external callers expect, even
+# though it is slightly harder to parse.
 show_status()
 {
     local j state_array
@@ -2473,12 +2535,16 @@ make_tarball()
     echo $"DKMS: mktarball Completed."
 }
 
+# A tiny helper function to make sure dkms.conf describes a valid package.
 get_pkginfo_from_conf() {
     [[ -f $1 && $1 = *dkms.conf ]] || return
     read_conf_or_die "$kernelver" "$arch" "$1"
     [[ $PACKAGE_NAME && $PACKAGE_VERSION ]]
 }
 
+# Unpack a DKMS tarball from a few different supported formats.
+# We expect $archive_location to have been passed either as a raw argument or
+# with --archive.
 load_tarball()
 {
     # Error out if $archive_location does not exist
@@ -2489,6 +2555,7 @@ load_tarball()
     fi
 
     # Figure out what kind of archive it is (tar.gz, tar, tar.bz, etc)
+    # Note that this does not depend on the extensions being correct.
     local tar_options=""
     for xpand in gzip bzip xz; do
 	$xpand -t $archive_location 2>/dev/null || continue
@@ -2521,6 +2588,9 @@ load_tarball()
     fi
 
     # Check that dkms_dbversion is not a future version
+    # As far as I can tell, the only reason we bother with this is for detecting
+    # whether we have arch support or not, which we can also determine by examining
+    # the structure of the tarball.
     db_from_tarball=$(cat $temp_dir_name/dkms_main_tree/dkms_dbversion 2>/dev/null)
     db_from_dkms=$(cat $dkms_tree/dkms_dbversion 2>/dev/null)
     if [[ $db_from_tarball && $db_from_dkms && \
@@ -2531,7 +2601,8 @@ load_tarball()
 	exit 9
     fi
 
-    # Make sure its a sane tarball
+    # Make sure its a sane tarball. Sane ones will have one of the two
+    # directories we test for.
     for loc in dkms_source_tree dkms_binaries_only ''; do
 	if [[ ! $loc ]]; then
 	    echo >&2
@@ -2798,7 +2869,7 @@ preproc_file()
     mv "$1.dkms-pp" "$1"
 }
 
-
+# Install a package on a debian system.
 debian_install()
 {
     local getroot  tmpfile i
@@ -3008,6 +3079,9 @@ report_build_problem()
     fi
 }
 
+# Little helper function for reading args from the commandline.
+# it automatically handles -a b and -a=b variants, and returns 1 if
+# we need to shift $3.
 read_arg() {
     # $1 = arg name
     # $2 = arg value
@@ -3017,10 +3091,17 @@ read_arg() {
 	read "$1" <<< "${BASH_REMATCH[1]}"
     else
 	read "$1" <<< "$3"
+	# There is no way to shift our callers args, so
+	# return 1 to indicate they should do it instead.
 	return 1
     fi
 }
 
+# A couple of helper functions for parsing out our most common arguments.
+# This one allows you to pass -k kernel.version-extra/arch instead of
+# -k kernel-version.extra -a arch.
+# This makes it harder to pass mismatching numbers of kernel/arch pairs, because
+# they are all passed at the same time.
 parse_kernelarch(){
     local ka_re='^([^/]*)/(.*)$'
     if [[ $1 =~ $ka_re ]]; then
@@ -3031,6 +3112,12 @@ parse_kernelarch(){
     fi
 }
 
+# This allows you to pass module and module_version information on the commandline
+# in a more convienent form.  Instead of the mostly mandatory and annoying
+# -m module -v module_version, you can use either -m module-module_version,
+# -m module/module_version, or just a raw module[-/]module_version with no -m
+# parameter.  This vastly improves readability and discoverability of
+# commands on the commandline.
 parse_moduleversion(){
     # split on / if it is in $1, otherwise split on -
     local mv_re='^([^-]*)-(.*)$'
@@ -3049,6 +3136,9 @@ check_root() {
     exit 1
 }
 
+# Add a passed source tree to the default source location.
+# We will check the dkms.conf file to make sure it is valid
+# beforehand.
 add_source_tree() {
     local from=$(readlink -f $1)
     if ! [[ $from && -f $from/dkms.conf ]]; then
@@ -3119,14 +3209,21 @@ make_kmp()
     # FIXME: hand SRPM to mock or build system to build
 }
 
+# This code used to be in dkms_autoinstaller.
+# Moving it into the main dkms script gets rid of a fair amount of duplicate
+# functionality, and makes it much easier to reinstall DKMS kernel modules
+# by hand if dkms_autoinstaller is not used.
 autoinstall() {
     local status mv mvka m v k a last_v last_m tenative
     local -a to_install=()
+    # Walk through our list of installed and built modules, and create
+    # a list of modules that need to be reinstalled.
     while read status mvka; do
 	# if it has not been built, do not try and build it now.
 	[[ $status = added ]] && continue
 	IFS='/' read m v k a <<< "$mvka"
 	[[ ! $last_m ]] && last_m="$m"
+	# If the module is already installed or weak-installed, skip it.
 	is_module_installed "$m" "$v" "$kernelver" "$arch" && continue
 	module_status_weak "$m" "$v" "$kernelver" "$arch" >/dev/null || continue
 	# if the module does not want to be autoinstalled, skip it.
@@ -3144,8 +3241,11 @@ autoinstall() {
 	    tenative="$m/$v"
 	fi
     done < <(module_status)
+    # We may have exited the loop with $tenative set.  If it is,
+    # it contains something that should be updated.
     [[ $tenative ]] && to_install[${#to_install[@]}]="$tenative"
     [[ $to_install ]] || return
+    # Install modules that need to be updated in parallel.
     for mv in "${to_install[@]}"; do
 	IFS=/ read m v <<< "$mv"
 	(module="$m"; module_version="$v"; install_module) &
