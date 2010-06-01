@@ -3371,15 +3371,15 @@ while (($# > 0)); do
 			     show_usage
 			     exit 2;;
 	*) if [[ $1 =~ $action_re ]]; then
-	    action="$action $1"
+	    action="$action $1" # Add actions to the action list
 	    elif [[ -f $1 && $1 = *dkms.conf ]]; then
-	    try_source_tree="${1%dkms.conf}./"
+	    try_source_tree="${1%dkms.conf}./" # Flag as a source tree
 	    elif [[ -d $1 && -f $1/dkms.conf ]]; then
-	    try_source_tree="$1"
+	    try_source_tree="$1" # ditto
 	    elif [[ -f $1 ]]; then
-	    archive_location="$1"
+	    archive_location="$1" # It is a file, assume it is an archive.
 	    elif [[ ! $module ]]; then
-	    parse_moduleversion "$1"
+	    parse_moduleversion "$1" # Assume it is a module/version pair.
 	    else
 	    echo $"Warning: I do not know how to handle $1."
 	    fi;;
