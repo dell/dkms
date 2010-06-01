@@ -1687,68 +1687,54 @@ valid_search_tree() {
 
 find_module_from_ko()
 {
-    local ko="$2"
+    local ko="$1"
     local basename_ko="${ko##*/}"
     local module
     local kernellink
 
     for kernellink in "$dkms_tree"/*/kernel-*; do
 	[[ -L $kernellink ]] || continue
-	module=${kernellink%/*}
-	module=${kernellink##*/}
-	diff "$kernellink/module/${basename_ko}" "${ko}" >/dev/null 2>&1 && echo "$module" && break
+	module=${kernellink#$dkms_tree/}
+	module=${module%/kernel-*}
+	diff "$kernellink/module/${basename_ko}" "${ko}" >/dev/null 2>&1 || continue
+	rest=$(readlink $kernellink)
+	echo "$module/$rest"
+	return 0
     done
-    echo ""
+    return 1
+}
+
+module_status_weak() {
+    # $1 = module, $2 = module_version, $3 = kernel_version, $4 = kernel arch
+    [[ $weak_modules ]] || return 1
+    local weak_ko mod installed_ko f ret=1
+    local -a already_found
+    for weak_ko in "$install_tree/"*/weak-updates/*; do
+	[[ -e $weak_ko ]] || continue
+	[[ -L $weak_ko ]] && installed_ko="$(readlink -f "$weak_ko")" || continue
+	mod="$(find_module_from_ko "$weak_ko")" || continue
+        IFS=/ read m v k a <<< "$mod"
+	[[ $m = ${1:-*} && $v = ${2:-*} && $k = ${3:-*} && $a = ${4:-*} ]] || \
+	    continue
+	ret=0
+	kern=${weak_ko#$install_tree/}
+	kern=${kern%/weak-updates/*}
+	for f in "${already_found[@]}"; do
+	    [[ $f = $mod/$kern ]] && continue 2
+	done
+	already_found[${#already_found[@]}]="$mod/$kern"
+	echo "installed-weak $mod/$kern"
+    done
+    return $ret
 }
 
 do_status_weak()
 {
-    [[ $weak_modules ]] || return 0
-    # these are the requested mod/ver/kern/arch fields
-    local r_mod="$1"
-    local r_ver="$2"
-    local r_kern="$3"
-    local r_arch="$4"
-    local installedkern
-    local ko
-    local basename_ko
-    local installed_ko
-    local tree_ver
-    local tree_kern
-    local tree_arch
-    local f s su
-    local -a string_array=() kver
-    # recognize weak modules.  These are in $kern/weak-updates but are symlinks to another $kern/extra file.
-
-    for ko in "$install_tree"/*/weak-updates/*; do
-	[[ -f $ko ]] || continue
-	installedkernver=${ko#$install_tree/}
-	installedkernver=${ko%/weak-updates*}
-	[[ -L $ko ]] && installed_ko=$(readlink -f $ko) || continue
-	basename_ko=${ko##*/}
-	local -a kver=(${installed_ko/\// })
-	kver=${kver[2]}
-	mod="$r_mod"
-	[[ $mod ]] || mod=$(find_module_from_ko "$depth" "$ko")
-	local q=$(readlink -f "$dkms_tree/$mod/$kver");
-	local -a q=(${q//\// })
-	tree_ver=${q[0]}
-	tree_kern=${q[1]}
-	tree_arch=${q[2]}
-	if diff "$dkms_tree/$mod/$tree_ver/$tree_kern/$tree_arch/module/$basename_ko"  \
-	    $installed_ko >/dev/null 2>&1 && \
-	    [[ ($r_mod = $mod || ! $r_mod) && \
-	    ($r_ver = $tree_ver || ! $r_ver) && \
-	    ($r_kern = $installedkernver || ! $r_kern) && \
-	    ($r_arch = $tree_arch || ! $r_arch) ]]; then
-	    su="$mod, $tree_ver, $installedkernver, $tree_arch: installed-weak from $tree_kern"
-	    for s in "${string_array[@]}"; do
-		[[ $s = $su ]] && continue 2
-	    done
-	    string_array[${#string_array[@]}]="$su"
-	    echo "$su"
-	fi
-    done
+    local mvka m v k a kern status
+    while read status mvka; do
+	IFS=/ read m v k a kern <<< "$mvka"
+	echo "$m, $v, $kern, $a: installed-weak from $k"
+    done < <(module_status_weak "$@")
 }
 
 module_status_built_extra() (
@@ -1789,7 +1775,7 @@ module_status_built() {
 }
 
 module_status() {
-    local oifs="$IFS" IFS='' mv m v directory
+    local oifs="$IFS" IFS='' mv m v directory ret=1
     for directory in "$dkms_tree/"${1:-*}/${2:-*}; do
 	IFS="$oifs"
 	valid_search_tree "$directory" || continue
@@ -1797,10 +1783,12 @@ module_status() {
 	m="${mv%/*}"
 	v="${mv#*/}"
 	is_module_added "$m" "$v" || continue
+	ret=0
 	module_status_built "$m" "$v" "$3" "$4" || echo "added $m/$v"
 	IFS=''
     done
     IFS="$oifs"
+    return $ret
 }
 
 do_status() {
