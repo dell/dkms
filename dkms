@@ -1705,25 +1705,26 @@ find_module_from_ko()
 }
 
 module_status_weak() {
-    # $1 = module, $2 = module_version, $3 = kernel_version, $4 = kernel arch
+    # $1 = module, $2 = module version, $3 = kernel version weak installed to, 
+    # $4 = kernel arch, $5 = kernel version built for
     [[ $weak_modules ]] || return 1
     local weak_ko mod installed_ko f ret=1
     local -a already_found
     for weak_ko in "$install_tree/"*/weak-updates/*; do
 	[[ -e $weak_ko ]] || continue
 	[[ -L $weak_ko ]] && installed_ko="$(readlink -f "$weak_ko")" || continue
-	mod="$(find_module_from_ko "$weak_ko")" || continue
-        IFS=/ read m v k a <<< "$mod"
-	[[ $m = ${1:-*} && $v = ${2:-*} && $k = ${3:-*} && $a = ${4:-*} ]] || \
-	    continue
-	ret=0
+        IFS=/ read m v k a < <(find_module_from_ko "$weak_ko") || continue
 	kern=${weak_ko#$install_tree/}
 	kern=${kern%/weak-updates/*}
+	[[ $m = ${1:-*} && $v = ${2:-*} && $k = ${5:-*} && \
+	    $a = ${4:-*} && $kern = ${3:-*} ]] || \
+	    continue
+	ret=0
 	for f in "${already_found[@]}"; do
-	    [[ $f = $mod/$kern ]] && continue 2
+	    [[ $f = $m/$v/$kern/$a/$k ]] && continue 2
 	done
-	already_found[${#already_found[@]}]="$mod/$kern"
-	echo "installed-weak $mod/$kern"
+	already_found[${#already_found[@]}]="$m/$v/$kern/$a/$k"
+	echo "installed-weak $m/$v/$kern/$a/$k"
     done
     return $ret
 }
@@ -1733,7 +1734,7 @@ do_status_weak()
     local mvka m v k a kern status
     while read status mvka; do
 	IFS=/ read m v k a kern <<< "$mvka"
-	echo "$m, $v, $kern, $a: installed-weak from $k"
+	echo "$m, $v, $k, $a: installed-weak from $kern"
     done < <(module_status_weak "$@")
 }
 
@@ -3127,6 +3128,7 @@ autoinstall() {
 	IFS='/' read m v k a <<< "$mvka"
 	[[ ! $last_m ]] && last_m="$m"
 	is_module_installed "$m" "$v" "$kernelver" "$arch" && continue
+	module_status_weak "$m" "$v" "$kernelver" "$arch" >/dev/null || continue
 	# if the module does not want to be autoinstalled, skip it.
 	read_conf_or_die "$k" "$a" "$dkms_tree/$m/$v/source/dkms.conf"
 	if [[ ! $AUTOINSTALL ]]; then
