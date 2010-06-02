@@ -1413,6 +1413,43 @@ _is_module_installed() {
 # This does not.
 is_module_installed() { is_module_built "$@" && _is_module_installed "$@"; }
 
+maybe_add_module() (
+    is_module_added "$1" "$2" && {
+	echo $"Module $1/$2 already added."
+	return 0
+    }
+    module="$1" module_version="$2" add_module
+)
+
+maybe_build_module() (
+    is_module_built "$1" "$2" "$3" "$4" && {
+	echo $"Module $1/$2 already built for kernel $3/4"
+	return 0
+    }
+    module="$1" module_version="$2" kernelver="$3" arch="$4" build_module
+)
+
+maybe_install_module() (
+    is_module_installed "$1" "$2" "$3" "$4" && {
+	echo $"Module $1/$2 already installed on kernel $3/$4"
+	return 0
+    }
+    module="$1" module_version="$2" kernelver="$3" arch="$4" install_module
+)
+
+build_modules() {
+    local i=0
+    for ((i=0; i < ${#kernelver[@]}; i++)); do
+	maybe_build_module "$module" "$module_version" "${kernelver[$i]}" "${arch[$i]}"
+    done
+}
+
+install_modules() {
+    local i=0
+    for ((i=0; i < ${#kernelver[@]}; i++)); do
+	maybe_install_module "$module" "$module_version" "${kernelver[$i]}" "${arch[$i]}"
+    done
+}
 
 check_module_exists() {
     is_module_added "$module" "$module_version" && return
@@ -1942,9 +1979,9 @@ make_redhat_driver_disk()
 	local dd_prefix="${kernelver[$i]}"
 	[[ $distro = redhat2 ]] && dd_prefix="${kernelver[$i]}/${arch[$i]}"
 	[[ $multi_arch = true && -z $redhat1_okay ]] && dd_prefix="${kernelver[$i]}/${arch[$i]}"
-	is_module_built "$module" "$module_version" "${kernelver[$i]}" "${arch[$i]}" || {
+	maybe_build_module "$module" "$module_version" "${kernelver[$i]}" "${arch[$i]}" || {
 	    rm -rf "$cpioarchive_dir_name"
-	    die 5 $"Module/version must be in built state before making a driver disk."
+	    die 5 $"Cannot build $module/$module_version for redhat driver disk."
 	}
 	
 	# FIXME: add check for KMP binary RPMs to include in the driver disk
@@ -2244,9 +2281,9 @@ make_ubuntu_driver_disk()
        # ubuntu-drivers/<kver>/*_<debarch>.deb
       local dd_prefix="ubuntu-drivers/$kvers"
       local dd_suffix="_${karch}.deb"
-      is_module_built "$module" "$module_version" "${kernelver[$i]}" "${arch[$i]}" || {
+      maybe_build_module "$module" "$module_version" "${kernelver[$i]}" "${arch[$i]}" || {
 	  rm -rf "$tempdir"
-	  die 5 $"Module/version must be in built state before making a driver disk."
+	  die 5 $"Unable to build $module/$module_version for Ubuntu driver disk."
       }
       mkdir -p "$tempdir/$dd_prefix"
       local deb_dir="$tempdir/$dd_prefix/debian"
@@ -3239,13 +3276,13 @@ for action_to_run in $action; do
     setup_kernels_arches "$action_to_run"
     case "$action_to_run" in
 	remove)       check_root && remove_module;;
-	install)      check_root && have_one_kernel && install_module;;
+	install)      check_root && install_modules;;
 	autoinstall)  check_root && autoinstall;;
 	match)        check_root && have_one_kernel && run_match;;
 	uninstall)    check_root && have_one_kernel && uninstall_module;;
 	mkdriverdisk) check_root && make_driver_disk;;
-	build)        have_one_kernel && build_module;;
-	add)          have_one_kernel && add_module;;
+	build)        build_modules;;
+	add)          add_modules;;
 	mktarball)    make_tarball;;
 	mkrpm)        make_rpm;;
 	mkdeb)        make_debian "deb";;
