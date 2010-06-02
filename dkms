@@ -49,7 +49,7 @@ invoke_command()
     local exitval=0
     [[ $verbose ]] && echo -e "$1" || echo -en "$2..."
     if [[ $3 = background && ! $verbose ]]; then
-	local exitval_file=$(mktemp $tmp_location/dkms.XXXXXX)
+	local exitval_file=$(mktemp_or_die $tmp_location/dkms.XXXXXX)
 	(eval $1 >/dev/null 2>&1; echo "exitval=$?" >> "$exitval_file") &
 	while [[ -e $exitval_file && ! -s $exitval_file ]]; do
 	    sleep 3
@@ -85,6 +85,13 @@ die() {
     shift
     error "$@"
     exit $ret
+}
+
+mktemp_or_die() {
+    local t
+    t=$(mktemp "$@") && return
+    [[ $* = *-d* ]] && die 1 $"Unable to make temporary directory"
+    die 1 "Unable to make temporary file."
 }
 
 show_usage()
@@ -378,7 +385,7 @@ safe_source() {
     # $@ = environment variables to echo out
     local to_source_file="$1"; shift
     declare -a -r export_envs=("$@")
-    local tmpfile=$(mktemp) || exit 9
+    local tmpfile=$(mktemp_or_die)
     ( exec >"$tmpfile"
 	. "$to_source_file" >/dev/null
 	# This is really ugly, but a neat hack
@@ -739,7 +746,7 @@ moduleconfig_add()
 {
     # $1 = kernel version
 
-    local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
     local -a sa_mc_o=() sa_sck_o=()
     modconfig_files="/etc/modprobe.d/dkms.conf
 		     /etc/modprobe.d/dkms
@@ -792,7 +799,7 @@ moduleconfig_remove()
 {
     # $1 = kernel version
 
-    local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
     modconfig_files=""
     [ -e /etc/modprobe.d/dkms.conf ] && modconfig_files="/etc/modprobe.d/dkms.conf"
     [ -e /etc/modprobe.d/dkms ] && modconfig_files="/etc/modprobe.d/dkms"
@@ -846,7 +853,7 @@ etc_sysconfig_kernel_modify()
     [[ -e /etc/sysconfig/kernel && $remake_initrd ]] || return 0
 
     # Make a temp directory to store files
-    local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
     if [[ $1 = add ]]; then
 	. /etc/sysconfig/kernel
 	for m in "${dest_module_name[@]}"; do
@@ -922,7 +929,7 @@ add_module()
     # Do stuff for --rpm_safe_upgrade
     if [[ $rpm_safe_upgrade ]]; then
 	local pppid=$(awk '/PPid:/ {print $2}' /proc/$PPID/status)
-	local lock_name=$(mktemp $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.XXXXXX 2>/dev/null)
+	local lock_name=$(mktemp_or_die $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.XXXXXX)
 	echo "$module-$module_version" >> $lock_name
 	ps -o lstart --no-headers -p $pppid 2>/dev/null >> $lock_name
     fi
@@ -1815,8 +1822,8 @@ create_temporary_trees()
     module="$PACKAGE_NAME"
     module_version="$PACKAGE_VERSION"
 
-    source_tree=$(mktemp -d)
-    dkms_tree=$(mktemp -d)
+    source_tree=$(mktemp_or_die -d)
+    dkms_tree=$(mktemp_or_die -d)
 
     local source_tree_dir="$source_tree/$PACKAGE_NAME-$PACKAGE_VERSION"
     mkdir -p "$source_tree_dir"
@@ -1896,12 +1903,7 @@ make_driver_disk_floppy()
 	ext2) invoke_command "mke2fs -F $image_name" "mke2fs" background;;
     esac
 
-    local mntdir=$(mktemp -d $tmp_location/dkms.XXXXXX)
-    if [[ ! $mntdir ]]; then
-	echo $""
-	echo $"Error: Could not create a temporary directory, failing."
-	return
-    fi
+    local mntdir=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
     invoke_command "mount -o loop -t $fs $image_name $mntdir >/dev/null 2>&1" "loopback mounting disk image"
     [[ -d $mntdir/lost+found ]] && rmdir "$mntdir/lost+found"
     invoke_command "cp -r $source_dir/* $mntdir/" "  copying files to floppy disk image"
@@ -1969,12 +1971,7 @@ make_redhat_driver_disk()
 	local rhdd_filename="rhdd-6.1"
     fi
 
-    cpioarchive_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
-    if [[ ! $cpioarchive_dir_name ]]; then
-	echo $""
-	echo $"Error: Could not create a temporary directory, failing."
-	return
-    fi
+    cpioarchive_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
 
     for ((i=0; i < ${#kernelver[@]}; i++)); do
 	set_module_suffix "${kernelver[$i]}"
@@ -2005,12 +2002,7 @@ make_redhat_driver_disk()
     done
 
     # Create directory and necessary files
-    driver_disk_dir=$(mktemp -d $tmp_location/dkms.XXXXXX)
-    if [[ ! $driver_disk_dir ]]; then
-	echo $""
-	echo $"Error: Could not create a temporary directory, failing."
-	return
-    fi
+    driver_disk_dir=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
 
     # Copy files for the driver disk (or warn if not present)
     local files_for_driverdisk="modinfo disk-info modules.dep pcitable modules.pcimap pci.ids"
@@ -2109,12 +2101,7 @@ make_suse_driver_disk()
 	$"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver>" \
 	$"                    -r <release-number>"
 
-    local driver_disk_dir=$(mktemp -d $tmp_location/dkms.XXXXXX)
-    if [[ ! $driver_disk_dir ]]; then
-	echo $""
-	echo $"Error: Could not create a temporary directory, failing."
-	return
-    fi
+    local driver_disk_dir=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
     local suffix="$(driver_disk_suffix)"
     local image_dir="$dkms_tree/$module/$module_version/driver_disk"
     local image_name="$module-$module_version-$distro-$release-dd.$suffix"
@@ -2242,12 +2229,7 @@ make_ubuntu_driver_disk()
     local image_dir="$dkms_tree/$module/$module_version/driver_disk"
     local image_name="$module-$module_version-$distro-dd.$suffix"
 
-    local tempdir=$(mktemp -d $tmp_location/dkms.XXXXXX)
-    if [[ ! $tempdir ]]; then
-	echo $""
-	echo $"Error: Could not create a temporary directory, failing."
-	return
-    fi
+    local tempdir=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
 
    # Check that the dh_make command is present
    if ! which dpkg-deb >/dev/null 2>&1 ; then
@@ -2345,7 +2327,7 @@ make_tarball()
     # Read the conf file
     read_conf_or_die "$kernelver" "$arch"
 
-    temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
     mkdir -p $temp_dir_name/dkms_main_tree
 
     if [[ $source_only ]]; then
@@ -2469,7 +2451,7 @@ load_tarball()
     done
 
     # Untar it into $tmp_location
-    local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
     trap 'rm -rf $temp_dir_name' EXIT RET
     tar -${tar_options}xf $archive_location -C $temp_dir_name
 
@@ -2704,7 +2686,7 @@ make_rpm()
 	mktarball_line="none"
     fi
 
-    local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
     trap 'rm -rf $temp_dir_name' EXIT HUP TERM
     mkdir -p ${temp_dir_name}/{BUILD,RPMS,SRPMS,SPECS,SOURCES}
     cp ${SPECFILE} ${temp_dir_name}/SPECS/dkms_mkrpm.spec
@@ -2769,7 +2751,7 @@ debian_install()
 	    break
 	done
     fi
-    if [[ -x /usr/sbin/synaptic && $DISPLAY ]] && tmpfile=$(mktemp); then
+    if [[ -x /usr/sbin/synaptic && $DISPLAY ]] && tmpfile=$(mktemp_or_die); then
 	# Pretty GUI install.
 	trap 'rm -f "$tmpfile"' RET EXIT
 	for ((i=0; i=${#packages[@]}; i++)); do
@@ -2815,7 +2797,7 @@ make_debian()
     fi
 
     #prepare build directory and copy template
-    local temp_dir=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    local temp_dir=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
     trap "rm -rf $temp_dir; delete_temporary_trees" EXIT HUP TERM
     local temp_dir_debian="$temp_dir/$debian_package-dkms-$module_version"
     invoke_command "cp -ar '$DEBDIR/' '$temp_dir_debian'" "copying template"
@@ -2900,7 +2882,7 @@ make_common_test()
 
 make_kmp_srpm()
 {
-    local temp_dir_name=$(mktemp -d $tmp_location/dkms.XXXXXX)
+    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
     trap 'rm -rf $temp_dir_name' EXIT HUP TERM
     mkdir -p $temp_dir_name/{BUILD,RPMS,SRPMS,SPECS,SOURCES}
     pushd "$dkms_tree/$module/$module_version" > /dev/null 2>&1
