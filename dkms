@@ -84,12 +84,12 @@ die() {
     ret=$1
     shift
     error "$@"
-    exit $ret
+    [[ $die_is_fatal = yes ]] && exit $ret || return $ret
 }
 
 mktemp_or_die() {
     local t
-    t=$(mktemp "$@") && return
+    t=$(mktemp "$@") && echo "$t" && return
     [[ $* = *-d* ]] && die 1 $"Unable to make temporary directory"
     die 1 "Unable to make temporary file."
 }
@@ -1397,7 +1397,7 @@ is_module_built() {
     valid_search_tree "$d" || return
     [[ -d $d/module ]] || return 1
     read_conf_or_die "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf"
-    for m in "${BUILT_MODULE_NAME[@]}"; do
+    for m in "${dest_module_name[@]}"; do
 	[[ -f $d/module/$m.ko || -f $d/module/$m.o ]] || return 1
     done
 }
@@ -1851,43 +1851,6 @@ media_valid()
     [[ $media =~ $mrx ]]
 }
 
-make_driver_disk()
-{
-    # Check that the right arguments were passed
-    if ! [[ $module && $module_version && $distro && $kernelver ]]; then
-	die 1 $"Invalid number of parameters passed." \
-	$"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver> [--media floppy|iso|tar]"
-    fi
-
-    # default to floppy media
-    [[ $media ]] || media="floppy"
-    if ! media_valid; then
-	die 1 $"Media $media is invalid." \
-	    $"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver> [--media floppy|iso|tar]"
-    fi
-
-    # Check that source symlink works
-    check_module_exists
-
-    # Confirm that distro is supported
-    case $distro in
-	redhat | redhat[12] | suse | UnitedLinux | ubuntu) ;;
-	*) die 3 $"Invalid distro argument. Currently, the distros" \
-		$"supported are: redhat, redhat1, redhat2, suse, UnitedLinux" \
-		$"               ubuntu";;
-    esac
-
-    # Read the conf file
-    read_conf_or_die "$kernelver" "$arch"
-
-    case $distro in
-	redhat*) make_redhat_driver_disk;;
-	ubuntu) make_ubuntu_driver_disk;;
-	*) make_suse_driver_disk;;
-    esac
-}
-
-
 make_driver_disk_floppy()
 {
     local image_name="$1"
@@ -1979,24 +1942,23 @@ make_redhat_driver_disk()
 	local dd_prefix="${kernelver[$i]}"
 	[[ $distro = redhat2 ]] && dd_prefix="${kernelver[$i]}/${arch[$i]}"
 	[[ $multi_arch = true && -z $redhat1_okay ]] && dd_prefix="${kernelver[$i]}/${arch[$i]}"
-	for ((count=0; count < ${#dest_module_name[@]}; count++)); do
-	    if ! [ -e "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix" ]; then
-		rm -rf "$cpioarchive_dir_name"
-		die 5 \
-		    $"Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver[$i]} (${arch[$i]})." \
-		    $"Module/version must be in built state before making a driver disk."
-	    fi
-	    # FIXME: add check for KMP binary RPMs to include in the driver disk
-	    if [[ ! $kernel_version_list ]]; then
-		kernel_version_list="kernel${kernelver[$i]}-${arch[$i]}"
-	    else
-		kernel_version_list="$kernel_version_list-kernel${kernelver[$i]}-${arch[$i]}"
-	    fi
-	    mkdir -p $cpioarchive_dir_name/$dd_prefix
-	    echo "Marking ${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix..."
-	    cp "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix" "$cpioarchive_dir_name/$dd_prefix/"
-
-	    modules_cgz_list="$dd_prefix/${dest_module_name[$count]}$module_suffix ${modules_cgz_list}"
+	is_module_built "$module" "$module_version" "${kernelver[$i]}" "${arch[$i]}" || {
+	    rm -rf "$cpioarchive_dir_name"
+	    die 5 $"Module/version must be in built state before making a driver disk."
+	}
+	
+	# FIXME: add check for KMP binary RPMs to include in the driver disk
+	if [[ ! $kernel_version_list ]]; then
+	    kernel_version_list="kernel${kernelver[$i]}-${arch[$i]}"
+	else
+	    kernel_version_list="$kernel_version_list-kernel${kernelver[$i]}-${arch[$i]}"
+	fi
+	mkdir -p $cpioarchive_dir_name/$dd_prefix
+	for f in "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/"*"$module_suffix"; do
+	    [[ -f $f ]] || continue
+	    echo "Marking ${f#$dkms_tree/$module/$module_version/}..."
+	    cp "$f" "$cpioarchive_dir_name/$dd_prefix/"
+	    modules_cgz_list="$dd_prefix/${f##*/} ${modules_cgz_list}"
 	done
 
     done
@@ -2067,6 +2029,42 @@ make_redhat_driver_disk()
     echo $"DKMS: mkdriverdisk Completed."
 }
 
+make_driver_disk()
+{
+    # Check that the right arguments were passed
+    if ! [[ $module && $module_version && $distro && $kernelver ]]; then
+	die 1 $"Invalid number of parameters passed." \
+	$"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver> [--media floppy|iso|tar]"
+    fi
+
+    # default to floppy media
+    [[ $media ]] || media="floppy"
+    if ! media_valid; then
+	die 1 $"Media $media is invalid." \
+	    $"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver> [--media floppy|iso|tar]"
+    fi
+
+    # Check that source symlink works
+    check_module_exists
+
+    # Confirm that distro is supported
+    case $distro in
+	redhat | redhat[12] | suse | UnitedLinux | ubuntu) ;;
+	*) die 3 $"Invalid distro argument. Currently, the distros" \
+		$"supported are: redhat, redhat1, redhat2, suse, UnitedLinux" \
+		$"               ubuntu";;
+    esac
+
+    # Read the conf file
+    read_conf_or_die "$kernelver" "$arch"
+
+    case $distro in
+	redhat*) make_redhat_driver_disk;;
+	ubuntu) make_ubuntu_driver_disk;;
+	*) make_suse_driver_disk;;
+    esac
+}
+
 find_external_dependencies()
 {
     local mod count i
@@ -2114,7 +2112,7 @@ make_suse_driver_disk()
     local offset=0
     # reserve a place for dependencies
     [[ ${deps[@]} ]] && offset=1
-
+    
     local count
     for ((count=0; count < ${#dest_module_name[@]}; count++)); do
 	local i
@@ -2246,27 +2244,18 @@ make_ubuntu_driver_disk()
        # ubuntu-drivers/<kver>/*_<debarch>.deb
       local dd_prefix="ubuntu-drivers/$kvers"
       local dd_suffix="_${karch}.deb"
-      local count
-      for ((count=0; count < ${#dest_module_name[@]}; count++)); do
-	if ! [[ -e $dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix ]]; then
-	    rm -rf "$tempdir"
-	    die 5 \
-		$"Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver[$i]} (${arch[$i]})." \
-		$"Module/version must be in built state before making a driver disk."
-	 fi
-
-	 mkdir -p "$tempdir/$dd_prefix"
-	 echo "Marking ${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix..."
-
-	 local deb_dir="$tempdir/$dd_prefix/debian"
-	 local deb_lib_dir="$deb_dir/lib/modules/${kernelver[$i]}/updates/dkms"
-	 mkdir -p "$deb_lib_dir"
-	 cp "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix" "$deb_lib_dir"
-       done
-
-       pushd "$deb_dir" > /dev/null 2>&1
-       mkdir DEBIAN
-       cat > DEBIAN/control <<EOF
+      is_module_built "$module" "$module_version" "${kernelver[$i]}" "${arch[$i]}" || {
+	  rm -rf "$tempdir"
+	  die 5 $"Module/version must be in built state before making a driver disk."
+      }
+      mkdir -p "$tempdir/$dd_prefix"
+      local deb_dir="$tempdir/$dd_prefix/debian"
+      local deb_lib_dir="$deb_dir/lib/modules/${kernelver[$i]}/updates/dkms"
+      mkdir -p "$deb_lib_dir"
+      cp "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/"*"$module_suffix" "$deb_lib_dir"
+      pushd "$deb_dir" > /dev/null 2>&1
+      mkdir DEBIAN
+      cat > DEBIAN/control <<EOF
 Package: ${module}-modules-${kernelver[$i]}
 Version: ${module_version}-1
 Section: misc
@@ -3147,6 +3136,7 @@ weak_modules=''
 last_mvka=''
 last_mvka_conf=''
 try_source_tree=''
+die_is_fatal="yes"
 [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
 [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 
