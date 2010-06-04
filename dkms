@@ -38,6 +38,7 @@ readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
 # Any poor souls still running bash 2 or older really need an upgrade.
 readonly reserved_tree_names="build|original_module|tarball|driver_disk|rpm|source|kernel"
 readonly y_re='^(Y|y)'
+readonly mv_re='^([^/]*)/(.*)$'
 readonly rh_kernels='(debug|summit|smp|enterprise|bigmem|hugemem|BOOT|vmnix)'
 
 # Run a command that we may or may not want to be detailed about.
@@ -2969,8 +2970,7 @@ read_arg() {
 # This makes it harder to pass mismatching numbers of kernel/arch pairs, because
 # they are all passed at the same time.
 parse_kernelarch(){
-    local ka_re='^([^/]*)/(.*)$'
-    if [[ $1 =~ $ka_re ]]; then
+    if [[ $1 =~ $mv_re ]]; then
 	kernelver[${#kernelver[@]}]="${BASH_REMATCH[1]}"
 	arch[${#arch[@]}]="${BASH_REMATCH[2]}"
     else
@@ -2980,14 +2980,11 @@ parse_kernelarch(){
 
 # This allows you to pass module and module_version information on the commandline
 # in a more convienent form.  Instead of the mostly mandatory and annoying
-# -m module -v module_version, you can use either -m module-module_version,
-# -m module/module_version, or just a raw module[-/]module_version with no -m
-# parameter.  This vastly improves readability and discoverability of
+# -m module -v module_version, you can use either -m module/module_version, 
+# or just a raw module/module_version with no -m parameter.  
+# This vastly improves readability and discoverability of
 # commands on the commandline.
 parse_moduleversion(){
-    # split on / if it is in $1, otherwise split on -
-    local mv_re='^([^-]*)-(.*)$'
-    [[ $1 =~ / ]] && mv_re='^([^/]*)/(.*)$'
     if [[ $1 =~ $mv_re ]]; then
 	module="${BASH_REMATCH[1]}"
 	module_version="${BASH_REMATCH[2]}"
