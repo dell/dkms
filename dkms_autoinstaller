@@ -29,127 +29,12 @@ if [ -f /lib/lsb/init-functions ]; then
     fi
 fi
 
-invoke_command ()
-{
-    local exitval=0
-    local exitval_file=`mktemp /tmp/dkms.XXXXXX`
-    if [ "$3" = background ] && [ -z "$verbose" ]; then
-        (eval $1 >/dev/null 2>&1; echo "exitval=$?" >> "$exitval_file") &
-        while [ -e "$exitval_file" ] && ! [ -s "$exitval_file" ]; do
-            sleep 3
-        done
-        . "$exitval_file"
-    else
-        eval $1; exitval=$?
-    fi
-    [ $exitval -gt 0 ] && logger -t dkms_autoinstaller "(bad exit status: $exitval)"
-    rm -f "$exitval_file"
-    return $exitval
-}
-
-# Set Variables
-uname=`uname -mr`
-[ -n "$2" ] && kernel=$2
-arch=${uname#* }
-kernel_preparation_done=""
-dkms_tree="/var/lib/dkms"
-. /etc/dkms/framework.conf 2>/dev/null
-
 # See how we were called.
 case "$1" in
   start)
     log_daemon_msg "Running DKMS auto installation service for kernel $kernel"
-
-    if [ -z "$kernel" ]; then
-        if [ -L /vmlinuz -a -e /vmlinuz ]; then
-            linktarget="$(basename "$(readlink /vmlinuz)")"
-            kernel="${linktarget##vmlinuz-}"
-        else
-            kernel=${uname% *}
-        fi
-    fi
-
-    # Iterate over the modules
-    for modulepath in $(find "$dkms_tree" -maxdepth 1 -mindepth 1 -type d); do
-
-        module_in_tree=${modulepath##*/}
-        # Determine which versions to show status for
-        do_autoinstall=""
-        version_count=0
-        already_installed=""
-        already_installed_version=""
-        for versioned_path in $(find "$modulepath" -maxdepth 1 -mindepth 1 -type d -a -not -name original_module); do
-            version_count=$(($version_count + 1))
-            version_in_tree="${versioned_path##*/}"
-
-            if [ -f $versioned_path/source/dkms.conf ]; then
-                do_autoinstall=$(sed -n -e 's/^\(str  *\)\?AUTOINSTALL=\(.*\)$/\2/gp;'  $versioned_path/source/dkms.conf)
-            else
-                current_state="broken"
-                continue
-            fi
-
-            # Get the current state
-            # a mod can be both built and installed-weak (stupid, but could be)
-            # but installed-weak comes last, so use tail
-            current_state=`dkms status -m $module_in_tree -v $version_in_tree -k $kernel -a $arch 2>/dev/null | awk {'print $5'} | tail -n 1`
-            [ "$current_state" = "installed" -o "$current_state" = "installed-weak" ] && already_installed="true" && already_installed_version=$version_in_tree
-        done
-
-        log_action_begin_msg " $module_in_tree ($version_in_tree)"
-
-        # Based on what we know, either do it or not
-        if [ "$current_state" = "broken" ]; then
-            logger -t dkms_autoinstaller "$module_in_tree ($version_in_tree): Unable to locate $versioned_path/source/dkms.conf"
-            logger -t dkms_autoinstaller " DKMS tree must be manually fixed"
-            log_action_end_msg 1
-            continue
-        elif [ -n "$already_installed" ]; then
-            log_action_end_msg 0
-        elif [ -z "$do_autoinstall" ]; then
-            logger -t dkms_autoinstaller "$module_in_tree ($version_in_tree): AUTOINSTALL not set in its dkms.conf."
-            log_action_end_msg 0
-        elif [ -n "$do_autoinstall" ] && [ "$version_count" -gt 1 ]; then
-            logger -t dkms_autoinstaller "$module_in_tree: Multiple versions in DKMS. Unsure what to do. Resolve manually."
-            log_action_end_msg 1
-        else
-            logger -t dkms_autoinstaller "$module_in_tree ($version_in_tree): Installing module on kernel $kernel."
-            if [ "$current_state" != "built" ] && ! [ -e /lib/modules/$kernel/build/include ]; then
-                logger -t dkms_autoinstaller "  Kernel headers for $kernel are not installed.  Cannot install this module."
-                logger -t dkms_autoinstaller "  Try installing linux-headers-$kernel or equivalent."
-                log_action_end_msg 1
-            elif [ "$current_state" != "built" ] && [ -e /lib/modules/$kernel/build/include ]; then
-                return_status=""
-                if [ -z "$kernel_preparation_done" ]; then
-                    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q --no-clean-kernel" "." background
-                    return_status="$?"
-                    kernel_preparation_done="true"
-                else
-                    invoke_command "dkms build -m $module_in_tree -v $version_in_tree -k $kernel -a $arch --no-prepare-kernel --no-clean-kernel -q" "." background
-                    return_status="$?"
-                fi
-                if [ "$return_status" -eq 0 ]; then
-                    invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch" "." background
-                    log_action_end_msg 0
-                else
-                    logger -t dkms_autoinstaller "  Build failed.  Installation skipped."
-                    log_action_end_msg 1
-                fi
-            else
-                invoke_command "dkms install -m $module_in_tree -v $version_in_tree -k $kernel -a $arch -q" "." background
-                return_status=$?
-                if [ "$return_status" -eq 101 ]; then
-                    logger -t dkms_autoinstaller "  A newer module version than this already exists in kernel."
-                    logger -t dkms_autoinstaller "  Skipping install... (you can manually install later with --force)"
-                elif [ "$return_status" -ne 0 ]; then
-                    logger -t dkms_autoinstaller "  Installation failed!"
-                fi
-            fi
-        fi
-    done
-    if [ -z "$modules_needing_status" ]; then
-        log_end_msg 0
-    fi
+    dkms autoinstall
+    log_end_msg $?
     ;;
   stop|restart|force-reload|status|reload)
     # ignore
