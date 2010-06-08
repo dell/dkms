@@ -3287,7 +3287,7 @@ for action_to_run in $action; do
 	uninstall)    check_root && have_one_kernel && uninstall_module;;
 	mkdriverdisk) check_root && make_driver_disk;;
 	build)        build_modules;;
-	add)          add_modules;;
+	add)          add_module;;
 	mktarball)    make_tarball;;
 	mkrpm)        make_rpm;;
 	mkdeb)        make_debian "deb";;
