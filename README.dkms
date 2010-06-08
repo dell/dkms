@@ -73,7 +73,7 @@ install directly from the following:
 In order to load any tarball into the DKMS tree, you must use the following
 command:
 
-	dkms ldtarball --archive=/path/to/dkms_enabled.tar.gz
+	dkms ldtarball /path/to/dkms_enabled.tar.gz
 
 This command will first inspect the tarball to ensure that it contains a
 dkms.conf configuration file for that module.  If it cannot find this file
@@ -111,7 +111,7 @@ section 2 of this README under tarballs of type "c".
 If your system does not have module source, loading the dkms tarball will fail
 because of this.  To avoid this, use the --force flag, as such:
 
-	dkms ldtarball --archive=/path/to/dkms_enabled.tar.gz --force
+	dkms ldtarball /path/to/dkms_enabled.tar.gz --force
 
 This will load the pre-built binaries into the dkms tree, and create the
 directory /usr/src/<module>-<moduleversion>/ which will only contain the
