@@ -878,7 +878,9 @@ etc_sysconfig_kernel_modify()
 check_module_args() {
     [[ $module && $module_version ]] && return
     die 1 $"Invalid number of arguments passed." \
-	$"Usage: $1 -m <module> -v <module-version>"
+        $"Usage: $1 <module>/<module-version> or" \
+        $"       $1 -m <module>/<module-version> or" \
+	$"       $1 -m <module> -v <module-version>"
 }
 
 read_conf_or_die() {
@@ -1631,8 +1633,8 @@ remove_module()
     # Check that the right arguments were passed
     if [[ ! ($module && $module_version) || $kernels_arches_default  ]]; then
 	die 1 $"Invalid number of parameters passed." \
-	    $"Usage: remove -m <module> -v <module-version> --all" \
-	    $"   or: remove -m <module> -v <module-version> -k <kernel-version>"
+	    $"Usage: remove <module>/<module-version> --all" \
+	    $"   or: remove <module>/<module-version> -k <kernel-version>"
     fi
 
     # Check that $module is in the dkms tree
@@ -2072,14 +2074,14 @@ make_driver_disk()
     # Check that the right arguments were passed
     if ! [[ $module && $module_version && $distro && $kernelver ]]; then
 	die 1 $"Invalid number of parameters passed." \
-	$"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver> [--media floppy|iso|tar]"
+	$"Usage: mkdriverdisk <module>/<module-version> -d <distro> -k <kernelver> [--media floppy|iso|tar]"
     fi
 
     # default to floppy media
     [[ $media ]] || media="floppy"
     if ! media_valid; then
 	die 1 $"Media $media is invalid." \
-	    $"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver> [--media floppy|iso|tar]"
+	    $"Usage: mkdriverdisk <module>/<module-version> -d <distro> -k <kernelver> [--media floppy|iso|tar]"
     fi
 
     # Check that source symlink works
@@ -2134,7 +2136,7 @@ make_suse_driver_disk()
 {
     [[ $release ]] || die 3 \
 	$"Invalid number of parameters passed for suse/UnitedLinux driver disk." \
-	$"Usage: mkdriverdisk -d <distro> -m <module> -v <module-version> -k <kernelver>" \
+	$"Usage: mkdriverdisk <module>/<module-version> -d <distro> -k <kernelver>" \
 	$"                    -r <release-number>"
 
     local driver_disk_dir=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
@@ -2583,7 +2585,7 @@ run_match()
     if [[ ! $template_kernel ]]; then
 	die 1 $"Invalid number of parameters passed." \
 	    $"Usage: match --templatekernel=<kernel-version> -k <kernel-version>" \
-	    $"   or: match --templatekernel=<kernel-version> -k <kernel-version> -m <module>"
+	    $"   or: match --templatekernel=<kernel-version> -k <kernel-version> <module>"
     fi
 
     # Error out if $template_kernel = $kernel_version
