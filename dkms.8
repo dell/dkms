@@ -3,46 +3,101 @@
 .SH NAME
 dkms \- Dynamic Kernel Module Support
 .SH SYNOPSIS
-.B dkms
-.I [action] [options]
+.SY dkms
+.OP action 
+.OP options
+.OP module/module-version
+.OP /path/to/source-tree
+.OP /path/to/tarball.tar
+.YS
 .SH DESCRIPTION
 .B dkms
 is a framework which allows kernel modules to be dynamically built
 for each kernel on your system in a simplified and organized fashion.
 .SH ACTIONS
-.TP
-.B add
-Adds a module/version combination to the tree for builds and installs.
-Requires source in
+.SY add
+.OP module/module\-version
+.OP /path/to/source\-tree
+.OP /path/to/tarball.tar
+.YS
+.IP "" 4
+Adds a module/module\-version combination to the tree for builds and installs.
+If module/module\-version, \-m module/module\-version, or \-m module\ \-v version are passed as options, this command
+requires source in
 .I /usr/src/<module>\-<module\-version>/
 as well as a properly
 formatted
 .I dkms.conf
-file.
-.TP
-.B remove
-Removes a module/version or module/version/kernel combination from the
-tree.  If the modules is currently installed, it first uninstalls it
+file. If 
+.I /path/to/source\-tree
+is passed as an option, and source-tree contains a 
+.I dkms.conf
+file, it will copy 
+.I /path/to/source\-tree
+to
+.I /usr/src/module\-module\-version.
+If 
+.I /path/to/tarball.tar
+is passed, this command behaves like the
+.B ldtarball
+command.
+.SY remove
+.OP module/module\-version
+.OP -k kernel/arch
+.OP \-\-all
+.YS
+.IP "" 4
+Removes a module/version or module/version/kernel/arch combination from the
+tree.  If the module is currently installed, it first uninstalls it
 and if applicable, will replace it with its original_module.  Use the
 .B \-\-all
 option in order to remove all instances for every kernel at once.
-.TP
-.B build
-Builds the specified module/version combo for the specified kernel. If
-no kernel is specified it builds for the currently running kernel.  All builds
+.SY build
+.OP module/module\-version
+.OP -k kernel/arch
+.YS
+.IP "" 4
+Builds the specified module/version combo for the specified kernel/arch. If
+the
+.I \-k
+option is not specified it builds for the currently running kernel and arch..  All builds
 occur in the directory
-.I /var/lib/dkms/<module>/<module\-version>/build/.
-.TP
-.B install
+.I /var/lib/dkms/<module>/<module\-version>/build/. 
+If the module/module\-version combo has not been added, dkms will try to add it, and in that
+case 
+.B build 
+can take the same arguments that 
+.B add
+can.
+.SY install
+.OP module/module\-version
+.OP -k kernel/arch
+.YS
+.IP "" 4
 Installs a built module/version combo onto the kernel it was built for. If
 the kernel option is not specified it assumes the currently running kernel.
-.TP
-.B uninstall
-Uninstalls an installed module/version combo from the kernel it was installed
+If the module has not been built, dkms will try to build it.
+If the module has not been added, dkms will try to add it.  In both cases, the
+.B install
+command can then take the same arguments as the
+.B build
+or
+.B add
+commands.
+.SY uninstall
+.OP module/module\-version
+.OP -k kernel/arch
+.YS
+.IP "" 4
+Uninstalls an installed module/module\-version combo from the kernel/arch passed in the -k option, or the
+current kernel if the -k option was not passed.
 upon.  After uninstall completion, the driver will be left in the built state.
 To completely remove a driver, the remove action should be utilized.
-.TP
-.B match
+.SY match
+.OP --templatekernel kernel/arch
+.OP -k kernel/arch
+.YS
+.IP "" 4
 Match installs modules onto the specified kernel by looking at the
 configuration of the specified
 .B templatekernel.
@@ -51,8 +106,14 @@ Every module that is installed on the
 within
 .B dkms
 is then installed on that specified kernel.
-.TP
-.B mkdriverdisk
+.SY mkdriverdisk
+.OP -d distro
+.OP -r release
+.OP --media mediatype
+.OP -k kernel/arch
+.OP module/version
+.YS
+.IP "" 4
 Creates a floppy driver disk image for use when updated drivers are needed
 to install an OS.  Currently, the supported distributions are redhat, suse
 and UnitedLinux. For Red Hat driver disks, necessary driver disk files are
@@ -61,7 +122,7 @@ subdirectory of your module source directory.  You
 must specify the distro while using this action.  Driver disks can be made
 for single kernels or can be made to support multiple kernels.  To create
 a driver disk image with modules for multiple kernels, just specify multiple
-\-k parameters on the command line (\-k kernel1 \-k kernel2 \-a arch1 \-a arch2).
+\-k parameters on the command line (\-k kernel1/arch1 \-k kernel2/arch2).
 
 Red Hat began supporting multi-arched driver disks in RHEL3.  To force creation
 of a driver disk with arch information, specify
@@ -97,28 +158,32 @@ which should should be given as a number in kilobytes divisible by 20.
 
 You may have more content than will fit on a floppy.  Therefore, DKMS
 can now generate image files of different types.
-.B \-\-media=floppy (default)
+.B \-\-media floppy (default)
 to generate a floppy disk image, or
-.B \-\-media=iso
+.B \-\-media iso
 to generate a CD-ROM ISO file, or
-.B \-\-media=tar
+.B \-\-media tar
 to generate a tar file.
 
 You may copy the floppy or ISO image file to a USB key to be used with
 OS installer.
-
-
-.TP
-.B mktarball
+.SY mktarball
+.OP module/module\-version
+.OP -k kernel/arch
+.OP --archive /path/to/tarball.tar
+.OP --source-only
+.OP --binaries-only
+.YS
+.IP "" 4
 Creates a tarball archive for the specified module/version of all files
 in the DKMS tree for that module/version combination.  This includes
 the source and any built modules for kernels in the tree (as specified).
 Otherwise, you can specify
 a singular kernel to archive only, or multiple kernels to archive
-(\-k kernel1 \-k kernel2 \-a arch1 \-a arch2).  Optionally, you can use
+(\-k kernel1/arch1 \-k kernel2/arch2).  Optionally, you can use
 .B \-\-archive
-to specify the name (with no preceding path) that you would like this
-tarball to have.  You can also specify
+to specify the file that you would like to save this
+tarball to.  You can also specify
 .B \-\-binaries\-only
 if you want the resultant tarball not to include the module source.  Likewise,
 .B \-\-source-only
@@ -130,13 +195,14 @@ on just one system and then use
 .B ldtarball
 on all of your other systems to get the same built modules loaded
 without having to wait for anything to compile.
-.TP
-.B ldtarball
+.SY ldtarball
+.OS /path/to/tarball.tar
+.OS --force
+.YS
+.IP "" 4
 This takes a tarball made from the
-.B mktarball
-command and specified with the
-.B \-\-archive
-option and loads it into your DKMS tree.  This will leave any
+.B mktarball 
+command and loads it into your DKMS tree.  This will leave any
 newly added modules in the built state and
 .B dkms install
 should then be called to install any of them.  If files already
@@ -145,8 +211,13 @@ exist where
 is attempting to place them, it will warn and not copy over them.  The
 .B \-\-force
 option should be used to override this.
-.TP
-.B mkrpm
+.SY mkrpm
+.OP module/module\-version
+.OP -k kernel/arch
+.OP --source-only
+.OP --binaries-only
+.YS
+.IP "" 4
 This action allows you to create an RPM package for a specified module / version.
 It uses a template .spec file found in
 .I /etc/dkms/template\-dkms\-mkrpm.spec
@@ -159,7 +230,13 @@ not want your RPM to contain any prebuilt binaries, be sure to specify
 .B \-\-source\-only
 in the mkrpm command.
 .TP
-.B mkdeb
+.SY mkdeb
+.OP module/module\-version
+.OP -k kernel/arch
+.OP --binaries-only
+.OP --source-only
+.YS
+.IP "" 4
 This action allows you to create a debian binary package for a specified module / version.
 It uses a template debian directory found in
 .I /etc/dkms/template\-dkms\-mkdeb
@@ -171,8 +248,13 @@ load this tarball, build and install modules on the end user's system.  If you d
 not want your debian package to contain any prebuilt binaries, be sure to specify
 .B \-\-source\-only
 in the mkdeb command.
-.TP
-.B mkdsc
+.SY mkdsc
+.OP module/module\-version
+.OP -k kernel/arch
+.OP --binaries-only
+.OP --source-only
+.YS
+.IP "" 4
 This action allows you to create a debian source package for a specified module / version.
 It will create a .tar.gz, and a .dsc.  All options supported by
 .B mkdeb
@@ -184,8 +266,11 @@ it will use that folder instead. If you do not want your debian source package t
 contain any prebuilt binaries, be sure to specify
 .B \-\-source\-only
 in the mkdsc command.
-.TP
-.B mkkmp
+.SY mkkmp
+.OP module/module\-version
+.OP --spec specfile
+.YS
+.IP "" 4
 This action allows you to create an Kernel Module Package source RPM for a specified module / version.
 It uses the .spec file specified by
 .I \-\-spec=specfile
@@ -194,28 +279,45 @@ else
 as the basis for the RPM.  The generated source RPM may then be built using SuSE's build.rpm or
 Fedora/RHEL's mock chroot environments.  See http://kerneldrivers.org/ for
 more details on KMPs.
-.TP
-.B status
+.SY status
+.OP module/module\-version
+.OP -k kernel/arch
+.YS
+.IP "" 4
 Returns the current status of modules, versions and kernels within
 the tree as well as whether they have been added, built or installed.
 Status can be shown for just a certain module, a certain kernel,
 a module/version combination or a module/version/kernel combination.
+.SY autoinstall
+.YS
+.IP "" 4
+Attempt to install the latest revision of all modules that have been installed for other kernel revisions.
+dkms_autoinstaller is a stub that uses this action to perform its work.
 .SH OPTIONS
 .TP
-.B \-m <module>
-The name of the module.
+.B \-m <module>/<module\-version>
+The name of the module and module version you wnat to operate on. The
+.B \-m
+part of this option is optional, and can be omitted in virtually all circumstances.
 .TP
 .B \-v <module\-version>
-The version of the module to execute the specified action upon.
+The version of the module to execute the specified action upon.  This option only has to be specified 
+if you pass a 
+.B \-m
+option without a <module\-version> component of its own.
 .TP
-.B \-k <kernel\-version>
-The kernel to perform the action upon.  You can specify multiple kernel versions
-on the command line by repeating the \-k argument with a different kernel name.
+.B \-k <kernel\-version>/<arch>
+The kernel and arch to perform the action upon.  You can specify multiple kernel version/arch pairs
+on the command line by repeating the \-k argument with a different kernel version and arch.
 However, not all actions support multiple kernel versions (it will error out
 in this case).
+The arch part can be omitted, and DKMS will assume you want it to be the arch of the currently running
+system.
 .TP
 .B \-a, \-\-arch
-The system architecture to perform the action upon.  If not specified, it assumes
+The system architecture to perform the action upon.  It is optional if you pass it as part of the
+.B \-k
+option. If not specified, it assumes
 the arch of the currently running system (`uname \-m`).  You can specify multiple
 arch parameters on the same command line by repeating the \-a argument with a
 different arch name.  When multiple architectures are specified, there must
@@ -286,7 +388,9 @@ prepared for the module build.
 This option is used during a
 .B ldtarball
 action to specify the location of the tarball you wish to load into
-your DKMS tree.
+your DKMS tree.  You only have to specify the
+.B --archive
+part of this option if <tarball\-location> does not already exist as a file.
 .TP
 .B \-\-templatekernel <kernel\-version>
 This option is required for the action:
@@ -783,6 +887,17 @@ will be
 , unless otherwise specified with the
 .B \-\-kernelsourcedir
 option.
+.SH DKMS.CONF OVERRIDES
+You can override the module-provided
+.I dkms.conf
+files. Every time after a  dkms.conf file is read, dkms will look for and read the following files in order:
+
+.I /etc/dkms/<module>.conf\p
+.I /etc/dkms/<module>\-<module\-version>.conf\p
+.I /etc/dkms/<module>\-<module\-version>\-<kernel>.conf\p
+.I /etc/dkms/<module>\-<module\-version>\-<kernel>\-<arch>.conf
+
+You can use these files to override settings in the module-provided dkms.conf files.
 .SH /etc/dkms/framework.conf
 This configuration file controls how the overall DKMS framework handles.  It is sourced
 in every time the dkms command is run.  Mainly it can currently be used to set different
