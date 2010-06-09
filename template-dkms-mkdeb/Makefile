@@ -12,7 +12,7 @@ install:
 ifeq ("$(wildcard $(NAME)-$(VERSION))", "$(NAME)-$(VERSION)")
 	install -d "$(SRC)"
 	cp -a $(NAME)-$(VERSION) $(SRC)
-	chmod 644 -R "$(SRC)/$(NAME)-$(VERSION)"
+	find "$(SRC)/$(NAME)-$(VERSION)" -type f | xargs chmod a+r
 endif
 
 #tarball, possibly with binaries
