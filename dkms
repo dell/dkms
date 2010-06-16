@@ -2472,6 +2472,17 @@ load_tarball()
 	die 2 $"$archive_location does not exist."
     fi
 
+    # If it is an .rpm file. install it with rpm, run an autoinstall, and then exit.
+    if [[ $archive_location = *.rpm ]]; then
+       if rpm -Uvh "$archive_location"; then
+           autoinstall
+           exit $?
+       else
+           die 9 $"Unable to install $archive_location using rpm." \
+               $"Check to ensure that your system can install .rpm files."
+       fi
+    fi
+
     # Figure out what kind of archive it is (tar.gz, tar, tar.bz, etc)
     # Note that this does not depend on the extensions being correct.
     local tar_options=""
