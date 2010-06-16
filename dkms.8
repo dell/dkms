@@ -9,6 +9,7 @@ dkms \- Dynamic Kernel Module Support
 .OP module/module-version
 .OP /path/to/source-tree
 .OP /path/to/tarball.tar
+.OP /path/to/driver.rpm
 .YS
 .SH DESCRIPTION
 .B dkms
@@ -72,6 +73,7 @@ can.
 .SY install
 .OP module/module\-version
 .OP -k kernel/arch
+.OP /path/to/driver.rpm
 .YS
 .IP "" 4
 Installs a built module/version combo onto the kernel it was built for. If
@@ -84,6 +86,11 @@ command can then take the same arguments as the
 or
 .B add
 commands.
+If you pass a .rpm file, dkms will try to install that file with
+.B rpm -Uvh
+, and it will perform an
+.B autoinstall
+action to mesure that everything is built for your kernel if the RPM installed sucessfully.
 .SY uninstall
 .OP module/module\-version
 .OP -k kernel/arch
