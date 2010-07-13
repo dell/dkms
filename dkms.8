@@ -145,6 +145,13 @@ the second arch was i386 and the kernel module was for the BOOT kernel.  DKMS
 allows for this, and as such you can create a redhat1 style driver disk if the
 only other arch is i386 and the kernel name ends in BOOT.
 
+Red Hat introduced DDv3 starting with RHEL6. To create Red Hat DDv3, specify
+.B \-d redhat3
+and specify the specfile to use with
+.I \-\-spec=specfile.
+If no specfile is specified, DKMS will use
+.I /etc/dkms/template\-dkms\-redhat\-kmod.spec
+
 See
 .I http://people.redhat.com/dledford
 for more information on the Red Hat driver
