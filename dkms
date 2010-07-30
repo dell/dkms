@@ -2906,7 +2906,7 @@ make_debian()
 
     if in_temporary_trees; then
 	echo "Copying built files to "`pwd`"/.." >&2
-	cp "$dkms_tree/$module/$module_version/deb/"* ..
+	cp "${deb_basedir}/"* ..
     fi
 
     #cleanup
