@@ -32,7 +32,7 @@ fi
 # See how we were called.
 case "$1" in
   start)
-    log_daemon_msg "Running DKMS auto installation service for kernel $kernel"
+    log_daemon_msg "dkms: running auto installation service for kernel $kernel"
     dkms autoinstall
     log_end_msg $?
     ;;
