@@ -90,7 +90,7 @@ tarball: $(TARBALL)
 
 $(TARBALL):
 	mkdir -p $(deb_destdir)
-	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
+	tmp_dir=`mktemp -d --tmpdir dkms.XXXXXXXX` ; \
 	cp -a ../$(RELEASE_NAME) $${tmp_dir}/$(RELEASE_STRING) ; \
 	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms > $${tmp_dir}/$(RELEASE_STRING)/dkms ; \
 	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms.spec > $${tmp_dir}/$(RELEASE_STRING)/dkms.spec ; \
@@ -107,7 +107,7 @@ $(TARBALL):
 
 
 rpm: $(TARBALL) dkms.spec
-	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
+	tmp_dir=`mktemp -d --tmpdir dkms.XXXXXXXX` ; \
 	mkdir -p $${tmp_dir}/{BUILD,RPMS,SRPMS,SPECS,SOURCES} ; \
 	cp $(TARBALL) $${tmp_dir}/SOURCES ; \
 	sed "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms.spec > $${tmp_dir}/SPECS/dkms.spec ; \
@@ -131,7 +131,7 @@ debmagic: $(TARBALL)
 	cd -
 
 debs:
-	tmp_dir=`mktemp -d /tmp/dkms.XXXXXXXX` ; \
+	tmp_dir=`mktemp -d --tmpdir dkms.XXXXXXXX` ; \
 	make debmagic DEB_TMP_BUILDDIR=$${tmp_dir} DIST=$(DIST); \
 	rm -rf $${tmp_dir}
 
