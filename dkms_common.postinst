@@ -231,8 +231,22 @@ for KERNEL in $KERNELS; do
         fi
         if [ -e /lib/modules/$KERNEL/build/include ]; then
             echo "Building initial module for $KERNEL"
+            set +e
             dkms build -m $NAME -v $VERSION -k $KERNEL $ARCH > /dev/null
-            echo "Done."
+            case $? in
+            9)
+                set -e
+                echo "Skipped."
+                continue
+                ;;
+            0)
+                set -e
+                echo "Done."
+                ;;
+            *)
+                exit $?
+                ;;
+            esac
             dkms_status=`dkms status -m $NAME -v $VERSION -k $KERNEL $ARCH`
         else
             echo "Module build for the currently running kernel was skipped since the"
