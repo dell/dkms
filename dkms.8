@@ -595,6 +595,9 @@ directives match against the kernel being built for, the last matching
 will be used to build your module. If no MAKE directive is specified or if no
 MAKE_MATCH matches the kernel being built for, DKMS
 will attempt to use a generic MAKE command to build your module.
+
+KERNELRELEASE will be automatically appended to MAKE[#].  If you want to
+suppress this behavior, you can quote the make command: 'make'.
 .TP
 .B MAKE_MATCH[#]=
 See the above entry on
