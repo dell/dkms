@@ -51,7 +51,7 @@ invoke_command()
     [[ $verbose ]] && echo -e "$1" || echo -en "$2..."
     if [[ $3 = background && ! $verbose ]]; then
 	local exitval_file=$(mktemp_or_die $tmp_location/dkms.XXXXXX)
-	(eval $1 >/dev/null 2>&1; echo "exitval=$?" >> "$exitval_file") &
+	(eval "$1" >/dev/null 2>&1; echo "exitval=$?" >> "$exitval_file") &
 	while [[ -e $exitval_file && ! -s $exitval_file ]]; do
 	    sleep 3
 	    echo -en "."
@@ -59,7 +59,7 @@ invoke_command()
 	. "$exitval_file"
 	rm -f "$exitval_file"
     else
-	eval $1; exitval=$?
+	eval "$1"; exitval=$?
     fi
     (($exitval > 0)) && echo -en "(bad exit status: $exitval)"
     echo -en "\n"
@@ -1167,7 +1167,7 @@ do_build()
     date >> "$dkms_tree/$module/$module_version/build/make.log"
     local the_make_command="${make_command/#make/make KERNELRELEASE=$kernelver}"
 
-    invoke_command "$the_make_command >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$the_make_command" background || \
+    invoke_command "{ $the_make_command; } >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$the_make_command" background || \
 	report_build_problem 10 $"Bad return status for module build on kernel: $kernelver ($arch)" \
 	$"Consult $dkms_tree/$module/$module_version/build/make.log for more information."
 
