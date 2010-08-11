@@ -3121,7 +3121,7 @@ autoinstall() {
     # We may have exited the loop with $tenative set.  If it is,
     # it contains something that should be updated.
     [[ $tenative ]] && to_install[${#to_install[@]}]="$tenative"
-    [[ $to_install ]] || return
+    [[ $to_install ]] || return 0
     # Install modules that need to be updated in parallel.
     for mv in "${to_install[@]}"; do
 	IFS=/ read m v <<< "$mv"
