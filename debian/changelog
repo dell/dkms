@@ -6,6 +6,7 @@ dkms (2.1.2.0-0ubuntu1) UNRELEASED; urgency=low
     append a readable bit to all files. (LP: #582670)
   * Add a patch from Steffen Barszus that speeds up module uninstallation.
     (LP: #582666)
+  * Add a patch from Anders Kaseorg to fix compounded build logs (LP: #593509)
 
  -- Mario Limonciello <Mario_Limonciello@Dell.com>  Wed, 26 May 2010 15:47:45 -0500
 
