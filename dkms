@@ -2869,12 +2869,12 @@ make_debian()
     fi
 
     #Only if we are shipping binary modules, make a .tgz for the deb
-    local archive_location="$module-$module_version.dkms.tar.gz"
+    local archive_location="$dkms_tree/$module/$module_version/tarball/$module-$module_version.dkms.tar.gz"
     if [[ ! $source_only ]]; then
 	binaries_only="binaries-only"
 	invoke_command "make_tarball" "Gathering binaries"
-	if [[ -f $dkms_tree/$module/$module_version/tarball/$archive_location ]]; then
-	    invoke_command "cp '$dkms_tree/$module/$module_version/tarball/$archive_location' '$temp_dir_debian'" "Copying DKMS tarball into DKMS tree"
+	if [[ -f $archive_location ]]; then
+	    invoke_command "cp '$archive_location' '$temp_dir_debian'" "Copying DKMS tarball into DKMS tree"
 	else
 	    die 12 $"Unable to find created tarball."
 	fi
