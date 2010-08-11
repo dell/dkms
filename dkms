@@ -2399,7 +2399,7 @@ make_tarball()
     # Copy the source_tree or make special binaries-only structure
     if [[ $binaries_only ]]; then
 	echo $""
-	echo $"Creating special tarball structure to accomodate only binaries."
+	echo $"Creating tarball structure to specifically accomodate binaries."
 	mkdir $temp_dir_name/dkms_binaries_only
 	echo "$module" > $temp_dir_name/dkms_binaries_only/PACKAGE_NAME
 	echo "$module_version" > $temp_dir_name/dkms_binaries_only/PACKAGE_VERSION
