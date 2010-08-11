@@ -1123,12 +1123,12 @@ prepare_build()
 
     # Error out if build_exclude is set
     [[ $build_exclude ]] && die 9 \
-	$" The dkms.conf for this module includes a BUILD_EXCLUSIVE directive which"
+	$" The dkms.conf for this module includes a BUILD_EXCLUSIVE directive which" \
 	$"does not match this kernel/arch.  This indicates that it should not be built."
 
     # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
     (($(ls $dkms_tree/$module/$module_version/source | wc -l | awk {'print $1'}) < 2)) && die 8 \
-	$"The directory $dkms_tree/$module/$module_version/source/"
+	$"The directory $dkms_tree/$module/$module_version/source/" \
 	$"does not appear to have module source located within it.  Build halted."
 
     prepare_kernel "$kernelver" "$arch"
