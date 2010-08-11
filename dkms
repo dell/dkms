@@ -2426,7 +2426,7 @@ make_tarball()
 	    -d ${archive_location%/*} && -w ${archive_location%/*} ]]; then
 	    tarball_dest="${archive_location%/*}"
 	else
-	    die 9 $"Will not be able to create $archive_location."
+	    die 9 $"Will not be able to create $archive_location due to a permissions problem."
 	fi
     else
 	mkdir -p "$dkms_tree/$module/$module_version/tarball/"
