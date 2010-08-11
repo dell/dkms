@@ -29,7 +29,7 @@ _dkms()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
-		COMPREPLY=( $( compgen -W "add remove build install uninstall \
+		COMPREPLY=( $( compgen -W "add autoinstall remove build install uninstall \
 			match mkdriverdisk mktarball ldtarball mkrpm mkdeb mkdsc mkkmp \
 			status" -- $cur ) )
 	else
