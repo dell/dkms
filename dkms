@@ -1862,7 +1862,7 @@ show_status()
 
 create_temporary_trees()
 {
-    [[ $module || $module_version || ! -r dkms.conf ]] && return
+    [[ $module || $module_version || ! -r dkms.conf ]] && return 0
 
     . dkms.conf
     module="$PACKAGE_NAME"
@@ -1880,7 +1880,7 @@ create_temporary_trees()
 
 delete_temporary_trees()
 {
-    [[ $temporary_trees_del_command ]] || return
+    [[ $temporary_trees_del_command ]] || return 0
     $temporary_trees_del_command
     module=
     module_version=
