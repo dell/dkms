@@ -3212,6 +3212,40 @@ function make_redhat3_driver_disk ()
             echo $"Error! There was a problem creating your kmod." >&2
             cat ${temp_dir_name}/rpmbuild.log >&2
             exit 7
+        fi
+        local kabi_whitelist=`rpm -ql kabi-whitelists | grep ${arch_array[$i]}`
+        if [ $? == 0 ]; then
+            local module_file=`rpm -qlp ${temp_dir_name}/RPMS/${arch_array[$i]}/kmod-${module}-${module_version}* | grep ${module}.ko`
+            cd ${temp_dir_name}/
+            rpm2cpio ${temp_dir_name}/RPMS/${arch_array[$i]}/kmod-${module}-${module_version}* | cpio -id --quiet .${module_file}
+            cd - > /dev/null
+            local mod_symbols=( $(modprobe --dump-modversions ${temp_dir_name}/${module_file} | cut -f2) )
+            local miss_sym_count=0
+            local missing_symbols
+            for ((i=0; i < "${#mod_symbols[@]}"; i++))
+            do
+               if [ -z "`grep -o ${mod_symbols[${i}]} ${kabi_whitelist}`" ]; then
+                   missing_symbols[$miss_sym_count]="${mod_symbols[${i}]}"
+                   miss_sym_count=$(($miss_sym_count+1))
+               fi
+            done
+            if [ $miss_sym_count -ne 0 ]; then
+                echo $"" >&2
+                echo $"WARNING: ${module}-${module_version} is using kernel symbols that are not in the ABI whitelist."
+                echo $"WARNING: The following symbols are used by ${module}-${module_version}:"
+                echo $"----------------------------------"
+                for missing_symbol in ${missing_symbols[*]}
+                do
+                    echo "$missing_symbol"
+                done
+                echo $"----------------------------------"
+                echo $"" >&2
+            else
+                echo $"NOTICE: ${module}-${module_version} module seems to use only official Red Hat ABI."
+            fi
+        else
+            echo $"WARNING:${module}-${module_version} module is not checked against Red Hat ABI whitelist."
+            echo $"Install 'kabi-whitelists' package and build driver disk again to run the ABI compliance test."
         fi    
         i=$(($i + 1))
     done
