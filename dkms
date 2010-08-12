@@ -2422,10 +2422,8 @@ make_tarball()
     # Die if we will not be able to create the tarball due to permissions.
     if [[ $archive_location ]]; then
 	tarball_name="${archive_location##*/}"
-	if [[ ${archive_location%/*} != $archive_location && \
-	    -d ${archive_location%/*} && -w ${archive_location%/*} ]]; then
-	    tarball_dest="${archive_location%/*}"
-	else
+	tarball_dest="${archive_location%/*}"
+	if [[ ${archive_location%/*} != $archive_location ]] && ! mkdir -p $tarball_dest; then
 	    die 9 $"Will not be able to create $archive_location due to a permissions problem."
 	fi
     else
