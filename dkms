@@ -2801,7 +2801,7 @@ debian_install()
     fi
     if [[ -x /usr/sbin/synaptic && $DISPLAY ]] && tmpfile=$(mktemp_or_die); then
 	# Pretty GUI install.
-	trap 'rm -f "$tmpfile"' RET EXIT
+	trap 'rm -f "$tmpfile"' EXIT
 	for ((i=0; i=${#packages[@]}; i++)); do
 	    [[ ${packages[$i]} ]] && echo "install ${packages[$i]}" >>$tmpfile
 	done
