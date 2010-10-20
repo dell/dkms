@@ -2502,7 +2502,7 @@ load_tarball()
 
     # Untar it into $tmp_location
     local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    trap 'rm -rf $temp_dir_name' EXIT RET
+    trap 'rm -rf $temp_dir_name' EXIT
     tar -${tar_options}xf $archive_location -C $temp_dir_name
 
     if [[ ! $temp_dir_name/dkms_main_tree ]]; then
@@ -2803,7 +2803,7 @@ debian_install()
     fi
     if [[ -x /usr/sbin/synaptic && $DISPLAY ]] && tmpfile=$(mktemp_or_die); then
 	# Pretty GUI install.
-	trap 'rm -f "$tmpfile"' RET EXIT
+	trap 'rm -f "$tmpfile"' EXIT
 	for ((i=0; i=${#packages[@]}; i++)); do
 	    [[ ${packages[$i]} ]] && echo "install ${packages[$i]}" >>$tmpfile
 	done
