@@ -135,11 +135,6 @@ if [ -e "/var/lib/dkms/$NAME/$VERSION" ]; then
 fi
 
 #Load new files, by source package and by tarball
-echo "Loading new $NAME-$VERSION DKMS files..."
-if [ -d "/usr/src/$NAME-$VERSION" ]; then
-    dkms add -m $NAME -v $VERSION > /dev/null
-fi
-
 if [ -f "$TARBALL_ROOT/$NAME-$VERSION.dkms.tar.gz" ]; then
     if ! dkms ldtarball --archive "$TARBALL_ROOT/$NAME-$VERSION.dkms.tar.gz"; then
         echo ""
@@ -153,6 +148,9 @@ if [ -f "$TARBALL_ROOT/$NAME-$VERSION.dkms.tar.gz" ]; then
         echo ""
         exit 2 
     fi
+elif [ -d "/usr/src/$NAME-$VERSION" ]; then
+    echo "Loading new $NAME-$VERSION DKMS files..."
+    dkms add -m $NAME -v $VERSION > /dev/null
 fi
 
 # On 1st installation, let us look for a directory
