@@ -2422,8 +2422,10 @@ make_tarball()
     # Die if we will not be able to create the tarball due to permissions.
     if [[ $archive_location ]]; then
 	tarball_name="${archive_location##*/}"
-	tarball_dest="${archive_location%/*}"
-	if [[ ${archive_location%/*} != $archive_location ]] && ! mkdir -p $tarball_dest; then
+        if [[ ${archive_location%/*} != $archive_location && \
+            -d ${archive_location%/*} && -w ${archive_location%/*} ]]; then
+            tarball_dest="${archive_location%/*}"
+        elif [[ ${archive_location%/*} != $archive_location ]] && ! mkdir -p $tarball_dest; then
 	    die 9 $"Will not be able to create $archive_location due to a permissions problem."
 	fi
     else
@@ -2545,7 +2547,7 @@ load_tarball()
 	fi
 	if is_module_added "$PACKAGE_NAME" "$PACKAGE_VERSION" && \
 	    [[ ! $force ]]; then
-	    die 8  $"$PACKAGE_NAME-$PACKAGE_VERSION is already installed!" \
+	    die 8  $"$PACKAGE_NAME-$PACKAGE_VERSION is already added!" \
 		$"Aborting."
 	fi
 	module="$PACKAGE_NAME"; module_version="$PACKAGE_VERSION"
