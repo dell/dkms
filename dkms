@@ -3231,8 +3231,7 @@ function make_redhat3_driver_disk ()
             done
             if [ $miss_sym_count -ne 0 ]; then
                 echo $"" >&2
-                echo $"WARNING: ${module}-${module_version} is using kernel symbols that are not in the ABI whitelist."
-                echo $"WARNING: The following symbols are used by ${module}-${module_version}:"
+                echo $"WARNING: ${module}-${module_version} is using following kernel symbols that are not in the ABI whitelist:"
                 echo $"----------------------------------"
                 for missing_symbol in ${missing_symbols[*]}
                 do
