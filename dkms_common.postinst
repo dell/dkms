@@ -10,7 +10,7 @@ set -e
 _is_kernel_name_correct() {
     CORRECT="no"
     KERNEL_NAME=$1
-    
+
     for kernel in /boot/config-*; do
         KERNEL=${kernel#*-}
         if [ "${KERNEL}" = "${KERNEL_NAME}" ]; then
@@ -30,7 +30,7 @@ _get_newest_kernel_debian() {
     NEWEST_KERNEL=
     NEWEST_VERSION=
     NEWEST_ABI=
-    
+
     for kernel in /boot/config-*; do
         KERNEL=${kernel#*-}
         KERNEL_VERSION=${KERNEL%%-*}
@@ -44,7 +44,7 @@ _get_newest_kernel_debian() {
             # Get the biggest version
             COMPARE_TO="$NEWEST_VERSION-$NEWEST_ABI"
         fi
-            
+
         # if $kernel is greater than $COMPARE_TO
         if [ `dpkg --compare-versions "$KERNEL_VERSION-$ABI" gt "$COMPARE_TO" && echo "yes" || \
               echo "no"` = "yes" ]; then
@@ -61,7 +61,7 @@ _get_newest_kernel_debian() {
 # is the most recent kernel then the function will print a null string.
 _get_newest_kernel_rhel() {
     NEWEST_KERNEL=
-    
+
     LAST_INSTALLED_KERNEL=$(rpm -q --whatprovides kernel  --last | grep kernel -m1 | cut -f1 -d' ')
 
     LIK_FORMATTED_NAME=$(rpm -q $LAST_INSTALLED_KERNEL --queryformat="%{VERSION}-%{RELEASE}.%{ARCH}\n")
@@ -71,7 +71,7 @@ _get_newest_kernel_rhel() {
         NEWEST_KERNEL=$LIK_FORMATTED_NAME
     else
         # Hack for Mandriva where $LIK_FORMATTED_NAME is broken
-        LIK_NAME=$(rpm -q $LAST_INSTALLED_KERNEL --queryformat="%{NAME}\n") 
+        LIK_NAME=$(rpm -q $LAST_INSTALLED_KERNEL --queryformat="%{NAME}\n")
         LIK_TYPE=${LIK_NAME#kernel-}
         LIK_TYPE=${LIK_TYPE%%-*}
         LIK_STRIPPED=${LIK_NAME#kernel-}
@@ -146,7 +146,7 @@ if [ -f "$TARBALL_ROOT/$NAME-$VERSION.dkms.tar.gz" ]; then
         echo " - Corrupt distribution specific archive"
         echo ""
         echo ""
-        exit 2 
+        exit 2
     fi
 elif [ -d "/usr/src/$NAME-$VERSION" ]; then
     echo "Loading new $NAME-$VERSION DKMS files..."
@@ -158,10 +158,10 @@ fi
 # is found it is possible that buildd is being used
 # and that uname -r is giving us the name of the
 # kernel used by the buildd machine.
-# 
+#
 # If this is the case we try to build the kernel
-# module for each kernel which has a directory in 
-# /lib/modules. Furthermore we will have to tell 
+# module for each kernel which has a directory in
+# /lib/modules. Furthermore we will have to tell
 # DKMS which architecture it should build the module
 # for (e.g. if the buildd machine is using a
 # 2.6.24-23-xen 64bit kernel).
