@@ -3316,7 +3316,7 @@ addon_modules_dir="${ADDON_MODULES_DIR}"
 weak_modules="${WEAK_MODULES_BIN}"
 
 # Source in /etc/dkms_framework.conf
-. $dkms_frameworkconf 2>/dev/null
+[ -e $dkms_frameworkconf ] && . $dkms_frameworkconf 2>/dev/null
 
 # Clear out command line argument variables
 module=""
