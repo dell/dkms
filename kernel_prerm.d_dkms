@@ -8,7 +8,7 @@ while read line; do
    name=`echo "$line" | awk '{print $1}' | sed 's/,$//'`
    vers=`echo "$line" | awk '{print $2}' | sed 's/,$//'`
    arch=`echo "$line" | awk '{print $4}' | sed 's/:$//'`
-   echo "Removing: $name $vers ($inst_kern) ($arch)"
+   echo "dkms: removing: $name $vers ($inst_kern) ($arch)" >&2
    dkms remove -m $name -v $vers -k $inst_kern -a $arch
 done < <(dkms status -k $inst_kern 2>/dev/null | grep ": installed")
 fi
