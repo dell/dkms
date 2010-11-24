@@ -186,13 +186,26 @@ fi
 # current kernel.
 NEWEST_KERNEL=$(get_newest_kernel "$KERNELS")
 
-if [ -n "$NEWEST_KERNEL" ] && [ ${CURRENT_KERNEL} != ${NEWEST_KERNEL} ]; then
-    echo "Building for $CURRENT_KERNEL and $NEWEST_KERNEL"
-    KERNELS="$KERNELS $NEWEST_KERNEL"
+# If the current kernel doesn't come from the host of a chroot
+if [ `_is_kernel_name_correct $CURRENT_KERNEL` = "yes" ]; then
+    # See if it's worth building the module for both the newest kernel
+    # and for the current kernel
+    if [ -n "$NEWEST_KERNEL" ] && [ ${CURRENT_KERNEL} != ${NEWEST_KERNEL} ]; then
+        echo "Building for $CURRENT_KERNEL and $NEWEST_KERNEL"
+        KERNELS="$CURRENT_KERNEL $NEWEST_KERNEL"
+    else
+        echo "Building only for $CURRENT_KERNEL"
+    fi
+# The current kernel is not useful as it's the host's
 else
-    echo "Building only for $CURRENT_KERNEL"
-fi
+    echo "It is likely that $CURRENT_KERNEL belongs to a chroot's host"
 
+    # Let's use only the newest kernel
+    if [ -n "$NEWEST_KERNEL" ]; then
+        KERNELS="$NEWEST_KERNEL"
+        echo "Building only for $NEWEST_KERNEL"
+    fi
+fi
 
 if [ -n "$ARCH" ]; then
     if which lsb_release >/dev/null && [ $(lsb_release -s -i) = "Ubuntu" ]; then
