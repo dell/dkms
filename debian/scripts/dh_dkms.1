@@ -175,6 +175,8 @@ Don't look for debian/\fIpackage\fR.dkms or debian/dkms, but install \fIfile\fR 
 Note that this command is not idempotent. \fIdh_prep\fR\|(1) should be called
 between invocations of this command. Otherwise, it may cause multiple
 instances of the same text to be added to maintainer scripts.
+
+IMPORTANT: binary packages using dh_dkms must have a name that ends in '-dkms'.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 \&\fIdebhelper\fR\|(1)
