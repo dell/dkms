@@ -40,6 +40,7 @@ binary-indep: build install
 	dh_testroot
 	dh_installchangelogs 
 	dh_installdocs AUTHORS debian/HOWTO.Debian
+	dh_lintian
 	dh_installexamples
 	dh_installman
 	dh_link
