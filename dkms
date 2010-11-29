@@ -3205,19 +3205,19 @@ function make_redhat3_driver_disk ()
     invoke_command "tar -jcvf $temp_dir_name/SOURCES/$module-$module_version.tar.bz2 $module-$module_version/" "creating source tarball"
     local i=0
     #Build RPMS
-    while [ $i -lt ${#kernelver_array[@]} ]; do
-        invoke_command "LC_ALL=C rpmbuild --define \"_topdir ${temp_dir_name}\" --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_version ${kernelver_array[$i]}\" -bb --target ${arch_array[$i]} ${temp_dir_name}/SPECS/$module.spec > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
+    while [ $i -lt ${#kernelver[@]} ]; do
+        invoke_command "LC_ALL=C rpmbuild --define \"_topdir ${temp_dir_name}\" --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_version ${kernelver[$i]}\" -bb --target ${arch[$i]} ${temp_dir_name}/SPECS/$module.spec > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
         if [ "$?" -ne 0 ]; then
             echo $"" >&2
             echo $"Error! There was a problem creating your kmod." >&2
             cat ${temp_dir_name}/rpmbuild.log >&2
             exit 7
         fi
-        local kabi_whitelist=`rpm -ql kabi-whitelists | grep ${arch_array[$i]}`
+        local kabi_whitelist=`rpm -ql kabi-whitelists | grep ${arch[$i]}`
         if [ $? == 0 ]; then
-            local module_file=`rpm -qlp ${temp_dir_name}/RPMS/${arch_array[$i]}/kmod-${module}-${module_version}* | grep ${module}.ko`
+            local module_file=`rpm -qlp ${temp_dir_name}/RPMS/${arch[$i]}/kmod-${module}-${module_version}* | grep ${module}.ko`
             cd ${temp_dir_name}/
-            rpm2cpio ${temp_dir_name}/RPMS/${arch_array[$i]}/kmod-${module}-${module_version}* | cpio -id --quiet .${module_file}
+            rpm2cpio ${temp_dir_name}/RPMS/${arch[$i]}/kmod-${module}-${module_version}* | cpio -id --quiet .${module_file}
             cd - > /dev/null
             local mod_symbols=( $(modprobe --dump-modversions ${temp_dir_name}/${module_file} | cut -f2) )
             local miss_sym_count=0
@@ -3250,8 +3250,8 @@ function make_redhat3_driver_disk ()
     done
 
     i=0
-    while [ $i -lt ${#arch_array[@]} ]; do
-        invoke_command "createrepo --pretty ${temp_dir_name}/RPMS/${arch_array[$i]}" "creating repo"
+    while [ $i -lt ${#arch[@]} ]; do
+        invoke_command "createrepo --pretty ${temp_dir_name}/RPMS/${arch[$i]}" "creating repo"
         if [ "$?" -ne 0 ]; then
             echo $"" >&2
             echo $"Error! There was a problem creating repository." >&2
