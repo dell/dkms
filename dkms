@@ -3148,6 +3148,14 @@ function make_redhat3_driver_disk ()
         exit 1
     fi
 
+    # Check that the createrepo command is present
+    if ! which createrepo >/dev/null 2>&1 ; then
+        echo $"" >&2
+        echo $"Error! createrepo not present." >&2
+        echo $"Install the createrepo package." >&2
+        exit 1
+    fi
+
     echo $""
     if [ -n "$specfile" -a -e "$dkms_tree/$module/$module_version/source/$specfile" ]; then
         echo $"Using $dkms_tree/$module/$module_version/source/$specfile"
@@ -3214,7 +3222,7 @@ function make_redhat3_driver_disk ()
             exit 7
         fi
         local kabi_whitelist=`rpm -ql kabi-whitelists | grep ${arch[$i]}`
-        if [ $? == 0 ]; then
+        if [ $kabi_whitelist ]; then
             local module_file=`rpm -qlp ${temp_dir_name}/RPMS/${arch[$i]}/kmod-${module}-${module_version}* | grep ${module}.ko`
             cd ${temp_dir_name}/
             rpm2cpio ${temp_dir_name}/RPMS/${arch[$i]}/kmod-${module}-${module_version}* | cpio -id --quiet .${module_file}
