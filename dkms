@@ -3173,14 +3173,14 @@ function make_redhat3_driver_disk ()
     rm -rf "$dkms_tree/$module/$module_version/build"
     cp -rf "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
 
+    cd "$dkms_tree/$module/$module_version/build"
+
     # Run the pre_build script
     if [ -n "$pre_build" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$pre_build" | sed 's/ .*//'` ]; then
         echo $""
         echo $"Running the pre_build script:"
-        $dkms_tree/$module/$module_version/source/$pre_build
+        $dkms_tree/$module/$module_version/build/$pre_build
     fi
-
-    cd "$dkms_tree/$module/$module_version/build"
 
     # Apply any patches
     local index=0
