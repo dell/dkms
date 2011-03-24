@@ -2428,7 +2428,8 @@ make_tarball()
         elif [[ ${archive_location%/*} != $archive_location ]] && ! mkdir -p $tarball_dest; then
 	    die 9 $"Will not be able to create $archive_location due to a permissions problem."
 	fi
-    else
+    fi
+    if [ ! -d $tarball_dest ]; then
 	mkdir -p "$dkms_tree/$module/$module_version/tarball/"
     fi
 
