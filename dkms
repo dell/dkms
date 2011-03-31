@@ -1792,7 +1792,7 @@ module_status_built_extra() (
 # we do not get word splitting where it would be inconvienent.
 module_status_built() {
     local ret=1 directory ka k a state oifs="$IFS" IFS=''
-    for directory in "$dkms_tree/$1/$2/"${3:-*.*.*}/${4:-*}; do
+    for directory in "$dkms_tree/$1/$2/"${3:-[0-9].*}/${4:-*}; do
 	IFS="$oifs"
 	valid_search_tree "$directory" || continue
 	ka="${directory#$dkms_tree/$1/$2/}"
