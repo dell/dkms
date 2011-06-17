@@ -2831,7 +2831,7 @@ make_debian()
 
     # Read the conf file
     read_conf_or_die "$kernelver" "$arch"
-    debian_install fakeroot dpkg-dev
+    debian_install fakeroot dpkg-dev debhelper
 
     #skeleton to load templates from
     local system_mk="$dkms_tree/$module/$module_version/source/$module-dkms-mk${create_type}"
