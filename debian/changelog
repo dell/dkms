@@ -1,4 +1,4 @@
-dkms (2.1.2.0-0ubuntu1) UNRELEASED; urgency=low
+dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
 
   * Add a patch from Steffen Barszus that makes DKMS produce a '.changes' file so
     that the resultant package is uploadable to launchpad.
@@ -8,7 +8,7 @@ dkms (2.1.2.0-0ubuntu1) UNRELEASED; urgency=low
     (LP: #582666)
   * Add a patch from Anders Kaseorg to fix compounded build logs (LP: #593509)
 
- -- Mario Limonciello <Mario_Limonciello@Dell.com>  Wed, 26 May 2010 15:47:45 -0500
+ -- Mario Limonciello <Mario_Limonciello@Dell.com>  Fri, 17 Jun 2011 13:53:48 -0500
 
 dkms (2.1.1.2-0ubuntu1) lucid; urgency=low
 
