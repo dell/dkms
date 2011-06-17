@@ -2813,7 +2813,7 @@ debian_install()
 	$getroot apt-get -y install "${packages[@]}"
     fi
     if (( $? != 0)); then
-	die 4 $"Missing $INSTALL_PACKAGES" \
+	die 4 $"Missing ${packages[@]}" \
 	    $"and unable to install.  Please ask an admin to install for you."
     fi
 }
