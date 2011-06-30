@@ -3049,7 +3049,8 @@ add_source_tree() {
 	"$dkms_tree/$module/$version/source") return;;
 	"$dkms_tree/$module/$version/build") return;;
     esac
-    cp -fr "$from" "$source_tree/$module-$module_version"
+    mkdir -p "$source_tree/$module-$module_version"
+    cp -fr "$from"/* "$source_tree/$module-$module_version"
 }
 
 make_kmp()
