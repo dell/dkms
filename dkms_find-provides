@@ -59,7 +59,8 @@ get_modinfo() {
 }
 
 
-TMPDIR=$(mktemp -d --tmpdir dkms-findprovides-$$-$RANDOM-XXXXXX)
+tmp=${TMPDIR:-/tmp}
+TMPDIR=$(mktemp -d ${tmp}/dkms-findprovides-$$-$RANDOM-XXXXXX)
 trap "rm -rf $TMPDIR >/dev/null 2>&1"  QUIT EXIT HUP INT TERM
 
 modlist=
