@@ -65,6 +65,11 @@ except ValueError:
     version = '(not installed)'
 if version is None:
     version = '(not installed)'
+
+if report['SourcePackage'] == 'fglrx-installer':
+    fglrx_make_log = os.path.join('/var','lib','dkms',options.module,options.version,'build','make.sh.log')
+    attach_file_if_exists(report, fglrx_make_log, 'FglrxBuildLog')
+
 report['PackageVersion'] = version
 report['Title'] = "%s %s: %s kernel module failed to build" % (package, version, options.module)
 attach_file_if_exists(report, make_log, 'DKMSBuildLog')
