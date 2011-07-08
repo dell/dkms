@@ -54,7 +54,11 @@ make_log=os.path.join('/var','lib','dkms',options.module,options.version,'build'
 
 report = apport.Report('Package')
 report['Package'] = package
-report['SourcePackage'] = apport.packaging.get_source(package)
+try:
+    report['SourcePackage'] = apport.packaging.get_source(package)
+except ValueError:
+    print >> sys.stderr, 'ERROR: unable to determine source package for %s' % package
+    sys.exit(3)
 try:
     version = packaging.get_version(package)
 except ValueError:
