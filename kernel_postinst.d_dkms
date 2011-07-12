@@ -8,7 +8,7 @@ uname_s=$(uname -s)
 _get_kernel_dir() {
     KVER=$1
     case ${uname_s} in
-       Linux)          DIR="/lib/modules/$KVER" ;;
+       Linux)          DIR="/lib/modules/$KVER/build" ;;
        GNU/kFreeBSD)   DIR="/usr/src/kfreebsd-headers-$KVER/sys" ;;
     esac
     echo $DIR
@@ -17,7 +17,7 @@ _get_kernel_dir() {
 _check_kernel_dir() {
     DIR=$(_get_kernel_dir $1)
     case ${uname_s} in
-       Linux)          test -e $DIR/build/include ;;
+       Linux)          test -e $DIR/include ;;
        GNU/kFreeBSD)   test -e $DIR/kern && test -e $DIR/conf/kmod.mk ;;
        *)              return 1 ;;
     esac
