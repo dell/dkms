@@ -2606,7 +2606,7 @@ load_tarball()
 
     # Load precompiled modules.
     for directory in "$temp_dir_name/dkms_main_tree"/*/*; do
-	[[ -d $directory ]] && continue
+	[[ -d $directory ]] || continue
 	kernel_arch_to_load=${directory/*dkms_main_tree\/}
 	dkms_dir_location="$dkms_tree/$module/$module_version/$kernel_arch_to_load"
 	if [[ -d $dkms_dir_location && ! $force ]]; then
