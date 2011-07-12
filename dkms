@@ -2583,10 +2583,13 @@ load_tarball()
 	    dkms_source_tree)
 		add_source_tree "$temp_dir_name/dkms_source_tree";;
 	    dkms_binaries_only)
-		echo $"Creating $dkms_tree/$module/$module_version/source"
-		mkdir -p "$dkms_tree/$module/$module_version/source"
-		echo $"Copying dkms.conf to $dkms_tree/$module/$module_version/source..."
-		cp -rf "$temp_dir_name/dkms_binaries_only/dkms.conf" "$dkms_tree/$module/$module_version/source";;
+		#if there is a source tree on the system already, don't build a binaries stub
+		if [[ ! -d $source_tree/$module-$module_version ]]; then
+			echo $"Creating $dkms_tree/$module/$module_version/source"
+			mkdir -p "$dkms_tree/$module/$module_version/source"
+			echo $"Copying dkms.conf to $dkms_tree/$module/$module_version/source..."
+			cp -rf "$temp_dir_name/dkms_binaries_only/dkms.conf" "$dkms_tree/$module/$module_version/source"
+		fi;;
 	    *)  die 8 $"$FUNCNAME:$LINENO: Cannot happen." \
 		$"Report this error to dkms-devel@dell.com";;
 	esac
@@ -2621,7 +2624,7 @@ load_tarball()
 
     echo $""
     echo $"DKMS: ldtarball Completed."
-    [[ $loc != dkms_binaries_only ]]
+    [[ $loc != dkms_binaries_only ]] || [[ -d $source_tree/$module-$module_version ]]
 }
 
 run_match()
