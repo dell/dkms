@@ -3,12 +3,44 @@
 # We're passed the version of the kernel being installed
 inst_kern=$1
 
+uname_s=$(uname -s)
+
+_get_kernel_dir() {
+    KVER=$1
+    case ${uname_s} in
+       Linux)          DIR="/lib/modules/$KVER" ;;
+       GNU/kFreeBSD)   DIR="/usr/src/kfreebsd-headers-$KVER/sys" ;;
+    esac
+    echo $DIR
+}
+
+_check_kernel_dir() {
+    DIR=$(_get_kernel_dir $1)
+    case ${uname_s} in
+       Linux)          test -e $DIR/build/include ;;
+       GNU/kFreeBSD)   test -e $DIR/kern && test -e $DIR/conf/kmod.mk ;;
+       *)              return 1 ;;
+    esac
+    return $?
+}
+
+case "${uname_s}" in
+    Linux)
+        header_pkg="linux-headers-$inst_kern"
+        kernel="Linux"
+    ;;
+    GNU/kFreeBSD)
+        header_pkg="kfreebsd-headers-$inst_kern"
+        kernel="kFreeBSD"
+    ;;
+esac
+
 if [ -x /usr/lib/dkms/dkms_autoinstaller ]; then
     exec /usr/lib/dkms/dkms_autoinstaller start $inst_kern > /dev/null
 fi
 
-if [ ! -e /lib/modules/$inst_kern/build/include ] ; then
-    echo "dkms: WARNING: linux headers are missing, which may explain the above failures." >&2
-    echo "      please install the linux-headers-$inst_kern package to fix this." >&2
+if ! _check_kernel_dir $inst_kern ; then
+    echo "dkms: WARNING: $kernel headers are missing, which may explain the above failures." >&2
+    echo "      please install the $header_pkg package to fix this." >&2
 fi
 

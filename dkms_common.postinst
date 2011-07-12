@@ -6,6 +6,27 @@
 
 set -e
 
+uname_s=$(uname -s)
+
+_get_kernel_dir() {
+    KVER=$1
+    case ${uname_s} in
+	Linux)		DIR="/lib/modules/$KVER" ;;
+	GNU/kFreeBSD)	DIR="/usr/src/kfreebsd-headers-$KVER/sys" ;;
+    esac
+    echo $DIR
+}
+
+_check_kernel_dir() {
+    DIR=$(_get_kernel_dir $1)
+    case ${uname_s} in
+	Linux)		test -e $DIR/build/include ;;
+	GNU/kFreeBSD)	test -e $DIR/kern && test -e $DIR/conf/kmod.mk ;;
+	*)		return 1 ;;
+    esac
+    return $?
+}
+
 # Check the existence of a kernel named as $1
 _is_kernel_name_correct() {
     CORRECT="no"
@@ -240,7 +261,7 @@ for KERNEL in $KERNELS; do
             echo " since the package source was not provided"
             continue
         fi
-        if [ -e /lib/modules/$KERNEL/build/include ]; then
+        if _check_kernel_dir $KERNEL; then
             echo "Building initial module for $KERNEL"
             set +e
             dkms build -m $NAME -v $VERSION -k $KERNEL $ARCH > /dev/null

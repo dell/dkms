@@ -41,6 +41,27 @@ readonly y_re='^(Y|y)'
 readonly mv_re='^([^/]*)/(.*)$'
 readonly rh_kernels='(debug|summit|smp|enterprise|bigmem|hugemem|BOOT|vmnix)'
 
+uname_s=$(uname -s)
+
+function _get_kernel_dir() {
+    KVER=$1
+    case ${uname_s} in
+       Linux)          DIR="/lib/modules/$KVER" ;;
+       GNU/kFreeBSD)   DIR="/usr/src/kfreebsd-headers-$KVER/sys" ;;
+    esac
+    echo $DIR
+}
+
+function _check_kernel_dir() {
+    DIR=$(_get_kernel_dir $1)
+    case ${uname_s} in
+       Linux)          test -e $DIR/build/include ;;
+       GNU/kFreeBSD)   test -e $DIR/kern && test -e $DIR/conf/kmod.mk ;;
+       *)              return 1 ;;
+    esac
+    return $?
+}
+
 # Run a command that we may or may not want to be detailed about.
 invoke_command()
 {
@@ -139,8 +160,7 @@ set_kernel_source_dir()
 {
     # $1 = the kernel to base the directory on
     [[ $kernel_source_dir ]] && return
-    [[ -d $install_tree/$1/build ]] && \
-	kernel_source_dir="$install_tree/$1/build"
+    kernel_source_dir="$(_get_kernel_dir "$1")"
 }
 
 # A little test function for DKMS commands that only work on one kernel.
@@ -356,6 +376,11 @@ override_dest_module_location()
 {
     local orig_location="$1"
     [[ ${addon_modules_dir} ]] && echo "/${addon_modules_dir}" && return
+
+    if [ "$uname_s" = "GNU/kFreeBSD" ] ; then
+	# Does not support subdirs, regardless of distribution
+	echo "" && return
+    fi
 
     case "$running_distribution" in
 	fc[12345]) ;;
@@ -971,7 +996,7 @@ prepare_kernel()
     set_kernel_source_dir "$1"
 
     # Check that kernel-source exists
-    [[ -e $kernel_source_dir/include ]] || {
+    _check_kernel_dir "$1" || {
 	case "$running_distribution" in
 	    Debian* | Ubuntu* )
 		die 1 $"Your kernel headers for kernel $1 cannot be found." \
