@@ -47,7 +47,7 @@ if options.kernel:
     kernel_package = "linux-headers-" + options.kernel
 
     if not apport.packaging.is_distro_package(kernel_package):
-        print >> sys.stderr, 'ERROR: kernel package %s is not supported' % (kernel_package,)
+        print >> sys.stderr, 'ERROR (dkms apport): kernel package %s is not supported' % (kernel_package,)
         sys.exit(1)
 
 make_log=os.path.join('/var','lib','dkms',options.module,options.version,'build','make.log')
@@ -57,7 +57,7 @@ report['Package'] = package
 try:
     report['SourcePackage'] = apport.packaging.get_source(package)
 except ValueError:
-    print >> sys.stderr, 'ERROR: unable to determine source package for %s' % package
+    print >> sys.stderr, 'ERROR (dkms apport): unable to determine source package for %s' % package
     sys.exit(3)
 try:
     version = packaging.get_version(package)
