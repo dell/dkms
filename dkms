@@ -3342,9 +3342,7 @@ current_kernel=$(uname -r)
 dkms_tree="/var/lib/dkms"
 source_tree="/usr/src"
 install_tree="/lib/modules"
-tmp=${TMPDIR:-/tmp}
-tmp_file=`mktemp $tmp/dkms.XXXXXXXX`
-tmp_location=`dirname $tmp_file`
+tmp_location=${TMPDIR:-/tmp}
 verbose=""
 dkms_frameworkconf="/etc/dkms/framework.conf"
 
