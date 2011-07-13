@@ -71,7 +71,7 @@ install-doc:
 
 install-debian: install install-doc
 	mkdir   -p -m 0755 $(SHAREDIR)/apport/package-hooks
-	install -p -m 0755 dkms_apport.py $(SHAREDIR)/apport/package-hooks/dkms.py
+	install -p -m 0755 dkms_apport.py $(SHAREDIR)/apport/package-hooks/dkms_packages.py
 	mkdir   -p -m 0755 $(KCONF)/header_postinst.d
 	install -p -m 0755 kernel_postinst.d_dkms $(KCONF)/header_postinst.d/dkms
 	mkdir   -p -m 0755 $(ETC)/template-dkms-mkdeb/debian

@@ -2993,7 +2993,7 @@ report_build_problem()
 {
     #If apport is on the system, files a build problem
     if [ -x /usr/share/apport/apport ] && which python>/dev/null; then
-	python /usr/share/apport/package-hooks/dkms.py -m $module -v $module_version -k ${kernelver[0]}
+	python /usr/share/apport/package-hooks/dkms_packages.py -m $module -v $module_version -k ${kernelver[0]}
     fi
     die "$@"
 }
