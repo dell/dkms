@@ -34,12 +34,12 @@ optparser.add_option('-k', help="Specify the kernel version",
 options=optparser.parse_args()[0]
 
 if not options.module or not options.version:
-    print >> sys.stderr, 'ERROR, both -m and -v are required'
+    print >> sys.stderr, 'ERROR (dkms apport): both -m and -v are required'
     sys.exit(2)
 
 package=packaging.get_file_package('/usr/src/' + options.module + '-' + options.version)
 if package is None:
-    print >> sys.stderr, 'ERROR: binary package for %s: %s not found' % (options.module,options.version)
+    print >> sys.stderr, 'ERROR (dkms apport): binary package for %s: %s not found' % (options.module,options.version)
     sys.exit(1)
 
 if options.kernel:
