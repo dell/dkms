@@ -41,20 +41,19 @@ readonly y_re='^(Y|y)'
 readonly mv_re='^([^/]*)/(.*)$'
 readonly rh_kernels='(debug|summit|smp|enterprise|bigmem|hugemem|BOOT|vmnix)'
 
-uname_s=$(uname -s)
-
-function _get_kernel_dir() {
+#Areas that will vary between Linux and other OS's
+_get_kernel_dir() {
     KVER=$1
-    case ${uname_s} in
+    case ${current_os} in
        Linux)          DIR="/lib/modules/$KVER/build" ;;
        GNU/kFreeBSD)   DIR="/usr/src/kfreebsd-headers-$KVER/sys" ;;
     esac
     echo $DIR
 }
 
-function _check_kernel_dir() {
+_check_kernel_dir() {
     DIR=$(_get_kernel_dir $1)
-    case ${uname_s} in
+    case ${current_os} in
        Linux)          test -e $DIR/include ;;
        GNU/kFreeBSD)   test -e $DIR/kern && test -e $DIR/conf/kmod.mk ;;
        *)              return 1 ;;
@@ -3339,6 +3338,7 @@ unset CC CXX CFLAGS CXXFLAGS LDFLAGS
 
 # Set important variables
 current_kernel=$(uname -r)
+current_os=$(uname -s)
 dkms_tree="/var/lib/dkms"
 source_tree="/usr/src"
 install_tree="/lib/modules"
