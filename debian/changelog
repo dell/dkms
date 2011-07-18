@@ -1,14 +1,23 @@
-dkms (RELEASE_VERSION-0ubuntu1) UNRELEASED; urgency=low
+dkms (2.2.0.1-0ubuntu1) oneiric; urgency=low
 
-  * Add a patch from Steffen Barszus that makes DKMS produce a '.changes' file so
-    that the resultant package is uploadable to launchpad.
-  * In the mkdeb/mkdsc Makefile, don't modify the permissions to 644, but rather
-    append a readable bit to all files. (LP: #582670)
-  * Add a patch from Steffen Barszus that speeds up module uninstallation.
-    (LP: #582666)
-  * Add a patch from Anders Kaseorg to fix compounded build logs (LP: #593509)
+  * New upstream version.  Bugs fixed in Ubuntu:
+  * Apport hook:
+    - Only generate reports about supported kernel version (LP: #766150)
+    - Include fglrx make file (LP: #792444)
+    - Crashes in get_source() (LP: #532496)
+    - Apport script fails (LP: #798498)
+  * Openafs modules leaving empty make.log (LP: #593509)
+  * '_' in module name causes mkdeb to fail (LP: #511619)
+  * PRE_BUILD command invoked from wrong directory. (LP: #702638)
+  * Speed up for large amounts of modules (LP: #786672)
+  * Leaves temp files in /tmp (LP: #810134)
+  * Generate .changes file for LP: upload (LP: #582668)
+  * Don't change access rights of upstream source (LP: #582670)
+  * common.postinst fails on failed build (LP: #595968)
+  * Using a hyphen as part of PACKAGE_VERSION causes failures (LP: #599983)
+  * dkms shouldn't source all the variables in dkms.conf (LP: #599985)
 
- -- Mario Limonciello <Mario_Limonciello@Dell.com>  Fri, 17 Jun 2011 13:53:48 -0500
+ -- Mario Limonciello <Mario_Limonciello@Dell.com>  Thu, 14 Jul 2011 13:18:56 -0500
 
 dkms (2.1.1.2-0ubuntu1) lucid; urgency=low
 
