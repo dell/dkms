@@ -922,10 +922,24 @@ read_conf_or_die() {
 run_build_script() {
     # $1 = script type
     # $2 = script to run
-    [[ $2 && -x $dkms_tree/$module/$module_version/source/${2%% *} ]] || return 0
-    echo $""
-    echo $"Running the $1 script:"
-    $dkms_tree/$module/$module_version/source/$2
+    local script_type run
+    [[ $2 ]] || return 0
+    case "$1" in
+        pre_build|post_build) script_type='build';;
+        *) script_type='source'
+    esac
+    run="$dkms_tree/$module/$module_version/$script_type/$2"
+    if [[ -x ${run%% *} ]]; then
+        echo $""
+        echo $"Running the $1 script:"
+        (
+            cd "$dkms_tree/$module/$module_version/$script_type/"
+            exec $run
+        )
+    else
+        echo $""
+        warn $"The $1 script is not executable."
+    fi
 }
 
 # Register a DKMS-ified source tree with DKMS.
@@ -1161,9 +1175,6 @@ prepare_build()
     rm -rf "$dkms_tree/$module/$module_version/build"
     cp -rf "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
 
-    # Run the pre_build script
-    run_build_script pre_build "$pre_build"
-
     cd "$dkms_tree/$module/$module_version/build"
 
     # Apply any patches
@@ -1176,6 +1187,9 @@ prepare_build()
 	    report_build_problem 6 $"Application of patch $p failed." \
 	    $"Check $dkms_tree/$module/$module_version/build/ for more information."
     done
+
+    # Run the pre_build script
+    run_build_script pre_build "$pre_build"
 }
 
 # Build our previously prepared source tree.  prepare_build must be called
