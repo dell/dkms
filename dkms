@@ -3142,7 +3142,8 @@ autoinstall() {
 	    last_v='0'
 	    [[ $tenative ]] && to_install[${#to_install[@]}]="$tenative"
 	    tenative=''
-	elif [[ $last_m = $m && ($(VER $v) > $(VER $last_v)) ]]; then
+        fi
+	if [[ ($(VER $v) > $(VER $last_v)) ]]; then
 	    last_v="$v"
 	    tenative="$m/$v"
 	fi
