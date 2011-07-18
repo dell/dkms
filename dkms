@@ -3139,28 +3139,28 @@ autoinstall() {
     # Walk through our list of installed and built modules, and create
     # a list of modules that need to be reinstalled.
     while read status mvka; do
-	# if it has not been built, do not try and build it now.
-	[[ $status = added ]] && continue
-	IFS='/' read m v k a <<< "$mvka"
-	[[ ! $last_m ]] && last_m="$m"
-	# If the module is already installed or weak-installed, skip it.
-	_is_module_installed "$m" "$v" "$kernelver" "$arch" && continue
-	module_status_weak "$m" "$v" "$kernelver" "$arch" >/dev/null && continue
-	# if the module does not want to be autoinstalled, skip it.
-	read_conf_or_die "$k" "$a" "$dkms_tree/$m/$v/source/dkms.conf"
-	if [[ ! $AUTOINSTALL ]]; then
-	    continue
-	# otherwise, only autoinstall the latest version we have hanging around.
-	elif [[ $last_m != $m ]]; then
-	    last_m="$m"
-	    last_v='0'
-	    [[ $tenative ]] && to_install[${#to_install[@]}]="$tenative"
-	    tenative=''
+        # if it has not been built, do not try and build it now.
+        [[ $status = added ]] && continue
+        IFS='/' read m v k a <<< "$mvka"
+        [[ ! $last_m ]] && last_m="$m"
+        # If the module is already installed or weak-installed, skip it.
+        _is_module_installed "$m" "$v" "$kernelver" "$arch" && continue
+        module_status_weak "$m" "$v" "$kernelver" "$arch" >/dev/null && continue
+        # if the module does not want to be autoinstalled, skip it.
+        read_conf_or_die "$k" "$a" "$dkms_tree/$m/$v/source/dkms.conf"
+        if [[ ! $AUTOINSTALL ]]; then
+            continue
+        # otherwise, only autoinstall the latest version we have hanging around.
+        elif [[ $last_m != $m ]]; then
+            last_m="$m"
+            last_v='0'
+            [[ $tenative ]] && to_install[${#to_install[@]}]="$tenative"
+            tenative=''
         fi
-	if [[ ($(VER $v) > $(VER $last_v)) ]]; then
-	    last_v="$v"
-	    tenative="$m/$v"
-	fi
+        if [[ ($(VER $v) > $(VER $last_v)) ]]; then
+            last_v="$v"
+            tenative="$m/$v"
+        fi
     done < <(module_status)
     # We may have exited the loop with $tenative set.  If it is,
     # it contains something that should be updated.
@@ -3168,8 +3168,8 @@ autoinstall() {
     [[ $to_install ]] || return 0
     # Install modules that need to be updated in parallel.
     for mv in "${to_install[@]}"; do
-	IFS=/ read m v <<< "$mv"
-	(module="$m"; module_version="$v"; install_module) &
+        IFS=/ read m v <<< "$mv"
+        (module="$m"; module_version="$v"; install_module) &
     done
     wait
 }
