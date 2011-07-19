@@ -14,7 +14,7 @@
 # Short-Description: Automatically install DKMS modules for new kernels
 # Description: A service to automatically install DKMS modules for new kernels.
 ### END INIT INFO
-kernel="$2"
+
 test -f /usr/sbin/dkms || exit 0
 
 if [ -f /lib/lsb/init-functions ]; then
@@ -27,6 +27,12 @@ if [ ! -f /etc/debian_version ]; then
     log_end_msg() { if [ "$1" = "0" ]; then echo " Done. "; else echo " Failed. "; fi }
     alias log_action_begin_msg=log_daemon_msg
     alias log_action_end_msg=log_end_msg
+fi
+
+if [ -n "$2" ]; then
+    kernel="$2"
+else
+    kernel=`uname -r`
 fi
 
 # See how we were called.
