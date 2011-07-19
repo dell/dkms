@@ -14,7 +14,7 @@
 # Short-Description: Automatically install DKMS modules for new kernels
 # Description: A service to automatically install DKMS modules for new kernels.
 ### END INIT INFO
-kernel=`uname -r`
+kernel="$2"
 test -f /usr/sbin/dkms || exit 0
 
 if [ -f /lib/lsb/init-functions ]; then
@@ -33,7 +33,7 @@ fi
 case "$1" in
   start)
     log_daemon_msg "dkms: running auto installation service for kernel $kernel"
-    dkms autoinstall
+    dkms autoinstall --kernelver $kernel
     log_end_msg $?
     ;;
   stop|restart|force-reload|status|reload)
