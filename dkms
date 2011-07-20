@@ -158,7 +158,6 @@ set_module_suffix()
 set_kernel_source_dir()
 {
     # $1 = the kernel to base the directory on
-    [[ $kernel_source_dir ]] && return
     kernel_source_dir="$(_get_kernel_dir "$1")"
 }
 
