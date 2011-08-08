@@ -997,7 +997,7 @@ add_module()
     run_build_script post_add "$post_add"
 
     echo $""
-    echo $"DKMS: add Completed."
+    echo $"DKMS: add completed."
 }
 
 # Prepare a kernel source or include tree for compiling a module.
@@ -1268,7 +1268,7 @@ build_module()
     do_build
     clean_build
     echo $""
-    echo $"DKMS: build Completed."
+    echo $"DKMS: build completed."
 }
 
 # Install a previously built module
@@ -1417,7 +1417,7 @@ install_module()
 	    $"DKMS: Install Failed (mkinitrd problems).  Module rolled back to built state."
     }
     echo $""
-    echo $"DKMS: install Completed."
+    echo $"DKMS: install completed."
 }
 
 # List each kernel object that has been installed for a particular module.
@@ -1643,7 +1643,7 @@ do_uninstall()
     [[ $was_active && $remake_initrd ]] && do_status $module $module_version | grep -q "installed" && moduleconfig_add "$1"
 
     echo $""
-    echo $"DKMS: uninstall Completed."
+    echo $"DKMS: uninstall completed."
 }
 
 # Check our preconditions, and then let do_install do all the hard work.
@@ -2116,7 +2116,7 @@ make_redhat_driver_disk()
     echo $""
     echo $"Disk image location: $image_dir/$image_name"
     echo $""
-    echo $"DKMS: mkdriverdisk Completed."
+    echo $"DKMS: mkdriverdisk completed."
 }
 
 make_driver_disk()
@@ -2308,7 +2308,7 @@ EOF
     echo $""
     echo $"Disk image location: $dkms_tree/$module/$module_version/driver_disk/$image_name"
     echo $""
-    echo $"DKMS: mkdriverdisk Completed."
+    echo $"DKMS: mkdriverdisk completed."
 }
 
 make_ubuntu_driver_disk()
@@ -2388,7 +2388,7 @@ EOF
    echo $""
    echo $"Disk image location: $dkms_tree/$module/$module_version/driver_disk/$image_name"
    echo $""
-   echo $"DKMS: mkdriverdisk Completed."
+   echo $"DKMS: mkdriverdisk completed."
 }
 
 make_tarball()
@@ -2497,7 +2497,7 @@ make_tarball()
 	xz) xz -9 "$tarball_dest/$tarball_name";;
     esac
     echo $""
-    echo $"DKMS: mktarball Completed."
+    echo $"DKMS: mktarball completed."
 }
 
 # A tiny helper function to make sure dkms.conf describes a valid package.
@@ -2638,7 +2638,7 @@ load_tarball()
     done
 
     echo $""
-    echo $"DKMS: ldtarball Completed."
+    echo $"DKMS: ldtarball completed."
     [[ $loc != dkms_binaries_only ]] || [[ -d $source_tree/$module-$module_version ]]
 }
 
@@ -2730,7 +2730,7 @@ run_match()
 
     # Done
     echo $""
-    echo $"DKMS: match Completed."
+    echo $"DKMS: match completed."
 }
 
 make_rpm()
@@ -2801,7 +2801,7 @@ make_rpm()
 	echo $""
 	cat ${temp_dir_name}/rpmbuild.log | grep ^Wrote | sed -e "s:${temp_dir_name}/:${rpm_basedir}/:" -e 's:SRPMS/::' -e 's:RPMS/.*/::'
 	echo $""
-	echo $"DKMS: mkrpm Completed."
+	echo $"DKMS: mkrpm completed."
     else
 	cat ${temp_dir_name}/rpmbuild.log >&2
 	die 7 $"There was a problem creating your rpm."
@@ -2935,14 +2935,14 @@ make_debian()
 	    invoke_command "dpkg-buildpackage -S -us -uc 1>/dev/null" "Building source package" || \
 		die 7 $"There was a problem creating your ${create_type}."
 	    echo $""
-	    echo $"DKMS: mk${create_type} Completed."
+	    echo $"DKMS: mk${create_type} completed."
 	    invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_source.changes' '$temp_dir/${debian_package}-dkms_${module_version}.dsc' '$temp_dir/${debian_package}-dkms_${module_version}.tar.gz' '$deb_basedir'" "Moving built files to $deb_basedir"
 	    ;;
 	deb)
 	    invoke_command "dpkg-buildpackage -rfakeroot -d -b -us -uc 1>/dev/null" "Building binary package" || \
 		die 7 $"There was a problem creating your ${create_type}."
 	    echo $""
-	    echo $"DKMS: mk${create_type} Completed."
+	    echo $"DKMS: mk${create_type} completed."
 	    invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_all.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
 	    ;;
     esac
@@ -3124,7 +3124,7 @@ make_kmp()
 	echo $""
 	echo $"KMP SRPM location: $RPMS"
 	echo $""
-	echo $"DKMS: mkkmp Completed."
+	echo $"DKMS: mkkmp completed."
     else
 	die 7 $"There was a problem creating your KMP source rpm."
     fi
@@ -3332,7 +3332,7 @@ function make_redhat3_driver_disk ()
     echo $""
     echo $"Disk image location: $image_dir/$image_name"
     echo $""
-    echo $"DKMS: mkdriverdisk Completed."
+    echo $"DKMS: mkdriverdisk completed."
     
     trap > /dev/null 2>&1
 }
