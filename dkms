@@ -1436,7 +1436,8 @@ list_each_installed_module()
 
 is_module_added() {
     [[ $1 && $2 ]] || return 1
-    valid_search_tree "$dkms_tree/$1/$2" || return 1
+    valid_search_tree "$dkms_tree/$1/$2" || die 1 $"Invalid module tree.  Check that you don't have "
+        $ "$reserved_tree_names in your module tree path." \
     [[ -L $dkms_tree/$1/$2/source || -d $dkms_tree/$1/$2/source ]];
 }
 
