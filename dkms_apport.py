@@ -48,9 +48,12 @@ if options.kernel:
     # TODO: Ubuntu specific
     kernel_package = "linux-headers-" + options.kernel
 
-    if not apport.packaging.is_distro_package(kernel_package):
-        print >> sys.stderr, 'ERROR (dkms apport): kernel package %s is not supported' % (kernel_package,)
-        sys.exit(1)
+    try:
+        apport.packaging.is_distro_package(kernel_package)
+    except ValueError, e:
+        if e == 'package does not exist':
+            print >> sys.stderr, 'ERROR (dkms apport): kernel package %s is not supported' % (kernel_package)
+            sys.exit(1)
 
 make_log=os.path.join('/var','lib','dkms',options.module,options.version,'build','make.log')
 
