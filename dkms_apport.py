@@ -24,6 +24,8 @@ from apport.hookutils import *
 import sys
 import subprocess, optparse
 
+from datetime import datetime
+
 optparser = optparse.OptionParser('%prog [options]')
 optparser.add_option('-m', help="Specify the DKMS module to find the package for",
                      action='store', type='string', dest='module')
@@ -73,6 +75,18 @@ if report['SourcePackage'] == 'fglrx-installer':
 report['PackageVersion'] = version
 report['Title'] = "%s %s: %s kernel module failed to build" % (package, version, options.module)
 attach_file_if_exists(report, make_log, 'DKMSBuildLog')
+if 'DKMSBuildLog' in report:
+    this_year = str(datetime.today().year)
+    if 'Segmentation fault' in report['DKMSBuildLog']:
+        print >> sys.stderr, 'ERROR (dkms apport): There was a segmentation fault when trying to build the module'
+        sys.exit(1)
+    dupe_sig = ''
+    for line in report['DKMSBuildLog'].split('\n'):
+        if line.endswith(this_year):
+            continue
+        dupe_sig += line + '\n'
+    report['DuplicateSignature'] = dupe_sig
+
 if options.kernel:
     report['DKMSKernelVersion'] = options.kernel
 report.write(open(apport.fileutils.make_report_path(report), 'w'))
