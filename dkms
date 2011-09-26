@@ -36,7 +36,6 @@ readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
 
 # Some important regular expressions.  Requires bash 3 or above.
 # Any poor souls still running bash 2 or older really need an upgrade.
-readonly reserved_tree_names="build|original_module|tarball|driver_disk|rpm|source|kernel"
 readonly y_re='^(Y|y)'
 readonly mv_re='^([^/]*)/(.*)$'
 readonly rh_kernels='(debug|summit|smp|enterprise|bigmem|hugemem|BOOT|vmnix)'
@@ -1436,15 +1435,13 @@ list_each_installed_module()
 
 is_module_added() {
     [[ $1 && $2 ]] || return 1
-    valid_search_tree "$dkms_tree/$1/$2" || die 1 $"Invalid module tree.  Check that you don't have "
-        $ "$reserved_tree_names in your module tree path." \
+    [[ -d $dkms_tree/$1/$2 ]] || return 2
     [[ -L $dkms_tree/$1/$2/source || -d $dkms_tree/$1/$2/source ]];
 }
 
 is_module_built() {
     [[ $1 && $2 && $3 && $4 ]] || return 1
     local d="$dkms_tree/$1/$2/$3/$4" m=''
-    valid_search_tree "$d" || return
     [[ -d $d/module ]] || return 1
     read_conf_or_die "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf"
     for m in "${dest_module_name[@]}"; do
@@ -1744,12 +1741,6 @@ remove_module()
     fi
 }
 
-# Test to see if a pathname is a "valid" pathname
-# to use for searching on.
-valid_search_tree() {
-    [[ -d $1 && ! ( $1 =~ $reserved_tree_names ) ]]
-}
-
 # Given a kernel object, figure out which DKMS module it is from.
 find_module_from_ko()
 {
@@ -1835,7 +1826,6 @@ module_status_built() {
     local ret=1 directory ka k a state oifs="$IFS" IFS=''
     for directory in "$dkms_tree/$1/$2/"${3:-[0-9].*}/${4:-*}; do
 	IFS="$oifs"
-	valid_search_tree "$directory" || continue
 	ka="${directory#$dkms_tree/$1/$2/}"
 	k="${ka%/*}"
 	a="${ka#*/}"
@@ -1856,7 +1846,6 @@ module_status() {
     local oifs="$IFS" IFS='' mv m v directory ret=1
     for directory in "$dkms_tree/"${1:-*}/${2:-*}; do
 	IFS="$oifs"
-	valid_search_tree "$directory" || continue
 	mv="${directory#$dkms_tree/}"
 	m="${mv%/*}"
 	v="${mv#*/}"
