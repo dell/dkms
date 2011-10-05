@@ -3131,8 +3131,6 @@ autoinstall() {
     # Walk through our list of installed and built modules, and create
     # a list of modules that need to be reinstalled.
     while read status mvka; do
-        # if it has not been built, do not try and build it now.
-        [[ $status = added ]] && continue
         IFS='/' read m v k a <<< "$mvka"
         [[ ! $last_m ]] && last_m="$m"
         # If the module is already installed or weak-installed, skip it.
