@@ -283,7 +283,7 @@ make_initrd()
 	invoke_command "$mkinitrd -f $initrd_dir/$initrd $1" "$mkinitrd" background
     elif [[ -e /etc/SuSE-release || -d /etc/SuSEconfig ]]; then
 	for kernel_file in vmlinuz vmlinux ''; do
-	    [[ $kernel_file && -f $initrd_dir ]] && break
+	    [[ $kernel_file && -f $initrd_dir/$kernel_file ]] && break
 	done
 	if [[ ! $kernel_file ]]; then
 	    error $"Unable to find valid kernel file under " \
