@@ -23,7 +23,7 @@
 # All of the variables we will accept from dkms.conf.
 # Does not include directives
 readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
-       PACKAGE_VERSION POST_ADD POST_INSTALL POST_REMOVE PRE_BUILD
+       PACKAGE_VERSION POST_ADD POST_BUILD POST_INSTALL POST_REMOVE PRE_BUILD
        PRE_INSTALL BUILD_EXCLUSIVE_KERNEL BUILD_EXCLUSIVE_ARCH
        build_exclude OBSOLETE_BY MAKE MAKE_MATCH MODULES_CONF
        modules_conf_array PATCH PATCH_MATCH patch_array BUILT_MODULE_NAME
