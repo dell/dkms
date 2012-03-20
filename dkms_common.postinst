@@ -139,6 +139,15 @@ VERSION=$2
 TARBALL_ROOT=$3
 ARCH=$4
 UPGRADE=$5
+
+#
+# NOTE: FORCE_INSTALL is highly discouraged as it generally means you are working
+# around a problem with the way the package was architected.
+#
+# If you find a situation that requires using force install, you should evaluate
+# whether there is a way to bump the version number using VCS rev numbers
+# or similar solutions.
+#
 FORCE_INSTALL=$6
 
 if [ -z "$NAME" ] || [ -z "$VERSION" ]; then
