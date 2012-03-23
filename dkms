@@ -1270,6 +1270,28 @@ build_module()
     echo $"DKMS: build completed."
 }
 
+# Force the installation of a module if this is listed
+# in the files in $forced_modules_dir, if any
+force_installation()
+{
+    forced_modules_dir="/usr/share/dkms/modules_to_force_install"
+    to_force=""
+    if [ -d $forced_modules_dir ]; then
+        for elem in $forced_modules_dir/*; do
+            if [ -e $elem ]; then
+                to_force="$to_force $(cat $elem)"
+            fi
+        done
+
+        for elem in $to_force; do
+            if [ "${1}" = "${elem}" ]; then
+                return 0
+            fi
+        done
+    fi
+    return 1
+}
+
 # Install a previously built module
 # There are huge swaths of code here that special-case for various distros.
 # They should be split into their own functions.
@@ -1279,6 +1301,13 @@ install_module()
     is_module_built "$module" "$module_version" "$kernelver" "$arch" || build_module
     local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
     check_module_args install
+
+    # Save the status of $force
+    tmp_force="$force"
+
+    # If the module is set to be force-installed
+    force_installation $module && echo "Forcing installation of $module" \
+        && force="true"
 
     # Make sure that kernel exists to install into
     [[ -e $install_tree/$kernelver ]] || die 6 \
@@ -1417,6 +1446,9 @@ install_module()
     }
     echo $""
     echo $"DKMS: install completed."
+
+    # Restore the status of $force
+    force="$tmp_force"
 }
 
 # List each kernel object that has been installed for a particular module.
