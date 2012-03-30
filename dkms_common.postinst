@@ -139,7 +139,6 @@ VERSION=$2
 TARBALL_ROOT=$3
 ARCH=$4
 UPGRADE=$5
-FORCE_INSTALL=$6
 
 if [ -z "$NAME" ] || [ -z "$VERSION" ]; then
     echo "Need NAME, and VERSION defined"
@@ -290,23 +289,7 @@ for KERNEL in $KERNELS; do
     #if the module is built (either pre-built or just now), install it
     if [ `echo $dkms_status | grep -c ": built"` -eq 1 ] && 
        [ `echo $dkms_status | grep -c ": installed"` -eq 0 ]; then
-
-
-        if [ -z "$FORCE_INSTALL" ]; then
-            FORCE=""
-        else
-            case $FORCE_INSTALL in
-                force)
-                    echo "Forcing modules Installation"
-                    FORCE="--force"
-                    ;;
-                *)
-                    FORCE=""
-                    ;;
-            esac
-        fi
-
-        dkms install -m $NAME -v $VERSION -k $KERNEL $ARCH $FORCE
+        dkms install -m $NAME -v $VERSION -k $KERNEL $ARCH
     fi
 done
 
