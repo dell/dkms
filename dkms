@@ -235,9 +235,9 @@ do_depmod()
         return
     fi
     if [[ -f /boot/System.map-$1 ]]; then
-	/sbin/depmod -a "$1" -F "/boot/System.map-$1"
+	depmod -a "$1" -F "/boot/System.map-$1"
     else
-	/sbin/depmod -a "$1"
+	depmod -a "$1"
     fi
 }
 
