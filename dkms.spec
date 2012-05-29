@@ -113,7 +113,6 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %post
-[ -e /sbin/dkms ] && mv -f /sbin/dkms /sbin/dkms.old 2>/dev/null
 # enable on initial install
 [ $1 -lt 2 ] && /sbin/chkconfig dkms_autoinstaller on ||:
 
