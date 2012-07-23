@@ -3520,6 +3520,11 @@ if [[ $arch && $all ]]; then
 fi
 
 # Run the specified action
+if [ -z "$action" ]; then
+    show_usage
+    die 4 $"No action was specified."
+fi
+
 for action_to_run in $action; do
     setup_kernels_arches "$action_to_run"
     case "$action_to_run" in
