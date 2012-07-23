@@ -1801,7 +1801,7 @@ module_status_weak() {
     # $1 = module, $2 = module version, $3 = kernel version weak installed to,
     # $4 = kernel arch, $5 = kernel version built for
     [[ $weak_modules ]] || return 1
-    local weak_ko mod installed_ko f ret=1 oifs=$IFS
+    local m v k a weak_ko mod installed_ko f ret=1 oifs=$IFS
     local -a already_found
     for weak_ko in "$install_tree/"*/weak-updates/*; do
 	[[ -e $weak_ko ]] || continue
