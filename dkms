@@ -646,6 +646,7 @@ read_conf()
 
 # Little helper function for parsing the output of modinfo.
 get_module_verinfo(){
+    unset res
     local vals=
     while read -a vals; do
 	case ${vals[0]} in
