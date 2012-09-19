@@ -3,6 +3,7 @@
 #  Dynamic Kernel Module Support (DKMS) <dkms-devel@dell.com>
 #  Copyright (C) 2003-2008 Dell, Inc.
 #  by Gary Lerhaupt, Matt Domsch, & Mario Limonciello
+#  Copyright (C) 2012 by Darik Horn <dajhorn@vanadac.com>
 #
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -24,7 +25,7 @@
 # Does not include directives
 readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
        PACKAGE_VERSION POST_ADD POST_BUILD POST_INSTALL POST_REMOVE PRE_BUILD
-       PRE_INSTALL BUILD_EXCLUSIVE_KERNEL BUILD_EXCLUSIVE_ARCH
+       PRE_INSTALL BUILD_DEPENDS BUILD_EXCLUSIVE_KERNEL BUILD_EXCLUSIVE_ARCH
        build_exclude OBSOLETE_BY MAKE MAKE_MATCH MODULES_CONF
        modules_conf_array PATCH PATCH_MATCH patch_array BUILT_MODULE_NAME
        built_module_name BUILT_MODULE_LOCATION built_module_location
@@ -3174,7 +3175,12 @@ make_kmp()
 # by hand if dkms_autoinstaller is not used.
 autoinstall() {
     local status mv mvka m v k a last_v last_m tenative
+    local install_count next_depends
     local -a to_install=()
+    local -a next_install=()
+    local -a installed_modules=()
+    local -A build_depends=()
+
     # Walk through our list of installed and built modules, and create
     # a list of modules that need to be reinstalled.
     while read status mvka; do
@@ -3191,7 +3197,10 @@ autoinstall() {
         elif [[ $last_m != $m ]]; then
             last_m="$m"
             last_v='0'
-            [[ $tenative ]] && to_install[${#to_install[@]}]="$tenative"
+            if [[ $tenative ]]; then
+                to_install[${#to_install[@]}]="$tenative"
+                build_depends["$m"]="${BUILD_DEPENDS[@]}"
+            fi
             tenative=''
         fi
         if [[ ($(VER $v) > $(VER $last_v)) ]]; then
@@ -3201,14 +3210,50 @@ autoinstall() {
     done < <(module_status)
     # We may have exited the loop with $tenative set.  If it is,
     # it contains something that should be updated.
-    [[ $tenative ]] && to_install[${#to_install[@]}]="$tenative"
+    if [[ $tenative ]]; then
+        to_install[${#to_install[@]}]="$tenative"
+        build_depends["$m"]="${BUILD_DEPENDS[@]}"
+    fi
     [[ $to_install ]] || return 0
-    # Install modules that need to be updated in parallel.
-    for mv in "${to_install[@]}"; do
-        IFS=/ read m v <<< "$mv"
-        (module="$m"; module_version="$v"; install_module) &
-    done
-    wait
+
+	while true; do
+		install_count=0
+		next_install=( )
+
+		# Step 1: Install modules that have an empty depdendency list.
+		for mv in "${to_install[@]}"; do
+			IFS=/ read m v <<< "$mv"
+			if [[ -z "${build_depends[$m]}" ]]; then
+				(module="$m"; module_version="$v"; install_module) &
+				installed_modules[${#installed_modules[@]}]="$m"
+				install_count=$(($install_count +1))
+			else
+				next_install[${#next_install[@]}]="$mv"
+			fi
+		done
+
+		wait
+
+		# Step 2: Keep going if at least one module was installed during
+		# this iteration.
+		[[ "$install_count" -gt 0 ]] || break;
+
+		# Step 3: Remove modules that were installed during Step 1 from
+		# the dependency lists of all other modules.
+		for m in ${!build_depends[@]}; do
+			for d in ${build_depends[$m]}; do
+				for i in ${installed_modules}; do
+					[[ "$d" = "$i" ]] && break 2
+				done
+				next_depends+="$d "
+			done
+			build_depends[$m]="${next_depends%% }"
+		done
+
+		# Step 4: Remove modules that were installed during Step 1 from
+		# the job queue.
+		to_install=( "${next_install[@]}" )
+	done
 }
 
 function make_redhat3_driver_disk ()
