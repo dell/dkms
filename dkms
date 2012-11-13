@@ -276,7 +276,7 @@ make_initrd()
     echo $"(If next boot fails, revert to $initrd.old-dkms image)"
 
     if [[ $mkinitrd = dracut ]]; then
-	invoke_command "$mkinitrd $1" "$mkinitrd" background
+	invoke_command "$mkinitrd -f $initrd_dir/$initrd $1" "$mkinitrd" background
     elif [[ $mkinitrd = update-initramfs ]]; then
 	invoke_command "$mkinitrd -u" "$mkinitrd" background
     elif $mkinitrd --version >/dev/null 2>&1; then
