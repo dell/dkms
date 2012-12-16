@@ -69,14 +69,16 @@ invoke_command()
     local exitval=0
     [[ $verbose ]] && echo -e "$1" || echo -en "$2..."
     if [[ $3 = background && ! $verbose ]]; then
-	local exitval_file=$(mktemp_or_die $tmp_location/dkms.XXXXXX)
-	(eval "$1" >/dev/null 2>&1; echo "exitval=$?" >> "$exitval_file") &
-	while [[ -e $exitval_file && ! -s $exitval_file ]]; do
-	    sleep 3
-	    echo -en "."
-	done
-	. "$exitval_file"
-	rm -f "$exitval_file"
+	local pid progresspid
+	(eval "$1" >/dev/null 2>&1) & pid=$!
+	while [ -d /proc/$pid ]; do
+		sleep 3
+		echo -en "."
+	done & progresspid=$!
+	wait $pid 2>/dev/null
+	exitval=$?
+	kill $progresspid 2>/dev/null
+	wait $progresspid 2>/dev/null
     else
 	eval "$1"; exitval=$?
     fi
