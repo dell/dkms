@@ -128,6 +128,7 @@ show_usage()
     echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel] [--no-initrd]"
     echo $"              [--binaries-only] [--source-only] [-r release (SuSE)] [--verbose]"
     echo $"              [--size] [--spec=specfile] [--media=floppy|iso|tar] [--legacy-postinst=0|1]"
+    echo $"              [--no-depmod]"
 }
 
 VER()
@@ -232,6 +233,9 @@ setup_kernels_arches()
 
 do_depmod()
 {
+    if [[ $no_depmod ]]; then
+        return
+    fi
     # $1 = kernel version
     if [ "${current_os}" != "Linux" ] ; then
         return
@@ -3427,6 +3431,7 @@ try_source_tree=''
 die_is_fatal="yes"
 [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
 [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
+no_depmod=""
 
 action_re='^(remove|(auto|un)?install|match|mk(driverdisk|tarball|rpm|deb|dsc|kmp)|build|add|status|ldtarball)$'
 
@@ -3472,6 +3477,7 @@ while (($# > 0)); do
 	--directive*)        read_arg _da "$1" "$2" || shift
 			     directive_array[${#directive_array[@]}]="$_da";;
 	--spec*)             read_arg specfile "$1" "$2" || shift;;
+	--no-depmod)         no_depmod="true";;
 	--debug)
 	    export PS4='${BASH_SOURCE}@${LINENO}(${FUNCNAME[0]}): '
 	    set -x;;

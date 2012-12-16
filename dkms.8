@@ -464,6 +464,13 @@ ensure that modules are compiled correctly.
 This option keeps DKMS from cleaning your kernel source tree after a
 build.
 .TP
+.B \-\-no\-depmod
+This option prevents DKMS from running the depmod command during
+.B install
+and
+.B uninstall
+which will avoid (re)calculating module dependencies and thereby save time.
+.TP
 .B \-\-kernelsourcedir <kernel\-source\-directory\-location>
 Using this option you can specify the location of your kernel source
 directory.  Most likely you will not need to set this if your kernel
