@@ -526,7 +526,8 @@ read_conf()
 	esac
 	case ${STRIP[$index]} in
 	    [nN]*) strip[$index]="no";;
-	    *)     strip[$index]="yes";;
+	    [yY]*) strip[$index]="yes";;
+	    '')    strip[$index]=${strip[0]:-yes};;
 	esac
 
 	# If unset, set by defaults

@@ -765,6 +765,7 @@ array directive.
 .B STRIP[#]=
 By default strip is considered to be "yes".  If set to "no", DKMS will not
 run strip \-g against your built module to remove debug symbols from it.
+STRIP[0] is used as the default for any unset entries in the STRIP array.
 .TP
 .B PACKAGE_NAME=
 This directive is used to give the name associated with the entire package of modules.  This is the same
