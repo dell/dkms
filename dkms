@@ -3187,8 +3187,14 @@ autoinstall() {
         IFS='/' read m v k a <<< "$mvka"
         [[ ! $last_m ]] && last_m="$m"
         # If the module is already installed or weak-installed, skip it.
-        _is_module_installed "$m" "$v" "$kernelver" "$arch" && continue
-        module_status_weak "$m" "$v" "$kernelver" "$arch" >/dev/null && continue
+        if _is_module_installed "$m" "$v" "$kernelver" "$arch"; then
+		installed_modules[${#installed_modules[@]}]="$m"
+		continue
+	fi
+        if module_status_weak "$m" "$v" "$kernelver" "$arch" >/dev/null; then
+		installed_modules[${#installed_modules[@]}]="$m"
+		continue
+	fi
         # if the module does not want to be autoinstalled, skip it.
         read_conf_or_die "$k" "$a" "$dkms_tree/$m/$v/source/dkms.conf"
         if [[ ! $AUTOINSTALL ]]; then
@@ -3220,7 +3226,18 @@ autoinstall() {
 		install_count=0
 		next_install=( )
 
-		# Step 1: Install modules that have an empty depdendency list.
+		# Step 1: Remove installed modules from all dependency lists.
+		for m in ${!build_depends[@]}; do
+			for d in ${build_depends[$m]}; do
+				for i in ${installed_modules[@]}; do
+					[[ "$d" = "$i" ]] && break 2
+				done
+				next_depends+="$d "
+			done
+			build_depends[$m]="${next_depends%% }"
+		done
+
+		# Step 2: Install modules that have an empty dependency list.
 		for mv in "${to_install[@]}"; do
 			IFS=/ read m v <<< "$mv"
 			if [[ -z "${build_depends[$m]}" ]]; then
@@ -3234,23 +3251,11 @@ autoinstall() {
 
 		wait
 
-		# Step 2: Keep going if at least one module was installed during
+		# Step 3: Keep going if at least one module was installed during
 		# this iteration.
 		[[ "$install_count" -gt 0 ]] || break;
 
-		# Step 3: Remove modules that were installed during Step 1 from
-		# the dependency lists of all other modules.
-		for m in ${!build_depends[@]}; do
-			for d in ${build_depends[$m]}; do
-				for i in ${installed_modules}; do
-					[[ "$d" = "$i" ]] && break 2
-				done
-				next_depends+="$d "
-			done
-			build_depends[$m]="${next_depends%% }"
-		done
-
-		# Step 4: Remove modules that were installed during Step 1 from
+		# Step 4: Remove modules that were installed during Step 2 from
 		# the job queue.
 		to_install=( "${next_install[@]}" )
 	done
