@@ -3228,9 +3228,10 @@ autoinstall() {
 
 		# Step 1: Remove installed modules from all dependency lists.
 		for m in ${!build_depends[@]}; do
+			next_depends=
 			for d in ${build_depends[$m]}; do
 				for i in ${installed_modules[@]}; do
-					[[ "$d" = "$i" ]] && break 2
+					[[ "$d" = "$i" ]] && continue 2
 				done
 				next_depends+="$d "
 			done
