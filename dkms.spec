@@ -97,7 +97,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc sample.spec sample.conf AUTHORS COPYING README.dkms
 %doc sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
 # these dirs are for plugins - owned by other packages
-%{_initddir}/dkms_autoinstaller
+%{_sysconfdir}/init.d/dkms_autoinstaller
 %{_sysconfdir}/kernel/postinst.d/%{name}
 %{_sysconfdir}/kernel/prerm.d/%{name}
 %{_sysconfdir}/bash_completion.d/%{name}
