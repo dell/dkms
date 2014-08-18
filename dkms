@@ -1419,7 +1419,8 @@ install_module()
 	echo $" - Installation"
 	echo $"   - Installing to $install_tree/$kernelver${dest_module_location[$count]}/"
 	mkdir -p $install_tree/$kernelver${dest_module_location[$count]}
-	cp -f "$base_dir/module/${dest_module_name[$count]}$module_suffix" "$install_tree/$kernelver${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+	[[ $symlink_modules ]] && symlink="-s"
+	cp -f $symlink  "$base_dir/module/${dest_module_name[$count]}$module_suffix" "$install_tree/$kernelver${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
 
     done
 
@@ -3391,6 +3392,7 @@ source_tree="/usr/src"
 install_tree="/lib/modules"
 tmp_location=${TMPDIR:-/tmp}
 verbose=""
+symlink_modules=""
 dkms_frameworkconf="/etc/dkms/framework.conf"
 
 # these can come from the environment or the config file
@@ -3469,6 +3471,7 @@ while (($# > 0)); do
 	--dkmstree*)         read_arg dkms_tree "$1" "$2" || shift;;
 	--sourcetree*)       read_arg source_tree "$1" "$2" || shift;;
 	--installtree*)      read_arg install_tree "$1" "$2" || shift;;
+	--symlink-modules)   symlink_module="true";;
 	--config*)           read_arg kernel_config "$1" "$2" || shift;;
 	--archive*)          read_arg archive_location "$1" "$2" || shift;;
 	--legacy-postinst*)  read_arg legacy_postinst "$1" "$2" || shift;;

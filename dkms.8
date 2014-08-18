@@ -931,9 +931,12 @@ default values for the variables.
 .B $source_tree
 and
 .B $install_tree
-which control where DKMS looks for its framework.  Note that these variables can also
-be manipulated on the command line with \-\-dkmstree, \-\-sourcetree
-and \-\-installtree options.
+which control where DKMS looks for its framework.  The 
+.B symlink_modules
+variable controls wheter binary modules are copied to /lib/modules or if only symlinks are
+created there. Note that these variables can also
+be manipulated on the command line with \-\-dkmstree, \-\-sourcetree, \-\-installtree 
+and \-\-symlink-modules options.
 .SH dkms_autoinstaller
 This boot\-time service automatically installs any module which has
 .B AUTOINSTALL="yes"
