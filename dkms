@@ -1268,7 +1268,7 @@ clean_build()
     fi
 
     # Clean the build directory
-    rm -rf "$dkms_tree/$module/$module_version/build/*"
+    rm -rf "$dkms_tree/$module/$module_version/build"
 }
 
 build_module()
@@ -3284,7 +3284,7 @@ function make_redhat3_driver_disk ()
     cp ${SPECFILE} ${temp_dir_name}/SPECS/$module.spec
     cp -rax $dkms_tree/$module/$module_version/build/ $temp_dir_name/SOURCES/$module-$module_version/
     # Clean the build directory
-    rm -rf "$dkms_tree/$module/$module_version/build/*"
+    rm -rf "$dkms_tree/$module/$module_version/build"
     cd $temp_dir_name/SOURCES
     invoke_command "tar -jcvf $temp_dir_name/SOURCES/$module-$module_version.tar.bz2 $module-$module_version/" "creating source tarball"
     local i=0
