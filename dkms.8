@@ -937,6 +937,12 @@ variable controls wheter binary modules are copied to /lib/modules or if only sy
 created there. Note that these variables can also
 be manipulated on the command line with \-\-dkmstree, \-\-sourcetree, \-\-installtree 
 and \-\-symlink-modules options.
+
+The
+.B $autoinstall_all_kernels
+variable is used by the common postinst for DKMS modules. It controls if the build should be done
+for all installed kernels or only for the current and latest installed kernel. It has no command 
+line equivalent.
 .SH dkms_autoinstaller
 This boot\-time service automatically installs any module which has
 .B AUTOINSTALL="yes"

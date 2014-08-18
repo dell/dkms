@@ -146,6 +146,11 @@ if [ -z "$NAME" ] || [ -z "$VERSION" ]; then
     exit 1
 fi
 
+# read framework configuration options
+if [ -r /etc/dkms/framework.conf ]; then
+    . /etc/dkms/framework.conf
+fi
+
 KERNELS=$(ls /lib/modules/)
 CURRENT_KERNEL=$(uname -r)
 
@@ -189,44 +194,35 @@ fi
 #
 # NOTE: if the headers are not installed then the
 #       module won't be built, as usual
-if [ -z "$UPGRADE" ]; then
-    echo "First Installation: checking all kernels..."
-    for KERNEL in $KERNELS; do
-        if [ ${KERNEL} = ${CURRENT_KERNEL} ]; then
-            # Kernel found
-            KERNELS=$CURRENT_KERNEL
-            break
-        fi
-    done
-else
-    KERNELS=$CURRENT_KERNEL
-fi
 
 # Here we look for the most recent kernel so that we can
 # build the module for it (in addition to doing it for the
 # current kernel.
 NEWEST_KERNEL=$(get_newest_kernel "$KERNELS")
 
-# If the current kernel doesn't come from the host of a chroot
-if [ `_is_kernel_name_correct $CURRENT_KERNEL` = "yes" ]; then
-    # See if it's worth building the module for both the newest kernel
-    # and for the current kernel
-    if [ -n "$NEWEST_KERNEL" ] && [ ${CURRENT_KERNEL} != ${NEWEST_KERNEL} ]; then
-        echo "Building for $CURRENT_KERNEL and $NEWEST_KERNEL"
-        KERNELS="$CURRENT_KERNEL $NEWEST_KERNEL"
+if [ -z "$autoinstall_all_kernels" ]; then
+    # If the current kernel is installed on the system or chroot
+    if [ `_is_kernel_name_correct $CURRENT_KERNEL` = "yes" ]; then
+        if [ -n "$NEWEST_KERNEL" ] && [ ${CURRENT_KERNEL} != ${NEWEST_KERNEL} ]; then
+            KERNELS="$CURRENT_KERNEL $NEWEST_KERNEL"
+        else
+            KERNELS=$CURRENT_KERNEL
+        fi
+    # The current kernel is not useful as it's not installed
     else
-        echo "Building only for $CURRENT_KERNEL"
-    fi
-# The current kernel is not useful as it's the host's
-else
-    echo "It is likely that $CURRENT_KERNEL belongs to a chroot's host"
+        echo "It is likely that $CURRENT_KERNEL belongs to a chroot's host"
 
-    # Let's use only the newest kernel
-    if [ -n "$NEWEST_KERNEL" ]; then
-        KERNELS="$NEWEST_KERNEL"
-        echo "Building only for $NEWEST_KERNEL"
+        # Let's use only the newest kernel if this is not a first installation
+        # otherwise build for all kernels
+        if [ -n "$NEWEST_KERNEL" -a -n "$UPGRADE" ]; then
+            KERNELS="$NEWEST_KERNEL"
+        fi
     fi
 fi
+
+# Take care of displaying newline separated list
+echo "Building for $KERNELS" | tr '\n' ',' \
+    | sed -e 's/,/, /g; s/, $/\n/; s/, \([^,]\+\)$/ and \1/'
 
 if [ -n "$ARCH" ]; then
     if which lsb_release >/dev/null && [ $(lsb_release -s -i) = "Ubuntu" ]; then
@@ -281,7 +277,7 @@ for KERNEL in $KERNELS; do
             esac
             dkms_status=`dkms status -m $NAME -v $VERSION -k $KERNEL $ARCH`
         else
-            echo "Module build for the currently running kernel was skipped since the"
+            echo "Module build for kernel $KERNEL was skipped since the"
             echo "kernel source for this kernel does not seem to be installed."
         fi
     fi
