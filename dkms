@@ -751,7 +751,7 @@ moduleconfig_update_obsoletes()
 {
     # $@ = files to process
     # do nothing if we have no obsoletes
-    [[ ${modules_conf_obsoletes[@]} ]] || return 0
+    [[ "${modules_conf_obsoletes[@]}" == "" ]] || return 0
     # generate sed args to remove obsolete modules
     local mod_diff
     for ((index=0; index < ${#dest_module_name[@]}; index++)); do
