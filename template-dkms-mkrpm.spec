@@ -52,7 +52,7 @@ if [ "$RPM_BUILD_ROOT" != "/" ]; then
 fi
 
 %post
-for POSTINST in %{_libdir}/dkms/common.postinst %{_datarootdir}/%{module_name}/postinst; do
+for POSTINST in %{_prefix}/lib/dkms/common.postinst %{_datarootdir}/%{module_name}/postinst; do
         if [ -f $POSTINST ]; then
                 $POSTINST %{module_name} %{version} %{_datarootdir}/%{module_name}
                 exit $?
