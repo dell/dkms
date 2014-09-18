@@ -1432,7 +1432,7 @@ install_module()
     # add to kabi-tracking
     if [[ ${weak_modules} ]]; then
 	echo $"Adding any weak-modules"
-	list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} --add-modules
+	list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} ${weak_modules_no_initrd} --add-modules
     fi
 
     # Run the post_install script
@@ -1613,7 +1613,7 @@ do_uninstall()
 	if [[ ${weak_modules} ]] && \
 	    (module_status_built $module $module_version |grep -q "installed"); then
 	    echo $"Removing any linked weak-modules"
-	    list_each_installed_module "$module" "$1" "$2" | ${weak_modules} --remove-modules
+	    list_each_installed_module "$module" "$1" "$2" | ${weak_modules} ${weak_modules_no_initrd} --remove-modules
 	fi
 
 	for ((count=0; count < ${#built_module_name[@]}; count++)); do
@@ -3586,6 +3586,15 @@ fi
 if [[ $arch && $all ]]; then
     die 3 $" You cannot specify an arch and also specify" \
 	$"--all on the command line."
+fi
+
+# If initramfs/initrd rebuild is not requested, skip it with Redhat's weak-modules
+if [[ $no_initrd && $weak_modules ]]; then
+    if [[ $running_distribution == el5 ]]; then
+        weak_modules_no_initrd="--no-initrd"
+    else
+        weak_modules_no_initrd="--no-initramfs"
+    fi
 fi
 
 # Run the specified action
