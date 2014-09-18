@@ -1,4 +1,42 @@
 .\" -*- nroff -*-
+.\"
+.\" .SY, .YS, .OP macros from /usr/share/groff/1.21/tmac/an-ext.tmac
+.\"
+.\" Declare start of command synopsis.  Sets up hanging indentation.
+.de SY
+.  ie !\\n(mS \{\
+.    nh
+.    nr mS 1
+.    nr mA \\n(.j
+.    ad l
+.    nr mI \\n(.i
+.  \}
+.  el \{\
+.    br
+.    ns
+.  \}
+.
+.  HP \w'\fB\\$1\fP\ 'u
+.  B "\\$1"
+..
+.
+.
+.\" End of command synopsis.  Restores adjustment.
+.de YS
+.  in \\n(mIu
+.  ad \\n(mA
+.  hy \\n(HY
+.  nr mS 0
+..
+.
+.
+.\" Declare optional option.
+.de OP
+.  ie \\n(.$-1 \
+.    RI "[\fB\\$1\fP" "\ \\$2" "]"
+.  el \
+.    RB "[" "\\$1" "]"
+..
 .TH DKMS 8 "June 2008" "Version 2.0.20"
 .SH NAME
 dkms \- Dynamic Kernel Module Support
