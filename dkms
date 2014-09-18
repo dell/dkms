@@ -753,19 +753,18 @@ moduleconfig_update_obsoletes()
 {
     # $@ = files to process
     # do nothing if we have no obsoletes
-    [[ "${modules_conf_obsoletes[@]}" == "" ]] || return 0
+    ( IFS=; [[ "${modules_conf_obsoletes[*]}" ]] ) || return 0
     # generate sed args to remove obsolete modules
     local mod_diff
     for ((index=0; index < ${#dest_module_name[@]}; index++)); do
 	[[ ${modules_conf_obsoletes[$index]} ]] || continue
 	for obsolete_module in ${modules_conf_obsoletes[$index]//,/ }; do
 	    # for module.conf style syntax
-	    sa_mc_o[${#sa_mc_o[@]}]="-e"
-	    sa_mc_o[${#sa_mc_o[@]}]="s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) $obsolete_module$/\1 ${dest_module_name[$index]}/g"
-
+	    sa_mc_o[${#sa_mc_o[*]}]="-e"
+	    sa_mc_o[${#sa_mc_o[*]}]="s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) $obsolete_module$/\1 ${dest_module_name[$index]}/g"
 	    # for /etc/sysconfig/kernel style syntax
-	    sa_sck_o[${#sa_sck_o[@]}]="-e"
-	    sa_sck_o[${#sa_sck_o[@]}]="s/\(INITRD_MODULES.*\)$obsolete_module\b\(.*\)/\1${dest_module_name[$index]}\2/"
+	    sa_sck_o[${#sa_sck_o[*]}]="-e"
+	    sa_sck_o[${#sa_sck_o[*]}]="s/\(INITRD_MODULES.*\)$obsolete_module\b\(.*\)/\1${dest_module_name[$index]}\2/"
 	done
     done
 
@@ -773,9 +772,9 @@ moduleconfig_update_obsoletes()
     for file in "$@"; do
 	[[ $file && -w $file ]] || continue
 	if [[ $file = /etc/sysconfig/kernel ]]; then
-	    sed "${sa_sck_o[@]}" "$file" > "$temp_dir_name/${file##*/}.new"
+	    sed "${sa_sck_o[*]}" "$file" > "$temp_dir_name/${file##*/}.new"
 	else
-	    sed "${sa_mc_o[@]}" "$file" > "$temp_dir_name/${file##*/}.new"
+	    sed "${sa_mc_o[*]}" "$file" > "$temp_dir_name/${file##*/}.new"
 	fi
 	if ! mod_diff=$(diff -u "$temp_dir_name/${file##*/}.new" "$file"); then
 	    echo $"$file updated to replace obsoleted module references:"
