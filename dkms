@@ -3044,8 +3044,8 @@ make_kmp_srpm()
 report_build_problem()
 {
     #If apport is on the system, files a build problem
-    if [ -x /usr/share/apport/apport ] && which python>/dev/null; then
-	python /usr/share/apport/package-hooks/dkms_packages.py -m $module -v $module_version -k ${kernelver[0]}
+    if [ -x /usr/share/apport/apport ] && which python3 >/dev/null; then
+	python3 /usr/share/apport/package-hooks/dkms_packages.py -m $module -v $module_version -k ${kernelver[0]}
     fi
     die "$@"
 }
