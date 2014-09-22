@@ -1,0 +1,11 @@
+[Unit]
+Description=Builds and install new kernel modules through DKMS
+Documentation=man:dkms(8)
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/bin/sh -c 'dkms autoinstall --verbose --kernelver $(uname -r)'
+
+[Install]
+WantedBy=multi-user.target
