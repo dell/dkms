@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+#DEBHELPER#
+
 # snippet from http://www.dpkg.org/dpkg/ConffileHandling
 
 # Remove a no-longer used conffile

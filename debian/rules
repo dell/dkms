@@ -1,12 +1,10 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
 
-# Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
-
 CURVER = $(shell dpkg-parsechangelog | grep ^Version | cut -d" " -f2 | cut -d"-" -f1 )
 
-include /usr/share/quilt/quilt.make
+%:
+	dh $@
 
 dh_dkms.1: debian/scripts/dh_dkms
 	pod2man \
@@ -14,47 +12,13 @@ dh_dkms.1: debian/scripts/dh_dkms
 		--release $(CURVER) \
 		$< > debian/scripts/$@
 
-build: build-stamp
-build-stamp: $(QUILT_STAMPFN)
-	dh_testdir
-	touch $@
+override_dh_auto_build:
 
-clean: unpatch
-	dh_testdir
-	dh_testroot
-	rm -f build-stamp configure-stamp
-	[ ! -f Makefile ] || $(MAKE) clean
-	dh_clean 
 
-install: build
-	dh_testdir
-	dh_testroot
-	dh_prep 
-	dh_installdirs
+override_dh_install:
 	$(MAKE) install-debian DESTDIR=$(CURDIR)/debian/dkms
 	dh_install
 	
-binary-arch: build install
-binary-indep: build install
-	dh_testdir
-	dh_testroot
-	dh_installchangelogs 
-	dh_installdocs AUTHORS debian/HOWTO.Debian
-	dh_lintian
-	dh_installexamples
-	dh_installman
-	dh_link
-	dh_strip
-	dh_compress
-	dh_fixperms
-	dh_installdeb
-	dh_shlibdeps
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-
-binary: binary-indep
-
 get-orig-source:
 	uscan \
 		--force-download \
@@ -64,5 +28,3 @@ get-orig-source:
 get-svn-source:
 	[ -d ../tarballs ] || mkdir ../tarballs
 	cd ../tarballs && make -f $(CURDIR)/debian/rules get-orig-source
-
-.PHONY: build clean binary-indep binary-arch binary install

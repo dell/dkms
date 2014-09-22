@@ -1,1 +1,1 @@
-dkms: python-script-but-no-python-dep ./usr/share/apport/package-hooks/dkms.py
+dkms binary: python-script-but-no-python-dep usr/share/apport/package-hooks/dkms_packages.py
