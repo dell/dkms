@@ -10,9 +10,10 @@ License: GPLv2+
 Group: System Environment/Base
 BuildArch: noarch
 URL: http://linux.dell.com/dkms
-
-Source0:        %{name}.service
-Source1:        %{name}_autoinstaller.init
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+Source0: http://linux.dell.com/dkms/permalink/dkms-%{version}.tar.gz
+# because Mandriva calls this package dkms-minimal
+Provides: dkms-minimal = %{version}
 
 Requires: coreutils
 Requires: cpio
@@ -25,6 +26,7 @@ Requires: kernel-devel
 Requires: sed
 Requires: tar 
 Requires: bash > 1.99
+
 %if 0%{?fedora} || 0%{?rhel} >= 7
 Requires:       kmod
 %else
@@ -42,13 +44,6 @@ Requires(preun):        /sbin/chkconfig
 Requires(preun):        /sbin/service
 Requires(postun):       /sbin/service
 %endif
-
-
-# because Mandriva calls this package dkms-minimal
-Provides: dkms-minimal = %{version}
-URL: http://linux.dell.com/dkms
-Source0: http://linux.dell.com/dkms/permalink/dkms-%{version}.tar.gz
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %if 0%{?fedora}
 Requires: kernel-devel
@@ -121,21 +116,6 @@ make install-redhat DESTDIR=$RPM_BUILD_ROOT \
     BASHDIR=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d \
     LIBDIR=$RPM_BUILD_ROOT%{_prefix}/lib/%{name}
 
-%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
-
-# Systemd unit files
-rm -rf %{buildroot}%{_initrddir}
-mkdir -p %{buildroot}%{_unitdir}
-install -p -m 644 -D %{SOURCE0} %{buildroot}%{_unitdir}/%{name}.service
-
-%else
-
-# Initscripts
-mkdir -p %{buildroot}%{_initrddir}
-install -p -m 755 -D %{SOURCE1} %{buildroot}%{_initrddir}/%{name}_autoinstaller
-
-%endif
-
 %clean
 rm -rf $RPM_BUILD_ROOT
 
@@ -165,11 +145,10 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root)
 %doc sample.spec sample.conf AUTHORS COPYING README.dkms
-%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
+#%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
 %{_unitdir}/%{name}.service
-%else
+#%endif
 %{_initrddir}/%{name}_autoinstaller
-%endif
 %{_prefix}/lib/%{name}
 %{_mandir}/*/*
 %{_sbindir}/%{name}
@@ -191,7 +170,7 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 
 %changelog
-* Mon Sept 22 2014 Mario Limonciello <Mario_Limonciello@dell.com>
+* Mon Sep 22 2014 Mario Limonciello <Mario_Limonciello@dell.com>
 - Merge with the spec file that has been adopted for RHEL/Fedora/CentOS.
 
 * Sat Aug 22 2009 Matt Domsch <Matt_Domsch@dell.com> - 2.1.0.0-1

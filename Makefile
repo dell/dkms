@@ -1,8 +1,8 @@
-RELEASE_DATE := "07-December-2011"
+RELEASE_DATE := "22-September-2014"
 RELEASE_MAJOR := 2
 RELEASE_MINOR := 2
-RELEASE_SUBLEVEL := 0
-RELEASE_EXTRALEVEL := .3
+RELEASE_SUBLEVEL := 1
+RELEASE_EXTRALEVEL := .0
 RELEASE_NAME := dkms
 RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_SUBLEVEL)$(RELEASE_EXTRALEVEL)
 RELEASE_STRING := $(RELEASE_NAME)-$(RELEASE_VERSION)
@@ -13,12 +13,13 @@ SBIN = $(DESTDIR)/usr/sbin
 ETC = $(DESTDIR)/etc/dkms
 VAR = $(DESTDIR)/var/lib/dkms
 MAN = $(DESTDIR)/usr/share/man/man8
-INITD = $(DESTDIR)/etc/init.d
+INITD = $(DESTDIR)/etc/rc.d/init.d
 LIBDIR = $(DESTDIR)/usr/lib/dkms
 BASHDIR = $(DESTDIR)/etc/bash_completion.d
 KCONF = $(DESTDIR)/etc/kernel
 SHAREDIR = $(DESTDIR)/usr/share
 DOCDIR = $(SHAREDIR)/doc/dkms
+SYSTEMD = $(DESTDIR)/etc/systemd/system
 
 #Define the top-level build directory
 BUILDDIR := $(shell pwd)
@@ -57,11 +58,13 @@ doc-perms:
 
 install-redhat: install doc-perms
 	mkdir -m 0755 -p  $(INITD)
+	mkdir -m 0755 -p  $(SYSTEMD)
 	install -p -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
 	install -p -m 0755 dkms_find-provides $(LIBDIR)/find-provides
 	install -p -m 0755 lsb_release $(LIBDIR)/lsb_release
 	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
 	install -p -m 0644 template-dkms-redhat-kmod.spec $(ETC)
+	install -p -m 0644 dkms.service $(SYSTEMD)
 	install -p -m 0755 dkms_autoinstaller $(INITD)
 
 install-doc:
