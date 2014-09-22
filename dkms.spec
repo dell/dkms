@@ -1,3 +1,7 @@
+%if 0%{?rhel} == 5
+%define _sharedstatedir /var/lib
+%endif
+
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
 Version: [INSERT_VERSION_HERE]
@@ -5,8 +9,41 @@ Release: 1%{?dist}
 License: GPLv2+
 Group: System Environment/Base
 BuildArch: noarch
-Requires: sed gawk findutils modutils tar cpio gzip grep coreutils
+URL: http://linux.dell.com/dkms
+
+Source0:        %{name}.service
+Source1:        %{name}_autoinstaller.init
+
+Requires: coreutils
+Requires: cpio
+Requires: findutils
+Requires: gawk
+Requires: gcc
+Requires: grep
+Requires: gzip
+Requires: kernel-devel
+Requires: sed
+Requires: tar 
 Requires: bash > 1.99
+%if 0%{?fedora} || 0%{?rhel} >= 7
+Requires:       kmod
+%else
+Requires:       module-init-tools
+%endif
+
+%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
+BuildRequires:          systemd
+Requires(post):         systemd
+Requires(preun):        systemd
+Requires(postun):       systemd
+%else
+Requires(post):         /sbin/chkconfig
+Requires(preun):        /sbin/chkconfig
+Requires(preun):        /sbin/service
+Requires(postun):       /sbin/service
+%endif
+
+
 # because Mandriva calls this package dkms-minimal
 Provides: dkms-minimal = %{version}
 URL: http://linux.dell.com/dkms
@@ -18,13 +55,13 @@ Requires: kernel-devel
 %endif
 
 %description
-This package contains the framework for the Dynamic
-Kernel Module Support (DKMS) method for installing
-module RPMS as originally developed by Dell.
+This package contains the framework for the Dynamic Kernel Module Support (DKMS)
+method for installing module RPMS as originally developed by Dell.
 
 %prep
 
 %setup -q
+
 %build
 
 %triggerpostun -- %{name} < 1.90.00-1
@@ -84,33 +121,36 @@ make install-redhat DESTDIR=$RPM_BUILD_ROOT \
     BASHDIR=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d \
     LIBDIR=$RPM_BUILD_ROOT%{_prefix}/lib/%{name}
 
+%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
+
+# Systemd unit files
+rm -rf %{buildroot}%{_initrddir}
+mkdir -p %{buildroot}%{_unitdir}
+install -p -m 644 -D %{SOURCE0} %{buildroot}%{_unitdir}/%{name}.service
+
+%else
+
+# Initscripts
+mkdir -p %{buildroot}%{_initrddir}
+install -p -m 755 -D %{SOURCE1} %{buildroot}%{_initrddir}/%{name}_autoinstaller
+
+%endif
+
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-%files
-%defattr(-,root,root)
-%{_sbindir}/%{name}
-%{_localstatedir}/lib/%{name}
-%{_prefix}/lib/%{name}
-%{_mandir}/*/*
-%config(noreplace) %{_sysconfdir}/%{name}
-%doc sample.spec sample.conf AUTHORS COPYING README.dkms
-%doc sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
-# these dirs are for plugins - owned by other packages
-%{_sysconfdir}/init.d/dkms_autoinstaller
-%{_sysconfdir}/kernel/postinst.d/%{name}
-%{_sysconfdir}/kernel/prerm.d/%{name}
-%{_sysconfdir}/bash_completion.d/%{name}
+%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
 
-%if 0%{?suse_version}
-# suse doesnt yet support /etc/kernel/{prerm.d,postinst.d}, but will fail build
-# with unowned dirs if we dont own them ourselves
-# when opensuse *does* add this support, we will need to BuildRequires kernel
-%dir %{_sysconfdir}/kernel
-%dir %{_sysconfdir}/kernel/postinst.d
-%dir %{_sysconfdir}/kernel/prerm.d
-%endif
+%post
+%systemd_post %{name}_autoinstaller.service
 
+%preun
+%systemd_preun %{name}_autoinstaller.service
+
+%postun
+%systemd_postun %{name}_autoinstaller.service
+
+%else
 
 %post
 # enable on initial install
@@ -120,7 +160,40 @@ rm -rf $RPM_BUILD_ROOT
 # remove on uninstall
 [ $1 -lt 1 ] && /sbin/chkconfig dkms_autoinstaller off ||:
 
+%endif
+
+%files
+%defattr(-,root,root)
+%doc sample.spec sample.conf AUTHORS COPYING README.dkms
+%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
+%{_unitdir}/%{name}.service
+%else
+%{_initrddir}/%{name}_autoinstaller
+%endif
+%{_prefix}/lib/%{name}
+%{_mandir}/*/*
+%{_sbindir}/%{name}
+%{_localstatedir}/lib/%{name}
+%config(noreplace) %{_sysconfdir}/%{name}
+# these dirs are for plugins - owned by other packages
+%{_sysconfdir}/kernel/postinst.d/%{name}
+%{_sysconfdir}/kernel/prerm.d/%{name}
+%{_sysconfdir}/bash_completion.d/%{name}
+
+%if 0%{?suse_version}
+%doc sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
+# suse doesnt yet support /etc/kernel/{prerm.d,postinst.d}, but will fail build
+# with unowned dirs if we dont own them ourselves
+# when opensuse *does* add this support, we will need to BuildRequires kernel
+%dir %{_sysconfdir}/kernel
+%dir %{_sysconfdir}/kernel/postinst.d
+%dir %{_sysconfdir}/kernel/prerm.d
+%endif
+
 %changelog
+* Mon Sept 22 2014 Mario Limonciello <Mario_Limonciello@dell.com>
+- Merge with the spec file that has been adopted for RHEL/Fedora/CentOS.
+
 * Sat Aug 22 2009 Matt Domsch <Matt_Domsch@dell.com> - 2.1.0.0-1
 - update to latest upstream
 - drop Requires: lsb.  avoid calling rpm (recursively) if possible.
