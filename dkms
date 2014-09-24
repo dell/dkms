@@ -294,7 +294,7 @@ make_initrd()
         done
         if [[ ! $kernel_file ]]; then
             error $"Unable to find valid kernel file under " \
-            $"$initrd_dir for kernel version $1" 
+            $"$initrd_dir for kernel version $1"
             return 1;
         fi
         invoke_command "$mkinitrd -k $kernel_file-$1 -i $initrd" "$mkinitrd" background
