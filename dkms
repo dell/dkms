@@ -3182,9 +3182,20 @@ autoinstall() {
 
     # Walk through our list of installed and built modules, and create
     # a list of modules that need to be reinstalled.
+    # Assuming all versions of same module to be parsed sequentially.
     while read status mvka; do
         IFS='/' read m v k a <<< "$mvka"
         [[ ! $last_m ]] && last_m="$m"
+        # autoinstall previous module's latest version after its deps.
+        if [[ $last_m != $m ]]; then
+            if [[ $tenative ]]; then
+                to_install[${#to_install[@]}]="$tenative"
+                build_depends["$last_m"]="${BUILD_DEPENDS[@]}"
+            fi
+            last_m="$m"
+            last_v='0'
+            tenative=''
+        fi
         # If the module is already installed or weak-installed, skip it.
         if _is_module_installed "$m" "$v" "$kernelver" "$arch"; then
 		installed_modules[${#installed_modules[@]}]="$m"
@@ -3198,27 +3209,21 @@ autoinstall() {
         read_conf_or_die "$k" "$a" "$dkms_tree/$m/$v/source/dkms.conf"
         if [[ ! $AUTOINSTALL ]]; then
             continue
-        # otherwise, only autoinstall the latest version we have hanging around.
-        elif [[ $last_m != $m ]]; then
-            last_m="$m"
-            last_v='0'
-            if [[ $tenative ]]; then
-                to_install[${#to_install[@]}]="$tenative"
-                build_depends["$m"]="${BUILD_DEPENDS[@]}"
-            fi
-            tenative=''
         fi
+        # otherwise, only autoinstall the latest version we have hanging around.
         if [[ ($(VER $v) > $(VER $last_v)) ]]; then
             last_v="$v"
             tenative="$m/$v"
         fi
     done < <(module_status)
+
     # We may have exited the loop with $tenative set.  If it is,
     # it contains something that should be updated.
     if [[ $tenative ]]; then
         to_install[${#to_install[@]}]="$tenative"
         build_depends["$m"]="${BUILD_DEPENDS[@]}"
     fi
+
     [[ $to_install ]] || return 0
 
 	while true; do
@@ -3258,6 +3263,11 @@ autoinstall() {
 		# Step 4: Remove modules that were installed during Step 2 from
 		# the job queue.
 		to_install=( "${next_install[@]}" )
+
+	done
+	for mv in "${to_install[@]}"; do
+		IFS=/ read m v <<< "$mv"
+		echo "$m/$v autoinstall failed due to missing dependencies: ${build_depends[$m]}"
 	done
 }
 
