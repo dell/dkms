@@ -285,7 +285,7 @@ make_initrd()
     if [[ $mkinitrd = dracut ]]; then
         invoke_command "$mkinitrd -f $initrd_dir/$initrd $1" "$mkinitrd" background
     elif [[ $mkinitrd = update-initramfs ]]; then
-        invoke_command "$mkinitrd -u" "$mkinitrd" background
+        invoke_command "$mkinitrd -u -k $1" "$mkinitrd" background
     elif $mkinitrd --version >/dev/null 2>&1; then
         invoke_command "$mkinitrd -f $initrd_dir/$initrd $1" "$mkinitrd" background
     elif [[ -e /etc/SuSE-release || -d /etc/SuSEconfig ]]; then
