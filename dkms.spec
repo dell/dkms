@@ -25,6 +25,7 @@ Requires: gzip
 Requires: kernel-devel
 Requires: sed
 Requires: tar 
+Requires: which
 Requires: bash > 1.99
 
 %if 0%{?fedora} || 0%{?rhel} >= 7
@@ -108,13 +109,24 @@ echo ""
 
 %install
 rm -rf $RPM_BUILD_ROOT
-make install-redhat DESTDIR=$RPM_BUILD_ROOT \
+
+%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
+make install-redhat-systemd DESTDIR=$RPM_BUILD_ROOT \
     SBIN=$RPM_BUILD_ROOT%{_sbindir} \
     VAR=$RPM_BUILD_ROOT%{_localstatedir}/lib/%{name} \
     MAN=$RPM_BUILD_ROOT%{_mandir}/man8 \
     ETC=$RPM_BUILD_ROOT%{_sysconfdir}/%{name} \
     BASHDIR=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d \
     LIBDIR=$RPM_BUILD_ROOT%{_prefix}/lib/%{name}
+%else
+make install-redhat-sysv DESTDIR=$RPM_BUILD_ROOT \
+    SBIN=$RPM_BUILD_ROOT%{_sbindir} \
+    VAR=$RPM_BUILD_ROOT%{_localstatedir}/lib/%{name} \
+    MAN=$RPM_BUILD_ROOT%{_mandir}/man8 \
+    ETC=$RPM_BUILD_ROOT%{_sysconfdir}/%{name} \
+    BASHDIR=$RPM_BUILD_ROOT%{_sysconfdir}/bash_completion.d \
+    LIBDIR=$RPM_BUILD_ROOT%{_prefix}/lib/%{name}
+%endif
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -122,33 +134,41 @@ rm -rf $RPM_BUILD_ROOT
 %if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
 
 %post
-%systemd_post %{name}_autoinstaller.service
+%systemd_post %{name}.service
 
 %preun
-%systemd_preun %{name}_autoinstaller.service
+if [ $1 -eq 0 ]; then
+    # Package removal, not upgrade
+    /bin/systemctl --no-reload disable %{name}.service >/dev/null 2>&1 || :
+fi
+
+%systemd_preun %{name}.service
 
 %postun
-%systemd_postun %{name}_autoinstaller.service
+%systemd_postun %{name}.service
 
 %else
 
 %post
 # enable on initial install
-[ $1 -lt 2 ] && /sbin/chkconfig dkms_autoinstaller on ||:
+[ $1 -lt 2 ] && /sbin/chkconfig --add dkms_autoinstaller >/dev/null 2>&1 ||:
+[ $1 -lt 2 ] && /sbin/chkconfig dkms_autoinstaller on >/dev/null 2>&1 ||:
 
 %preun
 # remove on uninstall
-[ $1 -lt 1 ] && /sbin/chkconfig dkms_autoinstaller off ||:
+[ $1 -lt 1 ] && /sbin/chkconfig dkms_autoinstaller off >/dev/null 2>&1 ||:
+[ $1 -lt 1 ] && /sbin/chkconfig --del dkms_autoinstaller >/dev/null 2>&1 ||:
 
 %endif
 
 %files
 %defattr(-,root,root)
 %doc sample.spec sample.conf AUTHORS COPYING README.dkms
-#%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
+%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
 %{_unitdir}/%{name}.service
-#%endif
+%else
 %{_initrddir}/%{name}_autoinstaller
+%endif
 %{_prefix}/lib/%{name}
 %{_mandir}/*/*
 %{_sbindir}/%{name}

@@ -19,7 +19,7 @@ BASHDIR = $(DESTDIR)/etc/bash_completion.d
 KCONF = $(DESTDIR)/etc/kernel
 SHAREDIR = $(DESTDIR)/usr/share
 DOCDIR = $(SHAREDIR)/doc/dkms
-SYSTEMD = $(DESTDIR)/etc/systemd/system
+SYSTEMD = $(DESTDIR)/usr/lib/systemd/system
 
 #Define the top-level build directory
 BUILDDIR := $(shell pwd)
