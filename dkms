@@ -33,7 +33,7 @@ readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
    DEST_MODULE_LOCATION dest_module_location
    modules_conf_obsoletes MODULES_CONF_ALIAS_TYPE
    modules_conf_alias_type STRIP strip MODULES_CONF_OBSOLETE_ONLY
-   modules_conf_obsolete_only AUTOINSTALL"
+   modules_conf_obsolete_only AUTOINSTALL NO_WEAK_MODULES"
 
 # Some important regular expressions.  Requires bash 3 or above.
 # Any poor souls still running bash 2 or older really need an upgrade.
@@ -1481,10 +1481,12 @@ install_module()
     ln -s "$module_version/$kernelver/$arch" "$dkms_tree/$module/kernel-$kernelver-$arch" 2>/dev/null
 
     # Add to kabi-tracking
-    if [[ ${weak_modules} ]]; then
-        echo $"Adding any weak-modules"
-        list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} ${weak_modules_no_initrd} --add-modules
-    fi
+	if [ -z "$NO_WEAK_MODULES" ]; then
+		if [[ ${weak_modules} ]]; then
+			echo $"Adding any weak-modules"
+			list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} ${weak_modules_no_initrd} --add-modules
+		fi
+	fi
 
     # Run the post_install script
     run_build_script post_install "$post_install"
@@ -1661,10 +1663,12 @@ do_uninstall()
         echo $""
         echo $"Status: Before uninstall, this module version was ACTIVE on this kernel."
         # remove kabi-tracking if last instance removed
-        if [[ ${weak_modules} ]] && (module_status_built $module $module_version |grep -q "installed"); then
-            echo $"Removing any linked weak-modules"
-            list_each_installed_module "$module" "$1" "$2" | ${weak_modules} ${weak_modules_no_initrd} --remove-modules
-        fi
+		if [ -z "$NO_WEAK_MODULES" ]; then
+			if [[ ${weak_modules} ]] && (module_status_built $module $module_version |grep -q "installed"); then
+				echo $"Removing any linked weak-modules"
+				list_each_installed_module "$module" "$1" "$2" | ${weak_modules} ${weak_modules_no_initrd} --remove-modules
+			fi
+		fi
 
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
         real_dest_module_location="$(find_actual_dest_module_location $module $count $1 $2)"
@@ -1865,6 +1869,7 @@ find_module_from_ko()
 module_status_weak() {
     # $1 = module, $2 = module version, $3 = kernel version weak installed to,
     # $4 = kernel arch, $5 = kernel version built for
+	[ -z "$NO_WEAK_MODULES" ] || return 1
     [[ $weak_modules ]] || return 1
     local m v k a weak_ko mod installed_ko f ret=1 oifs=$IFS
     local -a already_found
