@@ -724,7 +724,42 @@ check_version_sanity()
     local -a kernels_info dkms_info
     set_module_suffix
     read -a kernels_module < <(find $lib_tree -name ${4}$module_suffix)
-    [[ $kernels_module ]] || return 0
+    if [ -z $kernels_module ]; then
+        # Magic split into array syntax saves trivial awk and cut calls.
+        local -a obs=(${3//-/ })
+        local -a my=(${1//-/ })
+        local obsolete=0
+        if [[ ${obs} && ${my} ]]; then
+            if [[ $(VER ${obs}) == $(VER ${my}) && ! $force ]]; then
+                # They get obsoleted possibly in this kernel release
+                if [[ ! ${obs[1]} ]]; then
+                    # They were obsoleted in this upstream kernel
+                    obsolete=1
+                elif [[ $(VER ${my[1]}) > $(VER ${obs[1]}) ]]; then
+                    # They were obsoleted in an earlier ABI bump of the kernel
+                    obsolete=1
+                elif [[ $(VER ${my[1]}) = $(VER ${obs[1]}) ]]; then
+                    # They were obsoleted in this ABI bump of the kernel
+                    obsolete=1
+                fi
+            elif [[ $(VER ${my}) > $(VER ${obs}) && ! $force ]]; then
+                # They were obsoleted in an earlier kernel release
+                obsolete=1
+            fi
+        fi
+
+        if ((obsolete == 1)); then
+            echo $"" >&2
+            echo $"Module has been obsoleted due to being included" >&2
+            echo $"in kernel $3.  We will avoid installing" >&2
+            echo $"for future kernels above $3." >&2
+            echo $"You may override by specifying --force." >&2
+            return 1
+  else
+          return 0
+        fi
+    fi
+
     if [[ ${kernels_module[1]} ]]; then
         warn $"Warning! Cannot do version sanity checking because multiple ${4}$module_suffix" \
             $"modules were found in kernel $1."
@@ -755,37 +790,6 @@ check_version_sanity()
         return 1
     fi
 
-    # Magic split into array syntax saves trivial awk and cut calls.
-    local -a obs=(${3//-/ })
-    local -a my=(${1//-/ })
-    local obsolete=0
-    if [[ ${obs} && ${my} ]]; then
-        if [[ $(VER ${obs}) == $(VER ${my}) && ! $force ]]; then
-            # They get obsoleted possibly in this kernel release
-            if [[ ! ${obs[1]} ]]; then
-                # They were obsoleted in this upstream kernel
-                obsolete=1
-            elif [[ $(VER ${my[1]}) > $(VER ${obs[1]}) ]]; then
-                # They were obsoleted in an earlier ABI bump of the kernel
-                obsolete=1
-            elif [[ $(VER ${my[1]}) = $(VER ${obs[1]}) ]]; then
-                # They were obsoleted in this ABI bump of the kernel
-                obsolete=1
-            fi
-        elif [[ $(VER ${my}) > $(VER ${obs}) && ! $force ]]; then
-            # They were obsoleted in an earlier kernel release
-            obsolete=1
-        fi
-    fi
-
-    if ((obsolete == 1)); then
-        echo $"" >&2
-        echo $"Module has been obsoleted due to being included" >&2
-        echo $"in kernel $3.  We will avoid installing" >&2
-        echo $"for future kernels above $3." >&2
-        echo $"You may override by specifying --force." >&2
-        return 1
-    fi
     return 0
 }
 
