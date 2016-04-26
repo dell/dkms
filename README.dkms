@@ -1,12 +1,9 @@
-README.dkms
-Version 1.1
-2/4/2004
-
 This intention of this README is to explain how a DKMS enabled module RPM
 functions and also how DKMS can be used in conjunction with tarballs which
 contain a dkms.conf file within them.
 
-The DKMS project (and any updates) can be found at: http://linux.dell.com/dkms/
+The DKMS project (and any updates) can be found at: https://github.com/dell-oss/dkms
+NOTE: IT IS NO LONGER HOSTED ON LINUX.DELL.COM.
 
 Table of Contents
 0. Installation of DKMS via RPM
@@ -133,4 +130,4 @@ dkms.conf configuration file.
 You may also wish to join the dkms-devel public mailing-list at
 http://lists.us.dell.com/.
 
-The DKMS project is located at: http://linux.dell.com/dkms/
+The DKMS project is located at: https://github.com/dell-oss/dkms

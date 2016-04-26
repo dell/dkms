@@ -7,9 +7,9 @@ Uploaders: David Paleino <dapal@debian.org>,
  Giuseppe Iuculano <iuculano@debian.org>
 Build-Depends: debhelper (>= 7.0.50~), quilt
 Standards-Version: 3.9.2
-Homepage: http://linux.dell.com/dkms
-Vcs-Git: http://linux.dell.com/git/dkms.git 
-Vcs-Browser: http://linux.dell.com/git/dkms.git 
+Homepage: https://github.com/dell-oss/dkms
+Vcs-Git: https://github.com/dell-oss/dkms.git
+Vcs-Browser: https://github.com/dell-oss/dkms.git
 
 Package: dkms
 Architecture: all
