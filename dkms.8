@@ -561,6 +561,15 @@ prior than DKMS 2.1.  This option currently defaults to 1.
 A supplemental configuration file to the system-wide dkms framework, typically located
 in /etc/dkms/framework.conf.  All option that are normally provided on a command line
 can be provided in this file.
+.TP
+.B \-j number
+Run no more than
+.I number
+jobs in parallel; see the -j option of
+.I make(1).
+Defaults to the number of CPUs in the system, detected by
+.I nproc(1).
+Specify 0 to impose no limit on the number of parallel jobs.
 .SH ORIGINAL MODULES
 During the first install of a module for a <kernelversion>,
 .B dkms
