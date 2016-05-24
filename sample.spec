@@ -93,7 +93,7 @@ if [ -z "$loaded_tarballs" ]; then
 	else
 		echo -e ""
 		echo -e "Module build for the currently running kernel was skipped since the"
-		echo -e "kernel source for this kernel does not seem to be installed."
+		echo -e "kernel headers for this kernel do not seem to be installed."
 	fi
 fi
 exit 0
