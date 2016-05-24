@@ -130,6 +130,7 @@ show_usage()
     echo $"              [--binaries-only] [--source-only] [-r release (SuSE)] [--verbose]"
     echo $"              [--size] [--spec=specfile] [--media=floppy|iso|tar] [--legacy-postinst=0|1]"
     echo $"              [--no-depmod]"
+    echo $"              [-j number]"
 }
 
 VER()
@@ -146,6 +147,18 @@ VER()
         -e 's: \([0-9]\) : 00\1 :g' \
         -e 's: \([0-9][0-9]\) : 0\1 :g' \
         -e 's: ::g'
+}
+
+# Find out how many CPUs there are so that we may pass an appropriate -j
+# option to make. Ignore hyperthreading for now.
+get_num_cpus()
+{
+   # use nproc(1) from coreutils 8.1-1+ if available, otherwise single job
+   if [ -x /usr/bin/nproc ]; then
+	nproc
+   else
+	echo "1"
+  fi
 }
 
 # Figure out the correct module suffix for the kernel we are currently
@@ -1148,7 +1161,7 @@ prepare_kernel()
         invoke_command "cp /boot/vmlinuz.version.h include/linux/version.h" "using /boot/vmlinux.version.h"
         invoke_command "cp -f $kernel_config .config" "using $kernel_config"
         invoke_command "make KERNELRELEASE=$1 cloneconfig" "make cloneconfig" background
-        invoke_command "make CONFIG_MODVERSIONS=1 KERNELRELEASE=$1 dep" "make CONFIG_MODVERSIONS=1 dep" background
+        invoke_command "make -j$parallel_jobs CONFIG_MODVERSIONS=1 KERNELRELEASE=$1 dep" "make CONFIG_MODVERSIONS=1 dep" background
     elif grep -q rhconfig.h $kernel_source_dir/include/linux/{modversions,version}.h 2>/dev/null; then
         echo $"Running Red Hat style preparation routine"
         invoke_command "make clean" "make clean" background
@@ -1194,9 +1207,9 @@ prepare_kernel()
 
         invoke_command "make KERNELRELEASE=$1 oldconfig" "make oldconfig" background
         if [[ $(VER $1) < $(VER 2.5) ]]; then
-            invoke_command "make KERNELRELEASE=$1 dep" "make dep" background
+            invoke_command "make -j$parallel_jobs KERNELRELEASE=$1 dep" "make dep" background
         else
-            invoke_command "make KERNELRELEASE=$1 prepare-all scripts" "make prepare-all" background
+            invoke_command "make -j$parallel_jobs KERNELRELEASE=$1 prepare-all scripts" "make prepare-all" background
         fi
     fi
     cd - >/dev/null
@@ -1268,7 +1281,7 @@ do_build()
     invoke_command "$clean" "cleaning build area" background
     echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$dkms_tree/$module/$module_version/build/make.log"
     date >> "$dkms_tree/$module/$module_version/build/make.log"
-    local the_make_command="${make_command/#make/make KERNELRELEASE=$kernelver}"
+    local the_make_command="${make_command/#make/make -j$parallel_jobs KERNELRELEASE=$kernelver}"
 
     invoke_command "{ $the_make_command; } >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$the_make_command" background || \
         report_build_problem 10 $"Bad return status for module build on kernel: $kernelver ($arch)" \
@@ -3732,6 +3745,8 @@ while (($# > 0)); do
             export PS4='${BASH_SOURCE}@${LINENO}(${FUNCNAME[0]}): '
             set -x
             ;;
+        -j)
+            read_arg parallel_jobs "$1" "$2" || shift;;
         -*|--*)
             error $" Unknown option: $1"
             show_usage
@@ -3791,6 +3806,12 @@ if [[ $no_initrd && $weak_modules ]]; then
         weak_modules_no_initrd="--no-initramfs"
     fi
 fi
+
+# Default to -j<number of CPUs>
+parallel_jobs=${parallel_jobs:-$(get_num_cpus)}
+
+# Make sure we're not passing -j0 to make; treat -j0 as just "-j"
+[[ "$parallel_jobs" = 0 ]] && parallel_jobs=""
 
 # Run the specified action
 if [ -z "$action" ]; then

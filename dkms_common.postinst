@@ -278,7 +278,7 @@ for KERNEL in $KERNELS; do
             dkms_status=`dkms status -m $NAME -v $VERSION -k $KERNEL $ARCH`
         else
             echo "Module build for kernel $KERNEL was skipped since the"
-            echo "kernel source for this kernel does not seem to be installed."
+            echo "kernel headers for this kernel does not seem to be installed."
         fi
     fi
 
