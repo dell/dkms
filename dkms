@@ -1251,7 +1251,7 @@ prepare_build()
 
     # Set up temporary build directory for build
     rm -rf "$dkms_tree/$module/$module_version/build"
-    cp -rf "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
+    cp -a "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
 
     cd "$dkms_tree/$module/$module_version/build"
 
@@ -3439,7 +3439,7 @@ function make_redhat3_driver_disk ()
     fi
     # Set up temporary build directory for build
     rm -rf "$dkms_tree/$module/$module_version/build"
-    cp -rf "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
+    cp -a "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
 
     cd "$dkms_tree/$module/$module_version/build"
 
