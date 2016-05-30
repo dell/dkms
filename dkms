@@ -137,8 +137,7 @@ show_usage()
     echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel] [--no-initrd]"
     echo $"              [--binaries-only] [--source-only] [-r release (SuSE)] [--verbose]"
     echo $"              [--size] [--spec=specfile] [--media=floppy|iso|tar] [--legacy-postinst=0|1]"
-    echo $"              [--no-depmod]"
-    echo $"              [-j number]"
+    echo $"              [--no-depmod] [-j number] [--version]"
 }
 
 VER()
@@ -3759,7 +3758,8 @@ while (($# > 0)); do
             set -x
             ;;
         -j)
-            read_arg parallel_jobs "$1" "$2" || shift;;
+            read_arg parallel_jobs "$1" "$2" || shift
+            ;;
         -*|--*)
             error $" Unknown option: $1"
             show_usage
