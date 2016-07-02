@@ -169,6 +169,14 @@ set_module_suffix()
     kernel_test="${1-:$(uname -r)}"
     module_suffix=".ko"
     [[ $(VER $kernel_test) < $(VER 2.5) ]] && module_suffix=".o"
+    grep -q '\.gz:' /lib/modules/$kernel_test/modules.dep 2>/dev/null && gz_modules=1
+    if [ -n "$gz_modules" ]; then
+	[ -z "$delayed_gzip" ] && module_suffix=${module_suffix}.gz
+    fi
+    if [ -n "$xz_modules" ]; then
+       module_suffix=${module_suffix}.xz
+    fi
+
 }
 
 set_kernel_source_dir()
@@ -259,6 +267,11 @@ do_depmod()
     else
         depmod -a "$1"
     fi
+    grep -q '\.xz:' /lib/modules/$kernel_test/modules.dep 2>/dev/null && xz_modules=1
+    if [ -n "$xz_modules" ]; then
+       [ -z "$delayed_xz" ] && module_suffix=${module_suffix}.xz
+    fi
+
 }
 
 # This function is a little hairy -- every distro has slightly different tools
@@ -1309,6 +1322,14 @@ do_build()
     cp -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix" \
         "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
     done
+
+    if [ -n "$gz_modules" ]; then
+	gzip -9f $dkms_tree/$module/$module_version/${kernelver_array[0]}/${arch_array[0]}/module/${dest_module_name[$count]}$module_suffix
+    fi
+
+    if [ -n "$xz_modules" ]; then
+	xz -f $dkms_tree/$module/$module_version/${kernelver_array[0]}/${arch_array[0]}/module/${dest_module_name[$count]}$module_suffix
+    fi
 
     # Run the post_build script
     run_build_script post_build "$post_build"
@@ -2677,7 +2698,7 @@ load_tarball()
        fi
     fi
 
-    # Figure out what kind of archive it is (tar.gz, tar, tar.bz, etc)
+    # Figure out what kind of archive it is (tar.gz, tar, tar.bz, tar.xz, etc)
     # Note that this does not depend on the extensions being correct.
     local tar_options=""
     for xpand in gzip bzip xz; do
@@ -2895,6 +2916,10 @@ make_rpm()
     if ! which rpmbuild >/dev/null 2>&1 ; then
         die 1 $"rpmbuild not present." \
             $"Install the rpm-build package."
+    fi
+
+    if `xz -t $archive_location 2>/dev/null`; then
+	tar_options="${tar_options}J"
     fi
 
     # Read the conf file
@@ -3841,7 +3866,7 @@ for action_to_run in $action; do
         check_root && make_driver_disk
         ;;
     build)
-        build_modules
+        delayed_xz=1 && delayed_gzip=1 && build_modules
         ;;
     add)
         add_module
