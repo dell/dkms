@@ -9,7 +9,7 @@ Release: 1%{?dist}
 License: GPLv2+
 Group: System Environment/Base
 BuildArch: noarch
-URL: http://linux.dell.com/dkms
+URL: https://github.com/dell/dkms
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Source0: http://linux.dell.com/dkms/permalink/dkms-%{version}.tar.gz
 # because Mandriva calls this package dkms-minimal

@@ -1,3 +1,7 @@
 version=3
 
-http://linux.dell.com/dkms/permalink/dkms-(.*)\.tar\.gz
+#we no longer are hosted on linux.dell.com
+#http://linux.dell.com/dkms/permalink/dkms-(.*)\.tar\.gz
+
+https://github.com/dell/dkms/releases \
+.*[^n]/(?:|v|version-|r|REL_|rel-|dkms(?:_|-))(\d[^\s/]*)\.(?:tar\.xz|txz|tar\.bz2|tbz2|tar\.gz|tgz)

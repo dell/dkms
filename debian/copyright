@@ -1,8 +1,8 @@
-Source: http://linux.dell.com/dkms/
+Source: https://github.com/dell/dkms
 
 Files: debian/HOWTO.Debian
-Copyright: © 2008, Dell, Inc. <dkms-devel@lists.us.dell.com>
-                   Mario Limonciello <Mario_Limonciello@dell.com>
+Copyright: © 2008-2016, Dell, Inc. <dkms-devel@lists.us.dell.com>
+
 License: GPL-2+
  This package is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
