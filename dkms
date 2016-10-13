@@ -96,7 +96,7 @@ error() (
 
 warn() (
     exec >&2
-    echo -n "$Warning: "
+    echo -n $"Warning: "
     for s in "$@"; do echo "$s"; done
 )
 
