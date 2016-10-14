@@ -72,10 +72,18 @@ invoke_command()
     if [[ $3 = background && ! $verbose ]]; then
         local pid progresspid
         (eval "$1" >/dev/null 2>&1) & pid=$!
-        while [ -d /proc/$pid ]; do
-            sleep 3
-            echo -en "."
-        done & progresspid=$!
+        {
+            on_exit() {
+                kill $(jobs -p) 2>/dev/null
+                wait $(jobs -p) 2>/dev/null
+            }
+            trap on_exit EXIT
+            while [ -d /proc/$pid ]; do
+                sleep 3 &
+                wait $!
+                echo -en "."
+            done
+        } & progresspid=$!
         wait $pid 2>/dev/null
         exitval=$?
         kill $progresspid 2>/dev/null
