@@ -1,7 +1,7 @@
 RELEASE_DATE := "22-September-2014"
 RELEASE_MAJOR := 2
-RELEASE_MINOR := 2
-RELEASE_SUBLEVEL := 1
+RELEASE_MINOR := 3
+RELEASE_SUBLEVEL := 0
 RELEASE_EXTRALEVEL := .0
 RELEASE_NAME := dkms
 RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_SUBLEVEL)$(RELEASE_EXTRALEVEL)
@@ -50,7 +50,7 @@ install:
 	install -p -m 0755 kernel_prerm.d_dkms  $(KCONF)/prerm.d/dkms
 	install -p -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
 
-DOCFILES=sample.spec sample.conf AUTHORS COPYING README.dkms sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
+DOCFILES=sample.spec sample.conf AUTHORS COPYING README.md sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
 
 doc-perms:
 	# ensure doc file permissions ok

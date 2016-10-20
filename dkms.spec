@@ -163,7 +163,7 @@ fi
 
 %files
 %defattr(-,root,root)
-%doc sample.spec sample.conf AUTHORS COPYING README.dkms
+%doc sample.spec sample.conf AUTHORS COPYING README.md
 %if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
 %{_unitdir}/%{name}.service
 %else
