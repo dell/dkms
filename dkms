@@ -1896,8 +1896,8 @@ module_status_weak() {
     # $4 = kernel arch, $5 = kernel version built for
 	[ -z "$NO_WEAK_MODULES" ] || return 1
     [[ $weak_modules ]] || return 1
-    local m v k a weak_ko mod installed_ko f ret=1 oifs=$IFS
-    local -a already_found
+    local m v k a kern weak_ko mod installed_ko f ret=1 oifs=$IFS
+    local -A already_found
     for weak_ko in "$install_tree/"*/weak-updates/*; do
         [[ -e $weak_ko ]] || continue
         [[ -L $weak_ko ]] && installed_ko="$(readlink -f "$weak_ko")" || continue
@@ -1905,12 +1905,17 @@ module_status_weak() {
         kern=${weak_ko#$install_tree/}
         kern=${kern%/weak-updates/*}
         [[ $m = ${1:-*} && $v = ${2:-*} && $k = ${5:-*} && $a = ${4:-*} && $kern = ${3:-*} ]] || continue
+	already_found[$m/$v/$kern/$a/$k]+=${weak_ko##*/}" "
+    done
+    # Check to see that all ko's are present for each module
+    for mod in ${!already_found[@]}; do
+	IFS=/ read m v k a kern <<< "$mod"
+	# ensure each module is weak linked
+	for installed_ko in $(find $dkms_tree/$m/$v/$kern/$a/module -type f); do
+	    [[ ${already_found[$mod]} != *"$installed_ko"* ]] && continue 2
+	done
         ret=0
-        for f in "${already_found[@]}"; do
-            [[ $f = $m/$v/$kern/$a/$k ]] && continue 2
-        done
-        already_found[${#already_found[@]}]="$m/$v/$kern/$a/$k"
-        echo "installed-weak $m/$v/$kern/$a/$k"
+        echo "installed-weak $mod"
     done
     return $ret
 }
