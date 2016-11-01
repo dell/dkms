@@ -52,7 +52,7 @@ if options.kernel:
     try:
         supported_kernel = apport.packaging.is_distro_package(kernel_package)
     except ValueError as e:
-        if str(e) == 'package does not exist':
+        if str(e) == 'package %s does not exist' % kernel_package:
             supported_kernel = False
 
     if not supported_kernel:
