@@ -94,5 +94,8 @@ if 'DKMSBuildLog' in report:
 
 if options.kernel:
     report['DKMSKernelVersion'] = options.kernel
-with open(apport.fileutils.make_report_path(report), 'wb') as f:
-    report.write(f)
+try:
+    with apport.fileutils.make_report_file(report) as f:
+        report.write(f)
+except (IOError, OSError) as e:
+    apport.fatal('Cannot create report: ' + str(e))
