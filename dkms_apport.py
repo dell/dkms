@@ -62,18 +62,18 @@ if options.kernel:
 make_log=os.path.join('/var','lib','dkms',options.module,options.version,'build','make.log')
 
 report = apport.Report('Package')
-report['Package'] = package
-try:
-    report['SourcePackage'] = apport.packaging.get_source(package)
-except ValueError:
-    sys.stderr.write('ERROR (dkms apport): unable to determine source package for %s\n' % package)
-    sys.exit(3)
 try:
     version = packaging.get_version(package)
 except ValueError:
     version = '(not installed)'
 if version is None:
     version = '(not installed)'
+report['Package'] = '%s %s' % (package, version)
+try:
+    report['SourcePackage'] = apport.packaging.get_source(package)
+except ValueError:
+    sys.stderr.write('ERROR (dkms apport): unable to determine source package for %s\n' % package)
+    sys.exit(3)
 
 if report['SourcePackage'] == 'fglrx-installer':
     fglrx_make_log = os.path.join('/var','lib','dkms',options.module,options.version,'build','make.sh.log')
