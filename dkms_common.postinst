@@ -53,6 +53,7 @@ _get_newest_kernel_debian() {
     NEWEST_ABI=
 
     for kernel in /boot/config-*; do
+        [ -f "$kernel" ] || continue
         KERNEL=${kernel#*-}
         KERNEL_VERSION=${KERNEL%%-*}
         ABI=${KERNEL#*-}
