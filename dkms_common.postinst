@@ -6,6 +6,8 @@
 
 set -e
 
+. /usr/share/debconf/confmodule
+
 uname_s=$(uname -s)
 
 _get_kernel_dir() {

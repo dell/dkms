@@ -1414,10 +1414,29 @@ clean_build()
     rm -rf "$dkms_tree/$module/$module_version/build"
 }
 
+sign_build()
+{
+    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
+    if type update-secureboot-policy >/dev/null 2>&1; then
+        echo $"Signing module:"
+        SHIM_NOTRIGGER=y update-secureboot-policy --new-key
+        for ko in `find "$base_dir/module/" -name "*.ko" -print`;
+        do
+            echo " - $ko"
+            kmodsign sha512 \
+                /var/lib/shim-signed/mok/MOK.priv \
+                /var/lib/shim-signed/mok/MOK.der \
+                "$ko"
+        done
+        update-secureboot-policy --enroll-key
+    fi
+}
+
 build_module()
 {
     prepare_build
     do_build
+    sign_build
     clean_build
     echo $""
     echo $"DKMS: build completed."
