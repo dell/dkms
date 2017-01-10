@@ -28,13 +28,13 @@ Requires: tar
 Requires: which
 Requires: bash > 1.99
 
-%if 0%{?fedora} || 0%{?rhel} >= 7
+%if 0%{?fedora} || 0%{?rhel} >= 7 || 0%{?suse_version} >= 1210
 Requires:       kmod
 %else
 Requires:       module-init-tools
 %endif
 
-%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
+%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7 || 0%{?suse_version} >= 1210
 BuildRequires:          systemd
 Requires(post):         systemd
 Requires(preun):        systemd
@@ -48,6 +48,11 @@ Requires(postun):       /sbin/service
 
 %if 0%{?fedora}
 Requires: kernel-devel
+%endif
+
+%if 0%{?suse_version} >= 1210
+BuildRequires: systemd-rpm-macros
+%{?systemd_requires}
 %endif
 
 %description
@@ -110,7 +115,7 @@ echo ""
 %install
 rm -rf $RPM_BUILD_ROOT
 
-%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
+%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7 || 0%{?suse_version} >= 1210
 make install-redhat-systemd DESTDIR=$RPM_BUILD_ROOT \
     SBIN=$RPM_BUILD_ROOT%{_sbindir} \
     VAR=$RPM_BUILD_ROOT%{_localstatedir}/lib/%{name} \
@@ -131,7 +136,7 @@ make install-redhat-sysv DESTDIR=$RPM_BUILD_ROOT \
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
+%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7 || 0%{?suse_version} >= 1210
 
 %post
 %systemd_post %{name}.service
@@ -164,7 +169,7 @@ fi
 %files
 %defattr(-,root,root)
 %doc sample.spec sample.conf AUTHORS COPYING README.md
-%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7
+%if 0%{?fedora} >= 20 || 0%{?rhel} >= 7 || 0%{?suse_version} >= 1210
 %{_unitdir}/%{name}.service
 %else
 %{_initrddir}/%{name}_autoinstaller
