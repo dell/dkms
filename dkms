@@ -1730,7 +1730,9 @@ do_uninstall()
             fi
         fi
     done
-    rm -f "$dkms_tree/$module/kernel-$1-$2"
+    rm -rf "$dkms_tree/$module/kernel-$1-$2"
+    #Remove modules from dkms built tree
+    rm -rf "$dkms_tree/$module/$module_version/$1"
     else
         echo $""
         echo $"Status: This module version was INACTIVE for this kernel."

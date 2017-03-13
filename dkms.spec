@@ -139,7 +139,7 @@ rm -rf $RPM_BUILD_ROOT
 %if 0%{?fedora} >= 20 || 0%{?rhel} >= 7 || 0%{?suse_version} >= 1210
 
 %post
-%systemd_post %{name}.service
+systemctl enable %{name}.service>/dev/null 2>&1
 
 %preun
 if [ $1 -eq 0 ]; then
