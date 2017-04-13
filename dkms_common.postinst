@@ -114,7 +114,6 @@ get_newest_kernel() {
     # Try Debian first as rpm can be installed in Debian based distros
     if [ -e /usr/bin/dpkg ]; then
         # If DEB based
-        CURRENT_KERNEL=$1
         CURRENT_VERSION=${CURRENT_KERNEL%%-*}
         CURRENT_ABI=${CURRENT_KERNEL#*-}
         CURRENT_FLAVOUR=${CURRENT_ABI#*-}
@@ -199,7 +198,7 @@ fi
 # Here we look for the most recent kernel so that we can
 # build the module for it (in addition to doing it for the
 # current kernel.
-NEWEST_KERNEL=$(get_newest_kernel "$KERNELS")
+NEWEST_KERNEL=$(get_newest_kernel)
 
 if [ -z "$autoinstall_all_kernels" ]; then
     # If the current kernel is installed on the system or chroot
