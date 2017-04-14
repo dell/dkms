@@ -7,8 +7,7 @@ inst_kern=$1
 # creates the possible initrd backup file.
 remove_initrd_backup() {
 	for initrd in "initrd-$1.img" "initramfs-$1.img" "initrd.img-$1" "initrd-$1"; do
-		rm -fv /boot/"${initrd}".old-dkms \
-		 /boot/efi/efi/redhat/"${initrd}".old-dkms >&2
+		rm -fv /boot/"${initrd}".old-dkms >&2
 	done
 }
 
