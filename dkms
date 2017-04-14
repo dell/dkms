@@ -286,7 +286,6 @@ make_initrd()
 
     # Back up our current initrd
     echo $""
-    [[ $2 = ia64 && -d /boot/efi/efi/redhat ]] && initrd_dir="/boot/efi/efi/redhat"
     # Find out what the proper filename will be
     for initrd in "initrd-$1.img" "initramfs-$1.img" "initrd.img-$1" "initrd-$1" ''; do
         [[ $initrd && -f $initrd_dir/$initrd ]] && break
