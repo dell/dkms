@@ -1526,6 +1526,12 @@ install_module()
             exit 6
     }
 
+    # Make the newly installed modules available immediately
+    find /sys/devices -name modalias -print0 | xargs -0 cat | xargs modprobe -a -b -q
+    if [ -f /lib/systemd/system/systemd-modules-load.service ]; then
+        systemctl restart systemd-modules-load.service
+    fi
+
     # Do remake_initrd things (save old initrd)
     [[ $remake_initrd ]] && ! make_initrd "$kernelver" "$arch" && {
         do_uninstall "$kernelver" "$arch"
