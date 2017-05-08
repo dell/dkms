@@ -795,14 +795,6 @@ This directive specifies whether your initrd should be remade after the module i
 onto the kernel.  Any text after the first character is ignored and if the first character
 is not a "y" or a "Y", it is assumed that REMAKE_INITRD="no".
 .TP
-.B UDEV_TRIGGER=
-This optional directive specifies, if the udev daemon will be get a trigger event after the module is installed 
-for your currently running kernel. Because this udev trigger might have some unfriendly side effects on some Linux 
-Systems, you can now disable this trigger, if your driver does not need it anyway.
-UDEV_TRIGGER=yes is assumed as the default, although this directive may not be given. This ensures backward compatibility
-to older DKMS releases. Any text after the first character is ignored and if the first character is not a "n" or a "N",
-it is assumed that UDEV_TRIGGER="yes". 
-.TP
 .B MODULES_CONF[#]=
 This directive array specifies what static configuration text
 lines need to be added into
