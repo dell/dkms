@@ -169,34 +169,12 @@ for single kernels or can be made to support multiple kernels.  To create
 a driver disk image with modules for multiple kernels, just specify multiple
 \-k parameters on the command line (\-k kernel1/arch1 \-k kernel2/arch2).
 
-Red Hat began supporting multi-arched driver disks in RHEL3.  To force creation
-of a driver disk with arch information, specify
-.B \-d redhat2
-or if you specify multiple architectures on the command-line and use
-.B \-d redhat
-, DKMS will create a version 2 driver disk.  By specifying
-.B \-d redhat1
-, you can force a version 1 driver disk image.
-
-Note that redhat1 driver disks actually supported multiple architectures when
-the second arch was i386 and the kernel module was for the BOOT kernel.  DKMS
-allows for this, and as such you can create a redhat1 style driver disk if the
-only other arch is i386 and the kernel name ends in BOOT.
-
 Red Hat introduced DDv3 starting with RHEL6. To create Red Hat DDv3, specify
 .B \-d redhat3
 and specify the specfile to use with
 .I \-\-spec=specfile.
 If no specfile is specified, DKMS will use
 .I /etc/dkms/template\-dkms\-redhat\-kmod.spec
-
-See
-.I http://people.redhat.com/dledford
-for more information on the Red Hat driver
-disk standards and which files are necessary to make a driver disk.
-
-Fedora Core 5 and higher, RHEL5 and higher require DKMS version 2.0.14
-or higher to generate a proper driver disk image.
 
 For suse/UnitedLinux driver disks, /usr/share/YaST2/modules/Vendor.ycp
 will also be copied to the driver disk; no other files are needed.
@@ -713,10 +691,8 @@ must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODU
 DEST_MODULE_LOCATION and that the numbering should start at 0 (eg. DEST_MODULE_LOCATION[0]="/kernel/drivers/something/"
 DEST_MODULE_LOCATION[1]="/kernel/drivers/other/").
 
-DEST_MODULE_LOCATION is ignored on Fedora Core 6 and higher, Red Hat
-Enterprise Linux 5 and higher, Novell SuSE Linux Enterprise Server 10
-and higher, Novell SuSE Linux 10.0 and higher, and Ubuntu. Instead,
-the proper distribution-specific directory is used.
+DEST_MODULE_LOCATION is ignored on Fedora and Red Hat Enterprise Linux, Novell SuSE Linux Enterprise Server 10
+and higher, Novell SuSE Linux 10.0 and higher, and Ubuntu. Instead, the proper distribution-specific directory is used.
 .TP
 .B MODULES_CONF_ALIAS_TYPE[#]=
 This directive array specifies how your modules should be aliased in

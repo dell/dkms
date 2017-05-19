@@ -426,10 +426,6 @@ override_dest_module_location()
     fi
 
     case "$running_distribution" in
-    fc[12345])
-        ;;
-    el[1234])
-        ;;
     sles[123456789])
         ;;
     suse[123456789])
@@ -2144,133 +2140,6 @@ driver_disk_suffix()
     esac
 }
 
-make_redhat_driver_disk()
-{
-    local i count
-    # Kludge to allow redhat1 driver disks with BOOT kernel modules (arch i386)
-    if [[ $distro = redhat1 && $multi_arch = true ]]; then
-        local redhat1_okay="true"
-        local other_arch=""
-        for ((i=0; i < ${#kernelver[@]}; i++)); do
-            if [[ ${arch[$i]} != i386 && $other_arch != ${arch[$i]} && $other_arch ]]; then
-                die 3 $"You have specified a Red Hat version 1 driver disk, but have also" \
-                    $"specified multiple architectures.  Version 1 does not support this." \
-                    $"Use 'redhat2' instead (only OSes >= RHEL3, FC1 support version 2)."
-            elif [[ ${arch[$i]} != i386 && $other_arch != ${arch[$i]} && ! $other_arch ]]; then
-                other_arch="${arch[$i]}"
-            fi
-        done
-    fi
-    if [ "$distro" == "redhat2" ]  && [ -z "$redhat1_okay" ]; then
-        echo $"Creating Red Hat v2 driver disk (arch support)."
-        echo $""
-        local rhdd_filename="rhdd"
-    elif [ "$distro" == "redhat3" ] && [ -z "$redhat1_okay" ]; then
-        echo $"Creating Red Hat v3 driver disk."
-        echo $""
-        make_redhat3_driver_disk
-        return
-    else
-        echo $"Creating Red Hat v1 driver disk."
-        echo $""
-        local rhdd_filename="rhdd-6.1"
-    fi
-
-    cpioarchive_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-
-    for ((i=0; i < ${#kernelver[@]}; i++)); do
-        set_module_suffix "${kernelver[$i]}"
-
-        local dd_prefix="${kernelver[$i]}"
-        [[ $distro = redhat2 ]] && dd_prefix="${kernelver[$i]}/${arch[$i]}"
-        [[ $multi_arch = true && -z $redhat1_okay ]] && dd_prefix="${kernelver[$i]}/${arch[$i]}"
-        maybe_build_module "$module" "$module_version" "${kernelver[$i]}" "${arch[$i]}" || {
-            rm -rf "$cpioarchive_dir_name"
-            die 5 $"Cannot build $module/$module_version for redhat driver disk."
-        }
-
-        # FIXME: add check for KMP binary RPMs to include in the driver disk
-        if [[ ! $kernel_version_list ]]; then
-            kernel_version_list="kernel${kernelver[$i]}-${arch[$i]}"
-        else
-            kernel_version_list="$kernel_version_list-kernel${kernelver[$i]}-${arch[$i]}"
-        fi
-        mkdir -p $cpioarchive_dir_name/$dd_prefix
-        for f in "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/"*"$module_suffix"; do
-            [[ -f $f ]] || continue
-            echo "Marking ${f#$dkms_tree/$module/$module_version/}..."
-            cp "$f" "$cpioarchive_dir_name/$dd_prefix/"
-            modules_cgz_list="$dd_prefix/${f##*/} ${modules_cgz_list}"
-        done
-
-    done
-
-    # Create directory and necessary files
-    driver_disk_dir=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-
-    # Copy files for the driver disk (or warn if not present)
-    local files_for_driverdisk="modinfo disk-info modules.dep pcitable modules.pcimap pci.ids"
-    # Fedora Core 5 and higher, RHEL5 and higher, strictly require: rhdd, modules.cgz, modinfo, modules.alias, modules.dep
-    # which is in effect ignoring disk-info, pcitable, modules.pcimap and pci.ids
-    # and adding modules.alias, which will be generated.
-
-    local files_into_driverdisk="modules.cgz $rhdd_filename modules.alias"
-    for file in $files_for_driverdisk; do
-        if [[ -e $dkms_tree/$module/$module_version/source/redhat_driver_disk/$file ]]; then
-            files_into_driverdisk="$file $files_into_driverdisk"
-            cp -f "$dkms_tree/$module/$module_version/source/redhat_driver_disk/$file" "$driver_disk_dir/" 2>/dev/null
-        else
-            warn $"File: $file not found in $dkms_tree/$module/$module_version/source/redhat_driver_disk/"
-        fi
-    done
-    echo "$module-$module_version driver disk" > "$driver_disk_dir/$rhdd_filename"
-
-    # Make sure the kernel_version_list is not too long
-    if (( $(echo $kernel_version_list | wc -m | awk {'print $1'}) > 200 )); then
-        kernel_version_list="manykernels"
-    fi
-
-    local suffix="$(driver_disk_suffix)"
-    local image_dir="$dkms_tree/$module/$module_version/driver_disk"
-    local image_name="$module-$module_version-$kernel_version_list-dd.$suffix"
-    echo $""
-    echo $"Creating driver disk on $media media:"
-    cd "$cpioarchive_dir_name"
-    invoke_command "echo '$modules_cgz_list' | cpio -oH crc 2>/dev/null | gzip -9 > ./modules.cgz" "compressing modules.cgz" background
-    cp -f ./modules.cgz "$driver_disk_dir/"
-
-    # Generate modules.alias file
-    # On 2.4 kernels and kernels with no aliases. this won't yield anything.
-    touch ./modules.alias
-    for f in ${modules_cgz_list}; do
-        module_wo_suffix=$(basename ${f} ${module_suffix})
-        tmp_alias="./modules.alias.${module_wo_suffix}"
-        f="./${f}"
-        depmod -n ${f} 2>/dev/null | grep ^alias > ${tmp_alias}
-        if [[ -s ${tmp_alias} ]]; then
-            cat "${tmp_alias}" >> ./modules.alias
-        fi
-    done
-    [[ -e ./modules.alias ]] && cp -f ./modules.alias "$driver_disk_dir/"
-    # FIXME: add rpms/ directory, copy in KMP RPMs, run createrepo --pretty
-
-    cd - >/dev/null
-    rm -rf "$cpioarchive_dir_name"
-
-    mkdir -p "$image_dir"
-    rm -f "$image_dir/$image_name"
-
-    cd "$driver_disk_dir"
-    make_driver_disk_media "$image_dir/$image_name" "$driver_disk_dir"
-    cd - >/dev/null
-    rm -rf "$driver_disk_dir"
-
-    echo $""
-    echo $"Disk image location: $image_dir/$image_name"
-    echo $""
-    echo $"DKMS: mkdriverdisk completed."
-}
-
 make_driver_disk()
 {
     # Check that the right arguments were passed
@@ -2291,12 +2160,11 @@ make_driver_disk()
 
     # Confirm that distro is supported
     case $distro in
-        redhat | redhat[123] | suse | UnitedLinux | ubuntu)
+        redhat3 | suse | UnitedLinux | ubuntu)
             ;;
         *)
             die 3 $"Invalid distro argument. Currently, the distros" \
-                $"supported are: redhat, redhat1, redhat2, redhat3, suse, UnitedLinux" \
-                $"               ubuntu"
+                $"supported are: redhat3, suse, UnitedLinux, ubuntu"
             ;;
     esac
 
@@ -2305,7 +2173,7 @@ make_driver_disk()
 
     case $distro in
         redhat*)
-            make_redhat_driver_disk
+            make_redhat3_driver_disk
             ;;
         ubuntu)
             make_ubuntu_driver_disk
@@ -3417,7 +3285,7 @@ autoinstall() {
     done
 }
 
-function make_redhat3_driver_disk ()
+make_redhat3_driver_disk ()
 {
     # Check that the rpmbuild command is present
     if ! which rpmbuild >/dev/null 2>&1 ; then
@@ -3820,11 +3688,7 @@ fi
 
 # If initramfs/initrd rebuild is not requested, skip it with Redhat's weak-modules
 if [[ $no_initrd && $weak_modules ]]; then
-    if [[ $running_distribution == el5 ]]; then
-        weak_modules_no_initrd="--no-initrd"
-    else
-        weak_modules_no_initrd="--no-initramfs"
-    fi
+    weak_modules_no_initrd="--no-initramfs"
 fi
 
 # Default to -j<number of CPUs>
