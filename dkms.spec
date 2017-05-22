@@ -1,16 +1,10 @@
-%if 0%{?rhel} == 5
-%define _sharedstatedir /var/lib
-%endif
-
 Summary: Dynamic Kernel Module Support Framework
 Name: dkms
 Version: [INSERT_VERSION_HERE]
 Release: 1%{?dist}
 License: GPLv2+
-Group: System Environment/Base
 BuildArch: noarch
 URL: https://github.com/dell/dkms
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Source0: http://linux.dell.com/dkms/permalink/dkms-%{version}.tar.gz
 # because Mandriva calls this package dkms-minimal
 Provides: dkms-minimal = %{version}

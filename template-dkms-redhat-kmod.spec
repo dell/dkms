@@ -3,18 +3,16 @@
 Name:		%{module_name}
 Version:	%{version}
 Release:	1%{?dist}
-Summary:	%{module_name}-%{version} RHEL6 Driver Update Program package
+Summary:	%{module_name}-%{version} RHEL Driver Update Program package
 
-Group:		System/Kernel
-License:	Unkown
+License:	Unknown
 Source0:	%{module_name}-%{version}.tar.bz2
-BuildRoot:	%(mktemp -ud %{_tmppath}/%{module_name}-%{version}-%{release}-XXXXXX)
 BuildRequires:	%kernel_module_package_buildreqs
 
 %kernel_module_package default
 
 %description
-%{module_name}-%{version} RHEL6 Driver Update package.
+%{module_name}-%{version} RHEL Driver Update package.
 
 %prep
 %setup
@@ -37,12 +35,3 @@ for flavor in %flavors_to_build ; do
 	make -C %{kernel_source $flavor} modules_install \
 		M=$PWD/obj/$flavor
 done
-
-%clean
-rm -rf $RPM_BUILD_ROOT
-
-%changelog
-* Sun Jun 15 2010 Prudhvi Tella <prudhvi_tella@dell.com>
-- DKMS template for RHEL6 Driver Update package.
-* Sun Mar 28 2010 Jon Masters <jcm@redhat.com>
-- Example RHEL6 Driver Update package.
