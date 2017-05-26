@@ -711,6 +711,7 @@ read_conf()
 get_module_verinfo(){
     unset res
     local vals=
+    res[0]=0 #if "version:" tag is missing, assume it is 0
     while read -a vals; do
     case ${vals[0]} in
         version:)
