@@ -515,7 +515,7 @@ read_conf()
     [[ $3 ]] && read_conf_file="$3"
 
     [[ -r $read_conf_file ]] || die 4 $"Could not locate dkms.conf file." \
-    $"File: $conf does not exist."
+    $"File: $read_conf_file does not exist."
 
     [[ $last_mvka = $module/$module_version/$1/$2 && \
     $last_mvka_conf = $(readlink -f $read_conf_file) ]] && return
