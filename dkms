@@ -1565,7 +1565,10 @@ is_module_built() {
     [[ $1 && $2 && $3 && $4 ]] || return 1
     local d="$dkms_tree/$1/$2/$3/$4" m=''
     [[ -d $d/module ]] || return 1
-    read_conf_or_die "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf"
+    local default_conf="$dkms_tree/$1/$2/source/dkms.conf"
+    # If a custom dkms.conf was specified use it, otherwise use the default one.
+    local real_conf="${conf:-${default_conf}}"
+    read_conf_or_die "$3" "$4" "$real_conf"
     for m in "${dest_module_name[@]}"; do
         [[ -f $d/module/$m.ko || -f $d/module/$m.o ]] || return 1
     done
