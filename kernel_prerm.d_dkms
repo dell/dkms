@@ -11,8 +11,6 @@ remove_initrd_backup() {
 	done
 }
 
-remove_initrd_backup "$inst_kern"
-
 if [ -x /usr/sbin/dkms ]; then
 while read line; do
    name=`echo "$line" | awk '{print $1}' | sed 's/,$//'`
@@ -22,6 +20,8 @@ while read line; do
    dkms uninstall -m $name -v $vers -k $inst_kern -a $arch
 done < <(dkms status -k $inst_kern 2>/dev/null | grep ": installed")
 fi
+
+remove_initrd_backup "$inst_kern"
 
 rmdir --ignore-fail-on-non-empty \
 	"/lib/modules/$inst_kern/updates/dkms" \
