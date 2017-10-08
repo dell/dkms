@@ -275,6 +275,8 @@ make_initrd()
 {
     # $1 = kernel version
     # $2 = arch
+    # $3 = 'backup', if backup of old initrd is wanted (using .old-dkms filename suffix)
+    
     [[ $no_initrd ]] && return
     local mkinitrd kernel_file initrd_dir="/boot"
     for mkinitrd in dracut update-initramfs mkinitrd ''; do
@@ -296,10 +298,12 @@ make_initrd()
             $"Will not try to make an initrd."
         return 0
     fi
-    echo $"Backing up $initrd to $initrd_dir/$initrd.old-dkms"
-    cp -f "$initrd_dir/$initrd" "$initrd_dir/$initrd.old-dkms"
-    echo $"Making new $initrd"
-    echo $"(If next boot fails, revert to $initrd.old-dkms image)"
+    if [[ $3 = backup ]]; then 
+        echo $"Backing up $initrd to $initrd_dir/$initrd.old-dkms"
+        cp -f "$initrd_dir/$initrd" "$initrd_dir/$initrd.old-dkms"
+        echo $"Making new $initrd"
+        echo $"(If next boot fails, revert to $initrd.old-dkms image)"
+    fi
 
     if [[ $mkinitrd = dracut ]]; then
         invoke_command "$mkinitrd -f $initrd_dir/$initrd $1" "$mkinitrd" background
@@ -1529,7 +1533,7 @@ install_module()
     fi
 
     # Do remake_initrd things (save old initrd)
-    [[ $remake_initrd ]] && ! make_initrd "$kernelver" "$arch" && {
+    [[ $remake_initrd ]] && ! make_initrd "$kernelver" "$arch" backup && {
         do_uninstall "$kernelver" "$arch"
         die 7 $"Problems with mkinitrd detected.  Automatically uninstalling this module." \
             $"DKMS: Install Failed (mkinitrd problems).  Module rolled back to built state."
@@ -1749,7 +1753,7 @@ do_uninstall()
     invoke_command "do_depmod $1" "depmod" background
 
     # Do remake_initrd things (remake initrd)
-    if [[ $remake_initrd && $was_active ]] && ! make_initrd "$1" "$2"; then
+    if [[ $remake_initrd && $was_active ]] && ! make_initrd "$1" "$2" ''; then
         warn $"There was a problem remaking your initrd.  You must manually remake it" \
             $"before booting into this kernel."
     fi
