@@ -1038,6 +1038,14 @@ add_module()
     # Check that we have all the arguments
     check_module_args add
 
+    # Do stuff for --rpm_safe_upgrade
+    if [[ $rpm_safe_upgrade ]]; then
+        local pppid=$(awk '/PPid:/ {print $2}' /proc/$PPID/status)
+        local lock_name=$(mktemp_or_die $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.XXXXXX)
+        echo "$module-$module_version" >> $lock_name
+        ps -o lstart --no-headers -p $pppid 2>/dev/null >> $lock_name
+    fi
+
     # Check that this module-version hasn't already been added
     if is_module_added "$module" "$module_version"; then
         die 3 $"DKMS tree already contains: $module-$module_version" \
@@ -1050,14 +1058,6 @@ add_module()
     if ! [[ -d $source_tree/$module-$module_version ]]; then
         die 2 $"Could not find module source directory." \
             $"Directory: $source_tree/$module-$module_version does not exist."
-    fi
-
-    # Do stuff for --rpm_safe_upgrade
-    if [[ $rpm_safe_upgrade ]]; then
-        local pppid=$(awk '/PPid:/ {print $2}' /proc/$PPID/status)
-        local lock_name=$(mktemp_or_die $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.XXXXXX)
-        echo "$module-$module_version" >> $lock_name
-        ps -o lstart --no-headers -p $pppid 2>/dev/null >> $lock_name
     fi
 
     # Check the conf file for sanity
