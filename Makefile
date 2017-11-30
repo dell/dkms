@@ -1,11 +1,9 @@
-RELEASE_DATE := "25-May-2017"
+RELEASE_DATE := "30-Nov-2017"
 RELEASE_MAJOR := 2
-RELEASE_MINOR := 4
-RELEASE_SUBLEVEL := 0
-RELEASE_EXTRALEVEL := .0
+RELEASE_MINOR := 5
 RELEASE_NAME := dkms
-RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_SUBLEVEL)$(RELEASE_EXTRALEVEL)
-RELEASE_STRING := $(RELEASE_NAME)-$(RELEASE_VERSION)
+RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR)
+RELEASE_STRING := $(RELEASE_NAME)
 DIST := unstable
 SHELL=bash
 
@@ -133,7 +131,7 @@ debmagic: $(TARBALL)
 	cp -ar debian $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian
 	chmod +x $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/rules
 	cd $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING) ; \
-	dch -v $(RELEASE_VERSION)-0 "New upstream version, $(RELEASE_VERSION)"; \
+	dch -v $(RELEASE_VERSION) "New upstream version, $(RELEASE_VERSION)"; \
 	dpkg-buildpackage -D -b -rfakeroot ; \
 	dpkg-buildpackage -D -S -sa -rfakeroot ; \
 	mv ../$(RELEASE_NAME)_* $(TOPDIR)/dist/ ; \
