@@ -8,11 +8,13 @@ The DKMS project (and any updates) can be found at: https://github.com/dell/dkms
 
 How To Build RPM & DEB Package
 --
+
 If you want to create rpm or deb package,then you can install the dkms package in your system.
-1.Install all the build dependency packages
-2.Runs: '#make rpm' to create rpm package
-3.Runs: '#make debs' to create deb package
-4.You can find the built package in "dkms/dist/"
+
+1. Install all the build dependency packages
+2. Runs: '#make rpm' to create rpm package
+3. Runs: '#make debs' to create deb package
+4. You can find the built package in "dkms/dist/"
 
 
 
