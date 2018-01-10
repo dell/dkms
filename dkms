@@ -1713,7 +1713,7 @@ do_uninstall()
         while [ "${dir_to_remove}" != "${dir_to_remove#/}" ]; do
             dir_to_remove="${dir_to_remove#/}"
         done
-        (cd "$install_tree/$1" && rmdir --parents --ignore-fail-on-non-empty "${dir_to_remove}" || true)
+        (cd "$install_tree/$1" && rm -rf "${dir_to_remove}/*" && rmdir -p "${dir_to_remove}" || true)
         echo $" - Original module"
         if [[ -e $dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix ]]; then
             case "$running_distribution" in
