@@ -168,14 +168,43 @@ get_num_cpus()
   fi
 }
 
+# Finds a .ko or .ko.xz based on a directory and module name
+# must call set_module_suffix first
+compressed_or_uncompressed()
+{
+    # module dir = $1
+    # module = $2
+    local test1="$1/$2$module_uncompressed_suffix"
+    local test2="$1/$2$module_uncompressed_suffix$module_compressed_suffix"
+    if [[ -e "$test1" ]]; then
+        echo "$test1"
+    elif [[ -e "$test2" ]]; then
+        echo "$test2"
+    fi
+}
+
+# Finds .ko or .ko.xz based on a tree and module name
+# must call set_module_suffix first
+find_module()
+{
+    # tree = $1
+    # module = $2
+    find "$1" -name "$2$module_uncompressed_suffix" -o -name "$2$module_suffix" -type f
+    return $?
+}
+
+
 # Figure out the correct module suffix for the kernel we are currently
 # dealing with, which may or may not be the currently installed kernel.
 set_module_suffix()
 {
     # $1 = the kernel to base the module_suffix on
-    kernel_test="${1-:$(uname -r)}"
-    module_suffix=".ko"
-    [[ $(VER $kernel_test) < $(VER 2.5) ]] && module_suffix=".o"
+    kernel_test="${1:-$(uname -r)}"
+    module_uncompressed_suffix=".ko"
+    [[ $(VER $kernel_test) < $(VER 2.5) ]] && module_uncompressed_suffix=".o"
+    grep -q '\.gz:' /lib/modules/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".gz"
+    grep -q '\.xz:' /lib/modules/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".xz"
+    module_suffix="$module_uncompressed_suffix$module_compressed_suffix"
 }
 
 set_kernel_source_dir()
@@ -742,7 +771,7 @@ check_version_sanity()
     local i=0
     local -a kernels_info dkms_info
     set_module_suffix
-    read -a kernels_module < <(find $lib_tree -name ${4}$module_suffix)
+    read -a kernels_module < <(find_module "$lib_tree" "${4}")
     if [ -z $kernels_module ]; then
         # Magic split into array syntax saves trivial awk and cut calls.
         local -a obs=(${3//-/ })
@@ -784,7 +813,7 @@ check_version_sanity()
             $"modules were found in kernel $1."
         return 0
     fi
-    local dkms_module="$dkms_tree/$module/$module_version/$1/$2/module/${4}$module_suffix"
+    local dkms_module=$(compressed_or_uncompressed "$dkms_tree/$module/$module_version/$1/$2/module/" "${4}")
     get_module_verinfo $kernels_module; kernels_info=("${res[@]}")
     get_module_verinfo $dkms_module; dkms_info=("${res[@]}")
     if [[ ! ${dkms_info[1]} && ${kernels_info[1]} ]]; then
@@ -1295,9 +1324,9 @@ do_build()
 
     # Make sure all the modules built successfully
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
-        [[ -e ${built_module_location[$count]}${built_module_name[$count]}$module_suffix ]] && continue
+        [[ -e ${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix ]] && continue
         report_build_problem 7 \
-            $" Build of ${built_module_name[$count]}$module_suffix failed for: $kernelver ($arch)" \
+            $" Build of ${built_module_name[$count]}$module_uncompressed_suffix failed for: $kernelver ($arch)" \
             $"Consult the make.log in the build directory" \
             $"$dkms_tree/$module/$module_version/build/ for more information."
     done
@@ -1311,7 +1340,12 @@ do_build()
     # Save a copy of the new module
     mkdir "$base_dir/module" >/dev/null
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
-    [[ ${strip[$count]} != no ]] && strip -g "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix"
+    [[ ${strip[$count]} != no ]] && strip -g "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+    if [ "$module_compressed_suffix" = ".gz" ]; then
+        gzip -9f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+    elif [ "$module_compressed_suffix" = ".xz" ]; then
+        xz -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+    fi
     cp -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix" \
         "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
     done
@@ -1425,17 +1459,20 @@ install_module()
         die 101 $"pre_install failed, aborting install." \
             $"You may override by specifying --force."
     fi
-    local module_count=$(find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f | wc -l | awk {'print $1'})
+    local m=${dest_module_name[$count]}
+    local installed_modules=$(find_module "$lib_tree" "$m")
+    local module_count=${#installed_modules[@]}
     echo $" - Original module"
-    if [[ -L $dkms_tree/$module/kernel-$kernelver-$arch && \
-        -e $dkms_tree/$module/original_module/$kernelver/$arch/${dest_module_name[$count]}$module_suffix ]]; then
+    local original_copy=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$kernelver/$arch" "$m")
+    if [[ -L $dkms_tree/$module/kernel-$kernelver-$arch &&
+        -n "$original_copy" ]]; then
         echo $"   - An original module was already stored during a previous install"
     elif ! [[ -L $dkms_tree/$module/kernel-$kernelver-$arch ]]; then
-        local archive_pref1="$lib_tree/extra/${dest_module_name[$count]}$module_suffix"
-        local archive_pref2="$lib_tree/updates/${dest_module_name[$count]}$module_suffix"
-        local archive_pref3="$lib_tree${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+        local archive_pref1=$(compressed_or_uncompressed "$lib_tree/extra" "$m")
+        local archive_pref2=$(compressed_or_uncompressed "$lib_tree/updates" "$m")
+        local archive_pref3=$(compressed_or_uncompressed "$lib_tree${dest_module_location[$count]}" "$m")
         local archive_pref4=""
-        ((module_count == 1)) && archive_pref4=$(find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f)
+        ((module_count == 1)) && archive_pref4=${installed_modules[0]}
         local original_module=""
         local found_orginal=""
         for original_module in $archive_pref1 $archive_pref2 $archive_pref3 $archive_pref4; do
@@ -1466,7 +1503,7 @@ install_module()
 
     if ((module_count > 1)); then
         echo $" - Multiple same named modules!"
-        echo $"   - $module_count named ${dest_module_name[$count]}$module_suffix in $lib_tree/"
+        echo $"   - $module_count named $m$module_suffix in $lib_tree/"
         case "$running_distribution" in
             Debian* | Ubuntu* )
                 ;;
@@ -1475,9 +1512,10 @@ install_module()
                 echo $"   - Storing in $dkms_tree/$module/original_module/$kernelver/$arch/collisions/"
                 ;;
         esac
-        for module_dup in $(find $lib_tree -name ${dest_module_name[$count]}$module_suffix -type f); do
+        for module_dup in $(find_module "$lib_tree" "$m"); do
             dup_tree="${module_dup#$lib_tree}";
-            dup_tree="${dup_tree/${dest_module_name[$count]}$module_suffix}"
+            dup_name="${module_dup##*/}"
+            dup_tree="${dup_tree/${dup_name}}"
             case "$running_distribution" in
                 Debian* | Ubuntu* )
                     ;;
@@ -1495,7 +1533,8 @@ install_module()
     echo $"   - Installing to $install_tree/$kernelver${dest_module_location[$count]}/"
     mkdir -p $install_tree/$kernelver${dest_module_location[$count]}
     [[ $symlink_modules ]] && symlink="-s"
-    cp -f $symlink  "$base_dir/module/${dest_module_name[$count]}$module_suffix" "$install_tree/$kernelver${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
+    local toinstall=$(compressed_or_uncompressed "$base_dir/module" "$m")
+    cp -f $symlink "$toinstall" "$install_tree/$kernelver${dest_module_location[$count]}/${toinstall##*/}"
 
     done
 
@@ -1553,9 +1592,11 @@ list_each_installed_module()
     # $3 = arch
     local count
     local real_dest_module_location
+    local mod
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
         real_dest_module_location="$(find_actual_dest_module_location $1 $count $2 $3)"
-        echo "$install_tree/$2${real_dest_module_location}/${dest_module_name[$count]}$module_suffix"
+        mod=$(compressed_or_uncompressed "$install_tree/$2${real_dest_module_location}" "${dest_module_name[$count]}")
+        echo "$mod"
     done
 }
 
@@ -1573,8 +1614,10 @@ is_module_built() {
     # If a custom dkms.conf was specified use it, otherwise use the default one.
     local real_conf="${conf:-${default_conf}}"
     read_conf_or_die "$3" "$4" "$real_conf"
+    set_module_suffix "$3"
     for m in "${dest_module_name[@]}"; do
-        [[ -f $d/module/$m.ko || -f $d/module/$m.o ]] || return 1
+        local t=$(compressed_or_uncompressed "$d/module" "$m")
+        test -n "$t" || return 1
     done
 }
 
@@ -1659,11 +1702,11 @@ find_actual_dest_module_location()
     local l
     local dkms_owned
     local installed
-    dkms_owned="${dkms_tree}/${module}/kernel-${kernelver}-${arch}/module/${dest_module_name[$count]}${module_suffix}"
+    dkms_owned=$(compressed_or_uncompressed "${dkms_tree}/${module}/kernel-${kernelver}-${arch}/module" "${dest_module_name[$count]}")
 
     for l in $locations; do
-        installed="${install_tree}/${kernelver}${l}/${dest_module_name[${count}]}${module_suffix}"
-        if [[ -f ${installed} ]] && diff "${dkms_owned}" "${installed}" > /dev/null 2>&1; then
+        installed=$(compressed_or_uncompressed "${install_tree}/${kernelver}${l}" "${dest_module_name[${count}]}")
+        if [[ -n "${installed}" ]] && diff "${dkms_owned}" "${installed}" > /dev/null 2>&1; then
             echo "${l}"
             return 0
         fi
@@ -1708,14 +1751,15 @@ do_uninstall()
         echo $"${dest_module_name[$count]}$module_suffix:"
         echo $" - Uninstallation"
         echo $"   - Deleting from: $install_tree/$1${real_dest_module_location}/"
-        rm -f "$install_tree/$1${real_dest_module_location}/${dest_module_name[$count]}$module_suffix"
+        rm -f "$install_tree/$1${real_dest_module_location}/${dest_module_name[$count]}$module_uncompressed_suffix"*
         dir_to_remove="${real_dest_module_location#/}"
         while [ "${dir_to_remove}" != "${dir_to_remove#/}" ]; do
             dir_to_remove="${dir_to_remove#/}"
         done
         (cd "$install_tree/$1" && rm -rf "${dir_to_remove}/*" && rmdir -p "${dir_to_remove}" || true)
         echo $" - Original module"
-        if [[ -e $dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix ]]; then
+        local origmod=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$1/$2" "${dest_module_name[$count]}")
+        if [[ -n "$origmod" ]]; then
             case "$running_distribution" in
                 Debian* | Ubuntu* )
                     ;;
@@ -1723,8 +1767,7 @@ do_uninstall()
                     echo $"   - Archived original module found in the DKMS tree"
                     echo $"   - Moving it to: $install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
                     mkdir -p "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
-                    mv -f "$dkms_tree/$module/original_module/$1/$2/${dest_module_name[$count]}$module_suffix" \
-                    "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/" 2>/dev/null
+                    mv -f "$origmod" "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/" 2>/dev/null
                     ;;
             esac
             else
@@ -1946,12 +1989,13 @@ module_status_built_extra() (
     read_conf "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf"
     [[ -d $dkms_tree/$1/original_module/$3/$4 ]] && echo -n " (original_module exists)"
     for ((count=0; count < ${#dest_module_name[@]}; count++)); do
-        tree_mod="$dkms_tree/$1/$2/$3/$4/module/${dest_module_name[$count]}$module_suffix"
-        if ! [[ -e $tree_mod ]]; then
+        tree_mod=$(compressed_or_uncompressed "$dkms_tree/$1/$2/$3/$4/module" "${dest_module_name[$count]}")
+        if ! [[ -n "$tree_mod" ]]; then
             echo -n " (WARNING! Missing some built modules!)"
         elif _is_module_installed "$@"; then
             real_dest="$(find_actual_dest_module_location "$1" $count "$3" "$4")"
-            if ! diff -q "$tree_mod" "$install_tree/$3${real_dest}/${dest_module_name[$count]}$module_suffix" >/dev/null 2>&1; then
+            real_dest_mod=$(compressed_or_uncompressed "$install_tree/$3${real_dest}" "${dest_module_name[$count]}")
+            if ! diff -q "$tree_mod" "$real_dest_mod" >/dev/null 2>&1; then
                 echo -n " (WARNING! Diff between built and installed module!)"
             fi
         fi
@@ -2245,8 +2289,9 @@ make_suse_driver_disk()
     local topdir=$(printf "%02d" $(($count+1+offset)))
     for ((i=0; i < ${#kernelver[@]}; i++)); do
         set_module_suffix "${kernelver[$i]}"
-
-        if ! [[ -e $dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix ]]; then
+        local srcdir=$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module
+        local srcpath=$(compressed_or_uncompressed "$srcdir" "${dest_module_name[$count]}")
+        if ! [[ -n "$srcpath" ]]; then
             rm -rf $temp_dir_name
             die 5 \
                 $"Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver[$i]} (${arch[$i]})." \
@@ -2262,12 +2307,12 @@ make_suse_driver_disk()
 
         echo "Marking ${kernelver[$i]}/${arch[$i]}/modules/${dest_module_name[$count]}$module_suffix..."
         mkdir -p "$driver_disk_dir/$topdir/$suse_arch-$release/install/lib/modules/${kernelver[$i]}${dest_module_location[$count]}"
-        cp "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix" "$driver_disk_dir/$topdir/$suse_arch-$release/install/lib/modules/${kernelver[$i]}${dest_module_location[$count]}/"
+        cp "$srcpath" "$driver_disk_dir/$topdir/$suse_arch-$release/install/lib/modules/${kernelver[$i]}${dest_module_location[$count]}/"
 
         case ${kernelver[$i]} in
         *-default)
             mkdir -p "$driver_disk_dir/$topdir/$suse_arch-$release/modules/"
-            cp "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix" "$driver_disk_dir/$topdir/$suse_arch-$release/modules/"
+            cp "$srcpath" "$driver_disk_dir/$topdir/$suse_arch-$release/modules/"
             ;;
         esac
 
@@ -2379,7 +2424,7 @@ make_ubuntu_driver_disk()
         local deb_dir="$tempdir/$dd_prefix/debian"
         local deb_lib_dir="$deb_dir/lib/modules/${kernelver[$i]}/updates/dkms"
         mkdir -p "$deb_lib_dir"
-        cp "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/"*"$module_suffix" "$deb_lib_dir"
+        cp "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/"*"$module_uncompressed_suffix"* "$deb_lib_dir"
         pushd "$deb_dir" > /dev/null 2>&1
         mkdir DEBIAN
         cat > DEBIAN/control <<EOF
@@ -2571,7 +2616,7 @@ load_tarball()
        fi
     fi
 
-    # Figure out what kind of archive it is (tar.gz, tar, tar.bz, etc)
+    # Figure out what kind of archive it is (tar.gz, tar, tar.bz, tar.xz, etc)
     # Note that this does not depend on the extensions being correct.
     local tar_options=""
     for xpand in gzip bzip xz; do
@@ -3509,6 +3554,8 @@ binaries_only=""
 source_only=""
 all=""
 module_suffix=""
+module_uncompressed_suffix=""
+module_compressed_suffix=""
 rpm_safe_upgrade=""
 size="1440";
 specfile=""

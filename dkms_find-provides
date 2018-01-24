@@ -64,7 +64,7 @@ TMPDIR=$(mktemp -d ${tmp}/dkms-findprovides-$$-$RANDOM-XXXXXX)
 trap "rm -rf $TMPDIR >/dev/null 2>&1"  QUIT EXIT HUP INT TERM
 
 modlist=
-for cand in $(grep -E '(/lib/modules/.+\.ko$|tgz$|tbz$|tar\.(gz|bz2)$)') $*; do
+for cand in $(grep -E '(/lib/modules/.+\.ko$|tgz$|tbz$|tar\.(gz|bz2|xz)$)') $*; do
     if echo $cand | grep -q -E '/lib/modules/.+\.ko$' > /dev/null 2>&1; then
         modlist="$modlist $cand"
     fi
@@ -76,6 +76,8 @@ for cand in $(grep -E '(/lib/modules/.+\.ko$|tgz$|tbz$|tar\.(gz|bz2)$)') $*; do
         opts=${opts}z
     elif bzip2 -t $cand >/dev/null 2>&1; then
         opts=${opts}j
+    elif xz -t $cand >/dev/null 2>&1; then
+	opts=${opts}J
     fi
     tar ${opts}f $cand -C $TMPDIR > /dev/null 2>&1
 done
