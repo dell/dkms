@@ -42,7 +42,7 @@
 dkms \- Dynamic Kernel Module Support
 .SH SYNOPSIS
 .SY dkms
-.OP action 
+.OP action
 .OP options
 .OP module/module-version
 .OP /path/to/source-tree
@@ -67,15 +67,15 @@ requires source in
 as well as a properly
 formatted
 .I dkms.conf
-file. If 
+file. If
 .I /path/to/source\-tree
-is passed as an option, and source-tree contains a 
+is passed as an option, and source-tree contains a
 .I dkms.conf
-file, it will copy 
+file, it will copy
 .I /path/to/source\-tree
 to
 .I /usr/src/module\-module\-version.
-If 
+If
 .I /path/to/tarball.tar
 is passed, this command behaves like the
 .B ldtarball
@@ -101,11 +101,11 @@ the
 .I \-k
 option is not specified it builds for the currently running kernel and arch..  All builds
 occur in the directory
-.I /var/lib/dkms/<module>/<module\-version>/build/. 
+.I /var/lib/dkms/<module>/<module\-version>/build/.
 If the module/module\-version combo has not been added, dkms will try to add it, and in that
-case 
-.B build 
-can take the same arguments that 
+case
+.B build
+can take the same arguments that
 .B add
 can.
 .SY install
@@ -128,7 +128,7 @@ If you pass a .rpm file, dkms will try to install that file with
 .B rpm -Uvh
 , and it will perform an
 .B autoinstall
-action to mesure that everything is built for your kernel if the RPM installed sucessfully.
+action to be sure that everything is built for your kernel if the RPM installed successfully.
 .SY uninstall
 .OP module/module\-version
 .OP -k kernel/arch
@@ -231,7 +231,7 @@ without having to wait for anything to compile.
 .YS
 .IP "" 4
 This takes a tarball made from the
-.B mktarball 
+.B mktarball
 command and loads it into your DKMS tree.  This will leave any
 newly added modules in the built state and
 .B dkms install
@@ -325,13 +325,13 @@ dkms_autoinstaller is a stub that uses this action to perform its work.
 .SH OPTIONS
 .TP
 .B \-m <module>/<module\-version>
-The name of the module and module version you wnat to operate on. The
+The name of the module and module version you want to operate on. The
 .B \-m
 part of this option is optional, and can be omitted in virtually all circumstances.
 .TP
 .B \-v <module\-version>
-The version of the module to execute the specified action upon.  This option only has to be specified 
-if you pass a 
+The version of the module to execute the specified action upon.  This option only has to be specified
+if you pass a
 .B \-m
 option without a <module\-version> component of its own.
 .TP
@@ -954,17 +954,17 @@ default values for the variables.
 .B $source_tree
 and
 .B $install_tree
-which control where DKMS looks for its framework.  The 
+which control where DKMS looks for its framework.  The
 .B $symlink_modules
-variable controls wheter binary modules are copied to /lib/modules or if only symlinks are
+variable controls whether binary modules are copied to /lib/modules or if only symlinks are
 created there. Note that these variables can also
-be manipulated on the command line with \-\-dkmstree, \-\-sourcetree, \-\-installtree 
+be manipulated on the command line with \-\-dkmstree, \-\-sourcetree, \-\-installtree
 and \-\-symlink-modules options.
 
 The
 .B $autoinstall_all_kernels
 variable is used by the common postinst for DKMS modules. It controls if the build should be done
-for all installed kernels or only for the current and latest installed kernel. It has no command 
+for all installed kernels or only for the current and latest installed kernel. It has no command
 line equivalent.
 .SH dkms_autoinstaller
 This boot\-time service automatically installs any module which has
