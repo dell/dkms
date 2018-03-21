@@ -68,7 +68,7 @@ _get_newest_kernel_debian() {
         fi
 
         # if $kernel is greater than $COMPARE_TO
-        if [ `dpkg --compare-versions "$KERNEL_VERSION-$ABI" gt "$COMPARE_TO" && echo "yes" || \
+        if [ `dpkg --compare-versions "$KERNEL_VERSION-$ABI" ge "$COMPARE_TO" && echo "yes" || \
               echo "no"` = "yes" ]; then
             NEWEST_KERNEL=$KERNEL
             NEWEST_VERSION=$KERNEL_VERSION
