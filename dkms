@@ -3610,7 +3610,7 @@ while (($# > 0)); do
             exec >/dev/null 2>&1
             ;;
         --version|-V)
-            echo $"dkms: RELEASE_VERSION"
+            echo $"dkms:[INSERT_VERSION_HERE]"
             exit 0
             ;;
         --no-prepare-kernel)
