@@ -22,11 +22,11 @@ elif [ -f /etc/rc.d/init.d/functions ]; then
     . /etc/rc.d/init.d/functions
 fi
 
-#We only have these functions on debian/ubuntu
+# We only have these functions on debian/ubuntu
 # so on other distros just stub them out
 if [ ! -f /etc/debian_version ]; then
     alias log_daemon_msg=/bin/echo
-    log_end_msg() { if [ "$1" = "0" ]; then echo " Done. "; else echo " Failed. "; fi }
+    log_end_msg() { if [ "$1" = "0" ]; then echo " Done. "; else echo " Failed. "; fi; }
     alias log_action_begin_msg=log_daemon_msg
     alias log_action_end_msg=log_end_msg
 fi
