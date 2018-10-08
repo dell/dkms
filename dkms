@@ -822,7 +822,8 @@ check_version_sanity()
         kernels_info[1]=${kernels_info[2]}
     fi
 
-    if [[ ${kernels_info[1]} && ${dkms_info[1]} && ${kernels_info[1]} = ${dkms_info[1]} && ! $force ]]; then
+    if [[ ${kernels_info[1]} && ${dkms_info[1]} && ${kernels_info[1]} = ${dkms_info[1]} &&
+	  -n "${kernels_info[0]}" && -n "${dkms_info[0]}" && ${kernels_info[0]} = ${dkms_info[0]} && ! $force ]]; then
         echo $"" >&2
         echo $"Good news! Module version $dkms_info for ${4}$module_suffix" >&2
         echo $"exactly matches what is already found in kernel $1." >&2
