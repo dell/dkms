@@ -129,7 +129,7 @@ show_usage()
 {
     echo $"Usage: $0 [action] [options]"
     echo $"  [action]  = { add | remove | build | install | uninstall | match | autoinstall"
-    echo $"               | mkdriverdisk | mktarball | ldtarball | mkrpm | mkkmp | mkdeb | status }"
+    echo $"               | mkdriverdisk | mktarball | ldtarball | mkrpm | mkkmp | mkdeb | mkbmdeb | status }"
     echo $"  [options] = [-m module] [-v module-version] [-k kernel-version] [-a arch]"
     echo $"              [-d distro] [-c dkms.conf-location] [-q] [--force] [--all]"
     echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
@@ -2908,6 +2908,8 @@ preproc_file()
     local date_str="$(date -R)"
     echo "modifying $1..."
     sed -e "s/DEBIAN_PACKAGE/$debian_package/g" \
+	-e "s/DEBIAN_BUILD_ARCH/$debian_build_arch/g" \
+	-e "s/KERNEL_VERSION/$kernelver/g" \
         -e "s/MODULE_NAME/$module/g" \
         -e "s/MODULE_VERSION/$module_version/g" \
         -e "s/DATE_STAMP/$date_str/" "$1" > "$1.dkms-pp"
@@ -2970,6 +2972,7 @@ make_debian()
     make_common_test "mk${create_type}"
 
     debian_package=${module//_/-}
+    debian_build_arch=$(dpkg-architecture -qDEB_BUILD_ARCH)
 
     # Read the conf file
     read_conf_or_die "$kernelver" "$arch"
@@ -3042,7 +3045,16 @@ make_debian()
             die 7 $"There was a problem creating your ${create_type}."
         echo $""
         echo $"DKMS: mk${create_type} completed."
-        invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_all.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
+	invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_${debian_build_arch}.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
+	;;
+    bmdeb)
+	export KVER="$kernelver"
+	export KARCH="$arch"
+	invoke_command "dpkg-buildpackage -rfakeroot -d -b -us -uc 1>/dev/null" "Building binary package" || \
+	    die 7 $"There was a problem creating your ${create_type}."
+	echo $""
+	echo $"DKMS: mk${create_type} completed."
+	invoke_command "mv '$temp_dir/${debian_package}-modules-${kernelver}_${module_version}_${debian_build_arch}.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
         ;;
     esac
     popd > /dev/null 2>&1
@@ -3571,7 +3583,7 @@ die_is_fatal="yes"
 [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 no_depmod=""
 
-action_re='^(remove|(auto|un)?install|match|mk(driverdisk|tarball|rpm|deb|dsc|kmp)|build|add|status|ldtarball)$'
+action_re='^(remove|(auto|un)?install|match|mk(driverdisk|tarball|rpm|deb|bmdeb|dsc|kmp)|build|add|status|ldtarball)$'
 
 # Parse command line arguments
 while (($# > 0)); do
@@ -3793,6 +3805,9 @@ for action_to_run in $action; do
         ;;
     mkdeb)
         make_debian "deb"
+        ;;
+    mkbmdeb)
+        make_debian "bmdeb"
         ;;
     mkdsc)
         make_debian "dsc"

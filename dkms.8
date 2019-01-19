@@ -277,6 +277,18 @@ load this tarball, build and install modules on the end user's system.  If you d
 not want your debian package to contain any prebuilt binaries, be sure to specify
 .B \-\-source\-only
 in the mkdeb command.
+.SY mkbmdeb
+.OP module/module\-version
+.OP -k kernel/arch
+.YS
+.IP "" 4
+Creates a Debian binary package containing just the binary modules in the /lib/modules
+installation path. This package does not depend on dkms and does not require a toolchain
+to be installed on the target host. Useful if you want to have a package to install on
+hosts identical to the build system without installing the full toolchain on them.
+It uses a template debian directory found in
+.I /etc/dkms/template\-dkms\-mkbmdeb
+as the basis for the package.
 .SY mkdsc
 .OP module/module\-version
 .OP -k kernel/arch
