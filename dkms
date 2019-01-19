@@ -128,8 +128,8 @@ mktemp_or_die() {
 show_usage()
 {
     echo $"Usage: $0 [action] [options]"
-    echo $"  [action]  = { add | remove | build | install | uninstall | match | autoinstall"
-    echo $"               | mkdriverdisk | mktarball | ldtarball | mkrpm | mkkmp | mkdeb | mkbmdeb | status }"
+    echo $"  [action]  = { add | remove | build | install | uninstall | match | autoinstall | mkdriverdisk |"
+    echo $"                mktarball | ldtarball | mkrpm | mkkmp | mkdeb | mkdsc | mkbmdeb | status }"
     echo $"  [options] = [-m module] [-v module-version] [-k kernel-version] [-a arch]"
     echo $"              [-d distro] [-c dkms.conf-location] [-q] [--force] [--all]"
     echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
