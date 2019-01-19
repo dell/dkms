@@ -3045,7 +3045,7 @@ make_debian()
             die 7 $"There was a problem creating your ${create_type}."
         echo $""
         echo $"DKMS: mk${create_type} completed."
-        invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_${debian_build_arch}.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
+        invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_all.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
 	;;
     bmdeb)
         export KVER="$kernelver"
