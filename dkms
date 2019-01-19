@@ -3009,23 +3009,6 @@ make_debian()
         invoke_command "cp '$PREFIX/usr/lib/dkms/common.postinst' '$temp_dir_debian'" "copying legacy postinstall template"
     fi
 
-    # Copy in the source tree
-    if [[ ! $binaries_only ]]; then
-        invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '$temp_dir_debian/$module-$module_version'" "Copying source tree"
-    fi
-
-    # Only if we are shipping binary modules, make a .tgz for the deb
-    local archive_location="$dkms_tree/$module/$module_version/tarball/$module-$module_version.dkms.tar.gz"
-    if [[ ! $source_only ]]; then
-        binaries_only="binaries-only"
-        invoke_command "make_tarball" "Gathering binaries"
-        if [[ -f $archive_location ]]; then
-            invoke_command "cp '$archive_location' '$temp_dir_debian'" "Copying DKMS tarball into DKMS tree"
-        else
-            die 12 $"Unable to find created tarball."
-        fi
-    fi
-
     # Calculate destination directory
     deb_basedir=$dkms_tree/$module/$module_version/${create_type}
     mkdir -p ${deb_basedir} >/dev/null 2>&1
@@ -3034,6 +3017,7 @@ make_debian()
     pushd "$temp_dir_debian" > /dev/null 2>&1
     case "$create_type" in
     dsc)
+        invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '$temp_dir_debian/$module-$module_version'" "Copying source tree"
         invoke_command "dpkg-buildpackage -S -us -uc 1>/dev/null" "Building source package" || \
             die 7 $"There was a problem creating your ${create_type}."
         echo $""
@@ -3041,6 +3025,7 @@ make_debian()
         invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_source.changes' '$temp_dir/${debian_package}-dkms_${module_version}.dsc' '$temp_dir/${debian_package}-dkms_${module_version}.tar.gz' '$deb_basedir'" "Moving built files to $deb_basedir"
         ;;
     deb)
+        invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '$temp_dir_debian/$module-$module_version'" "Copying source tree"
         invoke_command "dpkg-buildpackage -rfakeroot -d -b -us -uc 1>/dev/null" "Building binary package" || \
             die 7 $"There was a problem creating your ${create_type}."
         echo $""
@@ -3048,6 +3033,15 @@ make_debian()
         invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_all.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
 	;;
     bmdeb)
+        local archive_location="$dkms_tree/$module/$module_version/tarball/$module-$module_version.dkms.tar.gz"
+        # Force binaries_only
+        binaries_only="binaries-only"
+        invoke_command "make_tarball" "Gathering binaries"
+        if [[ -f $archive_location ]]; then
+            invoke_command "cp '$archive_location' '$temp_dir_debian'" "Copying DKMS tarball into DKMS tree"
+        else
+            die 12 $"Unable to find created tarball."
+        fi
         export KVER="$kernelver"
         export KARCH="$arch"
         invoke_command "dpkg-buildpackage -rfakeroot -d -b -us -uc 1>/dev/null" "Building binary package" || \

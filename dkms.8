@@ -262,8 +262,6 @@ in the mkrpm command.
 .SY mkdeb
 .OP module/module\-version
 .OP -k kernel/arch
-.OP --binaries-only
-.OP --source-only
 .YS
 .IP "" 4
 This action allows you to create a debian binary package for a specified module / version.
@@ -273,10 +271,7 @@ as the basis for the package. Alternatively, if DKMS finds a file called
 .I /usr/src/<module>\-<module\-version>/<module>\-dkms\-mkdeb
 it will use that folder instead. In general, a DKMS tarball is placed inside the
 contents of this package, and the package itself calls various DKMS commands to
-load this tarball, build and install modules on the end user's system.  If you do
-not want your debian package to contain any prebuilt binaries, be sure to specify
-.B \-\-source\-only
-in the mkdeb command.
+load this tarball, build and install modules on the end user's system.
 .SY mkbmdeb
 .OP module/module\-version
 .OP -k kernel/arch
@@ -292,8 +287,6 @@ as the basis for the package.
 .SY mkdsc
 .OP module/module\-version
 .OP -k kernel/arch
-.OP --binaries-only
-.OP --source-only
 .YS
 .IP "" 4
 This action allows you to create a debian source package for a specified module / version.
@@ -303,10 +296,7 @@ are supported by it.  The main difference in it's usage is that it will look in
 .I /etc/dkms/template\-dkms\-mkdsc
 as the basis for the package. Alternatively, if DKMS finds a file called
 .I /usr/src/<module>\-<module\-version>/<module>\-dkms\-mkdsc
-it will use that folder instead. If you do not want your debian source package to
-contain any prebuilt binaries, be sure to specify
-.B \-\-source\-only
-in the mkdsc command.
+it will use that folder instead.
 .SY mkkmp
 .OP module/module\-version
 .OP --spec specfile
