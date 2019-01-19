@@ -3045,16 +3045,16 @@ make_debian()
             die 7 $"There was a problem creating your ${create_type}."
         echo $""
         echo $"DKMS: mk${create_type} completed."
-	invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_${debian_build_arch}.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
+        invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_${debian_build_arch}.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
 	;;
     bmdeb)
-	export KVER="$kernelver"
-	export KARCH="$arch"
-	invoke_command "dpkg-buildpackage -rfakeroot -d -b -us -uc 1>/dev/null" "Building binary package" || \
-	    die 7 $"There was a problem creating your ${create_type}."
-	echo $""
-	echo $"DKMS: mk${create_type} completed."
-	invoke_command "mv '$temp_dir/${debian_package}-modules-${kernelver}_${module_version}_${debian_build_arch}.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
+        export KVER="$kernelver"
+        export KARCH="$arch"
+        invoke_command "dpkg-buildpackage -rfakeroot -d -b -us -uc 1>/dev/null" "Building binary package" || \
+        die 7 $"There was a problem creating your ${create_type}."
+        echo $""
+        echo $"DKMS: mk${create_type} completed."
+        invoke_command "mv '$temp_dir/${debian_package}-modules-${kernelver}_${module_version}_${debian_build_arch}.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
         ;;
     esac
     popd > /dev/null 2>&1
