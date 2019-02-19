@@ -9,13 +9,12 @@ The DKMS project (and any updates) can be found at: https://github.com/dell/dkms
 How To Build RPM & DEB Package
 --
 
-If you want to create rpm or deb package,then you can install the dkms package in your system.
+If you want to create rpm or deb package, then you can install the dkms package in your system.
 
 1. Install all the build dependency packages
-2. Runs: '#make rpm' to create rpm package
-3. Runs: '#make debs' to create deb package
-4. You can find the built package in "dkms/dist/"
-
+2. Run: `make rpm` to create rpm package
+3. Run: `make debs` to create deb package
+4. You can find the built package in `dkms/dist/`
 
 
 Installation of DKMS via RPM
@@ -32,13 +31,12 @@ This is a prerequisite to installing DKMS-enabled module RPMs.
 Installation via RPM
 --
 
-To install a DKMS enabled module RPM, you simply install it like any other
-RPM:
+To install a DKMS enabled module RPM, you simply install it like any other RPM:
 
 `rpm -ivh <module>-<version>-<rpmversion>.noarch.rpm`
 
 With a DKMS enabled module RPM, most of the installation work done by the RPM
-is actually handed off to DKMS within the RPM.  Generally it does the following:
+is actually handed off to DKMS within the RPM. Generally it does the following:
 
 1. Installs module source into `/usr/src/<module>-<moduleversion>/`
 2. Places a dkms.conf file into `/usr/src/<module>-<moduleversion>/`
