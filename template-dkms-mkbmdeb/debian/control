@@ -1,0 +1,14 @@
+Source: DEBIAN_PACKAGE-dkms-bin
+Section: misc
+Priority: optional
+Maintainer: Dynamic Kernel Modules Support Team <pkg-dkms-maint@lists.alioth.debian.org>
+Build-Depends: debhelper (>= 7), dkms
+Standards-Version: 3.8.1
+
+Package: DEBIAN_PACKAGE-modules-KERNEL_VERSION
+Architecture: DEBIAN_BUILD_ARCH
+Depends: ${misc:Depends}, linux-image-KERNEL_VERSION
+Provides: DEBIAN_PACKAGE-modules
+Description: DEBIAN_PACKAGE binary drivers for linux-image-KERNEL_VERSION
+ This package contains DEBIAN_PACKAGE drivers for the KERNEL_VERSION Linux kernel,
+ built from DEBIAN_PACKAGE-dkms for the DEBIAN_BUILD_ARCH architecture.

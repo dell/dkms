@@ -88,6 +88,10 @@ install-debian: install install-doc
 	chmod +x $(ETC)/template-dkms-mkdeb/debian/postinst
 	chmod +x $(ETC)/template-dkms-mkdeb/debian/prerm
 	chmod +x $(ETC)/template-dkms-mkdeb/debian/rules
+	mkdir   -p -m 0755 $(ETC)/template-dkms-mkbmdeb/debian
+	install -p -m 0664 template-dkms-mkbmdeb/Makefile $(ETC)/template-dkms-mkbmdeb/
+	install -p -m 0664 template-dkms-mkbmdeb/debian/* $(ETC)/template-dkms-mkbmdeb/debian/
+	chmod +x $(ETC)/template-dkms-mkbmdeb/debian/rules
 	rm $(DOCDIR)/COPYING*
 	rm $(DOCDIR)/sample*
 
