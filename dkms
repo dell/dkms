@@ -770,9 +770,7 @@ check_version_sanity()
     echo $"Running module version sanity check."
     local i=0
     local -a kernels_info dkms_info
-    set_module_suffix
-    read -a kernels_module < <(find_module "$lib_tree" "${4}")
-    if [ -z $kernels_module ]; then
+    if [ -n $3 ]; then
         # Magic split into array syntax saves trivial awk and cut calls.
         local -a obs=(${3//-/ })
         local -a my=(${1//-/ })
@@ -803,10 +801,11 @@ check_version_sanity()
             echo $"for future kernels above $3." >&2
             echo $"You may override by specifying --force." >&2
             return 1
-  else
-          return 0
         fi
     fi
+    set_module_suffix
+    read -a kernels_module < <(find_module "$lib_tree" "${4}")
+    [ -z $kernels_module ] || return 0
 
     if [[ ${kernels_module[1]} ]]; then
         warn $"Warning! Cannot do version sanity checking because multiple ${4}$module_suffix" \
