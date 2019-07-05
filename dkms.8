@@ -903,6 +903,13 @@ of your source.  If the script exits with a non\-zero value, the
 install will be aborted.  This is typically used to perform a custom
 version comparison.
 .TP
+.B SIGN_TOOL=
+The module signing tool to be run at a
+.B build.
+Two arguments will be passed to the signing tool. The first argument is the
+target kernel version, the second is the module file path. If the tool exits
+with a non\-zero value, the build will be aborted.
+.TP
 .SH DKMS.CONF VARIABLES
 Within your
 .I dkms.conf
