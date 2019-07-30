@@ -805,7 +805,7 @@ check_version_sanity()
     fi
     set_module_suffix
     read -a kernels_module < <(find_module "$lib_tree" "${4}")
-    [ -z $kernels_module ] || return 0
+    [ -z $kernels_module ] && return 0
 
     if [[ ${kernels_module[1]} ]]; then
         warn $"Warning! Cannot do version sanity checking because multiple ${4}$module_suffix" \
