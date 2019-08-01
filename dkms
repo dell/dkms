@@ -43,12 +43,16 @@ readonly rh_kernels='(debug|summit|smp|enterprise|bigmem|hugemem|BOOT|vmnix)'
 
 # Areas that will vary between Linux and other OS's
 _get_kernel_dir() {
-    KVER=$1
-    case ${current_os} in
-       Linux)          DIR="/lib/modules/$KVER/build" ;;
-       GNU/kFreeBSD)   DIR="/usr/src/kfreebsd-headers-$KVER/sys" ;;
-    esac
-    echo $DIR
+    if [[ -z $ksourcedir_fromcli ]]; then
+        KVER=$1
+        case ${current_os} in
+           Linux)          DIR="/lib/modules/$KVER/build" ;;
+           GNU/kFreeBSD)   DIR="/usr/src/kfreebsd-headers-$KVER/sys" ;;
+        esac
+        echo $DIR
+    else
+        echo $kernel_source_dir
+    fi
 }
 
 _check_kernel_dir() {
@@ -209,8 +213,10 @@ set_module_suffix()
 
 set_kernel_source_dir()
 {
-    # $1 = the kernel to base the directory on
-    kernel_source_dir="$(_get_kernel_dir "$1")"
+    if [[ -z $ksourcedir_fromcli ]]; then
+        # $1 = the kernel to base the directory on
+        kernel_source_dir="$(_get_kernel_dir "$1")"
+    fi
 }
 
 # A little test function for DKMS commands that only work on one kernel.
