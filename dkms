@@ -1126,7 +1126,7 @@ prepare_kernel()
                 ;;
         * )
             die 1 echo $"Your kernel headers for kernel $1 cannot be found at" \
-                $"/lib/modules/$1/build or /lib/modules/$1/source."
+                $"/lib/modules/$1/build or /lib/modules/$1/source." \
                 $"You can use the --kernelsourcedir option to tell DKMS where it's located."
             ;;
     esac
