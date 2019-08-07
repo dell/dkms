@@ -940,12 +940,15 @@ option.
 You can override the module-provided
 .I dkms.conf
 files. Every time after a  dkms.conf file is read, dkms will look for and read the following files in order:
-
-.I /etc/dkms/<module>.conf\p
-.I /etc/dkms/<module>\-<module\-version>.conf\p
-.I /etc/dkms/<module>\-<module\-version>\-<kernel>.conf\p
+.PP
+.I /etc/dkms/<module>.conf
+.br
+.I /etc/dkms/<module>\-<module\-version>.conf
+.br
+.I /etc/dkms/<module>\-<module\-version>\-<kernel>.conf
+.br
 .I /etc/dkms/<module>\-<module\-version>\-<kernel>\-<arch>.conf
-
+.PP
 You can use these files to override settings in the module-provided dkms.conf files.
 .SH /etc/dkms/framework.conf
 This configuration file controls how the overall DKMS framework handles.  It is sourced
