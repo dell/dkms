@@ -33,7 +33,8 @@ readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
    DEST_MODULE_LOCATION dest_module_location
    modules_conf_obsoletes MODULES_CONF_ALIAS_TYPE
    modules_conf_alias_type STRIP strip MODULES_CONF_OBSOLETE_ONLY
-   modules_conf_obsolete_only AUTOINSTALL NO_WEAK_MODULES"
+   modules_conf_obsolete_only AUTOINSTALL NO_WEAK_MODULES
+   SIGN_TOOL"
 
 # Some important regular expressions.  Requires bash 3 or above.
 # Any poor souls still running bash 2 or older really need an upgrade.
@@ -593,6 +594,7 @@ read_conf()
     pre_build="$PRE_BUILD"
     pre_install="$PRE_INSTALL"
     obsolete_by="$OBSOLETE_BY"
+    sign_tool="$SIGN_TOOL"
 
     # Set module naming/location arrays
     local index array_size=0 s
@@ -1056,6 +1058,21 @@ run_build_script() {
     fi
 }
 
+run_sign_tool() {
+    # $1 = sign tool to run
+    # $2 = module file to sign
+    local logfile="$base_dir/log/make.log"
+    if [[ -x "$1" ]]; then
+        echo "Signing $2" >> "$logfile"
+        "$1" "$kernelver" "$2" || \
+        report_build_problem 11 $"Bad exit status $? for sign tool." \
+            $"Consult $logfile for more information."
+    else
+        echo $""
+        warn $"The $1 is not executable."
+    fi
+}
+
 # Register a DKMS-ified source tree with DKMS.
 # This function is smart enough to register the module if we
 # passed a source tree or a tarball instead of relying on the source tree
@@ -1346,14 +1363,19 @@ do_build()
     # Save a copy of the new module
     mkdir "$base_dir/module" >/dev/null
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
-    [[ ${strip[$count]} != no ]] && strip -g "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
-    if [ "$module_compressed_suffix" = ".gz" ]; then
-        gzip -9f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
-    elif [ "$module_compressed_suffix" = ".xz" ]; then
-        xz -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
-    fi
-    cp -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix" \
-        "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
+        [[ ${strip[$count]} != no ]] && strip -g "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+
+        if [ -n "${sign_tool}" ]; then
+            run_sign_tool "${sign_tool}" "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+        fi
+
+        if [ "$module_compressed_suffix" = ".gz" ]; then
+            gzip -9f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+        elif [ "$module_compressed_suffix" = ".xz" ]; then
+            xz -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+        fi
+        cp -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix" \
+            "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
     done
 
     # Run the post_build script
