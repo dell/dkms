@@ -10,7 +10,7 @@ NAME=MODULE_NAME
 PACKAGE_NAME=$NAME-dkms
 DEB_NAME=$(echo $PACKAGE_NAME | sed 's,_,-,')
 CVERSION=`dpkg-query -W -f='${Version}' $DEB_NAME | awk -F "-" '{print $1}' | cut -d\: -f2`
-ARCH=`dpkg --print-architecture`
+ARCH=`dpkg-architecture -qDEB_BUILD_GNU_CPU`
 
 dkms_configure () {
 	for POSTINST in /usr/lib/dkms/common.postinst "/usr/share/$PACKAGE_NAME/postinst"; do
