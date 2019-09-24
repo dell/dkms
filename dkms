@@ -784,7 +784,7 @@ check_version_sanity()
         local -a my=(${1//-/ })
         local obsolete=0
         if [[ ${obs} && ${my} ]]; then
-            if [[ $(VER ${obs}) == $(VER ${my}) ]]; then
+            if [[ $(VER ${obs}) == $(VER ${my}) && ! $force ]]; then
                 # They get obsoleted possibly in this kernel release
                 if [[ ! ${obs[1]} ]]; then
                     # They were obsoleted in this upstream kernel
@@ -796,7 +796,7 @@ check_version_sanity()
                     # They were obsoleted in this ABI bump of the kernel
                     obsolete=1
                 fi
-            elif [[ $(VER ${my}) > $(VER ${obs}) ]]; then
+            elif [[ $(VER ${my}) > $(VER ${obs}) && ! $force ]]; then
                 # They were obsoleted in an earlier kernel release
                 obsolete=1
             fi
