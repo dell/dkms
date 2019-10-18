@@ -1798,7 +1798,7 @@ do_uninstall()
         while [ "${dir_to_remove}" != "${dir_to_remove#/}" ]; do
             dir_to_remove="${dir_to_remove#/}"
         done
-        (cd "$install_tree/$1" && rmdir --parents --ignore-fail-on-non-empty "${dir_to_remove}" || true)
+        (cd "$install_tree/$1" && rmdir -p --ignore-fail-on-non-empty "${dir_to_remove}" || true)
         echo $" - Original module"
         local origmod=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$1/$2" "${dest_module_name[$count]}")
         if [[ -n "$origmod" ]]; then
@@ -2615,13 +2615,13 @@ make_tarball()
     fi
     case $tarball_ext in
         gz)
-            gzip --force -9 "$tarball_dest/$tarball_name"
+            gzip -f -9 "$tarball_dest/$tarball_name"
             ;;
         bz2)
-            bzip2 --force -9 "$tarball_dest/$tarball_name"
+            bzip2 -f -9 "$tarball_dest/$tarball_name"
             ;;
         xz)
-            xz --force -9 "$tarball_dest/$tarball_name"
+            xz -f -9 "$tarball_dest/$tarball_name"
             ;;
     esac
     echo $""
