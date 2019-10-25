@@ -20,6 +20,7 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+shopt -s extglob
 
 # All of the variables we will accept from dkms.conf.
 # Does not include directives
@@ -2047,7 +2048,7 @@ module_status_built_extra() (
 # we do not get word splitting where it would be inconvienent.
 module_status_built() {
     local ret=1 directory ka k a state oifs="$IFS" IFS=''
-    for directory in "$dkms_tree/$1/$2/"${3:-[0-9].*}/${4:-*}; do
+    for directory in "$dkms_tree/$1/$2/"${3:-+([0-9]).*}/${4:-*}; do
         IFS="$oifs"
         ka="${directory#$dkms_tree/$1/$2/}"
         k="${ka%/*}"
