@@ -877,16 +877,17 @@ moduleconfig_update_obsoletes()
     # Do all the changes at once, record the diffs for posterity
     for file in "$@"; do
         [[ $file && -w $file ]] || continue
+        _tmpf="$temp_dir_name/${file##*/}.new"
         if [[ $file = /etc/sysconfig/kernel ]]; then
-            sed "${sa_sck_o[*]}" "$file" > "$temp_dir_name/${file##*/}.new"
+            [ -z "${sa_sck_o[@]}" ] || sed "${sa_sck_o[@]}" "$file" > "$_tmpf"
         else
-            sed "${sa_mc_o[*]}" "$file" > "$temp_dir_name/${file##*/}.new"
+            [ -z "${sa_mc_o[@]}" ] || sed "${sa_mc_o[@]}" "$file" > "$_tmpf"
         fi
-        if ! mod_diff=$(diff -u "$temp_dir_name/${file##*/}.new" "$file"); then
+	if [ -f "$_tmpf" ] && ! mod_diff=$(diff -u "$_tmpf" "$file"); then
             echo $"$file updated to replace obsoleted module references:"
             echo "$mod_diff"
-            cp -fp "$temp_dir_name/${file##*/}.new" "$file"
-            rm -f "$temp_dir_name/${file##*/}.new"
+            cp -fp "$_tmpf" "$file"
+            rm -f "$_tmpf"
         fi
     done
 }
