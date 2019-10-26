@@ -1416,6 +1416,7 @@ clean_build()
 
 sign_build()
 {
+    [[ -x "$(command -v kmodsign)" && -d "/var/lib/shim-signed/mok/" ]] || return
     local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
     if type update-secureboot-policy >/dev/null 2>&1; then
         echo $"Signing module:"
