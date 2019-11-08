@@ -1304,7 +1304,7 @@ prepare_build()
 
     # Error out if build_exclude is set
     [[ $build_exclude ]] && die 9 \
-        $" The dkms.conf for this module includes a BUILD_EXCLUSIVE directive which" \
+        $" The $base_dir/dkms.conf for module $module includes a BUILD_EXCLUSIVE directive which" \
         $"does not match this kernel/arch.  This indicates that it should not be built."
 
     # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
