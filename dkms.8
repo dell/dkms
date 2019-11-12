@@ -108,6 +108,18 @@ case
 can take the same arguments that
 .B add
 can.
+.SY unbuild
+.OP module/module\-version
+.OP -k kernel/arch
+.OP \-\-all
+.YS
+.IP "" 4
+Undoes the build for a module/version or module/version/kernel/arch combination from the
+tree.  If the module is currently installed, it first uninstalls it
+and if applicable, will replace it with its original_module. Finally all binary
+kernel modules are removed. Use the
+.B \-\-all
+option in order to remove all instances for every kernel at once.
 .SY install
 .OP module/module\-version
 .OP -k kernel/arch
