@@ -1928,6 +1928,13 @@ uninstall_module()
     done
 }
 
+do_unbuild()
+{
+    # Delete or "unbuild" the $kernel_version/$arch_used part of the tree
+    rm -rf "$dkms_tree/$module/$module_version/$1/$2"
+    [[ $(find $dkms_tree/$module/$module_version/$1/* -maxdepth 0 -type d 2>/dev/null) ]] || \
+        rm -rf "$dkms_tree/$module/$module_version/$1"
+}
 # Unregister a DKMS module.  This uninstalls any installed modules along the way.
 remove_module()
 {
@@ -1958,10 +1965,7 @@ remove_module()
 
         do_uninstall "${kernelver[$i]}" "${arch[$i]}"
 
-        # Delete the $kernel_version/$arch_used part of the tree
-        rm -rf "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}"
-        [[ $(find $dkms_tree/$module/$module_version/${kernelver[$i]}/* -maxdepth 0 -type d 2>/dev/null) ]] || \
-            rm -rf "$dkms_tree/$module/$module_version/${kernelver[$i]}"
+        do_unbuild "${kernelver[$i]}" "${arch[$i]}"
     done
 
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
