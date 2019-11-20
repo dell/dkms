@@ -6,7 +6,7 @@
 
 set -e
 
-. /usr/share/debconf/confmodule
+[ -f /usr/share/debconf/confmodule ] && . /usr/share/debconf/confmodule
 
 uname_s=$(uname -s)
 
