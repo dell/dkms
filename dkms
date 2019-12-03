@@ -812,7 +812,7 @@ check_version_sanity()
             return 1
         fi
     fi
-    set_module_suffix
+    set_module_suffix "$1"
     read -a kernels_module < <(find_module "$lib_tree" "${4}")
     [ -z $kernels_module ] && return 0
 
