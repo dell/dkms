@@ -3855,10 +3855,10 @@ for action_to_run in $action; do
         check_root && make_driver_disk
         ;;
     build)
-        build_modules
+        check_root && build_modules
         ;;
     add)
-        add_module
+        check_root && add_module
         ;;
     mktarball)
         make_tarball
