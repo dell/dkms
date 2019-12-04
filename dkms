@@ -3849,7 +3849,7 @@ for action_to_run in $action; do
         check_root && autoinstall
         ;;
     match)
-        check_root && have_one_kernel && run_match
+        check_root && have_one_kernel "match" && run_match
         ;;
     uninstall)
         check_root && uninstall_module
@@ -3879,7 +3879,7 @@ for action_to_run in $action; do
         make_debian "dsc"
         ;;
     mkkmp)
-        have_one_kernel && make_kmp
+        have_one_kernel "mkkmp" && make_kmp
         ;;
     status)
         show_status
