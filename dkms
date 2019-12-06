@@ -3845,7 +3845,7 @@ for action_to_run in $action; do
         check_root && remove_module
         ;;
     install)
-        check_root && install_modules
+        check_root && check_all_is_banned "install" && install_modules
         ;;
     autoinstall)
         check_root && autoinstall
@@ -3860,10 +3860,10 @@ for action_to_run in $action; do
         check_root && make_driver_disk
         ;;
     build)
-        check_root && build_modules
+        check_root && check_all_is_banned "build" && build_modules
         ;;
     add)
-        check_root && add_module
+        check_root && check_all_is_banned "add" && add_module
         ;;
     mktarball)
         make_tarball
