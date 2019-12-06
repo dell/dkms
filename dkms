@@ -1030,7 +1030,7 @@ etc_sysconfig_kernel_modify()
 
 check_module_args() {
     [[ $module && $module_version ]] && return
-    die 1 $"Invalid number of arguments passed." \
+    die 1 $"Arguments <module> and <module-version> are not specified" \
         $"Usage: $1 <module>/<module-version> or" \
         $"       $1 -m <module>/<module-version> or" \
         $"       $1 -m <module> -v <module-version>"
