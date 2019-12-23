@@ -1524,7 +1524,7 @@ install_module()
             $"You may override by specifying --force."
     fi
     local m=${dest_module_name[$count]}
-    local installed_modules=$(find_module "$lib_tree" "$m" | grep -v "$lib_tree/kernel/")
+    local installed_modules=$(find_module "$lib_tree" "$m")
     local module_count=${#installed_modules[@]}
     echo $" - Original module"
     local original_copy=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$kernelver/$arch" "$m")
