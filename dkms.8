@@ -132,11 +132,14 @@ action to be sure that everything is built for your kernel if the RPM installed 
 .SY uninstall
 .OP module/module\-version
 .OP -k kernel/arch
+.OP \-\-all
 .YS
 .IP "" 4
 Uninstalls an installed module/module\-version combo from the kernel/arch passed in the -k option, or the
-current kernel if the -k option was not passed.
-upon.  After uninstall completion, the driver will be left in the built state.
+current kernel if the -k option was not passed. Use the
+.B \-\-all
+option in order to uninstall all instances for every kernel at once.
+After uninstall completion, the driver will be left in the built state.
 To completely remove a driver, the remove action should be utilized.
 .SY match
 .OP --templatekernel kernel/arch

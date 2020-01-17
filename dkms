@@ -1920,9 +1920,12 @@ uninstall_module()
     # Check that $module is in the dkms tree
     module_is_added_or_die
 
-    # Only do stuff if module/module version is currently installed
-    module_is_installed_or_die "$kernelver" "$arch"
-    do_uninstall "$kernelver" "$arch"
+    local i
+    for ((i=0; i < ${#kernelver[@]}; i++)); do
+        # Only do stuff if module/module version is currently installed
+        module_is_installed_or_die "${kernelver[$i]}" "${arch[$i]}"
+        do_uninstall "${kernelver[$i]}" "${arch[$i]}"
+    done
 }
 
 # Unregister a DKMS module.  This uninstalls any installed modules along the way.
@@ -3849,7 +3852,7 @@ for action_to_run in $action; do
         check_root && have_one_kernel && run_match
         ;;
     uninstall)
-        check_root && have_one_kernel && uninstall_module
+        check_root && uninstall_module
         ;;
     mkdriverdisk)
         check_root && make_driver_disk
