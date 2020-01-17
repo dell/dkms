@@ -1941,6 +1941,20 @@ remove_module()
     # Check that the right arguments were passed
     check_module_args remove
 
+    # Do --rpm_safe_upgrade check (exit out and don't do remove if inter-release RPM upgrade scenario occurs)
+    if [[ $rpm_safe_upgrade ]]; then
+        local pppid=$(awk '/PPid:/ {print $2}' /proc/$PPID/status)
+        local time_stamp=$(ps -o lstart --no-headers -p $pppid 2>/dev/null)
+        for lock_file in $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.*; do
+            [[ -f $lock_file ]] || continue
+            lock_head=$(head -n 1 $lock_file 2>/dev/null)
+            lock_tail=$(tail -n 1 $lock_file 2>/dev/null)
+            [[ $lock_head = $module-$module_version && $time_stamp && $lock_tail = $time_stamp ]] || continue
+            rm -f $lock_file
+            die 0 $"DKMS: Remove cancelled because --rpm_safe_upgrade scenario detected."
+        done
+    fi
+
     # Check that $module is in the dkms tree
     module_is_added_or_die
 
@@ -1948,20 +1962,6 @@ remove_module()
     for ((i=0; i < ${#kernelver[@]}; i++)); do
         # Make sure its there first before removing
         module_is_built_or_die "${kernelver[$i]}" "${arch[$i]}"
-
-        # Do --rpm_safe_upgrade check (exit out and don't do remove if inter-release RPM upgrade scenario occurs)
-        if [[ $rpm_safe_upgrade ]]; then
-            local pppid=$(awk '/PPid:/ {print $2}' /proc/$PPID/status)
-            local time_stamp=$(ps -o lstart --no-headers -p $pppid 2>/dev/null)
-            for lock_file in $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.*; do
-                [[ -f $lock_file ]] || continue
-                lock_head=$(head -n 1 $lock_file 2>/dev/null)
-                lock_tail=$(tail -n 1 $lock_file 2>/dev/null)
-                [[ $lock_head = $module-$module_version && $time_stamp && $lock_tail = $time_stamp ]] || continue
-                rm -f $lock_file
-                die 0 $"DKMS: Remove cancelled because --rpm_safe_upgrade scenario detected."
-            done
-        fi
 
         do_uninstall "${kernelver[$i]}" "${arch[$i]}"
 
