@@ -262,7 +262,6 @@ setup_kernels_arches()
     if [[ $1 != status ]]; then
         if [[ ! $kernelver && ! $all ]]; then
             kernelver[0]=$(uname -r)
-            kernels_arches_default="yes"
         fi
         if [[ ! $arch ]]; then
             kernelver_rpm=$(rpm -qf "/lib/modules/$kernelver" 2>/dev/null | \
@@ -1890,6 +1889,28 @@ do_uninstall()
     echo $"DKMS: uninstall completed."
 }
 
+module_is_added_or_die()
+{
+    is_module_added "$module" "$module_version" || die 3 \
+        $"The module/version combo: $module-$module_version" \
+        $"is not located in the DKMS tree."
+}
+
+module_is_built_or_die()
+{
+    is_module_built "$module" "$module_version" "$1" "$2" || die 4 \
+        $"There is no instance of $module $module_version" \
+        $"for kernel $1 ($2) located in the DKMS tree."
+
+}
+
+module_is_installed_or_die()
+{
+    is_module_installed "$module" "$module_version" "$1" "$2" || die 4 \
+        $"The module $module $module_version is not currently installed." \
+        $"This module is not currently ACTIVE for kernel $1 ($2)."
+}
+
 # Check our preconditions, and then let do_install do all the hard work.
 uninstall_module()
 {
@@ -1897,23 +1918,10 @@ uninstall_module()
     check_module_args uninstall
 
     # Check that $module is in the dkms tree
-    [[ -d $dkms_tree/$module ]] || die 2 \
-        $"There are no instances of module: $module" \
-        $"located in the DKMS tree."
-
-    # Make sure that its installed in the first place
-    [[ -d $dkms_tree/$module/$module_version ]] || die 3 \
-        $"The module/version combo: $module-$module_version" \
-        $"is not located in the DKMS tree."
-
-    # Read the conf file
-    read_conf_or_die "$kernelver" "$arch"
+    module_is_added_or_die
 
     # Only do stuff if module/module version is currently installed
-    local kernel_symlink=$(readlink -f "$dkms_tree/$module/kernel-$kernelver-$arch")
-    [[ $kernel_symlink = $dkms_tree/$module/$module_version/$kernelver/$arch ]] || die 5 \
-        $"The module $module $module_version is not currently installed." \
-        $"This module is not currently ACTIVE for kernel $kernelver ($arch)."
+    module_is_installed_or_die "$kernelver" "$arch"
     do_uninstall "$kernelver" "$arch"
 }
 
@@ -1921,25 +1929,15 @@ uninstall_module()
 remove_module()
 {
     # Check that the right arguments were passed
-    if [[ ! ($module && $module_version) || $kernels_arches_default  ]]; then
-        die 1 $"Invalid number of parameters passed." \
-            $"Usage: remove <module>/<module-version> --all" \
-            $"   or: remove <module>/<module-version> -k <kernel-version>"
-    fi
+    check_module_args remove
 
     # Check that $module is in the dkms tree
-    if ! [[ -d $dkms_tree/$module/$module_version ]]; then
-        die 3 $"There are no instances of module: $module" \
-            $"$module_version located in the DKMS tree."
-    fi
+    module_is_added_or_die
 
     local i
     for ((i=0; i < ${#kernelver[@]}; i++)); do
         # Make sure its there first before removing
-        if ! [[ -d $dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]} ]]; then
-            die 4 $"There is no instance of $module $module_version" \
-            $"for kernel ${kernelver[$i]} (${arch[$i]}) located in the DKMS tree."
-        fi
+        module_is_built_or_die "${kernelver[$i]}" "${arch[$i]}"
 
         # Do --rpm_safe_upgrade check (exit out and don't do remove if inter-release RPM upgrade scenario occurs)
         if [[ $rpm_safe_upgrade ]]; then
@@ -1954,9 +1952,6 @@ remove_module()
                 die 0 $"DKMS: Remove cancelled because --rpm_safe_upgrade scenario detected."
             done
         fi
-
-        # Read the conf file
-        read_conf_or_die "${kernelver[$i]}" "${arch[$i]}"
 
         do_uninstall "${kernelver[$i]}" "${arch[$i]}"
 
