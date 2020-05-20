@@ -918,13 +918,6 @@ of your source.  If the script exits with a non\-zero value, the
 install will be aborted.  This is typically used to perform a custom
 version comparison.
 .TP
-.B SIGN_TOOL=
-The module signing tool to be run at a
-.B build.
-Two arguments will be passed to the signing tool. The first argument is the
-target kernel version, the second is the module file path. If the tool exits
-with a non\-zero value, the build will be aborted.
-.TP
 .SH DKMS.CONF VARIABLES
 Within your
 .I dkms.conf
@@ -976,22 +969,25 @@ You can use these files to override settings in the module-provided dkms.conf fi
 This configuration file controls how the overall DKMS framework handles.  It is sourced
 in every time the dkms command is run.  Mainly it can currently be used to set different
 default values for the variables.
-.B $dkms_tree
-,
-.B $source_tree
-and
-.B $install_tree
-which control where DKMS looks for its framework.  The
+.TP
+.B $dkms_tree, $source_tree, $install_tree
+control where DKMS looks for its framework.
+.TP
 .B $symlink_modules
-variable controls whether binary modules are copied to /lib/modules or if only symlinks are
-created there. Note that these variables can also
+controls whether binary modules are copied to /lib/modules or if only symlinks are created there. Note that these variables can also
 be manipulated on the command line with \-\-dkmstree, \-\-sourcetree, \-\-installtree
 and \-\-symlink-modules options.
-
-The
+.TP
+.B $sign_tool
+Script to be run at build for signing modules.
+Two arguments will be passed to the script. The first argument is the
+.B target kernel version
+, the second is the
+.B module file path.
+If the script exits with a non\-zero value, the build will be aborted.
+.TP
 .B $autoinstall_all_kernels
-variable is used by the common postinst for DKMS modules. It controls if the build should be done
-for all installed kernels or only for the current and latest installed kernel. It has no command
+used by the common postinst for DKMS modules. It controls if the build should be done for all installed kernels or only for the current and latest installed kernel. It has no command
 line equivalent.
 .SH dkms_autoinstaller
 This boot\-time service automatically installs any module which has

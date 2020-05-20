@@ -599,7 +599,6 @@ read_conf()
     pre_build="$PRE_BUILD"
     pre_install="$PRE_INSTALL"
     obsolete_by="$OBSOLETE_BY"
-    sign_tool="$SIGN_TOOL"
 
     # Set module naming/location arrays
     local index array_size=0 s
