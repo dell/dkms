@@ -1438,13 +1438,6 @@ sign_build()
 
 build_module()
 {
-    local buildable=0
-    for ((count=0; count < ${#built_module_name[@]}; count++)); do
-        check_version_sanity "$kernelver" "$arch" "$obsolete_by" "${dest_module_name[$count]}" || continue
-        ((buildable++))
-    done
-    ((buildable!=0)) || exit 0
-
     prepare_build
     do_build
     sign_build
