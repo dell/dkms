@@ -45,9 +45,13 @@ case "$1" in
 		else
 			kernel=`uname -r`
 		fi
-		log_daemon_msg "$prog: running auto installation service for kernel $kernel"
-		dkms autoinstall --kernelver $kernel
-		log_end_msg $?
+		if [ -f /etc/dkms/no-autoinstall ]; then
+			log_daemon_msg "$prog: autoinstall for dkms modules has been disabled"
+		else
+			log_daemon_msg "$prog: running auto installation service for kernel $kernel"
+			dkms autoinstall --kernelver $kernel
+			log_end_msg $?
+		fi
 		;;
 	stop|restart|force-reload|status|reload)
 		# There is no stop action, this and the 04 priority during stop is
