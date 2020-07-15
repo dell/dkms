@@ -149,6 +149,11 @@ if [ -z "$NAME" ] || [ -z "$VERSION" ]; then
     exit 1
 fi
 
+if [ -f /etc/dkms/no-autoinstall ]; then
+    echo "autoinstall for dkms modules has been disabled."
+    exit 0
+fi
+
 # read framework configuration options
 if [ -r /etc/dkms/framework.conf ]; then
     . /etc/dkms/framework.conf
