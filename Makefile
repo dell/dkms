@@ -64,6 +64,8 @@ install-redhat-sysv: install doc-perms
 	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
 	install -p -m 0644 template-dkms-redhat-kmod.spec $(ETC)
 	install -p -m 0755 dkms_autoinstaller $(INITD)
+	install -p -m 0755 kernel_install.d_dkms $(ETC)
+	install -p -m 0755 sign_helper.sh $(ETC)
 
 install-redhat-systemd: install doc-perms
 	mkdir -m 0755 -p  $(SYSTEMD)
@@ -73,6 +75,8 @@ install-redhat-systemd: install doc-perms
 	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
 	install -p -m 0644 template-dkms-redhat-kmod.spec $(ETC)
 	install -p -m 0644 dkms.service $(SYSTEMD)
+	install -p -m 0755 kernel_install.d_dkms $(ETC)
+	install -p -m 0755 sign_helper.sh $(ETC)
 
 install-doc:
 	mkdir -m 0755 -p $(DOCDIR)
@@ -94,6 +98,8 @@ install-debian: install install-doc
 	install -p -m 0664 template-dkms-mkbmdeb/Makefile $(ETC)/template-dkms-mkbmdeb/
 	install -p -m 0664 template-dkms-mkbmdeb/debian/* $(ETC)/template-dkms-mkbmdeb/debian/
 	chmod +x $(ETC)/template-dkms-mkbmdeb/debian/rules
+	install -p -m 0755 kernel_install.d_dkms $(ETC)
+	install -p -m 0755 sign_helper.sh $(ETC)
 	rm $(DOCDIR)/COPYING*
 	rm $(DOCDIR)/sample*
 
