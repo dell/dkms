@@ -3886,7 +3886,8 @@ for action_to_run in $action; do
         check_root && make_driver_disk
         ;;
     build)
-        check_root && check_all_is_banned "build" && build_modules
+        [ ! -w "$dkms_tree" ] && die 1 $"No write access to create a DKMS tree at ${dkms_tree}"
+        check_all_is_banned "build" && build_modules
         ;;
     add)
         check_root && check_all_is_banned "add" && add_module
