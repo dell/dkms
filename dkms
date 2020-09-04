@@ -1003,7 +1003,7 @@ moduleconfig_remove()
 
 etc_sysconfig_kernel_modify()
 (
-    [[ -e /etc/sysconfig/kernel && $remake_initrd ]] || return 0
+    [[ -f /etc/sysconfig/kernel && $remake_initrd ]] || return 0
 
     # Make a temp directory to store files
     local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
