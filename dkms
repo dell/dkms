@@ -210,6 +210,7 @@ set_module_suffix()
     [[ $(VER $kernel_test) < $(VER 2.5) ]] && module_uncompressed_suffix=".o"
     grep -q '\.gz:' /lib/modules/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".gz"
     grep -q '\.xz:' /lib/modules/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".xz"
+    grep -q '\.zst:' /lib/modules/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".zst"
     module_suffix="$module_uncompressed_suffix$module_compressed_suffix"
 }
 
@@ -1383,6 +1384,8 @@ do_build()
             gzip -9f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
         elif [ "$module_compressed_suffix" = ".xz" ]; then
             xz -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+        elif [ "$module_compressed_suffix" = ".zst" ]; then
+            zstd -q -f -T0 -20 --ultra "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
         fi
         cp -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix" \
             "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
