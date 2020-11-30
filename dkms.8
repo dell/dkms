@@ -763,6 +763,17 @@ if it finds within it an obsolete reference as specified in the corresponding va
 .B MODULES_CONF_OBSOLETES[#]
 array directive.
 .TP
+.B NO_WEAK_MODULES=
+The
+.B NO_WEAK_MODULES
+parameter prevents dkms from creating a symlink into the weak-updates directory, which is the
+default on Red Hat derivatives. The weak modules facility was designed to eliminate the need to
+rebuild kernel modules when kernel upgrades occur and relies on the symbols within the kABI.
+
+Fedora does not guaranteed a stable kABI so it should be disabled in the specific module override by setting it to "yes". For example, for an Nvidia DKMS module you would set the following in /etc/dkms/nvidia.conf:
+
+NO_WEAK_MODULES="yes"
+.TP
 .B STRIP[#]=
 By default strip is considered to be "yes".  If set to "no", DKMS will not
 run strip \-g against your built module to remove debug symbols from it.
