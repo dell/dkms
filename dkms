@@ -1361,7 +1361,8 @@ do_build()
         [[ -e ${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix ]] && continue
         report_build_problem 7 \
             $" Build of ${built_module_name[$count]}$module_uncompressed_suffix failed for: $kernelver ($arch)" \
-            $"Consult the make.log in the build directory" \
+            $"Make sure the name of the generated module is correct and at the root of the" \
+            $"build directory, or consult make.log in the build directory" \
             $"$dkms_tree/$module/$module_version/build/ for more information."
     done
     cd - >/dev/null
