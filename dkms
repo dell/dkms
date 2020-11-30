@@ -1004,7 +1004,7 @@ moduleconfig_remove()
 
 etc_sysconfig_kernel_modify()
 (
-    [[ -e /etc/sysconfig/kernel && $remake_initrd ]] || return 0
+    [[ -f /etc/sysconfig/kernel && $remake_initrd ]] || return 0
 
     # Make a temp directory to store files
     local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
@@ -1826,7 +1826,7 @@ do_uninstall()
         while [ "${dir_to_remove}" != "${dir_to_remove#/}" ]; do
             dir_to_remove="${dir_to_remove#/}"
         done
-        (cd "$install_tree/$1" && rmdir -p --ignore-fail-on-non-empty "${dir_to_remove}" || true)
+        (if cd "$install_tree/$1"; then rpm -qf "${dir_to_remove}" >/dev/null 2>&1 || rmdir -p --ignore-fail-on-non-empty "${dir_to_remove}"; fi || true)
         echo $" - Original module"
         local origmod=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$1/$2" "${dest_module_name[$count]}")
         if [[ -n "$origmod" ]]; then
