@@ -14,7 +14,7 @@ Vcs-Browser: https://github.com/dell-oss/dkms.git
 Package: dkms
 Architecture: all
 Depends: ${misc:Depends},
- module-init-tools,
+ kmod | module-init-tools,
  gcc,
  make | build-essential | dpkg-dev,
  coreutils (>= 7.4),
