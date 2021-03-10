@@ -31,19 +31,11 @@ _check_kernel_dir() {
 
 # Check the existence of a kernel named as $1
 _is_kernel_name_correct() {
-    CORRECT="no"
-    KERNEL_NAME=$1
-
-    for kernel in /boot/config-*; do
-        [ -f "$kernel" ] || continue
-        KERNEL=${kernel#*-}
-        if [ "${KERNEL}" = "${KERNEL_NAME}" ]; then
-            CORRECT="yes"
-            break
-        fi
-    done
-
-    echo $CORRECT
+    if [ -e "/lib/modules/$1" ]; then
+        echo yes
+    else
+        echo no
+    fi
 }
 
 
