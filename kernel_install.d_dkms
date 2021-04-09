@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 if [[ "$1" == "add" ]]; then
 	/etc/kernel/postinst.d/dkms $2
