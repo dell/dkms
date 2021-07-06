@@ -3416,7 +3416,7 @@ autoinstall() {
         for mv in "${to_install[@]}"; do
             IFS=/ read m v <<< "$mv"
             if [[ -z "${build_depends[$m]}" ]]; then
-                (module="$m" module_version="$v" install_module)
+                (module="$m" module_version="$v" kernelver="$kernelver" arch="$arch" install_module)
                 installed_modules[${#installed_modules[@]}]="$m"
                 install_count=$(($install_count +1))
             else
