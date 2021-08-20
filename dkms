@@ -105,7 +105,7 @@ invoke_command()
 error() (
     exec >&2
     echo -n $"Error! "
-    for s in "$@"; do echo "$s"; done 
+    for s in "$@"; do echo "$s"; done
 )
 
 warn() (
@@ -318,7 +318,7 @@ make_initrd()
     # $1 = kernel version
     # $2 = arch
     # $3 = 'backup', if backup of old initrd is wanted (using .old-dkms filename suffix)
-    
+
     [[ $no_initrd ]] && return
     local mkinitrd kernel_file initrd_dir="/boot"
     for mkinitrd in dracut update-initramfs mkinitrd ''; do
@@ -340,7 +340,7 @@ make_initrd()
             $"Will not try to make an initrd."
         return 0
     fi
-    if [[ $3 = backup ]]; then 
+    if [[ $3 = backup ]]; then
         echo $"Backing up $initrd to $initrd_dir/$initrd.old-dkms"
         cp -f "$initrd_dir/$initrd" "$initrd_dir/$initrd.old-dkms"
         echo $"Making new $initrd"
@@ -2376,7 +2376,7 @@ make_suse_driver_disk()
     local offset=0
     # reserve a place for dependencies
     [[ ${deps[@]} ]] && offset=1
-    
+
     local count
     for ((count=0; count < ${#dest_module_name[@]}; count++)); do
     local i
@@ -3564,7 +3564,7 @@ make_redhat3_driver_disk ()
         else
             echo $"WARNING:${module}-${module_version} module is not checked against Red Hat ABI whitelist."
             echo $"Install 'kabi-whitelists' package and build driver disk again to run the ABI compliance test."
-        fi    
+        fi
         i=$(($i + 1))
     done
 
@@ -3598,7 +3598,7 @@ make_redhat3_driver_disk ()
     echo $"Disk image location: $image_dir/$image_name"
     echo $""
     echo $"DKMS: mkdriverdisk completed."
-    
+
     trap > /dev/null 2>&1
 }
 

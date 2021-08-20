@@ -18,7 +18,7 @@ Requires: grep
 Requires: gzip
 Requires: kernel-devel
 Requires: sed
-Requires: tar 
+Requires: tar
 Requires: which
 Requires: bash > 1.99
 

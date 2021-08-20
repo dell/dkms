@@ -259,9 +259,8 @@ for KERNEL in $KERNELS; do
     fi
 
     #if the module is built (either pre-built or just now), install it
-    if [ `echo $dkms_status | grep -c ": built"` -eq 1 ] && 
+    if [ `echo $dkms_status | grep -c ": built"` -eq 1 ] &&
        [ `echo $dkms_status | grep -c ": installed"` -eq 0 ]; then
         dkms install -m $NAME -v $VERSION -k $KERNEL $ARCH
     fi
 done
-

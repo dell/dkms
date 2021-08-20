@@ -18,7 +18,7 @@
 
 if [ -f /lib/lsb/init-functions ]; then
     . /lib/lsb/init-functions
-elif [ -f /etc/rc.d/init.d/functions ]; then 
+elif [ -f /etc/rc.d/init.d/functions ]; then
     . /etc/rc.d/init.d/functions
 fi
 
