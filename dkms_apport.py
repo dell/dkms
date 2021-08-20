@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 #
 #  Dynamic Kernel Module Support (DKMS) <dkms-devel@dell.com>
 #  Copyright (C) 2009 Dell, Inc.
