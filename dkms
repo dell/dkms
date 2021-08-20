@@ -509,7 +509,7 @@ override_dest_module_location()
 # We want to ensure that the .conf file we source does not stomp all over
 # parts of the environment we don't want them to.  This makes it so that
 # it is harder to accidentally corrupt our environment.  conf files can
-# still deliberatly trash the environment by abusing dkms_directive env
+# still deliberately trash the environment by abusing dkms_directive env
 # variables or by crafting special values that will make eval do evil things.
 safe_source() {
     # $1 = file to source
@@ -540,7 +540,7 @@ safe_source() {
 
 # Source a dkms.conf file and perform appropriate postprocessing on it.
 # Do our best to not repeatedly source the same .conf file -- this can happen
-# when chaining module installtion functions or autoinstalling.
+# when chaining module installation functions or autoinstalling.
 read_conf()
 {
     # $1 kernel version (required)
@@ -2098,7 +2098,7 @@ module_status_built_extra() (
 
 # Return a list of all the modules that are either built or installed.
 # This and module_status do some juggling of $IFS to ensure that
-# we do not get word splitting where it would be inconvienent.
+# we do not get word splitting where it would be inconvenient.
 module_status_built() {
     local ret=1 directory ka k a state oifs="$IFS" IFS=''
     for directory in "$dkms_tree/$1/$2/"${3:-+([0-9]).*}/${4:-*}; do
@@ -3247,9 +3247,9 @@ parse_kernelarch(){
 }
 
 # This allows you to pass module and module_version information on the commandline
-# in a more convienent form.  Instead of the mostly mandatory and annoying
-# -m module -v module_version, you can use either -m module/module_version, 
-# or just a raw module/module_version with no -m parameter.  
+# in a more convenient form.  Instead of the mostly mandatory and annoying
+# -m module -v module_version, you can use either -m module/module_version,
+# or just a raw module/module_version with no -m parameter.
 # This vastly improves readability and discoverability of
 # commands on the commandline.
 parse_moduleversion(){
