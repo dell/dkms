@@ -50,7 +50,7 @@ accomplished via the command:
 
 `# dkms status`
 
-From here, you can then use the various DKMS commands (eg. add, build, install,
+From here, you can then use the various DKMS commands (e.g. add, build, install,
 uninstall) to load that module onto other kernels.
 
 

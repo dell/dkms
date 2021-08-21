@@ -10,7 +10,7 @@ MODULE_DESCRIPTION("A Simple dkms test module");
 static int __init dkms_test_init(void)
 {
     printk(KERN_INFO "DKMS Test Module -%s Loaded\n",DKMS_TEST_VER);
-    return 0;    
+    return 0;
 }
 
 static void __exit dkms_test_cleanup(void)

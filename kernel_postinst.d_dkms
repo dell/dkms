@@ -43,4 +43,3 @@ if ! _check_kernel_dir $inst_kern ; then
     echo "dkms: WARNING: $kernel headers are missing, which may explain the above failures." >&2
     echo "      please install the $header_pkg package to fix this." >&2
 fi
-

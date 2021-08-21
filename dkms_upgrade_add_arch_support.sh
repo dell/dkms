@@ -18,7 +18,7 @@ dkms_version=(${dkms_version//./ })
 
 mv /var/dkms /var/lib/dkms
 arch_used=$(uname -m)
-[[ $arch_used = x86_64 ]] && (($(grep -c "Intel" /proc/cpuinfo > 0 && \
+[[ $arch_used = x86_64 ]] && (($(grep -c "Intel" /proc/cpuinfo) > 0 && \
     $(ls /lib/modules/$kernel_test/build/configs 2>/dev/null | \
     grep -c "ia32e") > 0)) && arch_used="ia32e"
 
