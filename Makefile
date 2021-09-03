@@ -31,14 +31,14 @@ clean:
 	-rm -rf *~ dist/ dkms-freshmeat.txt
 
 install:
-	mkdir -m 0755 -p $(VAR) $(SBIN) $(MAN) $(ETC) $(BASHDIR) $(SHAREDIR) $(LIBDIR)
+	mkdir -p -m 0755 $(VAR) $(SBIN) $(MAN) $(ETC) $(BASHDIR) $(SHAREDIR) $(LIBDIR)
+	mkdir -p -m 0755 $(KCONF)/install.d $(KCONF)/prerm.d $(KCONF)/postinst.d
 	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms > dkms.versioned
 	mv -f dkms.versioned dkms
 	install -p -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
 	install -p -m 0755 dkms $(SBIN)
 	install -p -m 0755 dkms_autoinstaller $(LIBDIR)
 	install -p -m 0644 dkms_framework.conf $(ETC)/framework.conf
-	install -p -m 0755 kernel_install.d_dkms $(ETC)
 	install -p -m 0755 sign_helper.sh $(ETC)
 	install -p -m 0644 dkms_dbversion $(VAR)
 	install -p -m 0644 dkms.bash-completion $(BASHDIR)/dkms
@@ -46,9 +46,9 @@ install:
 	gzip -c -9 dkms.8 > $(MAN)/dkms.8.gz
 	chmod 0644 $(MAN)/dkms.8.gz
 	touch --reference=dkms.8 $(MAN)/dkms.8.gz
-	mkdir   -p -m 0755 $(KCONF)/prerm.d $(KCONF)/postinst.d
-	install -p -m 0755 kernel_prerm.d_dkms  $(KCONF)/prerm.d/dkms
+	install -p -m 0755 kernel_install.d_dkms $(KCONF)/install.d/dkms
 	install -p -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
+	install -p -m 0755 kernel_prerm.d_dkms $(KCONF)/prerm.d/dkms
 
 DOCFILES=sample.spec sample.conf AUTHORS COPYING README.md sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
 
@@ -64,8 +64,6 @@ install-redhat-sysv: install doc-perms
 	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
 	install -p -m 0644 template-dkms-redhat-kmod.spec $(ETC)
 	install -p -m 0755 dkms_autoinstaller $(INITD)
-	install -p -m 0755 kernel_install.d_dkms $(ETC)
-	install -p -m 0755 sign_helper.sh $(ETC)
 
 install-redhat-systemd: install doc-perms
 	mkdir -m 0755 -p  $(SYSTEMD)
@@ -75,8 +73,6 @@ install-redhat-systemd: install doc-perms
 	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
 	install -p -m 0644 template-dkms-redhat-kmod.spec $(ETC)
 	install -p -m 0644 dkms.service $(SYSTEMD)
-	install -p -m 0755 kernel_install.d_dkms $(ETC)
-	install -p -m 0755 sign_helper.sh $(ETC)
 
 install-doc:
 	mkdir -m 0755 -p $(DOCDIR)
@@ -98,8 +94,6 @@ install-debian: install install-doc
 	install -p -m 0664 template-dkms-mkbmdeb/Makefile $(ETC)/template-dkms-mkbmdeb/
 	install -p -m 0664 template-dkms-mkbmdeb/debian/* $(ETC)/template-dkms-mkbmdeb/debian/
 	chmod +x $(ETC)/template-dkms-mkbmdeb/debian/rules
-	install -p -m 0755 kernel_install.d_dkms $(ETC)
-	install -p -m 0755 sign_helper.sh $(ETC)
 	rm $(DOCDIR)/COPYING*
 	rm $(DOCDIR)/sample*
 
