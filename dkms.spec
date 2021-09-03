@@ -162,7 +162,7 @@ fi
 
 %files
 %defattr(-,root,root)
-%doc sample.spec sample.conf AUTHORS COPYING README.md
+%doc sample.spec sample.conf COPYING README.md
 %if 0%{?fedora} >= 20 || 0%{?rhel} >= 7 || 0%{?suse_version} >= 1210
 %{_unitdir}/%{name}.service
 %else
