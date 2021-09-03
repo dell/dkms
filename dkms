@@ -1148,7 +1148,7 @@ prepare_kernel()
     case "$running_distribution" in
         Debian* | Ubuntu* )
             die 1 $"Your kernel headers for kernel $1 cannot be found." \
-                $"Please install the linux-headers-$1 package or use the --kernelsourcedir option to tell DKMS where it's located"
+                $"Please install the linux-headers-$1 package or use the --kernelsourcedir option to tell DKMS where it's located."
                 ;;
         * )
             die 1 $"Your kernel headers for kernel $1 cannot be found at /lib/modules/$1/build or /lib/modules/$1/source." \
@@ -1498,7 +1498,7 @@ install_module()
 
     # Check that its not already installed (kernel symlink)
     is_module_installed "$module" "$module_version" "$kernelver" "$arch" && die 5 \
-        $"This module/version combo is already installed for kernel: $kernelver ($arch)"
+        $"This module/version combo is already installed for kernel $kernelver ($arch)."
 
     # If upgrading using rpm_safe_upgrade, go ahead and force the install
     # else we can wind up with the first half of an upgrade failing to install anything,
@@ -2278,7 +2278,7 @@ make_driver_disk()
         redhat3 | suse | UnitedLinux | ubuntu)
             ;;
         *)
-            die 3 $"Invalid distro argument. Currently, the distros supported are: redhat3, suse, UnitedLinux, ubuntu"
+            die 3 $"Invalid distro argument. Currently, the distros supported are: redhat3, suse, UnitedLinux, ubuntu."
             ;;
     esac
 
