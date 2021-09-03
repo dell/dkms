@@ -56,15 +56,6 @@ doc-perms:
 	# ensure doc file permissions ok
 	chmod 0644 $(DOCFILES)
 
-install-redhat-sysv: install doc-perms
-	mkdir -m 0755 -p  $(INITD)
-	install -p -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
-	install -p -m 0755 dkms_find-provides $(LIBDIR)/find-provides
-	install -p -m 0755 lsb_release $(LIBDIR)/lsb_release
-	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
-	install -p -m 0644 template-dkms-redhat-kmod.spec $(ETC)
-	install -p -m 0755 dkms_autoinstaller $(INITD)
-
 install-redhat-systemd: install doc-perms
 	mkdir -m 0755 -p  $(SYSTEMD)
 	install -p -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
