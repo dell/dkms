@@ -2116,7 +2116,7 @@ do_status() {
                 echo "$m, $v: $status"
                 ;;
             built|installed)
-                echo -n "$m, $v, $k, $a: $status"
+                echo -n "$m/$v, $k, $a: $status"
                 module_status_built_extra "$m" "$v" "$k" "$a"
                 echo
                 ;;
