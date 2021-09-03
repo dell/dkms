@@ -1,8 +1,9 @@
-RELEASE_DATE := "31-OCT-2019"
+RELEASE_DATE := "03 August 2021"
 RELEASE_MAJOR := 2
 RELEASE_MINOR := 8
+RELEASE_MICRO := 5
 RELEASE_NAME := dkms
-RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR)
+RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_MICRO)
 RELEASE_STRING := $(RELEASE_NAME)-$(RELEASE_VERSION)
 DIST := unstable
 SHELL=bash
@@ -33,8 +34,7 @@ clean:
 install:
 	mkdir -p -m 0755 $(VAR) $(SBIN) $(MAN) $(ETC) $(BASHDIR) $(SHAREDIR) $(LIBDIR)
 	mkdir -p -m 0755 $(KCONF)/install.d $(KCONF)/prerm.d $(KCONF)/postinst.d
-	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms > dkms.versioned
-	mv -f dkms.versioned dkms
+	sed -i -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' dkms dkms.8
 	install -p -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
 	install -p -m 0755 dkms $(SBIN)
 	install -p -m 0755 dkms_autoinstaller $(LIBDIR)
@@ -42,10 +42,8 @@ install:
 	install -p -m 0755 sign_helper.sh $(ETC)
 	install -p -m 0644 dkms_dbversion $(VAR)
 	install -p -m 0644 dkms.bash-completion $(BASHDIR)/dkms
-	# install compressed manpage with proper timestamp and permissions
 	gzip -c -9 dkms.8 > $(MAN)/dkms.8.gz
 	chmod 0644 $(MAN)/dkms.8.gz
-	touch --reference=dkms.8 $(MAN)/dkms.8.gz
 	install -p -m 0755 kernel_install.d_dkms $(KCONF)/install.d/dkms
 	install -p -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
 	install -p -m 0755 kernel_prerm.d_dkms $(KCONF)/prerm.d/dkms
@@ -96,8 +94,8 @@ $(TARBALL):
 	mkdir -p $(deb_destdir)
 	tmp_dir=`mktemp -d --tmpdir dkms.XXXXXXXX` ; \
 	cp -a ../$(RELEASE_NAME) $${tmp_dir}/$(RELEASE_STRING) ; \
-	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms > $${tmp_dir}/$(RELEASE_STRING)/dkms ; \
-	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms.spec > $${tmp_dir}/$(RELEASE_STRING)/dkms.spec ; \
+	sed -e "s/#RELEASE_VERSION#/$(RELEASE_VERSION)/" dkms > $${tmp_dir}/$(RELEASE_STRING)/dkms ; \
+	sed -e "s/#RELEASE_VERSION#/$(RELEASE_VERSION)/" dkms.spec > $${tmp_dir}/$(RELEASE_STRING)/dkms.spec ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name .git -type d -exec rm -rf \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dist -type d -exec rm -rf \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name \*~ -type f -exec rm -f \{\} \; ; \
@@ -115,7 +113,7 @@ rpm: $(TARBALL) dkms.spec
 	echo $(tmp_dir); \
 	mkdir -p $${tmp_dir}/{BUILD,RPMS,SRPMS,SPECS,SOURCES} ; \
 	cp $(TARBALL) $${tmp_dir}/SOURCES ; \
-	sed "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms.spec > $${tmp_dir}/SPECS/dkms.spec ; \
+	sed "s/#RELEASE_VERSION#/$(RELEASE_VERSION)/" dkms.spec > $${tmp_dir}/SPECS/dkms.spec ; \
 	pushd $${tmp_dir} > /dev/null 2>&1; \
 	rpmbuild -ba --define "_topdir $${tmp_dir}" SPECS/dkms.spec ; \
 	popd > /dev/null 2>&1; \
@@ -141,4 +139,4 @@ debs:
 	rm -rf $${tmp_dir}
 
 fm:
-	sed -e "s/\[INSERT_VERSION_HERE\]/$(RELEASE_VERSION)/" dkms-freshmeat.txt.in > dkms-freshmeat.txt
+	sed -e "s/#RELEASE_VERSION#/$(RELEASE_VERSION)/" dkms-freshmeat.txt.in > dkms-freshmeat.txt
