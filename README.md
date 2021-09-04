@@ -53,7 +53,9 @@ Once the RPM installation is complete, you can use DKMS to understand which
 module and which moduleversion is installed on which kernels.  This can be
 accomplished via the command:
 
-`# dkms status`
+```
+# dkms status
+```
 
 From here, you can then use the various DKMS commands (e.g. add, build, install,
 uninstall) to load that module onto other kernels.
@@ -173,7 +175,7 @@ The script by defaults expects a private key and a matching certificate in the
 `root` home folder. To generate the key and the self signed certificate:
 
 ```
-openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS modules" \
+# openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS modules" \
     -newkey rsa:2048 -keyout /root/dkms.key \
     -outform DER -out /root/dkms.der
 ```
@@ -181,7 +183,7 @@ openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS modules" \
 After generating the key, enroll the public key:
 
 ```
-mokutil --import /root/dkms.der
+# mokutil --import /root/dkms.der
 ```
 
 You'll be prompted to create a password. Enter it twice, it can also be blank.
@@ -198,15 +200,14 @@ key to enter it.
 After reboot, you can inspect the MOK certificates with the following command:
 
 ```
-# mokutil --list-enrolled | grep Subject:
-        Subject: CN=Fedora Secure Boot CA
+# mokutil --list-enrolled | grep DKMS:
         Subject: CN=DKMS modules
 ```
 
 To check the signature on a built DKMS module that is installed on a system:
 
 ```
-# modinfo evdi | grep ^signer
+# modinfo dkms_test | grep ^signer
 signer:         DKMS modules
 ```
 
