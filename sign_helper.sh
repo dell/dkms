@@ -1,2 +1,2 @@
 #!/bin/sh
-/lib/modules/"$1"/build/scripts/sign-file sha512 /root/mok.priv /root/mok.der "$2"
+/lib/modules/"$1"/build/scripts/sign-file sha512 /root/dkms.key /root/dkms.der "$2"
