@@ -34,7 +34,6 @@ clean:
 install:
 	mkdir -p -m 0755 $(VAR) $(SBIN) $(MAN) $(ETC) $(BASHDIR) $(SHAREDIR) $(LIBDIR)
 	mkdir -p -m 0755 $(KCONF)/install.d $(KCONF)/prerm.d $(KCONF)/postinst.d
-	sed -i -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' dkms dkms.8
 	install -p -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
 	install -p -m 0755 dkms $(SBIN)
 	install -p -m 0755 dkms_autoinstaller $(LIBDIR)
@@ -42,11 +41,12 @@ install:
 	install -p -m 0755 sign_helper.sh $(ETC)
 	install -p -m 0644 dkms_dbversion $(VAR)
 	install -p -m 0644 dkms.bash-completion $(BASHDIR)/dkms
-	gzip -c -9 dkms.8 > $(MAN)/dkms.8.gz
-	chmod 0644 $(MAN)/dkms.8.gz
+	install -p -m 0644 dkms.8 $(MAN)/dkms.8
 	install -p -m 0755 kernel_install.d_dkms $(KCONF)/install.d/dkms
 	install -p -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
 	install -p -m 0755 kernel_prerm.d_dkms $(KCONF)/prerm.d/dkms
+	sed -i -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' $(SBIN)/dkms $(MAN)/dkms.8
+	gzip -9 $(MAN)/dkms.8
 
 DOCFILES=sample.spec sample.conf COPYING README.md sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
 
