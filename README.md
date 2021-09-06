@@ -152,7 +152,7 @@ can be loaded. First of all make sure the commands `openssl` and `mokutil` are
 installed.
 
 For further customizations (scripts, certificates, etc.) please refer to the
-manual pagei (`dkms(8)`).
+manual page (`dkms(8)`).
 
 To check if Secure Boot is enabled:
 
@@ -200,7 +200,7 @@ key to enter it.
 After reboot, you can inspect the MOK certificates with the following command:
 
 ```
-# mokutil --list-enrolled | grep DKMS:
+# mokutil --list-enrolled | grep DKMS
         Subject: CN=DKMS modules
 ```
 
