@@ -2113,7 +2113,7 @@ do_status() {
         IFS=/ read m v k a <<< "$mvka"
         case $status in
             added)
-                echo "$m, $v: $status"
+                echo "$m/$v: $status"
                 ;;
             built|installed)
                 echo -n "$m/$v, $k, $a: $status"
