@@ -29,7 +29,7 @@ TOPDIR := $(shell pwd)
 all: clean tarball rpm debs
 
 clean:
-	-rm -rf *~ dist/ dkms-freshmeat.txt
+	-rm -rf *~ dist/
 
 install:
 	mkdir -p -m 0755 $(VAR) $(SBIN) $(MAN) $(ETC) $(BASHDIR) $(SHAREDIR) $(LIBDIR)
@@ -101,7 +101,6 @@ $(TARBALL):
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name \*~ -type f -exec rm -f \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.rpm -type f -exec rm -f \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.tar.gz -type f -exec rm -f \{\} \; ; \
-	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms-freshmeat.txt -type f -exec rm -f \{\} \; ; \
 	rm -rf $${tmp_dir}/$(RELEASE_STRING)/debian ; \
 	sync ; sync ; sync ; \
 	tar cvzf $(TARBALL) -C $${tmp_dir} $(RELEASE_STRING); \
@@ -137,6 +136,3 @@ debs:
 	tmp_dir=`mktemp -d --tmpdir dkms.XXXXXXXX` ; \
 	make debmagic DEB_TMP_BUILDDIR=$${tmp_dir} DIST=$(DIST); \
 	rm -rf $${tmp_dir}
-
-fm:
-	sed -e "s/#RELEASE_VERSION#/$(RELEASE_VERSION)/" dkms-freshmeat.txt.in > dkms-freshmeat.txt
