@@ -26,7 +26,7 @@ TOPDIR := $(shell pwd)
 
 .PHONY = tarball
 
-all: clean tarball rpm debs
+all: clean tarball
 
 clean:
 	-rm -rf *~ dist/
@@ -86,12 +86,11 @@ install-debian: install install-doc
 	rm $(DOCDIR)/COPYING*
 	rm $(DOCDIR)/sample*
 
-deb_destdir=$(BUILDDIR)/dist
-TARBALL=$(deb_destdir)/$(RELEASE_STRING).tar.gz
+TARBALL=$(BUILDDIR)/dist/$(RELEASE_STRING).tar.gz
 tarball: $(TARBALL)
 
 $(TARBALL):
-	mkdir -p $(deb_destdir)
+	mkdir -p $(BUILDDIR)/dist
 	tmp_dir=`mktemp -d --tmpdir dkms.XXXXXXXX` ; \
 	cp -a ../$(RELEASE_NAME) $${tmp_dir}/$(RELEASE_STRING) ; \
 	sed -e "s/#RELEASE_VERSION#/$(RELEASE_VERSION)/" dkms > $${tmp_dir}/$(RELEASE_STRING)/dkms ; \
@@ -105,34 +104,3 @@ $(TARBALL):
 	sync ; sync ; sync ; \
 	tar cvzf $(TARBALL) -C $${tmp_dir} $(RELEASE_STRING); \
 	rm -rf $${tmp_dir} ;
-
-
-rpm: $(TARBALL) dkms.spec
-	tmp_dir=`mktemp -d --tmpdir dkms.XXXXXXXX` ; \
-	echo $(tmp_dir); \
-	mkdir -p $${tmp_dir}/{BUILD,RPMS,SRPMS,SPECS,SOURCES} ; \
-	cp $(TARBALL) $${tmp_dir}/SOURCES ; \
-	sed "s/#RELEASE_VERSION#/$(RELEASE_VERSION)/" dkms.spec > $${tmp_dir}/SPECS/dkms.spec ; \
-	pushd $${tmp_dir} > /dev/null 2>&1; \
-	rpmbuild -ba --define "_topdir $${tmp_dir}" SPECS/dkms.spec ; \
-	popd > /dev/null 2>&1; \
-	cp $${tmp_dir}/RPMS/noarch/* $${tmp_dir}/SRPMS/* dist ; \
-	rm -rf $${tmp_dir}
-
-debmagic: $(TARBALL)
-	mkdir -p dist/
-	ln -s $(TARBALL) $(DEB_TMP_BUILDDIR)/$(RELEASE_NAME)_$(RELEASE_VERSION).orig.tar.gz
-	tar -C $(DEB_TMP_BUILDDIR) -xzf $(TARBALL)
-	cp -ar debian $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian
-	chmod +x $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING)/debian/rules
-	cd $(DEB_TMP_BUILDDIR)/$(RELEASE_STRING) ; \
-	dch -v $(RELEASE_VERSION)-0 "New upstream version, $(RELEASE_VERSION)"; \
-	dpkg-buildpackage -D -b -rfakeroot ; \
-	dpkg-buildpackage -D -S -sa -rfakeroot ; \
-	mv ../$(RELEASE_NAME)_* $(TOPDIR)/dist/ ; \
-	cd -
-
-debs:
-	tmp_dir=`mktemp -d --tmpdir dkms.XXXXXXXX` ; \
-	make debmagic DEB_TMP_BUILDDIR=$${tmp_dir} DIST=$(DIST); \
-	rm -rf $${tmp_dir}

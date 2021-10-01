@@ -6,59 +6,20 @@ contain a dkms.conf file within them.
 
 The DKMS project (and any updates) can be found at: https://github.com/dell/dkms
 
-How To Build RPM & DEB Package
+Installation
 --
 
-If you want to create rpm or deb package, then you can install the dkms package
-in your system.
-
-1. Install all the build dependency packages
-2. Run: `make rpm` to create rpm package
-3. Run: `make debs` to create deb package
-4. You can find the built package in `dkms/dist/`
-
-
-Installation of DKMS via RPM
---
-
-To install DKMS itself, you simply install (or upgrade) it like any
-other RPM:
+Installation is performed from the source directory with one of the following
+commands:
 
 ```
-# rpm -ivh dkms-<version>-<release>.noarch.rpm
+make install
+make install_debian
+make install-redhat-systemd
 ```
 
-This is a prerequisite to installing DKMS-enabled module RPMs.
-
-
-Installation via RPM
---
-
-To install a DKMS enabled module RPM, you simply install it like any other RPM:
-
-```
-# rpm -ivh <module>-<version>-<rpmversion>.noarch.rpm
-```
-
-With a DKMS enabled module RPM, most of the installation work done by the RPM
-is actually handed off to DKMS within the RPM. Generally it does the following:
-
-1. Installs module source into `/usr/src/<module>-<moduleversion>/`
-2. Places a dkms.conf file into `/usr/src/<module>-<moduleversion>/`
-3. Runs: `# dkms add -m <module> -v <version>`
-4. Runs: `# dkms build -m <module> -v <version>`
-5. Runs: `# dkms install -m <module> -v <version>`
-
-Once the RPM installation is complete, you can use DKMS to understand which
-module and which moduleversion is installed on which kernels.  This can be
-accomplished via the command:
-
-```
-# dkms status
-```
-
-From here, you can then use the various DKMS commands (e.g. add, build, install,
-uninstall) to load that module onto other kernels.
+Distribution specific installations (RPM, DEB, etc.) are not contained in this
+source repository.
 
 
 Installation via DKMS Tarballs
