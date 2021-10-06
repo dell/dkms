@@ -39,7 +39,6 @@ install:
 	install -p -m 0755 dkms_autoinstaller $(LIBDIR)
 	install -p -m 0644 dkms_framework.conf $(ETC)/framework.conf
 	install -p -m 0755 sign_helper.sh $(ETC)
-	install -p -m 0644 dkms_dbversion $(VAR)
 	install -p -m 0644 dkms.bash-completion $(BASHDIR)/dkms
 	install -p -m 0644 dkms.8 $(MAN)/dkms.8
 	install -p -m 0755 kernel_install.d_dkms $(KCONF)/install.d/dkms

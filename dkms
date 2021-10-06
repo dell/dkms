@@ -2539,14 +2539,6 @@ make_tarball()
 {
     make_common_test "mktarball"
 
-    # Check for dkms_dbversion
-    if ! [[ -e $dkms_tree/dkms_dbversion ]]; then
-        echo $"" >&2
-        echo $"Could not find the file $dkms_tree/dkms_dbversion." >&2
-        echo $"Creating w/ default contents." >&2
-        echo "2.0.0" > $dkms_tree/dkms_dbversion
-    fi
-
     # Read the conf file
     read_conf_or_die "$kernelver" "$arch"
 
@@ -2576,9 +2568,6 @@ make_tarball()
         cp -rf "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}" "$temp_dir_name/dkms_main_tree/${kernelver[$i]}"
     done
     fi
-
-    # Store the dkms_dbversion in the tarball
-    cp -f "$dkms_tree/dkms_dbversion" "$temp_dir_name/dkms_main_tree/"
 
     # Copy the source_tree or make special binaries-only structure
     if [[ $binaries_only ]]; then
@@ -2712,18 +2701,6 @@ load_tarball()
     return
     fi
 
-    # Check that dkms_dbversion is not a future version
-    # As far as I can tell, the only reason we bother with this is for detecting
-    # whether we have arch support or not, which we can also determine by examining
-    # the structure of the tarball.
-    db_from_tarball=$(cat $temp_dir_name/dkms_main_tree/dkms_dbversion 2>/dev/null)
-    db_from_dkms=$(cat $dkms_tree/dkms_dbversion 2>/dev/null)
-    if [[ $db_from_tarball && $db_from_dkms && $(VER "$db_from_tarball") > $(VER "$db_from_dkms") ]]; then
-        die 9 \
-            $"The tarball you are trying to load indicates it is database version $db_from_tarball."\
-            $"This version of DKMS only supports $db_from_dkms or lower."
-    fi
-
     # Make sure its a sane tarball. Sane ones will have one of the two
     # directories we test for.
     for loc in dkms_source_tree dkms_binaries_only ''; do
@@ -2769,13 +2746,6 @@ load_tarball()
     # At this point, the source has been copied to the appropriate location
     # and registered with dkms, or a binary-only config has been noted.
     # Now, add any included precompiled modules.
-
-    # Is tarball from before DKMS 2.0 (prior to arch support)
-    if [[ ! -e $temp_dir_name/dkms_main_tree/dkms_dbversion ]]; then
-        [[ $loc = dkms_binaries_only ]] && rm -rf "$dkms_tree/$module/$module_version/source"
-        die 10 $"This tarball was created with dkms < 2.0 and contains no arch info."\
-               $"DKMS is refusing to install precompiled modules."
-    fi
 
     # Load precompiled modules.
     for directory in "$temp_dir_name/dkms_main_tree"/*/*; do
