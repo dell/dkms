@@ -143,7 +143,7 @@ show_usage()
     echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel] [--no-initrd]"
     echo $"              [--binaries-only] [--source-only] [-r release (SuSE)] [--verbose]"
     echo $"              [--size] [--spec=specfile] [--media=floppy|iso|tar] [--legacy-postinst=0|1]"
-    echo $"              [--no-depmod] [-j number] [--version]"
+    echo $"              [--no-depmod] [--modprobe-on-install] [-j number] [--version]"
 }
 
 VER()
@@ -1628,10 +1628,12 @@ install_module()
             exit 6
     }
 
-    # Make the newly installed modules available immediately
-    find /sys/devices -name modalias -print0 | xargs -0 cat | xargs modprobe -a -b -q
-    if [ -f /lib/systemd/system/systemd-modules-load.service ]; then
-        systemctl restart systemd-modules-load.service
+    if [[ $modprobe_on_install ]]; then
+        # Make the newly installed modules available immediately
+        find /sys/devices -name modalias -print0 | xargs -0 cat | xargs modprobe -a -b -q
+        if [ -f /lib/systemd/system/systemd-modules-load.service ]; then
+            systemctl restart systemd-modules-load.service
+        fi
     fi
 
     # Do remake_initrd things (save old initrd)
@@ -3611,6 +3613,7 @@ die_is_fatal="yes"
 [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
 [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 no_depmod=""
+modprobe_on_install=""
 
 action_re='^(remove|(auto|un)?install|match|mk(driverdisk|tarball|rpm|deb|bmdeb|dsc|kmp)|(un)?build|add|status|ldtarball)$'
 
@@ -3726,6 +3729,9 @@ while (($# > 0)); do
             ;;
         --no-depmod)
             no_depmod="true"
+            ;;
+        --modprobe-on-install)
+            modprobe_on_install="true"
             ;;
         --debug)
             export PS4='${BASH_SOURCE}@${LINENO}(${FUNCNAME[0]}): '
