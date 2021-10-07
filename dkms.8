@@ -166,50 +166,6 @@ Every module that is installed on the
 within
 .B dkms
 is then installed on that specified kernel.
-.SY mkdriverdisk
-.OP -d distro
-.OP -r release
-.OP --media mediatype
-.OP -k kernel/arch
-.OP module/version
-.YS
-.IP "" 4
-Creates a floppy driver disk image for use when updated drivers are needed
-to install an OS.  Currently, the supported distributions are redhat, suse
-and UnitedLinux. For Red Hat driver disks, necessary driver disk files are
-looked for in the redhat_driver_disk
-subdirectory of your module source directory.  You
-must specify the distro while using this action.  Driver disks can be made
-for single kernels or can be made to support multiple kernels.  To create
-a driver disk image with modules for multiple kernels, just specify multiple
-\-k parameters on the command line (\-k kernel1/arch1 \-k kernel2/arch2).
-
-Red Hat introduced DDv3 starting with RHEL6. To create Red Hat DDv3, specify
-.B \-d redhat3
-and DKMS will use
-.I /etc/dkms/template\-dkms\-redhat\-kmod.spec
-
-For suse/UnitedLinux driver disks, /usr/share/YaST2/modules/Vendor.ycp
-will also be copied to the driver disk; no other files are needed.
-However, for these distros, you must specify a \-r release. For
-SuSE 9.1, it would be \-d suse \-r 9.1. For SLES9, it would be \-d suse \-r sles9.
-
-By default the disk image it creates is 1440 (k) in size.  This can be
-overridden by specifying a different
-.B \-\-size ####
-which should should be given as a number in kilobytes divisible by 20.
-
-You may have more content than will fit on a floppy.  Therefore, DKMS
-can now generate image files of different types.
-.B \-\-media floppy (default)
-to generate a floppy disk image, or
-.B \-\-media iso
-to generate a CD-ROM ISO file, or
-.B \-\-media tar
-to generate a tar file.
-
-You may copy the floppy or ISO image file to a USB key to be used with
-OS installer.
 .SY mktarball
 .OP module/module\-version
 .OP -k kernel/arch
@@ -317,24 +273,6 @@ it is assumed to be located in
 .I /usr/src/<module>\-<module\-version>/.
 See below for more information on the format of
 .I dkms.conf.
-.TP
-.B \-d, \-\-distro
-The distribution being used.  This is only currently needed for
-.B mkdriverdisk.
-The supported distros are
-.B redhat,
-.B suse
-and
-.B UnitedLinux.
-See the sections on
-.B mkdriverdisk
-for more information.
-.TP
-.B \-r, \-\-release
-The release being used.  This is only currently used for
-.B mkdriverdisk
-and is only used for suse or UnitedLinux distros (eg. \-r 9.1).  It is
-used in the internal makeup of the driverdisk.
 .TP
 .B \-\-size
 The size of the driver disk image to be created.  By default, this value is set
