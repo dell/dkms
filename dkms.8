@@ -186,9 +186,7 @@ a driver disk image with modules for multiple kernels, just specify multiple
 
 Red Hat introduced DDv3 starting with RHEL6. To create Red Hat DDv3, specify
 .B \-d redhat3
-and specify the specfile to use with
-.I \-\-spec=specfile.
-If no specfile is specified, DKMS will use
+and DKMS will use
 .I /etc/dkms/template\-dkms\-redhat\-kmod.spec
 
 For suse/UnitedLinux driver disks, /usr/share/YaST2/modules/Vendor.ycp
@@ -256,37 +254,6 @@ exist where
 is attempting to place them, it will warn and not copy over them.  The
 .B \-\-force
 option should be used to override this.
-.SY mkrpm
-.OP module/module\-version
-.OP -k kernel/arch
-.OP --source-only
-.OP --binaries-only
-.YS
-.IP "" 4
-This action allows you to create an RPM package for a specified module / version.
-It uses a template .spec file found in
-.I /etc/dkms/template\-dkms\-mkrpm.spec
-as the basis for the RPM.  Alternatively, if DKMS finds a file called
-.I /usr/src/<module>\-<module\-version>/<module>\-dkms\-mkrpm.spec
-it will use that .spec file instead.  In general, a DKMS tarball is placed inside
-the contents of this RPM, and the RPM itself calls various DKMS commands to
-load this tarball, build and install modules on the end user's system.  If you do
-not want your RPM to contain any prebuilt binaries, be sure to specify
-.B \-\-source\-only
-in the mkrpm command.
-.SY mkkmp
-.OP module/module\-version
-.OP --spec specfile
-.YS
-.IP "" 4
-This action allows you to create an Kernel Module Package source RPM for a specified module / version.
-It uses the .spec file specified by
-.I \-\-spec=specfile
-else
-.I $module\-kmp.spec
-as the basis for the RPM.  The generated source RPM may then be built using SuSE's build.rpm or
-Fedora/RHEL's mock chroot environments.  See http://kerneldrivers.org/ for
-more details on KMPs.
 .SY status
 .OP module/module\-version
 .OP -k kernel/arch
@@ -361,8 +328,6 @@ and
 .B UnitedLinux.
 See the sections on
 .B mkdriverdisk
-and
-.B mkkmp
 for more information.
 .TP
 .B \-r, \-\-release
@@ -427,11 +392,7 @@ to load a binaries-only tarball.
 .B \-\-source\-only
 This option can be used in conjunction with
 .B mktarball
-or
-.B mkrpm
-or
-.B mkrpm
-but do not want the RPM you create to have any prebuilt modules within it,
+but do not want the tarball you create to have any prebuilt modules within it,
 passing this option will keep its internal DKMS tarball from containing any
 prebuilt modules.
 .TP
@@ -487,13 +448,6 @@ scenarios when upgrading between various versions of a dkms enabled module
 RPM package.  See the sample.spec file for an example or read more in the section
 below on Creating RPMs Which Utilize DKMS.
 .TP
-.B \-\-spec specfile
-This option is used by the
-.B mkkmp
-action to specify which RPM spec file to use when generating the KMP.
-.I specfile
-will be sought in the module source directory.
-.TP
 .B \-\-dkmstree path/to/place
 Provides a destination tree for building and installing modules to.  Useful in
 cases that you don't want to contaminate a system when using solely for building.
@@ -506,10 +460,6 @@ not have root access, but would still like to be able to build DKMS packages.
 Provides a location to place modules when a
 .I dkms install
 command is issued.
-.TP
-.B \-\-legacy\-postinst=[0|1]
-Includes a legacy postinstall script so that a DEB or RPM built by DKMS can be used on versions
-prior than DKMS 2.1.  This option currently defaults to 1.
 .TP
 .B \-\-dkmsframework path/to/file
 A supplemental configuration file to the system-wide dkms framework, typically located

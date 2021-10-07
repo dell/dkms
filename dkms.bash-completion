@@ -30,7 +30,7 @@ _dkms()
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "add autoinstall remove build unbuild install uninstall \
-			match mkdriverdisk mktarball ldtarball mkrpm mkkmp \
+			match mkdriverdisk mktarball ldtarball \
 			status" -- $cur ) )
 	else
 
@@ -95,12 +95,6 @@ _dkms()
 					;;
 				mktarball)
 					options='--source-only --binaries-only'
-					;;
-				mkrpm)
-					options='--source-only'
-					;;
-				mkkmp)
-					options='--spec'
 					;;
 				match)
 					options='--templatekernel'

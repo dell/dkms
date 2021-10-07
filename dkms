@@ -135,14 +135,14 @@ show_usage()
 {
     echo $"Usage: $0 [action] [options]"
     echo $"  [action]  = { add | remove | build | install | uninstall | match | autoinstall | mkdriverdisk |"
-    echo $"                mktarball | ldtarball | mkrpm | mkkmp | status }"
+    echo $"                mktarball | ldtarball | status }"
     echo $"  [options] = [-m module] [-v module-version] [-k kernel-version] [-a arch]"
     echo $"              [-d distro] [-c dkms.conf-location] [-q] [--force] [--force-version-override] [--all]"
     echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
     echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"
     echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel] [--no-initrd]"
     echo $"              [--binaries-only] [--source-only] [-r release (SuSE)] [--verbose]"
-    echo $"              [--size] [--spec=specfile] [--media=floppy|iso|tar] [--legacy-postinst=0|1]"
+    echo $"              [--size] [--media=floppy|iso|tar]"
     echo $"              [--no-depmod] [--modprobe-on-install] [-j number] [--version]"
 }
 
@@ -2812,78 +2812,6 @@ run_match()
     fi
 }
 
-make_rpm()
-{
-    make_common_test "mkrpm"
-
-    # Check that the rpmbuild command is present
-    if ! which rpmbuild >/dev/null 2>&1 ; then
-        die 1 $"rpmbuild not present." \
-            $"Install the rpm-build package."
-    fi
-
-    # Read the conf file
-    read_conf_or_die "$kernelver" "$arch"
-
-    local rpm_basedir="$dkms_tree/$module/$module_version/rpm"
-
-    echo $""
-    local sp
-    for sp in "$dkms_tree/$module/$module_version/source/$module-dkms-mkrpm.spec" "/etc/dkms/template-dkms-mkrpm.spec"; do
-        [[ -e $sp ]] || continue
-        SPECFILE="$sp"
-        break
-    done
-    if [[ ! $SPECFILE ]]; then
-        die 5 $"Cannot find $sp which is needed by DKMS in order use mkrpm."
-    fi
-
-    # Run a dkms mktarball for use in the rpm
-    local mktarball_line
-    if [[ ! $source_only || $binaries_only ]]; then
-        mktarball_line="--binaries-only"
-        local i
-        echo $""
-        for ((i=0; i<${#kernelver[@]}; i++)); do
-            if ! [[ -d $dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]} ]]; then
-                die 5 $"You do not seem to have $module $module_version built for ${kernelver[$i]} (${arch[$i]})."\
-                    $"All modules must be in the built state before you can use mkrpm."
-            fi
-            echo $"Marking ${kernelver[$i]} (${arch[$i]}) for RPM..."
-            mktarball_line="-k ${kernelver[$i]} -a ${arch[$i]} $mktarball_line"
-        done
-    else
-        mktarball_line="none"
-    fi
-
-    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    trap 'rm -rf $temp_dir_name' EXIT HUP TERM
-    mkdir -p ${temp_dir_name}/{BUILD,RPMS,SRPMS,SPECS,SOURCES}
-    cp ${SPECFILE} ${temp_dir_name}/SPECS/dkms_mkrpm.spec
-
-    # If using legacy mode, install common postinst
-    if ((legacy_postinst != 0)); then
-        invoke_command "cp '$PREFIX/usr/lib/dkms/common.postinst' '${temp_dir_name}/SOURCES'" "copying legacy postinstall template"
-    fi
-
-    # Copy in the source tree
-    if [[ ! $binaries_only ]]; then
-        invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '${temp_dir_name}/SOURCES/$module-$module_version'" "Copying source tree"
-    fi
-
-    if invoke_command "LC_ALL=C rpmbuild --define \"_topdir ${temp_dir_name}\" --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  /usr/lib/dkms/find-provides\" --define \"_use_internal_dependency_generator 0\" -ba ${temp_dir_name}/SPECS/dkms_mkrpm.spec > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"; then
-        mkdir -p ${rpm_basedir}
-        cp -a ${temp_dir_name}/SRPMS/* ${temp_dir_name}/RPMS/*/* ${rpm_basedir}/
-        echo $""
-        cat ${temp_dir_name}/rpmbuild.log | grep ^Wrote | sed -e "s:${temp_dir_name}/:${rpm_basedir}/:" -e 's:SRPMS/::' -e 's:RPMS/.*/::'
-    else
-        cat ${temp_dir_name}/rpmbuild.log >&2
-        die 7 $"There was a problem creating your rpm."
-    fi
-    rm -rf $temp_dir_name
-    trap > /dev/null 2>&1
-}
-
 make_common_test()
 {
     local create_type=$1
@@ -2896,35 +2824,6 @@ make_common_test()
     # Make sure that its installed in the first place
     [[ -d $dkms_tree/$module/$module_version ]] ||
         die 3 $"Module $module-$module_version is not located in the DKMS tree."
-}
-
-make_kmp_srpm()
-{
-    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    trap 'rm -rf $temp_dir_name' EXIT HUP TERM
-    mkdir -p $temp_dir_name/{BUILD,RPMS,SRPMS,SPECS,SOURCES}
-    pushd "$dkms_tree/$module/$module_version" > /dev/null 2>&1
-    # Want to change name of the top-level of the tarball from build to $module-$module_version
-    cp -lr build ${module}-${module_version}
-    tar cvjf $temp_dir_name/SOURCES/${module}-${module_version}.tar.bz2 ${module}-${module_version} > /dev/null 2>&1
-    rm -rf ${module}-${module_version}
-    popd > /dev/null 2>&1
-    pushd "$temp_dir_name" > /dev/null 2>&1
-    invoke_command "rpmbuild --define \"_topdir ${temp_dir_name}\" --target=$arch -bs ${SPECFILE} > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
-    grep ^Wrote $temp_dir_name/rpmbuild.log > /dev/null 2>&1
-    local RC="$?"
-    if ((RC == 0)); then
-        local kmp_basedir="$dkms_tree/$module/$module_version/rpm"
-        mkdir -p $kmp_basedir
-        RPMS=$(LANG=C cp -va ${temp_dir_name}/SRPMS/* $kmp_basedir | awk '{print $NF}')
-    else
-        echo $"rpmbuild error log:"
-        cat $temp_dir_name/rpmbuild.log
-    fi
-    popd > /dev/null 2>&1
-    rm -rf $temp_dir_name
-    trap > /dev/null 2>&1
-    return ${RC}
 }
 
 report_build_problem()
@@ -3023,39 +2922,6 @@ add_source_tree() {
     esac
     mkdir -p "$source_tree/$module-$module_version"
     cp -fr "$from"/* "$source_tree/$module-$module_version"
-}
-
-make_kmp()
-{
-    make_common_test "mkkmp"
-
-    # Read the conf file
-    read_conf_or_die "$kernelver" "$arch"
-
-    echo $""
-    if [[ $specfile && -e $dkms_tree/$module/$module_version/source/$specfile ]]; then
-        echo $"Using $dkms_tree/$module/$module_version/source/$specfile"
-        SPECFILE="$dkms_tree/$module/$module_version/source/$specfile"
-    elif [[ -e $dkms_tree/$module/$module_version/source/$module-kmp.spec ]]; then
-        echo $"Using $dkms_tree/$module/$module_version/source/$module-kmp.spec"
-        SPECFILE="$dkms_tree/$module/$module_version/source/$module-kmp.spec"
-    else
-        die 5 $"Cannot find a suitable spec file which is needed by DKMS in order use mkkmp."\
-          $"Please specify --spec=specfile."
-    fi
-
-    prepare_build
-    make_kmp_srpm
-    RC=$?
-    clean_build
-
-    if ((RC == 0)); then
-        echo $""
-        echo $"KMP SRPM location: $RPMS"
-    else
-        die 7 $"There was a problem creating your KMP source rpm."
-    fi
-    # FIXME: hand SRPM to mock or build system to build
 }
 
 # This code used to be in dkms_autoinstaller.
@@ -3188,10 +3054,7 @@ make_redhat3_driver_disk ()
     fi
 
     echo $""
-    if [ -n "$specfile" -a -e "$dkms_tree/$module/$module_version/source/$specfile" ]; then
-        echo $"Using $dkms_tree/$module/$module_version/source/$specfile"
-        SPECFILE="$dkms_tree/$module/$module_version/source/$specfile"
-    elif [ -e "/etc/dkms/template-dkms-redhat-kmod.spec" ]; then
+    if [ -e "/etc/dkms/template-dkms-redhat-kmod.spec" ]; then
         echo $"Using /etc/dkms/template-dkms-redhat-kmod.spec"
         SPECFILE="/etc/dkms/template-dkms-redhat-kmod.spec"
     else
@@ -3381,8 +3244,6 @@ module_uncompressed_suffix=""
 module_compressed_suffix=""
 rpm_safe_upgrade=""
 size="1440";
-specfile=""
-legacy_postinst="1"
 declare -a directive_array=() kernelver=() arch=()
 weak_modules=''
 last_mvka=''
@@ -3394,7 +3255,7 @@ die_is_fatal="yes"
 no_depmod=""
 modprobe_on_install=""
 
-action_re='^(remove|(auto|un)?install|match|mk(driverdisk|tarball|rpm|kmp)|(un)?build|add|status|ldtarball)$'
+action_re='^(remove|(auto|un)?install|match|mk(driverdisk|tarball)|(un)?build|add|status|ldtarball)$'
 
 # Parse command line arguments
 while (($# > 0)); do
@@ -3485,9 +3346,6 @@ while (($# > 0)); do
         --archive*)
             read_arg archive_location "$1" "$2" || shift
             ;;
-        --legacy-postinst*)
-            read_arg legacy_postinst "$1" "$2" || shift
-            ;;
         --arch*|-a)
             read_arg _aa "$1" "$2" || shift
             arch[${#arch[@]}]="$_aa"
@@ -3502,9 +3360,6 @@ while (($# > 0)); do
         --directive*)
             read_arg _da "$1" "$2" || shift
             directive_array[${#directive_array[@]}]="$_da"
-            ;;
-        --spec*)
-            read_arg specfile "$1" "$2" || shift
             ;;
         --no-depmod)
             no_depmod="true"
@@ -3620,12 +3475,6 @@ for action_to_run in $action; do
         ;;
     mktarball)
         make_tarball
-        ;;
-    mkrpm)
-        make_rpm
-        ;;
-    mkkmp)
-        have_one_kernel "mkkmp" && make_kmp
         ;;
     status)
         show_status
