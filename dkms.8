@@ -984,66 +984,6 @@ in the final kernel you remove your DKMS module from.  This is an imperfect syst
 fact that there is only one modules.conf file for every kernel on your system even though various
 kernels use different modules.  In a perfect world, there would be one modules.conf file for
 every kernel (just like System.map).
-.SH CREATING RPMS WHICH UTILIZE DKMS
-See the
-.I sample.spec
-file packaged with
-.B DKMS
-as an example for what your RPM spec file might look like.
-Creating RPMs which utilize
-.B dkms
-is a fairly straight\-forward process.  The RPM need only to install the source into
-.I /usr/src/<module>\-<module\-version>/
-and then employ
-.B dkms
-itself to do all the work of installation.  As such, the RPM should first untar the source into
-this directory.  From here, within the RPM
-.I .spec
-file, a
-.B dkms add
-should be called (remember to use the \-\-rpm_safe_upgrade flag during the add) followed by a
-.B dkms build
-followed by a
-.B dkms install.
-Your
-.I dkms.conf
-file should be placed within the
-.I /usr/src/<module>\-<module\-version>/
-directory.
-
-Under the removal parts of the
-.I .spec
-file, all that needs to be called is a: dkms remove \-m <module> \-v <module\-version> \-\-all \-\-rpm_safe_upgrade.
-Use of the
-.B \-\-rpm_safe_upgrade
-flag is imperative for making sure DKMS and RPM play nicely together in all scenarios of using
-the \-Uvh flag with RPM to upgrade dkms enabled packages.  It will only function if used during
-both the add
-.B and
-remove actions within the same RPM spec file. Its use makes sure that when upgrading between different
-releases of an RPM for the same <module\-version>, DKMS does not do anything dumb (eg. it ensures
-a smooth upgrade from megaraid\-2.09-5.noarch.rpm to megaraid\-2.09\-6.noarch.rpm).
-
-It should be noted that a binary RPM which contains source is not a traditional practice.
-However, given the benefits of
-.B dkms
-it hopefully will become so.  As the RPM created which utilizes
-.B dkms
-is not architecture specific,
-.B BuildArch: noarch
-should be specified in the
-.I .spec
-file to indicate that the package can work regardless of the system architecture.  Also
-note that DKMS RPM upgrades (\-U option) will automatically work because of the structure
-of the
-.B dkms
-tree.
-
-Lastly, as a matter of convention, you should name your RPM:
-<package>\-<version>\-<rpm\-version>dkms.noarch.rpm.  The word
-.B dkms
-as part of the rpm\-version signifies that the RPM
-works within the DKMS framework.
 .SH AUTHOR
 Gary Lerhaupt
 .SH WEBPAGE
