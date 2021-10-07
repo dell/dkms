@@ -30,7 +30,7 @@ _dkms()
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "add autoinstall remove build unbuild install uninstall \
-			match mkdriverdisk mktarball ldtarball mkrpm mkdeb mkdsc mkkmp \
+			match mkdriverdisk mktarball ldtarball mkrpm mkkmp \
 			status" -- $cur ) )
 	else
 

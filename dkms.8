@@ -274,44 +274,6 @@ load this tarball, build and install modules on the end user's system.  If you d
 not want your RPM to contain any prebuilt binaries, be sure to specify
 .B \-\-source\-only
 in the mkrpm command.
-.SY mkdeb
-.OP module/module\-version
-.OP -k kernel/arch
-.YS
-.IP "" 4
-This action allows you to create a debian binary package for a specified module / version.
-It uses a template debian directory found in
-.I /etc/dkms/template\-dkms\-mkdeb
-as the basis for the package. Alternatively, if DKMS finds a file called
-.I /usr/src/<module>\-<module\-version>/<module>\-dkms\-mkdeb
-it will use that folder instead. In general, a DKMS tarball is placed inside the
-contents of this package, and the package itself calls various DKMS commands to
-load this tarball, build and install modules on the end user's system.
-.SY mkbmdeb
-.OP module/module\-version
-.OP -k kernel/arch
-.YS
-.IP "" 4
-Creates a Debian binary package containing just the binary modules in the /lib/modules
-installation path. This package does not depend on dkms and does not require a toolchain
-to be installed on the target host. Useful if you want to have a package to install on
-hosts identical to the build system without installing the full toolchain on them.
-It uses a template debian directory found in
-.I /etc/dkms/template\-dkms\-mkbmdeb
-as the basis for the package.
-.SY mkdsc
-.OP module/module\-version
-.OP -k kernel/arch
-.YS
-.IP "" 4
-This action allows you to create a debian source package for a specified module / version.
-It will create a .tar.gz, and a .dsc.  All options supported by
-.B mkdeb
-are supported by it.  The main difference in it's usage is that it will look in
-.I /etc/dkms/template\-dkms\-mkdsc
-as the basis for the package. Alternatively, if DKMS finds a file called
-.I /usr/src/<module>\-<module\-version>/<module>\-dkms\-mkdsc
-it will use that folder instead.
 .SY mkkmp
 .OP module/module\-version
 .OP --spec specfile
@@ -468,11 +430,6 @@ This option can be used in conjunction with
 or
 .B mkrpm
 or
-.B mkdeb
-in order to create a DKMS tarball which does not contain any prebuilt
-kernel module binaries within it.  This is helpful if you simply want
-to easily tar up your source but don't want anything prebuilt within
-it.  Likewise, if you are using
 .B mkrpm
 but do not want the RPM you create to have any prebuilt modules within it,
 passing this option will keep its internal DKMS tarball from containing any
