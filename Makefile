@@ -58,8 +58,6 @@ install-redhat-systemd: install doc-perms
 	install -p -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
 	install -p -m 0755 dkms_find-provides $(LIBDIR)/find-provides
 	install -p -m 0755 lsb_release $(LIBDIR)/lsb_release
-	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
-	install -p -m 0644 template-dkms-redhat-kmod.spec $(ETC)
 	install -p -m 0644 dkms.service $(SYSTEMD)
 
 install-doc:
