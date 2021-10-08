@@ -1,8 +1,7 @@
 Dynamic Kernel Module System (DKMS)
 ==
-This intention of this README is to explain how a DKMS enabled module RPM
-functions and also how DKMS can be used in conjunction with tarballs which
-contain a dkms.conf file within them.
+This intention of this README is to explain how DKMS can be used in conjunction
+with tarballs which contain a dkms.conf file within them.
 
 The DKMS project (and any updates) can be found at: https://github.com/dell/dkms
 
@@ -25,8 +24,7 @@ source repository.
 Installation via DKMS Tarballs
 --
 
-DKMS is not limited to installation via RPM only.  In fact, DKMS can also
-install directly from the following:
+DKMS can install directly from the following:
 
 1. Generic module source tarballs which contain a dkms.conf file
 2. Specially created DKMS tarballs with module source, pre-built module

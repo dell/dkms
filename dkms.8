@@ -166,52 +166,6 @@ Every module that is installed on the
 within
 .B dkms
 is then installed on that specified kernel.
-.SY mkdriverdisk
-.OP -d distro
-.OP -r release
-.OP --media mediatype
-.OP -k kernel/arch
-.OP module/version
-.YS
-.IP "" 4
-Creates a floppy driver disk image for use when updated drivers are needed
-to install an OS.  Currently, the supported distributions are redhat, suse
-and UnitedLinux. For Red Hat driver disks, necessary driver disk files are
-looked for in the redhat_driver_disk
-subdirectory of your module source directory.  You
-must specify the distro while using this action.  Driver disks can be made
-for single kernels or can be made to support multiple kernels.  To create
-a driver disk image with modules for multiple kernels, just specify multiple
-\-k parameters on the command line (\-k kernel1/arch1 \-k kernel2/arch2).
-
-Red Hat introduced DDv3 starting with RHEL6. To create Red Hat DDv3, specify
-.B \-d redhat3
-and specify the specfile to use with
-.I \-\-spec=specfile.
-If no specfile is specified, DKMS will use
-.I /etc/dkms/template\-dkms\-redhat\-kmod.spec
-
-For suse/UnitedLinux driver disks, /usr/share/YaST2/modules/Vendor.ycp
-will also be copied to the driver disk; no other files are needed.
-However, for these distros, you must specify a \-r release. For
-SuSE 9.1, it would be \-d suse \-r 9.1. For SLES9, it would be \-d suse \-r sles9.
-
-By default the disk image it creates is 1440 (k) in size.  This can be
-overridden by specifying a different
-.B \-\-size ####
-which should should be given as a number in kilobytes divisible by 20.
-
-You may have more content than will fit on a floppy.  Therefore, DKMS
-can now generate image files of different types.
-.B \-\-media floppy (default)
-to generate a floppy disk image, or
-.B \-\-media iso
-to generate a CD-ROM ISO file, or
-.B \-\-media tar
-to generate a tar file.
-
-You may copy the floppy or ISO image file to a USB key to be used with
-OS installer.
 .SY mktarball
 .OP module/module\-version
 .OP -k kernel/arch
@@ -256,75 +210,6 @@ exist where
 is attempting to place them, it will warn and not copy over them.  The
 .B \-\-force
 option should be used to override this.
-.SY mkrpm
-.OP module/module\-version
-.OP -k kernel/arch
-.OP --source-only
-.OP --binaries-only
-.YS
-.IP "" 4
-This action allows you to create an RPM package for a specified module / version.
-It uses a template .spec file found in
-.I /etc/dkms/template\-dkms\-mkrpm.spec
-as the basis for the RPM.  Alternatively, if DKMS finds a file called
-.I /usr/src/<module>\-<module\-version>/<module>\-dkms\-mkrpm.spec
-it will use that .spec file instead.  In general, a DKMS tarball is placed inside
-the contents of this RPM, and the RPM itself calls various DKMS commands to
-load this tarball, build and install modules on the end user's system.  If you do
-not want your RPM to contain any prebuilt binaries, be sure to specify
-.B \-\-source\-only
-in the mkrpm command.
-.SY mkdeb
-.OP module/module\-version
-.OP -k kernel/arch
-.YS
-.IP "" 4
-This action allows you to create a debian binary package for a specified module / version.
-It uses a template debian directory found in
-.I /etc/dkms/template\-dkms\-mkdeb
-as the basis for the package. Alternatively, if DKMS finds a file called
-.I /usr/src/<module>\-<module\-version>/<module>\-dkms\-mkdeb
-it will use that folder instead. In general, a DKMS tarball is placed inside the
-contents of this package, and the package itself calls various DKMS commands to
-load this tarball, build and install modules on the end user's system.
-.SY mkbmdeb
-.OP module/module\-version
-.OP -k kernel/arch
-.YS
-.IP "" 4
-Creates a Debian binary package containing just the binary modules in the /lib/modules
-installation path. This package does not depend on dkms and does not require a toolchain
-to be installed on the target host. Useful if you want to have a package to install on
-hosts identical to the build system without installing the full toolchain on them.
-It uses a template debian directory found in
-.I /etc/dkms/template\-dkms\-mkbmdeb
-as the basis for the package.
-.SY mkdsc
-.OP module/module\-version
-.OP -k kernel/arch
-.YS
-.IP "" 4
-This action allows you to create a debian source package for a specified module / version.
-It will create a .tar.gz, and a .dsc.  All options supported by
-.B mkdeb
-are supported by it.  The main difference in it's usage is that it will look in
-.I /etc/dkms/template\-dkms\-mkdsc
-as the basis for the package. Alternatively, if DKMS finds a file called
-.I /usr/src/<module>\-<module\-version>/<module>\-dkms\-mkdsc
-it will use that folder instead.
-.SY mkkmp
-.OP module/module\-version
-.OP --spec specfile
-.YS
-.IP "" 4
-This action allows you to create an Kernel Module Package source RPM for a specified module / version.
-It uses the .spec file specified by
-.I \-\-spec=specfile
-else
-.I $module\-kmp.spec
-as the basis for the RPM.  The generated source RPM may then be built using SuSE's build.rpm or
-Fedora/RHEL's mock chroot environments.  See http://kerneldrivers.org/ for
-more details on KMPs.
 .SY status
 .OP module/module\-version
 .OP -k kernel/arch
@@ -389,26 +274,6 @@ it is assumed to be located in
 See below for more information on the format of
 .I dkms.conf.
 .TP
-.B \-d, \-\-distro
-The distribution being used.  This is only currently needed for
-.B mkdriverdisk.
-The supported distros are
-.B redhat,
-.B suse
-and
-.B UnitedLinux.
-See the sections on
-.B mkdriverdisk
-and
-.B mkkmp
-for more information.
-.TP
-.B \-r, \-\-release
-The release being used.  This is only currently used for
-.B mkdriverdisk
-and is only used for suse or UnitedLinux distros (eg. \-r 9.1).  It is
-used in the internal makeup of the driverdisk.
-.TP
 .B \-\-size
 The size of the driver disk image to be created.  By default, this value is set
 at 1440.  Any different size should be given as an integer value only, should
@@ -465,16 +330,7 @@ to load a binaries-only tarball.
 .B \-\-source\-only
 This option can be used in conjunction with
 .B mktarball
-or
-.B mkrpm
-or
-.B mkdeb
-in order to create a DKMS tarball which does not contain any prebuilt
-kernel module binaries within it.  This is helpful if you simply want
-to easily tar up your source but don't want anything prebuilt within
-it.  Likewise, if you are using
-.B mkrpm
-but do not want the RPM you create to have any prebuilt modules within it,
+but do not want the tarball you create to have any prebuilt modules within it,
 passing this option will keep its internal DKMS tarball from containing any
 prebuilt modules.
 .TP
@@ -530,13 +386,6 @@ scenarios when upgrading between various versions of a dkms enabled module
 RPM package.  See the sample.spec file for an example or read more in the section
 below on Creating RPMs Which Utilize DKMS.
 .TP
-.B \-\-spec specfile
-This option is used by the
-.B mkkmp
-action to specify which RPM spec file to use when generating the KMP.
-.I specfile
-will be sought in the module source directory.
-.TP
 .B \-\-dkmstree path/to/place
 Provides a destination tree for building and installing modules to.  Useful in
 cases that you don't want to contaminate a system when using solely for building.
@@ -549,10 +398,6 @@ not have root access, but would still like to be able to build DKMS packages.
 Provides a location to place modules when a
 .I dkms install
 command is issued.
-.TP
-.B \-\-legacy\-postinst=[0|1]
-Includes a legacy postinstall script so that a DEB or RPM built by DKMS can be used on versions
-prior than DKMS 2.1.  This option currently defaults to 1.
 .TP
 .B \-\-dkmsframework path/to/file
 A supplemental configuration file to the system-wide dkms framework, typically located
@@ -1077,66 +922,6 @@ in the final kernel you remove your DKMS module from.  This is an imperfect syst
 fact that there is only one modules.conf file for every kernel on your system even though various
 kernels use different modules.  In a perfect world, there would be one modules.conf file for
 every kernel (just like System.map).
-.SH CREATING RPMS WHICH UTILIZE DKMS
-See the
-.I sample.spec
-file packaged with
-.B DKMS
-as an example for what your RPM spec file might look like.
-Creating RPMs which utilize
-.B dkms
-is a fairly straight\-forward process.  The RPM need only to install the source into
-.I /usr/src/<module>\-<module\-version>/
-and then employ
-.B dkms
-itself to do all the work of installation.  As such, the RPM should first untar the source into
-this directory.  From here, within the RPM
-.I .spec
-file, a
-.B dkms add
-should be called (remember to use the \-\-rpm_safe_upgrade flag during the add) followed by a
-.B dkms build
-followed by a
-.B dkms install.
-Your
-.I dkms.conf
-file should be placed within the
-.I /usr/src/<module>\-<module\-version>/
-directory.
-
-Under the removal parts of the
-.I .spec
-file, all that needs to be called is a: dkms remove \-m <module> \-v <module\-version> \-\-all \-\-rpm_safe_upgrade.
-Use of the
-.B \-\-rpm_safe_upgrade
-flag is imperative for making sure DKMS and RPM play nicely together in all scenarios of using
-the \-Uvh flag with RPM to upgrade dkms enabled packages.  It will only function if used during
-both the add
-.B and
-remove actions within the same RPM spec file. Its use makes sure that when upgrading between different
-releases of an RPM for the same <module\-version>, DKMS does not do anything dumb (eg. it ensures
-a smooth upgrade from megaraid\-2.09-5.noarch.rpm to megaraid\-2.09\-6.noarch.rpm).
-
-It should be noted that a binary RPM which contains source is not a traditional practice.
-However, given the benefits of
-.B dkms
-it hopefully will become so.  As the RPM created which utilizes
-.B dkms
-is not architecture specific,
-.B BuildArch: noarch
-should be specified in the
-.I .spec
-file to indicate that the package can work regardless of the system architecture.  Also
-note that DKMS RPM upgrades (\-U option) will automatically work because of the structure
-of the
-.B dkms
-tree.
-
-Lastly, as a matter of convention, you should name your RPM:
-<package>\-<version>\-<rpm\-version>dkms.noarch.rpm.  The word
-.B dkms
-as part of the rpm\-version signifies that the RPM
-works within the DKMS framework.
 .SH AUTHOR
 Gary Lerhaupt
 .SH WEBPAGE

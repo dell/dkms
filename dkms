@@ -134,15 +134,15 @@ mktemp_or_die() {
 show_usage()
 {
     echo $"Usage: $0 [action] [options]"
-    echo $"  [action]  = { add | remove | build | install | uninstall | match | autoinstall | mkdriverdisk |"
-    echo $"                mktarball | ldtarball | mkrpm | mkkmp | mkdeb | mkdsc | mkbmdeb | status }"
+    echo $"  [action]  = { add | remove | build | install | uninstall | match | autoinstall |"
+    echo $"                mktarball | ldtarball | status }"
     echo $"  [options] = [-m module] [-v module-version] [-k kernel-version] [-a arch]"
-    echo $"              [-d distro] [-c dkms.conf-location] [-q] [--force] [--force-version-override] [--all]"
+    echo $"              [-c dkms.conf-location] [-q] [--force] [--force-version-override] [--all]"
     echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
     echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"
     echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel] [--no-initrd]"
-    echo $"              [--binaries-only] [--source-only] [-r release (SuSE)] [--verbose]"
-    echo $"              [--size] [--spec=specfile] [--media=floppy|iso|tar] [--legacy-postinst=0|1]"
+    echo $"              [--binaries-only] [--source-only] [--verbose]"
+    echo $"              [--size]"
     echo $"              [--no-depmod] [--modprobe-on-install] [-j number] [--version]"
 }
 
@@ -2145,396 +2145,6 @@ show_status()
     fi
 }
 
-create_temporary_trees()
-{
-    [[ $module || $module_version || ! -r dkms.conf ]] && return 0
-
-    . dkms.conf
-    module="$PACKAGE_NAME"
-    module_version="$PACKAGE_VERSION"
-
-    source_tree=$(mktemp_or_die -d)
-    dkms_tree=$(mktemp_or_die -d)
-
-    local source_tree_dir="$source_tree/$PACKAGE_NAME-$PACKAGE_VERSION"
-    mkdir -p "$source_tree_dir"
-    cp -a * "$source_tree_dir" # intentionally skip .git or .hg
-    add_module
-    temporary_trees_del_command="rm -rf $source_tree $dkms_tree"
-}
-
-delete_temporary_trees()
-{
-    [[ $temporary_trees_del_command ]] || return 0
-    $temporary_trees_del_command
-    module=
-    module_version=
-    source_tree=
-    dkms_tree=
-    temporary_trees_del_command=
-}
-
-in_temporary_trees()
-{
-    [[ $temporary_trees_del_command ]]
-}
-
-media_valid()
-{
-    local mrx='^(floppy|iso|tar)$'
-    [[ $media =~ $mrx ]]
-}
-
-make_driver_disk_floppy()
-{
-    local image_name="$1"
-    local source_dir="$2"
-    local file
-    local fs='ext2'
-    [[ $distro = redhat* ]] && fs='vfat'
-
-    rm -f "$image_name"
-    invoke_command "dd if=/dev/zero of=$image_name bs=$(($size/20))k count=20" "making a blank floppy image" background
-    case $fs in
-        vfat)
-            invoke_command "mkdosfs $image_name" "mkdosfs" background
-            ;;
-        ext2)
-            invoke_command "mke2fs -F $image_name" "mke2fs" background
-            ;;
-    esac
-
-    local mntdir=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    invoke_command "mount -o loop -t $fs $image_name $mntdir >/dev/null 2>&1" "loopback mounting disk image"
-    [[ -d $mntdir/lost+found ]] && rmdir "$mntdir/lost+found"
-    invoke_command "cp -r $source_dir/* $mntdir/" "  copying files to floppy disk image"
-    invoke_command "umount $mntdir" "unmounting disk image"
-    rm -rf "$mntdir"
-}
-
-make_driver_disk_isotar()
-{
-    local type="$1"
-    local image_name="$2"
-    local source_dir="$3"
-    local file
-    case $type in
-        iso)
-            invoke_command "mkisofs -v -r -J -pad -V $module -o $image_name ." "mkisofs" background
-            ;;
-        tar)
-            invoke_command "tar cvf $image_name ." "tar" background
-            ;;
-    esac
-}
-
-make_driver_disk_media()
-{
-    echo "Copying files $2"
-
-    case $media in
-        floppy*)
-            make_driver_disk_floppy "$1" "$2"
-            ;;
-        iso*)
-            make_driver_disk_isotar "iso" "$1" "$2"
-            ;;
-        tar*)
-            make_driver_disk_isotar "tar" "$1" "$2"
-            ;;
-    esac
-}
-
-driver_disk_suffix()
-{
-    case $media in
-    floppy*)
-        echo "img"
-        ;;
-    iso*)
-        echo "iso"
-        ;;
-    tar*)
-        echo "tar"
-        ;;
-    esac
-}
-
-make_driver_disk()
-{
-    # Check that the right arguments were passed
-    if ! [[ $module && $module_version && $distro && $kernelver ]]; then
-        die 1 $"Invalid number of parameters passed." \
-        $"Usage: mkdriverdisk <module>/<module-version> -d <distro> -k <kernelver> [--media floppy|iso|tar]"
-    fi
-
-    # Default to floppy media
-    [[ $media ]] || media="floppy"
-    if ! media_valid; then
-        die 1 $"Media $media is invalid." \
-            $"Usage: mkdriverdisk <module>/<module-version> -d <distro> -k <kernelver> [--media floppy|iso|tar]"
-    fi
-
-    # Check that source symlink works
-    check_module_exists
-
-    # Confirm that distro is supported
-    case $distro in
-        redhat3 | suse | UnitedLinux | ubuntu)
-            ;;
-        *)
-            die 3 $"Invalid distro argument. Currently, the distros supported are: redhat3, suse, UnitedLinux, ubuntu."
-            ;;
-    esac
-
-    # Read the conf file
-    read_conf_or_die "$kernelver" "$arch"
-
-    case $distro in
-        redhat*)
-            make_redhat3_driver_disk
-            ;;
-        ubuntu)
-            make_ubuntu_driver_disk
-            ;;
-        *)
-            make_suse_driver_disk
-            ;;
-    esac
-}
-
-find_external_dependencies()
-{
-    local mod count i
-    local -a deps
-
-    # Find all module dependencies
-    for ((count=0; count < ${#dest_module_name[@]}; count++)); do
-        for ((i=0; i < ${#kernelver[@]}; i++)); do
-            set_module_suffix "${kernelver[$i]}"
-            mod="$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/${dest_module_name[$count]}$module_suffix"
-            deps=(${deps[@]} $(modinfo "$mod" | sed -n 's/,/ /g; s/^depends: *//p'))
-        done
-    done
-
-    # Prune internally satisfied dependencies
-
-    for ((i=0; i < ${#deps[@]}; i++)); do
-        for mod in ${dest_module_name[@]}; do
-            [[ ${deps[i]} = $mod ]] && deps[i]=
-        done
-    done
-
-    for dep in "${deps[@]}"; do
-        echo $dep
-    done | sort -u
-}
-
-make_suse_driver_disk()
-{
-    [[ $release ]] || die 3 \
-        $"Invalid number of parameters passed for suse/UnitedLinux driver disk." \
-        $"Usage: mkdriverdisk <module>/<module-version> -d <distro> -k <kernelver> -r <release-number>"
-
-    local driver_disk_dir=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    local suffix="$(driver_disk_suffix)"
-    local image_dir="$dkms_tree/$module/$module_version/driver_disk"
-    local image_name="$module-$module_version-$distro-$release-dd.$suffix"
-
-    echo $"Creating driver disk:"
-
-    local deps="$(find_external_dependencies)"
-
-    local offset=0
-    # reserve a place for dependencies
-    [[ ${deps[@]} ]] && offset=1
-
-    local count
-    for ((count=0; count < ${#dest_module_name[@]}; count++)); do
-    local i
-    local topdir=$(printf "%02d" $(($count+1+offset)))
-    for ((i=0; i < ${#kernelver[@]}; i++)); do
-        set_module_suffix "${kernelver[$i]}"
-        local srcdir=$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module
-        local srcpath=$(compressed_or_uncompressed "$srcdir" "${dest_module_name[$count]}")
-        if ! [[ -n "$srcpath" ]]; then
-            rm -rf $temp_dir_name
-            die 5 \
-                $"Cannot find module ${dest_module_name[$count]}$module_suffix for kernel ${kernelver[$i]} (${arch[$i]})." \
-                $"Module/version must be in built state before making a driver disk."
-        fi
-        # FIXME: add check for KMP binary RPMs to include in the driver disk
-        suse_arch=${arch[$i]}
-        case $suse_arch in
-            i?86)
-                suse_arch=i386
-                ;;
-        esac
-
-        echo "Marking ${kernelver[$i]}/${arch[$i]}/modules/${dest_module_name[$count]}$module_suffix..."
-        mkdir -p "$driver_disk_dir/$topdir/$suse_arch-$release/install/lib/modules/${kernelver[$i]}${dest_module_location[$count]}"
-        cp "$srcpath" "$driver_disk_dir/$topdir/$suse_arch-$release/install/lib/modules/${kernelver[$i]}${dest_module_location[$count]}/"
-
-        case ${kernelver[$i]} in
-        *-default)
-            mkdir -p "$driver_disk_dir/$topdir/$suse_arch-$release/modules/"
-            cp "$srcpath" "$driver_disk_dir/$topdir/$suse_arch-$release/modules/"
-            ;;
-        esac
-
-        # Create directory for dependency information
-        [[ ${deps[@]} ]] && mkdir -p "$driver_disk_dir/01/linux/$distro/$suse_arch-$release/modules"
-
-    done
-
-    # ---
-    for arch_release in $(find $driver_disk_dir/$topdir -maxdepth 1 -mindepth 1 -type d | sed "s#$driver_disk_dir\/$topdir\/##"); do
-        cd "$driver_disk_dir/$topdir/$arch_release/install/"
-        invoke_command "tar cvzf update.tar.gz lib/" "making update.tar.gz for $arch_release" background
-        cd - >/dev/null
-
-        mkdir -p "$driver_disk_dir/$topdir/linux/$distro/$arch_release/install"
-        mkdir -p "$driver_disk_dir/$topdir/linux/$distro/$arch_release/modules"
-
-        echo $"  copying update.tar.gz for $arch_release to disk image..."
-        cp -f "$driver_disk_dir/$topdir/$arch_release/install/update.tar.gz" "$driver_disk_dir/$topdir/linux/$distro/$arch_release/install/"
-
-        postkernels=
-        archtest=${arch_release/-*}
-        for ((i=0; i<${#kernelver[@]}; i++)); do
-            [[ ${arch[$i]} = ${archtest} ]] && postkernels="${postkernels} ${kernelver[$i]}"
-        done
-
-        if [[ ${postkernels} ]]; then
-            dstfile="$driver_disk_dir/$topdir/linux/$distro/$arch_release/install/update.post"
-            echo $"  creating update.post for $arch_release..."
-            (cat << EOF
-#!/bin/sh
-
-kernlist="${postkernels}"
-
-for kernel in \${kernlist}; do
-    if [ -e /boot/System.map-\${kernel} ]; then
-    depmod -a -F /boot/System.map-\${kernel} \${kernel}
-    fi
-done
-
-EOF
-            ) > ${dstfile}
-            chmod a+x ${dstfile}
-            fi
-
-            if [[ -d $driver_disk_dir/$topdir/$arch_release/modules/ ]]; then
-                echo $"  copying kernel modules for installation kernel to disk image..."
-                cp -f $driver_disk_dir/$topdir/$arch_release/modules/* $driver_disk_dir/$topdir/linux/$distro/$arch_release/modules/ 2>/dev/null
-            else
-                warn $"No kernel modules found for -default kernel."
-            fi
-
-            rm -fr "$driver_disk_dir/$topdir/$arch_release"
-        done
-    done
-
-    local dir
-    if [[ ${deps[@]} ]]; then
-        for dir in "$driver_disk_dir/01/linux/$distro/"*"/modules"; do
-            for dep in "${deps[@]}"; do
-                echo $dep >> "$dir/module.order"
-            done
-        done
-    fi
-
-    # FIXME: add suse-equivalent rpms/ directory, copy in KMP RPMs, run createrepo --pretty
-
-    mkdir -p "$image_dir"
-    rm -f "$image_dir/$image_name"
-    cd "$driver_disk_dir"
-    make_driver_disk_media "$image_dir/$image_name" "$driver_disk_dir"
-    cd - >/dev/null
-    rm -rf "$driver_disk_dir"
-
-    echo $""
-    echo $"Disk image location: $dkms_tree/$module/$module_version/driver_disk/$image_name"
-}
-
-make_ubuntu_driver_disk()
-{
-    local suffix="$(driver_disk_suffix)"
-    local image_dir="$dkms_tree/$module/$module_version/driver_disk"
-    local image_name="$module-$module_version-$distro-dd.$suffix"
-
-    local tempdir=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-
-    # Check that the dh_make command is present
-    if ! which dpkg-deb >/dev/null 2>&1 ; then
-        die 1 $"dpkg-deb not present." \
-            $"Install the dpkg-dev package."
-    fi
-
-    local i
-    for ((i=0; i < ${#kernelver[@]}; i++)); do
-        set_module_suffix "${kernelver[$i]}"
-        # Driver disks only recognize i386 as package arch
-        local karch=${arch[$i]/i?86/i386}
-        local kvers=${kernelver[$i]/-/_}; kvers=${kvers%%_*}
-        # ubuntu-drivers/<kver>/*_<debarch>.deb
-        local dd_prefix="ubuntu-drivers/$kvers"
-        local dd_suffix="_${karch}.deb"
-        maybe_build_module "$module" "$module_version" "${kernelver[$i]}" "${arch[$i]}" || {
-            rm -rf "$tempdir"
-            die 5 $"Unable to build $module/$module_version for Ubuntu driver disk."
-        }
-        mkdir -p "$tempdir/$dd_prefix"
-        local deb_dir="$tempdir/$dd_prefix/debian"
-        local deb_lib_dir="$deb_dir/lib/modules/${kernelver[$i]}/updates/dkms"
-        mkdir -p "$deb_lib_dir"
-        cp "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}/module/"*"$module_uncompressed_suffix"* "$deb_lib_dir"
-        pushd "$deb_dir" > /dev/null 2>&1
-        mkdir DEBIAN
-        cat > DEBIAN/control <<EOF
-Package: ${module}-modules-${kernelver[$i]}
-Version: ${module_version}-1
-Section: misc
-Priority: optional
-Architecture: $karch
-Depends:
-Maintainer: DKMS <dkms-devel@dell.com>
-Description: DKMS packaged binary driver update
- DKMS automagically generated debian package for
- driver update disks, used with Ubuntu installation
- programs (such as Ubiquity).
-EOF
-
-       # Generate the DEBIAN/preinst file.
-       # This is tricky as we need some parts evaluated now
-       # and some parts evaluated at runtime
-cat >DEBIAN/preinst <<EOF
-#!/bin/bash
-[[ \$(uname -r) = ${kernelver[$i]} ]] || exit 1
-exit 0
-EOF
-       chmod 0775 DEBIAN/preinst
-       cd "$tempdir/$dd_prefix"
-       dpkg-deb --build debian
-       mv debian.deb "${module}_${module_version}-${kernelver[$i]}${dd_suffix}"
-       rm -rf debian
-       popd > /dev/null 2>&1
-   done
-
-   echo "Copying source..."
-   mkdir -p "$tempdir/ubuntu"
-   cp -ar "$source_tree/$module-$module_version" "$tempdir/ubuntu/"
-
-   mkdir -p "$image_dir"
-   rm -f "$image_dir/$image_name"
-   cd "$tempdir"
-   make_driver_disk_media "$image_dir/$image_name" "$tempdir"
-   cd - >/dev/null
-   rm -rf "$tempdir"
-   echo $""
-   echo $"Disk image location: $dkms_tree/$module/$module_version/driver_disk/$image_name"
-}
-
 make_tarball()
 {
     make_common_test "mktarball"
@@ -2846,235 +2456,6 @@ run_match()
     fi
 }
 
-make_rpm()
-{
-    make_common_test "mkrpm"
-
-    # Check that the rpmbuild command is present
-    if ! which rpmbuild >/dev/null 2>&1 ; then
-        die 1 $"rpmbuild not present." \
-            $"Install the rpm-build package."
-    fi
-
-    # Read the conf file
-    read_conf_or_die "$kernelver" "$arch"
-
-    local rpm_basedir="$dkms_tree/$module/$module_version/rpm"
-
-    echo $""
-    local sp
-    for sp in "$dkms_tree/$module/$module_version/source/$module-dkms-mkrpm.spec" "/etc/dkms/template-dkms-mkrpm.spec"; do
-        [[ -e $sp ]] || continue
-        SPECFILE="$sp"
-        break
-    done
-    if [[ ! $SPECFILE ]]; then
-        die 5 $"Cannot find $sp which is needed by DKMS in order use mkrpm."
-    fi
-
-    # Run a dkms mktarball for use in the rpm
-    local mktarball_line
-    if [[ ! $source_only || $binaries_only ]]; then
-        mktarball_line="--binaries-only"
-        local i
-        echo $""
-        for ((i=0; i<${#kernelver[@]}; i++)); do
-            if ! [[ -d $dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]} ]]; then
-                die 5 $"You do not seem to have $module $module_version built for ${kernelver[$i]} (${arch[$i]})."\
-                    $"All modules must be in the built state before you can use mkrpm."
-            fi
-            echo $"Marking ${kernelver[$i]} (${arch[$i]}) for RPM..."
-            mktarball_line="-k ${kernelver[$i]} -a ${arch[$i]} $mktarball_line"
-        done
-    else
-        mktarball_line="none"
-    fi
-
-    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    trap 'rm -rf $temp_dir_name' EXIT HUP TERM
-    mkdir -p ${temp_dir_name}/{BUILD,RPMS,SRPMS,SPECS,SOURCES}
-    cp ${SPECFILE} ${temp_dir_name}/SPECS/dkms_mkrpm.spec
-
-    # If using legacy mode, install common postinst
-    if ((legacy_postinst != 0)); then
-        invoke_command "cp '$PREFIX/usr/lib/dkms/common.postinst' '${temp_dir_name}/SOURCES'" "copying legacy postinstall template"
-    fi
-
-    # Copy in the source tree
-    if [[ ! $binaries_only ]]; then
-        invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '${temp_dir_name}/SOURCES/$module-$module_version'" "Copying source tree"
-    fi
-
-    if invoke_command "LC_ALL=C rpmbuild --define \"_topdir ${temp_dir_name}\" --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_versions ${kernelver[*]}\" --define \"mktarball_line $mktarball_line\" --define \"__find_provides  /usr/lib/dkms/find-provides\" --define \"_use_internal_dependency_generator 0\" -ba ${temp_dir_name}/SPECS/dkms_mkrpm.spec > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"; then
-        mkdir -p ${rpm_basedir}
-        cp -a ${temp_dir_name}/SRPMS/* ${temp_dir_name}/RPMS/*/* ${rpm_basedir}/
-        echo $""
-        cat ${temp_dir_name}/rpmbuild.log | grep ^Wrote | sed -e "s:${temp_dir_name}/:${rpm_basedir}/:" -e 's:SRPMS/::' -e 's:RPMS/.*/::'
-    else
-        cat ${temp_dir_name}/rpmbuild.log >&2
-        die 7 $"There was a problem creating your rpm."
-    fi
-    rm -rf $temp_dir_name
-    trap > /dev/null 2>&1
-}
-
-preproc_file()
-{
-    local date_str="$(date -R)"
-    echo "modifying $1..."
-    sed -e "s/DEBIAN_PACKAGE/$debian_package/g" \
-	-e "s/DEBIAN_BUILD_ARCH/$debian_build_arch/g" \
-	-e "s/KERNEL_VERSION/$kernelver/g" \
-        -e "s/MODULE_NAME/$module/g" \
-        -e "s/MODULE_VERSION/$module_version/g" \
-        -e "s/DATE_STAMP/$date_str/" "$1" > "$1.dkms-pp"
-    mv "$1.dkms-pp" "$1"
-}
-
-# Install a package on a debian system.
-debian_install()
-{
-    local getroot  tmpfile i
-    local -a packages=("$@")
-    for ((i=0; i < ${#packages[@]}; i++)); do
-        dpkg-query -s "${packages[$i]}"| egrep -q '^Status:.* installed$' || continue
-        unset package[$i]
-    done
-    # if they are already installed, we are OK.
-    [[ ${package[@]} ]] || return
-    if [[ $(id -u) != 0 ]]; then
-        # figure out how to get root
-        for getroot in su-to-root gksudo kdesu sudo; do
-            which $getroot >/dev/null 2>&1 || continue
-            case $getroot in
-                su-to-root)
-                    getroot="$getroot -c"
-                    ;;
-                gksudo)
-                    [[ $DISPLAY ]] || continue
-                    getroot="$getroot --description 'DKMS Debian package builder' "
-                    ;;
-                kdesu)
-                    [[ $DISPLAY ]] || continue
-                    ;;
-            esac
-            break
-        done
-    fi
-    if [[ -x /usr/sbin/synaptic && $DISPLAY ]] && tmpfile=$(mktemp_or_die); then
-        # Pretty GUI install.
-        trap 'rm -f "$tmpfile"' EXIT
-        for ((i=0; i=${#packages[@]}; i++)); do
-            [[ ${packages[$i]} ]] && echo "install ${packages[$i]}" >>$tmpfile
-        done
-        $getroot "sh -c '/usr/sbin/synaptic --set-selections --non-interactive --hide-main-window < $tmpfile'"
-    else
-        $getroot apt-get -y install "${packages[@]}"
-    fi
-    if (( $? != 0)); then
-        die 4 $"Missing ${packages[@]} and unable to install. Please ask an admin to install for you."
-    fi
-}
-
-make_debian()
-{
-    create_type="$1"
-
-    create_temporary_trees
-    trap "delete_temporary_trees" EXIT HUP TERM
-
-    make_common_test "mk${create_type}"
-
-    debian_package=${module//_/-}
-    if [[ $source_only ]]; then
-         debian_build_arch='all'
-    else
-         debian_build_arch=$(dpkg-architecture -qDEB_BUILD_ARCH)
-    fi
-
-    # Read the conf file
-    read_conf_or_die "$kernelver" "$arch"
-    debian_install fakeroot dpkg-dev debhelper
-
-    # Skeleton to load templates from
-    local system_mk="$dkms_tree/$module/$module_version/source/$module-dkms-mk${create_type}"
-    local local_mk="/etc/dkms/template-dkms-mk${create_type}"
-    if [[ -e ${system_mk} ]]; then
-        echo $"Using ${system_mk}"
-        DEBDIR=${system_mk}
-    elif [[ -e ${local_mk} ]]; then
-        echo $"Using ${local_mk}"
-        DEBDIR=${local_mk}
-    else
-        die 5 $"Cannot find ${local_mk} which is needed by DKMS in order to use mk${create_type}."
-    fi
-
-    # Prepare build directory and copy template
-    local temp_dir=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    trap "rm -rf $temp_dir; delete_temporary_trees" EXIT HUP TERM
-    local temp_dir_debian="$temp_dir/$debian_package-dkms-$module_version"
-    invoke_command "cp -ar '$DEBDIR/' '$temp_dir_debian'" "copying template"
-    pushd "$temp_dir_debian" > /dev/null 2>&1
-    for file in debian/*; do
-        preproc_file "$file"
-        chmod 755 "$file"
-    done
-    popd > /dev/null 2>&1
-
-    # If using legacy mode, install common postinst
-    if ((legacy_postinst != 0)); then
-        invoke_command "cp '$PREFIX/usr/lib/dkms/common.postinst' '$temp_dir_debian'" "copying legacy postinstall template"
-    fi
-
-    # Calculate destination directory
-    deb_basedir=$dkms_tree/$module/$module_version/${create_type}
-    mkdir -p ${deb_basedir} >/dev/null 2>&1
-
-    # Create deb
-    pushd "$temp_dir_debian" > /dev/null 2>&1
-    case "$create_type" in
-    dsc)
-        invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '$temp_dir_debian/$module-$module_version'" "Copying source tree"
-        invoke_command "dpkg-buildpackage -S -us -uc 1>/dev/null" "Building source package" || \
-            die 7 $"There was a problem creating your ${create_type}."
-        invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_source.changes' '$temp_dir/${debian_package}-dkms_${module_version}.dsc' '$temp_dir/${debian_package}-dkms_${module_version}.tar.gz' '$deb_basedir'" "Moving built files to $deb_basedir"
-        ;;
-    deb)
-        invoke_command "cp -Lpr '$dkms_tree/$module/$module_version/source' '$temp_dir_debian/$module-$module_version'" "Copying source tree"
-        invoke_command "dpkg-buildpackage -rfakeroot -d -b -us -uc 1>/dev/null" "Building binary package" || \
-            die 7 $"There was a problem creating your ${create_type}."
-        invoke_command "mv '$temp_dir/${debian_package}-dkms_${module_version}_${debian_build_arch}.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
-	;;
-    bmdeb)
-        local archive_location="$dkms_tree/$module/$module_version/tarball/$module-$module_version.dkms.tar.gz"
-        # Force binaries_only
-        binaries_only="binaries-only"
-        invoke_command "make_tarball" "Gathering binaries"
-        if [[ -f $archive_location ]]; then
-            invoke_command "cp '$archive_location' '$temp_dir_debian'" "Copying DKMS tarball into DKMS tree"
-        else
-            die 12 $"Unable to find created tarball."
-        fi
-        export KVER="$kernelver"
-        export KARCH="$arch"
-        invoke_command "dpkg-buildpackage -rfakeroot -d -b -us -uc 1>/dev/null" "Building binary package" || \
-        die 7 $"There was a problem creating your ${create_type}."
-        invoke_command "mv '$temp_dir/${debian_package}-modules-${kernelver}_${module_version}_${debian_build_arch}.deb' '$deb_basedir'" "Moving built files to $deb_basedir"
-        ;;
-    esac
-    popd > /dev/null 2>&1
-
-    if in_temporary_trees; then
-        echo "Copying built files to "`pwd`"/.." >&2
-        cp "${deb_basedir}/"* ..
-    fi
-
-    # Cleanup
-    invoke_command "rm $temp_dir -fr" "Cleaning up temporary files"
-    delete_temporary_trees || \
-        die 7 $"There was a problem cleaning up temporary files."
-}
-
 make_common_test()
 {
     local create_type=$1
@@ -3087,35 +2468,6 @@ make_common_test()
     # Make sure that its installed in the first place
     [[ -d $dkms_tree/$module/$module_version ]] ||
         die 3 $"Module $module-$module_version is not located in the DKMS tree."
-}
-
-make_kmp_srpm()
-{
-    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    trap 'rm -rf $temp_dir_name' EXIT HUP TERM
-    mkdir -p $temp_dir_name/{BUILD,RPMS,SRPMS,SPECS,SOURCES}
-    pushd "$dkms_tree/$module/$module_version" > /dev/null 2>&1
-    # Want to change name of the top-level of the tarball from build to $module-$module_version
-    cp -lr build ${module}-${module_version}
-    tar cvjf $temp_dir_name/SOURCES/${module}-${module_version}.tar.bz2 ${module}-${module_version} > /dev/null 2>&1
-    rm -rf ${module}-${module_version}
-    popd > /dev/null 2>&1
-    pushd "$temp_dir_name" > /dev/null 2>&1
-    invoke_command "rpmbuild --define \"_topdir ${temp_dir_name}\" --target=$arch -bs ${SPECFILE} > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
-    grep ^Wrote $temp_dir_name/rpmbuild.log > /dev/null 2>&1
-    local RC="$?"
-    if ((RC == 0)); then
-        local kmp_basedir="$dkms_tree/$module/$module_version/rpm"
-        mkdir -p $kmp_basedir
-        RPMS=$(LANG=C cp -va ${temp_dir_name}/SRPMS/* $kmp_basedir | awk '{print $NF}')
-    else
-        echo $"rpmbuild error log:"
-        cat $temp_dir_name/rpmbuild.log
-    fi
-    popd > /dev/null 2>&1
-    rm -rf $temp_dir_name
-    trap > /dev/null 2>&1
-    return ${RC}
 }
 
 report_build_problem()
@@ -3214,39 +2566,6 @@ add_source_tree() {
     esac
     mkdir -p "$source_tree/$module-$module_version"
     cp -fr "$from"/* "$source_tree/$module-$module_version"
-}
-
-make_kmp()
-{
-    make_common_test "mkkmp"
-
-    # Read the conf file
-    read_conf_or_die "$kernelver" "$arch"
-
-    echo $""
-    if [[ $specfile && -e $dkms_tree/$module/$module_version/source/$specfile ]]; then
-        echo $"Using $dkms_tree/$module/$module_version/source/$specfile"
-        SPECFILE="$dkms_tree/$module/$module_version/source/$specfile"
-    elif [[ -e $dkms_tree/$module/$module_version/source/$module-kmp.spec ]]; then
-        echo $"Using $dkms_tree/$module/$module_version/source/$module-kmp.spec"
-        SPECFILE="$dkms_tree/$module/$module_version/source/$module-kmp.spec"
-    else
-        die 5 $"Cannot find a suitable spec file which is needed by DKMS in order use mkkmp."\
-          $"Please specify --spec=specfile."
-    fi
-
-    prepare_build
-    make_kmp_srpm
-    RC=$?
-    clean_build
-
-    if ((RC == 0)); then
-        echo $""
-        echo $"KMP SRPM location: $RPMS"
-    else
-        die 7 $"There was a problem creating your KMP source rpm."
-    fi
-    # FIXME: hand SRPM to mock or build system to build
 }
 
 # This code used to be in dkms_autoinstaller.
@@ -3352,165 +2671,6 @@ autoinstall() {
     done
 }
 
-make_redhat3_driver_disk ()
-{
-    # Check that the rpmbuild command is present
-    if ! which rpmbuild >/dev/null 2>&1 ; then
-        echo $"" >&2
-        echo $"Error! rpmbuild not present." >&2
-        echo $"Install the rpm-build package." >&2
-        exit 1
-    fi
-
-    local kmodtool=$(rpm -ql redhat-rpm-config | grep kmodtool)
-    #Check that the kmodtool is present
-    if [ -z "$kmodtool" ]; then
-        echo $"Error! kmodtool not present." >&2
-        echo $"Install redhat-rpm-config package." >&2
-        exit 1
-    fi
-
-    # Check that the createrepo command is present
-    if ! which createrepo >/dev/null 2>&1 ; then
-        echo $"" >&2
-        echo $"Error! createrepo not present." >&2
-        echo $"Install the createrepo package." >&2
-        exit 1
-    fi
-
-    echo $""
-    if [ -n "$specfile" -a -e "$dkms_tree/$module/$module_version/source/$specfile" ]; then
-        echo $"Using $dkms_tree/$module/$module_version/source/$specfile"
-        SPECFILE="$dkms_tree/$module/$module_version/source/$specfile"
-    elif [ -e "/etc/dkms/template-dkms-redhat-kmod.spec" ]; then
-        echo $"Using /etc/dkms/template-dkms-redhat-kmod.spec"
-        SPECFILE="/etc/dkms/template-dkms-redhat-kmod.spec"
-    else
-        echo $"" >&2
-        echo $"Cannot find /etc/dkms/template-dkms-redhat-kmod.spec which is needed by" >&2
-        echo $"DKMS in order to make Redhat driver disk v3." >&2
-        exit 5
-    fi
-    # Set up temporary build directory for build
-    rm -rf "$dkms_tree/$module/$module_version/build"
-    cp -a "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
-
-    cd "$dkms_tree/$module/$module_version/build"
-
-    # Run the pre_build script
-    if [ -n "$pre_build" ] && [ -x `echo "$dkms_tree/$module/$module_version/source/$pre_build" | sed 's/ .*//'` ]; then
-        echo $""
-        echo $"Running the pre_build script:"
-        $dkms_tree/$module/$module_version/build/$pre_build
-    fi
-
-    # Apply any patches
-    local index=0
-    while [ $index -lt ${#patch_array[@]} ]; do
-        if ! [ -e "$dkms_tree/$module/$module_version/build/patches/${patch_array[$index]}" ]; then
-            echo $"" >&2
-            echo $"Error!  Patch ${patch_array[$index]} as specified in dkms.conf cannot be" >&2
-            echo $"found in $dkms_tree/$module/$module_version/build/patches/." >&2
-            exit 5
-        fi
-        invoke_command "patch -p1 < ./patches/${patch_array[$index]}" "applying patch ${patch_array[$index]}"
-        if [ "$?" -ne 0 ]; then
-            echo $"" >&2
-            echo $"Error! Application of patch ${patch_array[$index]} failed." >&2
-            echo $"Check $dkms_tree/$module/$module_version/build/ for more information." >&2
-                report_build_problem
-            exit 6
-        fi
-        index=$(($index+1))
-    done
-    # Create temp dirs and copy files for build
-    local temp_dir_name=`mktemp -d $tmp_location/dkms.XXXXXX`
-    trap 'rm -rf $temp_dir_name' EXIT HUP TERM
-    mkdir -p ${temp_dir_name}/{disk,BUILD,RPMS,SRPMS,SPECS,SOURCES}
-    cp ${SPECFILE} ${temp_dir_name}/SPECS/$module.spec
-    cp -rax $dkms_tree/$module/$module_version/build/ $temp_dir_name/SOURCES/$module-$module_version/
-    # Clean the build directory
-    rm -rf "$dkms_tree/$module/$module_version/build"
-    cd $temp_dir_name/SOURCES
-    invoke_command "tar -jcvf $temp_dir_name/SOURCES/$module-$module_version.tar.bz2 $module-$module_version/" "creating source tarball"
-    local i=0
-    # Build RPMS
-    while [ $i -lt ${#kernelver[@]} ]; do
-        invoke_command "LC_ALL=C rpmbuild --define \"_topdir ${temp_dir_name}\" --define \"version $module_version\" --define \"module_name $module\" --define \"kernel_version ${kernelver[$i]}\" -bb --target ${arch[$i]} ${temp_dir_name}/SPECS/$module.spec > ${temp_dir_name}/rpmbuild.log 2>&1" "rpmbuild"
-        if [ "$?" -ne 0 ]; then
-            echo $"" >&2
-            echo $"Error! There was a problem creating your kmod." >&2
-            cat ${temp_dir_name}/rpmbuild.log >&2
-            exit 7
-        fi
-        local kabi_whitelist=`rpm -ql kabi-whitelists | grep ${arch[$i]}`
-        if [ $kabi_whitelist ]; then
-            local module_file=`rpm -qlp ${temp_dir_name}/RPMS/${arch[$i]}/kmod-${module}-${module_version}* | grep ${module}.ko`
-            cd ${temp_dir_name}/
-            rpm2cpio ${temp_dir_name}/RPMS/${arch[$i]}/kmod-${module}-${module_version}* | cpio -id --quiet .${module_file}
-            cd - > /dev/null
-            local mod_symbols=( $(modprobe --dump-modversions ${temp_dir_name}/${module_file} | cut -f2) )
-            local miss_sym_count=0
-            local missing_symbols
-            for ((i=0; i < "${#mod_symbols[@]}"; i++))
-            do
-               if [ -z "`grep -o ${mod_symbols[${i}]} ${kabi_whitelist}`" ]; then
-                   missing_symbols[$miss_sym_count]="${mod_symbols[${i}]}"
-                   miss_sym_count=$(($miss_sym_count+1))
-               fi
-            done
-            if [ $miss_sym_count -ne 0 ]; then
-                echo $"" >&2
-                echo $"WARNING: ${module}-${module_version} is using following kernel symbols that are not in the ABI whitelist:"
-                echo $"----------------------------------"
-                for missing_symbol in ${missing_symbols[*]}
-                do
-                    echo "$missing_symbol"
-                done
-                echo $"----------------------------------"
-                echo $"" >&2
-            else
-                echo $"NOTICE: ${module}-${module_version} module seems to use only official Red Hat ABI."
-            fi
-        else
-            echo $"WARNING:${module}-${module_version} module is not checked against Red Hat ABI whitelist."
-            echo $"Install 'kabi-whitelists' package and build driver disk again to run the ABI compliance test."
-        fi
-        i=$(($i + 1))
-    done
-
-    i=0
-    while [ $i -lt ${#arch[@]} ]; do
-        invoke_command "createrepo --pretty ${temp_dir_name}/RPMS/${arch[$i]}" "creating repo"
-        if [ "$?" -ne 0 ]; then
-            echo $"" >&2
-            echo $"Error! There was a problem creating repository." >&2
-            exit 7
-        fi
-        i=$(($i + 1))
-    done
-
-    echo "$module-$module_version driver disk" > "${temp_dir_name}/disk/rhdd3"
-    mkdir ${temp_dir_name}/disk/rpms
-    cp -rax ${temp_dir_name}/RPMS/* ${temp_dir_name}/disk/rpms/
-
-    local suffix="$(driver_disk_suffix)"
-    local image_dir="$dkms_tree/$module/$module_version/driver_disk"
-    local image_name="$module-$module_version-dd.$suffix"
-    echo $""
-    echo $"Creating driver disk on $media media:"
-    cd "${temp_dir_name}/disk"
-    mkdir -p "$image_dir"
-    rm -f "$image_dir/$image_name"
-    make_driver_disk_media "$image_dir/$image_name" "${temp_dir_name}/disk"
-    rm -rf $temp_dir_name
-
-    echo $""
-    echo $"Disk image location: $image_dir/$image_name"
-
-    trap > /dev/null 2>&1
-}
-
 #############################
 ####                     ####
 #### Program Starts Here ####
@@ -3551,9 +2711,6 @@ weak_modules="${WEAK_MODULES_BIN}"
 module=""
 module_version=""
 template_kernel=""
-distro=""
-media=""
-release=""
 conf=""
 kernel_config=""
 archive_location=""
@@ -3572,8 +2729,6 @@ module_uncompressed_suffix=""
 module_compressed_suffix=""
 rpm_safe_upgrade=""
 size="1440";
-specfile=""
-legacy_postinst="1"
 declare -a directive_array=() kernelver=() arch=()
 weak_modules=''
 last_mvka=''
@@ -3585,7 +2740,7 @@ die_is_fatal="yes"
 no_depmod=""
 modprobe_on_install=""
 
-action_re='^(remove|(auto|un)?install|match|mk(driverdisk|tarball|rpm|deb|bmdeb|dsc|kmp)|(un)?build|add|status|ldtarball)$'
+action_re='^(remove|(auto|un)?install|match|mktarball|(un)?build|add|status|ldtarball)$'
 
 # Parse command line arguments
 while (($# > 0)); do
@@ -3605,15 +2760,6 @@ while (($# > 0)); do
         --kernelver*|-k)
             read_arg _ka "$1" "$2" || shift
             parse_kernelarch "$_ka"
-            ;;
-        --distro*|-d)
-            read_arg distro "$1" "$2" || shift
-            ;;
-        --media*)
-            read_arg media "$1" "$2" ||shift
-            ;;
-        --release*|-r)
-            read_arg release "$1" "$2" || shift
             ;;
         --templatekernel*)
             read_arg template_kernel "$1" "$2" || shift
@@ -3676,9 +2822,6 @@ while (($# > 0)); do
         --archive*)
             read_arg archive_location "$1" "$2" || shift
             ;;
-        --legacy-postinst*)
-            read_arg legacy_postinst "$1" "$2" || shift
-            ;;
         --arch*|-a)
             read_arg _aa "$1" "$2" || shift
             arch[${#arch[@]}]="$_aa"
@@ -3693,9 +2836,6 @@ while (($# > 0)); do
         --directive*)
             read_arg _da "$1" "$2" || shift
             directive_array[${#directive_array[@]}]="$_da"
-            ;;
-        --spec*)
-            read_arg specfile "$1" "$2" || shift
             ;;
         --no-depmod)
             no_depmod="true"
@@ -3799,9 +2939,6 @@ for action_to_run in $action; do
     uninstall)
         check_root && uninstall_module
         ;;
-    mkdriverdisk)
-        check_root && make_driver_disk
-        ;;
     build)
         [ ! -w "$dkms_tree" ] && die 1 $"No write access to create a DKMS tree at ${dkms_tree}"
         check_all_is_banned "build" && build_modules
@@ -3811,21 +2948,6 @@ for action_to_run in $action; do
         ;;
     mktarball)
         make_tarball
-        ;;
-    mkrpm)
-        make_rpm
-        ;;
-    mkdeb)
-        make_debian "deb"
-        ;;
-    mkbmdeb)
-        make_debian "bmdeb"
-        ;;
-    mkdsc)
-        make_debian "dsc"
-        ;;
-    mkkmp)
-        have_one_kernel "mkkmp" && make_kmp
         ;;
     status)
         show_status

@@ -58,8 +58,6 @@ install-redhat-systemd: install doc-perms
 	install -p -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
 	install -p -m 0755 dkms_find-provides $(LIBDIR)/find-provides
 	install -p -m 0755 lsb_release $(LIBDIR)/lsb_release
-	install -p -m 0644 template-dkms-mkrpm.spec $(ETC)
-	install -p -m 0644 template-dkms-redhat-kmod.spec $(ETC)
 	install -p -m 0644 dkms.service $(SYSTEMD)
 
 install-doc:
@@ -71,17 +69,6 @@ install-debian: install install-doc
 	install -p -m 0755 dkms_apport.py $(SHAREDIR)/apport/package-hooks/dkms_packages.py
 	mkdir   -p -m 0755 $(KCONF)/header_postinst.d
 	install -p -m 0755 kernel_postinst.d_dkms $(KCONF)/header_postinst.d/dkms
-	mkdir   -p -m 0755 $(ETC)/template-dkms-mkdeb/debian
-	ln -s template-dkms-mkdeb $(ETC)/template-dkms-mkdsc
-	install -p -m 0664 template-dkms-mkdeb/Makefile $(ETC)/template-dkms-mkdeb/
-	install -p -m 0664 template-dkms-mkdeb/debian/* $(ETC)/template-dkms-mkdeb/debian/
-	chmod +x $(ETC)/template-dkms-mkdeb/debian/postinst
-	chmod +x $(ETC)/template-dkms-mkdeb/debian/prerm
-	chmod +x $(ETC)/template-dkms-mkdeb/debian/rules
-	mkdir   -p -m 0755 $(ETC)/template-dkms-mkbmdeb/debian
-	install -p -m 0664 template-dkms-mkbmdeb/Makefile $(ETC)/template-dkms-mkbmdeb/
-	install -p -m 0664 template-dkms-mkbmdeb/debian/* $(ETC)/template-dkms-mkbmdeb/debian/
-	chmod +x $(ETC)/template-dkms-mkbmdeb/debian/rules
 	rm $(DOCDIR)/COPYING*
 	rm $(DOCDIR)/sample*
 
@@ -93,11 +80,9 @@ $(TARBALL):
 	tmp_dir=`mktemp -d --tmpdir dkms.XXXXXXXX` ; \
 	cp -a ../$(RELEASE_NAME) $${tmp_dir}/$(RELEASE_STRING) ; \
 	sed -e "s/#RELEASE_VERSION#/$(RELEASE_VERSION)/" dkms > $${tmp_dir}/$(RELEASE_STRING)/dkms ; \
-	sed -e "s/#RELEASE_VERSION#/$(RELEASE_VERSION)/" dkms.spec > $${tmp_dir}/$(RELEASE_STRING)/dkms.spec ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name .git -type d -exec rm -rf \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dist -type d -exec rm -rf \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name \*~ -type f -exec rm -f \{\} \; ; \
-	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.rpm -type f -exec rm -f \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.tar.gz -type f -exec rm -f \{\} \; ; \
 	rm -rf $${tmp_dir}/$(RELEASE_STRING)/debian ; \
 	sync ; sync ; sync ; \
