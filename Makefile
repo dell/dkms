@@ -32,39 +32,33 @@ clean:
 	-rm -rf dist/
 
 install:
-	mkdir -p -m 0755 $(VAR) $(SBIN) $(MAN) $(ETC) $(BASHDIR) $(SHAREDIR) $(LIBDIR)
-	mkdir -p -m 0755 $(KCONF)/install.d $(KCONF)/prerm.d $(KCONF)/postinst.d
-	install -p -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
-	install -p -m 0755 dkms $(SBIN)
-	install -p -m 0755 dkms_autoinstaller $(LIBDIR)
-	install -p -m 0644 dkms_framework.conf $(ETC)/framework.conf
-	install -p -m 0755 sign_helper.sh $(ETC)
-	install -p -m 0644 dkms.bash-completion $(BASHDIR)/dkms
-	install -p -m 0644 dkms.8 $(MAN)/dkms.8
-	install -p -m 0755 kernel_install.d_dkms $(KCONF)/install.d/dkms
-	install -p -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
-	install -p -m 0755 kernel_prerm.d_dkms $(KCONF)/prerm.d/dkms
+	install -D -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
+	install -D -m 0755 dkms $(SBIN)/dkms
+	install -D -m 0755 dkms_autoinstaller $(LIBDIR)/dkms_autoinstaller
+	install -D -m 0644 dkms_framework.conf $(ETC)/framework.conf
+	install -D -m 0755 sign_helper.sh $(ETC)/sign_helper.sh
+	install -D -m 0644 dkms.bash-completion $(BASHDIR)/dkms
+	install -D -m 0644 dkms.8 $(MAN)/dkms.8
+	install -D -m 0755 kernel_install.d_dkms $(KCONF)/install.d/dkms
+	install -D -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
+	install -D -m 0755 kernel_prerm.d_dkms $(KCONF)/prerm.d/dkms
 	sed -i -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' $(SBIN)/dkms $(MAN)/dkms.8
 	gzip -9 $(MAN)/dkms.8
 
 DOCFILES=sample.spec sample.conf COPYING README.md sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
 
 install-redhat-systemd: install
-	mkdir -m 0755 -p  $(SYSTEMD)
-	install -p -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
-	install -p -m 0755 dkms_find-provides $(LIBDIR)/find-provides
-	install -p -m 0755 lsb_release $(LIBDIR)/lsb_release
-	install -p -m 0644 dkms.service $(SYSTEMD)
+	install -D -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
+	install -D -m 0755 dkms_find-provides $(LIBDIR)/find-provides
+	install -D -m 0755 lsb_release $(LIBDIR)/lsb_release
+	install -D -m 0644 dkms.service $(SYSTEMD)/dkms.service
 
 install-doc:
-	mkdir -m 0755 -p $(DOCDIR)
-	install -p -m 0644 $(DOCFILES) $(DOCDIR)
+	install -d -m 0644 $(DOCFILES) $(DOCDIR)
 
 install-debian: install install-doc
-	mkdir   -p -m 0755 $(SHAREDIR)/apport/package-hooks
-	install -p -m 0755 dkms_apport.py $(SHAREDIR)/apport/package-hooks/dkms_packages.py
-	mkdir   -p -m 0755 $(KCONF)/header_postinst.d
-	install -p -m 0755 kernel_postinst.d_dkms $(KCONF)/header_postinst.d/dkms
+	install -D -m 0755 dkms_apport.py $(SHAREDIR)/apport/package-hooks/dkms_packages.py
+	install -D -m 0755 kernel_postinst.d_dkms $(KCONF)/header_postinst.d/dkms
 	rm $(DOCDIR)/COPYING*
 	rm $(DOCDIR)/sample*
 
