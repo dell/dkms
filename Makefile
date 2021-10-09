@@ -30,8 +30,16 @@ all: clean tarball
 
 clean:
 	-rm -rf dist/
+	-rm -rf dkms
+	-rm -rf dkms.8
 
-install:
+dkms: dkms.in
+	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' $^ > $@
+
+dkms.8: dkms.8.in
+	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' $^ > $@
+
+install: dkms dkms.8
 	install -D -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
 	install -D -m 0755 dkms $(SBIN)/dkms
 	install -D -m 0755 dkms_autoinstaller $(LIBDIR)/dkms_autoinstaller
@@ -42,7 +50,6 @@ install:
 	install -D -m 0755 kernel_install.d_dkms $(KCONF)/install.d/dkms
 	install -D -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
 	install -D -m 0755 kernel_prerm.d_dkms $(KCONF)/prerm.d/dkms
-	sed -i -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' $(SBIN)/dkms $(MAN)/dkms.8
 
 DOCFILES=sample.spec sample.conf COPYING README.md sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
 
@@ -64,11 +71,10 @@ install-debian: install install-doc
 TARBALL=$(BUILDDIR)/dist/$(RELEASE_STRING).tar.gz
 tarball: $(TARBALL)
 
-$(TARBALL):
+$(TARBALL): dkms dkms.8
 	mkdir -p $(BUILDDIR)/dist
 	tmp_dir=`mktemp -d --tmpdir dkms.XXXXXXXX` ; \
 	cp -a ../$(RELEASE_NAME) $${tmp_dir}/$(RELEASE_STRING) ; \
-	sed -e "s/#RELEASE_VERSION#/$(RELEASE_VERSION)/" dkms > $${tmp_dir}/$(RELEASE_STRING)/dkms ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name .git -type d -exec rm -rf \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dist -type d -exec rm -rf \{\} \; ; \
 	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.tar.gz -type f -exec rm -f \{\} \; ; \
