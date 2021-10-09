@@ -383,8 +383,7 @@ and
 .B remove
 actions in the RPM spec to ensure that DKMS and RPM behave correctly in all
 scenarios when upgrading between various versions of a dkms enabled module
-RPM package.  See the sample.spec file for an example or read more in the section
-below on Creating RPMs Which Utilize DKMS.
+RPM package.
 .TP
 .B \-\-dkmstree path/to/place
 Provides a destination tree for building and installing modules to.  Useful in
