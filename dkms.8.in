@@ -337,15 +337,6 @@ for a module/module-version.  This is useful for things like
 , etc.  This saves the trouble of having to actually specify \-k kernel1 \-a
 arch1 \-k kernel2 \-a arch2 for every kernel you have built your module for.
 .TP
-.B \-\-no\-prepare\-kernel
-This option keeps DKMS from first preparing your kernel before building
-a module for it.  Generally, this option should not be used so as to
-ensure that modules are compiled correctly.
-.TP
-.B \-\-no\-clean\-kernel
-This option keeps DKMS from cleaning your kernel source tree after a
-build.
-.TP
 .B \-\-no\-depmod
 This option prevents DKMS from running the depmod command during
 .B install

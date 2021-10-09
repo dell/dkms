@@ -140,7 +140,7 @@ show_usage()
     echo $"              [-c dkms.conf-location] [-q] [--force] [--force-version-override] [--all]"
     echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
     echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"
-    echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel] [--no-initrd]"
+    echo $"              [--kernelsourcedir=source-location] [--no-initrd]"
     echo $"              [--binaries-only] [--source-only] [--verbose]"
     echo $"              [--no-depmod] [--modprobe-on-install] [-j number] [--version]"
 }
@@ -206,7 +206,6 @@ set_module_suffix()
     # $1 = the kernel to base the module_suffix on
     kernel_test="${1:-$(uname -r)}"
     module_uncompressed_suffix=".ko"
-    [[ $(VER $kernel_test) < $(VER 2.5) ]] && module_uncompressed_suffix=".o"
     grep -q '\.gz:' /lib/modules/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".gz"
     grep -q '\.xz:' /lib/modules/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".xz"
     grep -q '\.zst:' /lib/modules/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".zst"
@@ -632,13 +631,8 @@ read_conf()
     done
 
     # Use the generic make and make clean commands if not specified
-    if [[ $(VER $1) < $(VER 2.6.6) ]]; then
-        [[ ! $make_command ]] && make_command="make -C $kernel_source_dir SUBDIRS=$dkms_tree/$module/$module_version/build modules"
-        [[ ! $clean ]] && clean="make -C $kernel_source_dir SUBDIRS=$dkms_tree/$module/$module_version/build clean"
-    else
-        [[ ! $make_command ]] && make_command="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build"
-        [[ ! $clean ]] && clean="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build clean"
-    fi
+    [[ ! $make_command ]] && make_command="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build"
+    [[ ! $clean ]] && clean="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build clean"
 
     # Set modules_conf_array
     for ((index=0; index < ${#MODULES_CONF[@]}; index++)); do
@@ -1083,123 +1077,6 @@ prepare_kernel()
         die 1 $"Your kernel headers for kernel $1 cannot be found at /lib/modules/$1/build or /lib/modules/$1/source." \
             $"Please install the linux-headers-$1 package or use the --kernelsourcedir option to tell DKMS where it's located."
     }
-
-    [[ $no_prepare_kernel ]] && return
-
-    if [[ (! ( $(VER $1) < $(VER 2.6.5) ) || -d /etc/SuSEconfig) && \
-        -d "$kernel_source_dir" && \
-        -z "$ksourcedir_fromcli" ]]; then
-        echo $""
-        echo $"Kernel preparation unnecessary for this kernel. Skipping..."
-        no_clean_kernel="no-clean-kernel"
-        return 1
-    fi
-
-    # Prepare kernel for module build
-    echo $""
-    echo $"Preparing kernel $1 for module build:"
-    echo $"(This is not compiling a kernel, just preparing kernel symbols)"
-    cd $kernel_source_dir
-    [[ -r .config ]] && {
-        config_contents=$(cat .config)
-        echo $"Storing current .config to be restored when complete"
-    }
-
-    # Set kernel_config
-    if [[ -e /etc/redhat-release || -e /etc/fedora-release ]]; then
-    # Note this also applies to VMware 3.x
-    if [[ -z $kernel_config && -d $kernel_source_dir/configs ]]; then
-        local kernel_trunc=${1%%-*}
-        # Try a .config specific to whatever kernel we are running
-        if [[ $1 =~ $rh_kernels && -e $kernel_source_dir/configs/kernel-$kernel_trunc-$2-${BASH_REMATCH[1]}.config ]]; then
-            kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$2-${BASH_REMATCH[1]}.config"
-        elif [[ -e $kernel_source_dir/configs/kernel-$kernel_trunc-$2.config ]]; then
-            # If that one does not exist, try a generic one.
-            kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$2.config"
-        else
-            # If that does not exist, fall back to no config file
-            kernel_config=""
-        fi
-    fi
-    elif [[ (-e /etc/SuSE-release || -d /etc/SuSEconfig) && -z $kernel_config && -d $kernel_source_dir/arch ]]; then
-        local kernel_trunc=${1%%-*}
-        case $2 in
-            i586|i686)
-                config_arch="i386"
-                ;;
-            *)
-                config_arch=$2
-                ;;
-        esac
-        for config_type in default smp bigsmp; do
-            [[ $1 =~ $config_type ]] && kernel_config="$kernel_source_dir/arch/$config_arch/defconfig.$config_type"
-            [[ -e $kernel_config ]] || kernel_config=""
-        done
-        [[ $kernel_config ]] || kernel_config="$kernel_source_dir/arch/$config_arch/defconfig.default"
-        [[ -e $kernel_config ]] || kernel_config=""
-    fi
-
-    # Do preparation
-    if [ -e /boot/vmlinuz.version.h ]; then
-        echo $"Running UnitedLinux preparation routine"
-        local kernel_config="/boot/vmlinuz.config"
-        invoke_command "make mrproper" "make mrproper" background
-        [[ $config_contents ]] && echo "$config_contents" > .config
-        invoke_command "cp /boot/vmlinuz.version.h include/linux/version.h" "using /boot/vmlinux.version.h"
-        invoke_command "cp -f $kernel_config .config" "using $kernel_config"
-        invoke_command "make KERNELRELEASE=$1 cloneconfig" "make cloneconfig" background
-        invoke_command "make -j$parallel_jobs CONFIG_MODVERSIONS=1 KERNELRELEASE=$1 dep" "make CONFIG_MODVERSIONS=1 dep" background
-    elif grep -q rhconfig.h $kernel_source_dir/include/linux/{modversions,version}.h 2>/dev/null; then
-        echo $"Running Red Hat style preparation routine"
-        invoke_command "make clean" "make clean" background
-        [[ $config_contents ]] && echo "$config_contents" > .config
-
-        if [[ $kernel_config ]]; then
-            echo $"using $kernel_config"
-            cp -f "$kernel_config" .config
-        elif [[ -e .config ]]; then
-            warn $"Using $kernel_source_dir/.config" \
-                $"(I hope this is the correct config for this kernel)"
-        else
-            warn $"Cannot find a .config file to prepare your kernel with." \
-                $"Try using the --config option to specify where one can be found." \
-                $"Your build will likely fail because of this."
-        fi
-
-        # Hack to workaround broken tmp_include_depends for Red Hat
-        if grep -q "/usr/src/build" $kernel_source_dir/tmp_include_depends 2>/dev/null; then
-            sed 's/\/usr\/src\/build\/.*\/install//g' $kernel_source_dir/tmp_include_depends > $kernel_source_dir/tmp_include_depends.new
-            mv -f $kernel_source_dir/tmp_include_depends.new $kernel_source_dir/tmp_include_depends
-        fi
-
-        invoke_command "make KERNELRELEASE=$1 oldconfig" "make oldconfig" background
-        kerneldoth_contents=$(cat /boot/kernel.h 2>/dev/null)
-        invoke_command "/usr/lib/dkms/mkkerneldoth --kernelver $1 --targetarch $2 --output /boot/kernel.h" "running mkkerneldoth" background
-    else
-        echo $"Running Generic preparation routine"
-        invoke_command "make mrproper" "make mrproper" background
-        [[ $config_contents ]] && echo "$config_contents" > .config
-
-        if [[ $kernel_config ]]; then
-            echo $"using $kernel_config"
-            cp -f "$kernel_config" .config
-        elif [[ -e .config ]]; then
-            warn $"using $kernel_source_dir/.config" \
-                $"(I hope this is the correct config for this kernel)"
-        else
-            warn $"Warning! Cannot find a .config file to prepare your kernel with." \
-                $"Try using the --config option to specify where one can be found." \
-                $"Your build will likely fail because of this."
-        fi
-
-        invoke_command "make KERNELRELEASE=$1 oldconfig" "make oldconfig" background
-        if [[ $(VER $1) < $(VER 2.5) ]]; then
-            invoke_command "make -j$parallel_jobs KERNELRELEASE=$1 dep" "make dep" background
-        else
-            invoke_command "make -j$parallel_jobs KERNELRELEASE=$1 prepare-all scripts" "make prepare-all" background
-        fi
-    fi
-    cd - >/dev/null
 }
 
 # Get ready to build a module that has been registered with DKMS.
@@ -1322,19 +1199,6 @@ clean_build()
     cd "$dkms_tree/$module/$module_version/build"
     invoke_command "$clean" "cleaning build area" background
     cd - >/dev/null
-
-    if [[ ! ( $(VER $kernelver) < $(VER 2.6.6) ) && \
-       -d $kernel_source_dir && \
-       ! -h $kernel_source_dir && \
-       ! $ksourcedir_fromcli ]]; then
-        echo $"Kernel cleanup unnecessary for this kernel.  Skipping..."
-    elif [[ ! $no_clean_kernel ]]; then
-        cd "$kernel_source_dir"
-        [[ $kerneldoth_contents ]] || invoke_command "make mrproper" "cleaning kernel tree (make mrproper)" background
-        [[ $config_contents ]] || echo "$config_contents" > .config
-        [[ $kerneldoth_contents ]] && echo "$kerneldoth_contents" > /boot/kernel.h
-        cd - >/dev/null
-    fi
 
     # Clean the build directory
     rm -rf "$dkms_tree/$module/$module_version/build"
@@ -2345,17 +2209,6 @@ run_match()
         install_module
         fi
     done < <(echo "$template_kernel_status")
-
-    # Clean up the kernel tree
-    if [[ ! ( $(VER $kernelver) < $(VER 2.6.6) ) && -d "$kernel_source_dir" && ! -h "$kernel_source_dir" && -z "$ksourcedir_fromcli" ]]; then
-        echo $"Kernel cleanup unnecessary for this kernel. Skipping..."
-    elif [[ ! $no_clean_kernel ]]; then
-        cd "$kernel_source_dir"
-        [[ $kerneldoth_contents ]] || invoke_command "make mrproper" "cleaning kernel tree (make mrproper)" background
-        [[ $config_contents ]] && echo "$config_contents" > .config
-        [[ $kerneldoth_contents ]] && echo "$kerneldoth_contents" > /boot/kernel.h
-        cd - >/dev/null
-    fi
     fi
 }
 
@@ -2622,8 +2475,6 @@ ksourcedir_fromcli=""
 action=""
 force=""
 force_version_override=""
-no_prepare_kernel=""
-no_clean_kernel=""
 binaries_only=""
 source_only=""
 all=""
@@ -2675,12 +2526,6 @@ while (($# > 0)); do
         --version|-V)
             echo $"#RELEASE_STRING#"
             exit 0
-            ;;
-        --no-prepare-kernel)
-            no_prepare_kernel="no-prepare-kernel"
-            ;;
-        --no-clean-kernel)
-            no_clean_kernel="no-clean-kernel"
             ;;
         --no-initrd)
             no_initrd="no-initrd"
