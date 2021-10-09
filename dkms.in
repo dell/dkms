@@ -1147,16 +1147,8 @@ prepare_kernel()
 
     # Check that kernel-source exists
     _check_kernel_dir "$1" || {
-    case "$running_distribution" in
-        Debian* | Ubuntu* )
-            die 1 $"Your kernel headers for kernel $1 cannot be found." \
-                $"Please install the linux-headers-$1 package or use the --kernelsourcedir option to tell DKMS where it's located."
-                ;;
-        * )
-            die 1 $"Your kernel headers for kernel $1 cannot be found at /lib/modules/$1/build or /lib/modules/$1/source." \
-                $"You can use the --kernelsourcedir option to tell DKMS where it's located."
-            ;;
-    esac
+        die 1 $"Your kernel headers for kernel $1 cannot be found at /lib/modules/$1/build or /lib/modules/$1/source." \
+            $"Please install the linux-headers-$1 package or use the --kernelsourcedir option to tell DKMS where it's located."
     }
 
     [[ $no_prepare_kernel ]] && return
