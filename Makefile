@@ -49,11 +49,7 @@ install:
 
 DOCFILES=sample.spec sample.conf COPYING README.md sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
 
-doc-perms:
-	# ensure doc file permissions ok
-	chmod 0644 $(DOCFILES)
-
-install-redhat-systemd: install doc-perms
+install-redhat-systemd: install
 	mkdir -m 0755 -p  $(SYSTEMD)
 	install -p -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
 	install -p -m 0755 dkms_find-provides $(LIBDIR)/find-provides
