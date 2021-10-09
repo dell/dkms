@@ -1843,18 +1843,25 @@ module_is_added_or_die()
         $"The module/version combo: $module-$module_version is not located in the DKMS tree."
 }
 
-module_is_built_or_die()
+maybe_unbuild_module()
 {
-    is_module_built "$module" "$module_version" "$1" "$2" || die 4 \
-        $"There is no instance of $module $module_version for kernel $1 ($2) located in the DKMS tree."
+    is_module_built "$module" "$module_version" "$1" "$2" || {
+        echo $"Module $module $module_version is not built for kernel $1 ($2)."\
+            $"Skipping..."
+        return 0
+    }
 
+    do_unbuild "$1" "$2"
 }
 
-module_is_installed_or_die()
+maybe_uninstall_module()
 {
-    is_module_installed "$module" "$module_version" "$1" "$2" || die 4 \
-        $"The module $module $module_version is not currently installed." \
-        $"This module is not currently ACTIVE for kernel $1 ($2)."
+    is_module_installed "$module" "$module_version" "$1" "$2" || {
+        echo $"Module $module $module_version is not installed for kernel $1 ($2)."\
+            $"Skipping..."
+        return 0
+    }
+    do_uninstall "$1" "$2"
 }
 
 # Check our preconditions, and then let do_install do all the hard work.
@@ -1862,9 +1869,7 @@ uninstall_module()
 {
     local i
     for ((i=0; i < ${#kernelver[@]}; i++)); do
-        # Only do stuff if module/module version is currently installed
-        module_is_installed_or_die "${kernelver[$i]}" "${arch[$i]}"
-        do_uninstall "${kernelver[$i]}" "${arch[$i]}"
+        maybe_uninstall_module "${kernelver[$i]}" "${arch[$i]}"
     done
 }
 
@@ -1882,12 +1887,8 @@ unbuild_module()
 {
     local i
     for ((i=0; i < ${#kernelver[@]}; i++)); do
-        # Only do stuff if module/module version is currently built
-        module_is_built_or_die "${kernelver[$i]}" "${arch[$i]}"
-
-        do_uninstall "${kernelver[$i]}" "${arch[$i]}"
-
-        do_unbuild "${kernelver[$i]}" "${arch[$i]}"
+        maybe_uninstall_module "${kernelver[$i]}" "${arch[$i]}"
+        maybe_unbuild_module "${kernelver[$i]}" "${arch[$i]}"
     done
 }
 
@@ -1910,12 +1911,8 @@ remove_module()
 
     local i
     for ((i=0; i < ${#kernelver[@]}; i++)); do
-        # Make sure its there first before removing
-        module_is_built_or_die "${kernelver[$i]}" "${arch[$i]}"
-
-        do_uninstall "${kernelver[$i]}" "${arch[$i]}"
-
-        do_unbuild "${kernelver[$i]}" "${arch[$i]}"
+        maybe_uninstall_module "${kernelver[$i]}" "${arch[$i]}"
+        maybe_unbuild_module "${kernelver[$i]}" "${arch[$i]}"
     done
 
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
