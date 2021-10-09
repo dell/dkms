@@ -1860,9 +1860,6 @@ module_is_installed_or_die()
 # Check our preconditions, and then let do_install do all the hard work.
 uninstall_module()
 {
-    # Check that the right arguments were passed
-    check_module_args uninstall
-
     # Check that $module is in the dkms tree
     module_is_added_or_die
 
@@ -1886,9 +1883,6 @@ do_unbuild()
 # This uninstalls any installed modules along the way
 unbuild_module()
 {
-    # Check that the right arguments were passed
-    check_module_args unbuild
-
     # Check that $module is in the dkms tree
     module_is_added_or_die
 
@@ -1906,9 +1900,6 @@ unbuild_module()
 # Unregister a DKMS module.  This uninstalls any installed modules along the way.
 remove_module()
 {
-    # Check that the right arguments were passed
-    check_module_args remove
-
     # Do --rpm_safe_upgrade check (exit out and don't do remove if inter-release RPM upgrade scenario occurs)
     if [[ $rpm_safe_upgrade ]]; then
         local pppid=$(awk '/PPid:/ {print $2}' /proc/$PPID/status)
@@ -2885,9 +2876,11 @@ for action_to_run in $action; do
     setup_kernels_arches "$action_to_run"
     case "$action_to_run" in
     remove)
+        check_module_args remove
         check_root && remove_module
         ;;
     unbuild)
+        check_module_args unbuild
         check_root && unbuild_module
         ;;
     install)
@@ -2900,6 +2893,7 @@ for action_to_run in $action; do
         check_root && have_one_kernel "match" && run_match
         ;;
     uninstall)
+        check_module_args uninstall
         check_root && uninstall_module
         ;;
     build)
