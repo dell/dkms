@@ -274,12 +274,6 @@ it is assumed to be located in
 See below for more information on the format of
 .I dkms.conf.
 .TP
-.B \-\-size
-The size of the driver disk image to be created.  By default, this value is set
-at 1440.  Any different size should be given as an integer value only, should
-be divisible by 20 and should represent the number of kilobytes of the image
-size you desire.
-.TP
 .B \-\-config <kernel\-.config\-location>
 During a
 .B build

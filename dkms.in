@@ -142,7 +142,6 @@ show_usage()
     echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"
     echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel] [--no-initrd]"
     echo $"              [--binaries-only] [--source-only] [--verbose]"
-    echo $"              [--size]"
     echo $"              [--no-depmod] [--modprobe-on-install] [-j number] [--version]"
 }
 
@@ -2707,7 +2706,6 @@ module_suffix=""
 module_uncompressed_suffix=""
 module_compressed_suffix=""
 rpm_safe_upgrade=""
-size="1440";
 declare -a directive_array=() kernelver=() arch=()
 weak_modules=''
 last_mvka=''
@@ -2804,9 +2802,6 @@ while (($# > 0)); do
         --arch*|-a)
             read_arg _aa "$1" "$2" || shift
             arch[${#arch[@]}]="$_aa"
-            ;;
-        --size*)
-            read_arg size "$1" "$2" || shift
             ;;
         --kernelsourcedir*)
             read_arg kernel_source_dir "$1" "$2" || shift
