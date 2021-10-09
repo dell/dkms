@@ -444,12 +444,10 @@ directives are case\-sensitive and should be given in
 
 It is important to understand that many of the DKMS directives are arrays whose index
 values are tied together.  These array associations can be considered families, and there
-are currently four such families of directive arrays.  MAKE[#] and MAKE_MATCH[#] make up
+are currently three such families of directive arrays.  MAKE[#] and MAKE_MATCH[#] make up
 one family.  PATCH[#] and PATCH_MATCH[#] make up the second family.  The third  and
 largest family consists of BUILT_MODULE_NAME[#], BUILT_MODULE_LOCATION[#], DEST_MODULE_NAME[#],
-DEST_MODULE_LOCATION[#], MODULES_CONF_ALIAS_TYPE[#], MODULES_CONF_OBSOLETES[#],
-MODULES_CONF_OBSOLETE_ONLY[#] and STRIP[#].  The fourth
-family is made up of only MODULES_CONF[#].  When indexing these arrays when creating your
+DEST_MODULE_LOCATION[#] and STRIP[#].  When indexing these arrays when creating your
 dkms.conf, each family should start at index value 0.
 .TP
 .B MAKE[#]=
@@ -543,69 +541,6 @@ DEST_MODULE_LOCATION[1]="/kernel/drivers/other/").
 DEST_MODULE_LOCATION is ignored on Fedora and Red Hat Enterprise Linux, Novell SuSE Linux Enterprise Server 10
 and higher, Novell SuSE Linux 10.0 and higher, and Ubuntu. Instead, the proper distribution-specific directory is used.
 .TP
-.B MODULES_CONF_ALIAS_TYPE[#]=
-This directive array specifies how your modules should be aliased in
-.I /etc/modules.conf
-when your module is installed.  This is done in an intelligent fashion so if DKMS
-detects an already existing reference in modules.conf, it won't add a new line.  If
-it is not detected, it will add it to the modules.conf as the last alias number for
-that alias type (eg. if MODULES_CONF_ALIAS_TYPE="scsi_hostadapter", no alias
-currently exists for that module and the last scsi_hostadapter reference is 6, then
-your module will be added as "scsi_hostadapter7").  Common values for this directive
-include:
-.B scsi_hostadapter
-,
-.B sound\-slot\-
-and
-.B eth.
-Note that the numeric value of
-.B #
-is tied to the index of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME
-and DEST_MODULE_LOCATION.  The index is also tied to MODULES_CONF_OBSOLETES.
-.TP
-.B MODULES_CONF_OBSOLETES[#]=
-This directive array tells DKMS what modules.conf alias references are obsoleted by the
-module you are installing.  If your module obsoletes more than one module, this directive
-should be a comma\-delimited list of those modules that are obsoleted (eg. for megaraid2,
-MODULES_CONF_OBSOLETES[0]="megaraid,megaraid_2002"). When you are installing your module,
-DKMS ensures that any entries in
-.I /etc/modules.conf
-with the same
-.B MODULES_CONF_ALIAS_TYPE
-are changed over to the new module name.  When you are uninstalling
-your module, depending on the modules in your
-.I /lib/modules
-tree, DKMS will take different actions.
-If you kernel has an original_module, then modules.conf will not be touched and the non\-obsolete
-reference will remain.  If the kernel does not have an original_module but does have one
-of the obsolete modules, it will replace those references with the first obsolete module name in
-the comma\-delimited list that is also in that kernel (thus, your obsolete list should be prioritized
-from left to right).  If no original_module or obsolete modules are found within the kernel, the alias
-entry is removed all\-together. Note that the numeric value of
-.B #
-is tied to the index of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME
-and DEST_MODULE_LOCATION.  The index is also tied to MODULES_CONF_ALIAS_TYPE.
-.TP
-.B MODULES_CONF_OBSOLETE_ONLY[#]=
-If set to
-.B yes
-, this directive will tell DKMS to only modify
-.I /etc/modules.conf
-if it finds within it an obsolete reference as specified in the corresponding value of
-.B MODULES_CONF_OBSOLETES[#]
-array directive.
-.TP
-.B NO_WEAK_MODULES=
-The
-.B NO_WEAK_MODULES
-parameter prevents dkms from creating a symlink into the weak-updates directory, which is the
-default on Red Hat derivatives. The weak modules facility was designed to eliminate the need to
-rebuild kernel modules when kernel upgrades occur and relies on the symbols within the kABI.
-
-Fedora does not guaranteed a stable kABI so it should be disabled in the specific module override by setting it to "yes". For example, for an Nvidia DKMS module you would set the following in /etc/dkms/nvidia.conf:
-
-NO_WEAK_MODULES="yes"
-.TP
 .B STRIP[#]=
 By default strip is considered to be "yes".  If set to "no", DKMS will not
 run strip \-g against your built module to remove debug symbols from it.
@@ -625,19 +560,6 @@ package.  This directive must be present in every dkms.conf.
 .B CLEAN=
 CLEAN specifies the make clean command to be used to clean up both before and after building the
 module.  If unset, it is assumed to be "make clean".
-.TP
-.B REMAKE_INITRD=
-This directive specifies whether your initrd should be remade after the module is installed
-onto the kernel.  Any text after the first character is ignored and if the first character
-is not a "y" or a "Y", it is assumed that REMAKE_INITRD="no".
-.TP
-.B MODULES_CONF[#]=
-This directive array specifies what static configuration text
-lines need to be added into
-.I /etc/modules.conf
-for your module. See the section on MODULES.CONF CHANGES for more information regarding the
-implications of modifying
-.I /etc/modules.conf
 .TP
 .B OBSOLETE_BY=
 This directive allows you to specify a kernel version that obsoletes the necessity for this
@@ -840,72 +762,6 @@ set in its
 file.  The service works quite simply and if multiple versions of a module are in
 your system's DKMS tree, it will not do anything and instead explain that manual
 intervention is required.
-.SH MODULES.CONF / MODPROBE.CONF CHANGES
-Changes that your module will make to
-.I /etc/modules.conf
-or
-.I /etc/modprobe.conf
-should be specified with the
-.B MODULES_CONF_ALIAS_TYPE[#]
-, the
-.B MODULES_CONF_OBSOLETES[#]
-and the
-.B MODULES_CONF[#]
-directive arrays.  These arrays should also be used even if your distro uses
-.I /etc/sysconfig/kernel
-to track kernel modules.
-
-When the first module is installed upon the first kernel within the user's system,
-these entries in
-.B MODULES_CONF[#]
-are automatically added to
-.I /etc/modules.conf
-and if
-.B REMAKE_INITRD
-is specified, then the user's initrd is then remade.  Subsequently, as your modules are then
-later removed from the user's system, until the final module/version combination is removed
-from the final kernel version, those references in
-.I modules.conf
-will remain.  Once the last module/version combination is removed, those references are then
-removed.
-
-As modules/versions are removed and initrds are remade, one of three things will happen if you
-have specified a
-.B MODULES_CONF_ALIAS_TYPE.
-If no original_module exists for that kernel, and no
-.B MODULES_CONF_OBSOLETES
-modules are found in that kernel too, the
-.I modules.conf
-alias references will temporarily be removed so that the initrd will successfully
-remake.  Once the initrd is remade, however; those references are then automatically put
-back into
-.I modules.conf
-(unless you are removing the last instance of the module on the last kernel).
-However, if no original_module exists, but there is an OBSOLETE module
-found within that kernel, the alias reference is temporarily shifted to point to the
-OBSOLETE module so that the initrd can be remade.  After it is remade, it then automatically
-puts back the alias reference (unless you are removing the last instance of the module
-on the last kernel).  Lastly, if an original_module does exist for the kernel
-version, then
-.I modules.conf
-is not touched and all references persist (even if you are removing the last instance of the
-module on the last kernel).
-
-Certain module installations might not only require adding references to
-.I modules.conf
-but also require removing conflicting references that might exist in the user's system.  If this
-is the case, the
-.B MODULES_CONF_OBSOLETES[#]
-directive should be utilized to remove these references.  More information about this directive
-can be found in the
-.B DKMS.CONF
-section of this man page.
-
-Note that the end state of your modules.conf file very much depends on what kernel modules exist
-in the final kernel you remove your DKMS module from.  This is an imperfect system caused by the
-fact that there is only one modules.conf file for every kernel on your system even though various
-kernels use different modules.  In a perfect world, there would be one modules.conf file for
-every kernel (just like System.map).
 .SH AUTHOR
 Gary Lerhaupt
 .SH WEBPAGE

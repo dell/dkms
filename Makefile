@@ -53,7 +53,6 @@ install: dkms dkms.8
 	gzip -9 $(MAN)/dkms.8
 
 install-redhat-systemd: install
-	install -D -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
 	install -D -m 0755 dkms_find-provides $(LIBDIR)/find-provides
 	install -D -m 0755 lsb_release $(LIBDIR)/lsb_release
 	install -D -m 0644 dkms.service $(SYSTEMD)/dkms.service

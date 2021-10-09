@@ -24,24 +24,23 @@ shopt -s extglob
 
 # All of the variables we will accept from dkms.conf.
 # Does not include directives
-readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
+# The last group of variables has been deprecated
+readonly dkms_conf_variables="CLEAN PACKAGE_NAME
    PACKAGE_VERSION POST_ADD POST_BUILD POST_INSTALL POST_REMOVE PRE_BUILD
    PRE_INSTALL BUILD_DEPENDS BUILD_EXCLUSIVE_KERNEL BUILD_EXCLUSIVE_ARCH
-   build_exclude OBSOLETE_BY MAKE MAKE_MATCH MODULES_CONF
-   modules_conf_array PATCH PATCH_MATCH patch_array BUILT_MODULE_NAME
+   build_exclude OBSOLETE_BY MAKE MAKE_MATCH
+   PATCH PATCH_MATCH patch_array BUILT_MODULE_NAME
    built_module_name BUILT_MODULE_LOCATION built_module_location
-   DEST_MODULE_NAME dest_module_name MODULES_CONF_OBSOLETES
+   DEST_MODULE_NAME dest_module_name
    DEST_MODULE_LOCATION dest_module_location
-   modules_conf_obsoletes MODULES_CONF_ALIAS_TYPE
-   modules_conf_alias_type STRIP strip MODULES_CONF_OBSOLETE_ONLY
-   modules_conf_obsolete_only AUTOINSTALL NO_WEAK_MODULES
-   SIGN_TOOL"
+   STRIP strip AUTOINSTALL NO_WEAK_MODULES SIGN_TOOL
+
+   REMAKE_INITRD MODULES_CONF MODULES_CONF_OBSOLETES
+   MODULES_CONF_ALIAS_TYPE MODULES_CONF_OBSOLETE_ONLY"
 
 # Some important regular expressions.  Requires bash 3 or above.
 # Any poor souls still running bash 2 or older really need an upgrade.
-readonly y_re='^(Y|y)'
 readonly mv_re='^([^/]*)/(.*)$'
-readonly rh_kernels='(debug|summit|smp|enterprise|bigmem|hugemem|BOOT|vmnix)'
 
 # Areas that will vary between Linux and other OS's
 _get_kernel_dir() {
@@ -140,7 +139,7 @@ show_usage()
     echo $"              [-c dkms.conf-location] [-q] [--force] [--force-version-override] [--all]"
     echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
     echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"
-    echo $"              [--kernelsourcedir=source-location] [--no-initrd]"
+    echo $"              [--kernelsourcedir=source-location]"
     echo $"              [--binaries-only] [--source-only] [--verbose]"
     echo $"              [--no-depmod] [--modprobe-on-install] [-j number] [--version]"
 }
@@ -306,69 +305,6 @@ do_depmod()
     fi
 }
 
-# This function is a little hairy -- every distro has slightly different tools
-# and naming conventions for creating initial ramdisks.  It should probably
-# be split out into one function per distro, with make_initrd left as a stub.
-make_initrd()
-{
-    # $1 = kernel version
-    # $2 = arch
-    # $3 = 'backup', if backup of old initrd is wanted (using .old-dkms filename suffix)
-
-    [[ $no_initrd ]] && return
-    local mkinitrd kernel_file initrd_dir="/boot"
-    for mkinitrd in dracut update-initramfs mkinitrd ''; do
-        [[ $mkinitrd ]] && which "$mkinitrd" >/dev/null 2>&1 && break
-    done
-
-    # No mkinitrd? Just return.
-    [[ $mkinitrd ]] || return 0
-
-    # Back up our current initrd
-    echo $""
-    # Find out what the proper filename will be
-    for initrd in "initrd-$1.img" "initramfs-$1.img" "initrd.img-$1" "initrd-$1" ''; do
-        [[ $initrd && -f $initrd_dir/$initrd ]] && break
-    done
-    if ! [[ $initrd ]]; then
-        # Return if we cannot find an initrd.
-        warn $"Unable to find an initial ram disk that I know how to handle." \
-            $"Will not try to make an initrd."
-        return 0
-    fi
-    if [[ $3 = backup ]]; then
-        echo $"Backing up $initrd to $initrd_dir/$initrd.old-dkms"
-        cp -f "$initrd_dir/$initrd" "$initrd_dir/$initrd.old-dkms"
-        echo $"Making new $initrd"
-        echo $"(If next boot fails, revert to $initrd.old-dkms image)"
-    fi
-
-    if [[ $mkinitrd = dracut ]]; then
-        invoke_command "$mkinitrd -f $initrd_dir/$initrd $1" "$mkinitrd" background
-    elif [[ $mkinitrd = update-initramfs ]]; then
-        invoke_command "$mkinitrd -u -k $1" "$mkinitrd" background
-    elif $mkinitrd --version >/dev/null 2>&1; then
-        invoke_command "$mkinitrd -f $initrd_dir/$initrd $1" "$mkinitrd" background
-    elif [[ -e /etc/SuSE-release || -d /etc/SuSEconfig ]]; then
-        for kernel_file in vmlinuz vmlinux ''; do
-            [[ $kernel_file && -f $initrd_dir/$kernel_file ]] && break
-        done
-        if [[ ! $kernel_file ]]; then
-            error $"Unable to find valid kernel file under " \
-            $"$initrd_dir for kernel version $1"
-            return 1;
-        fi
-        invoke_command "$mkinitrd -k $kernel_file-$1 -i $initrd" "$mkinitrd" background
-    elif [[ -e /etc/debian_version ]]; then
-        invoke_command "$mkinitrd -o $initrd_dir/$initrd $1" "$mkinitrd" background
-    else
-        echo $""
-        echo $"Calling $mkinitrd (bad exit status 9 may occur)"
-        invoke_command "$mkinitrd" "$mkinitrd" background
-    fi
-    return
-}
-
 # Grab distro information from os-release.
 # Falls back to LSB for compliant distros.
 distro_version()
@@ -513,6 +449,12 @@ read_conf()
         [ -e "$_conf_file" ] && safe_source "$_conf_file" $dkms_conf_variables
     done
 
+    (( ${#REMAKE_INITRD[@]} )) && die 5 $"REMAKE_INITRD has been deprecated."
+    (( ${#MODULES_CONF[@]} )) && die 5 $"MODULES_CONF has been deprecated."
+    (( ${#MODULES_CONF_OBSOLETES[@]} )) && die 5 $"MODULES_CONF_OBSOLETES has been deprecated."
+    (( ${#MODULES_CONF_ALIAS_TYPE[@]} )) && die 5 $"MODULES_CONF_ALIAS_TYPE has been deprecated."
+    (( ${#MODULES_CONF_OBSOLETE_ONLY[@]} )) && die 5 $"MODULES_CONF_OBSOLETE_ONLY has been deprecated."
+
     # Source in the directive_array
     for directive in "${directive_array[@]}"; do
         directive_name=${directive%%=*}
@@ -547,13 +489,6 @@ read_conf()
         built_module_location[$index]=${BUILT_MODULE_LOCATION[$index]}
         dest_module_name[$index]=${DEST_MODULE_NAME[$index]}
         dest_module_location[$index]=${DEST_MODULE_LOCATION[$index]}
-        modules_conf_obsoletes[$index]=${MODULES_CONF_OBSOLETES[$index]}
-        modules_conf_alias_type[$index]=${MODULES_CONF_ALIAS_TYPE[$index]}
-        case ${MODULES_CONF_OBSOLETE_ONLY[$index]} in
-            [yY]*)
-                modules_conf_obsolete_only[$index]="yes"
-                ;;
-        esac
         case ${STRIP[$index]} in
             [nN]*)
                 strip[$index]="no"
@@ -634,11 +569,6 @@ read_conf()
     [[ ! $make_command ]] && make_command="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build"
     [[ ! $clean ]] && clean="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build clean"
 
-    # Set modules_conf_array
-    for ((index=0; index < ${#MODULES_CONF[@]}; index++)); do
-        [[ ${MODULES_CONF[$index]} ]] && modules_conf_array[$index]="${MODULES_CONF[$index]}"
-    done
-
     # Set patch_array (including kernel specific patches)
     count=0
     for ((index=0; index < ${#PATCH[@]}; index++)); do
@@ -647,9 +577,6 @@ read_conf()
         count=$(($count+1))
     fi
     done
-
-    # Set remake_initrd
-    [[ $REMAKE_INITRD =~ $y_re ]] && remake_initrd="yes"
 
     # Set build_exclude
     [[ $BUILD_EXCLUSIVE_KERNEL && ! $1 =~ $BUILD_EXCLUSIVE_KERNEL ]] && build_exclude="yes"
@@ -785,175 +712,6 @@ check_version_sanity()
 
     return 0
 }
-
-moduleconfig_update_obsoletes()
-{
-    # $@ = files to process
-    # Do nothing if we have no obsoletes
-    ( IFS=; [[ "${modules_conf_obsoletes[*]}" ]] ) || return 0
-    # Generate sed args to remove obsolete modules
-    local mod_diff
-    for ((index=0; index < ${#dest_module_name[@]}; index++)); do
-        [[ ${modules_conf_obsoletes[$index]} ]] || continue
-        for obsolete_module in ${modules_conf_obsoletes[$index]//,/ }; do
-            # For module.conf style syntax
-            sa_mc_o[${#sa_mc_o[*]}]="-e"
-            sa_mc_o[${#sa_mc_o[*]}]="s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) $obsolete_module$/\1 ${dest_module_name[$index]}/g"
-            # For /etc/sysconfig/kernel style syntax
-            sa_sck_o[${#sa_sck_o[*]}]="-e"
-            sa_sck_o[${#sa_sck_o[*]}]="s/\(INITRD_MODULES.*\)$obsolete_module\b\(.*\)/\1${dest_module_name[$index]}\2/"
-        done
-    done
-
-    # Do all the changes at once, record the diffs for posterity
-    for file in "$@"; do
-        [[ $file && -w $file ]] || continue
-        _tmpf="$temp_dir_name/${file##*/}.new"
-        if [[ $file = /etc/sysconfig/kernel ]]; then
-            [ -z "${sa_sck_o[@]}" ] || sed "${sa_sck_o[@]}" "$file" > "$_tmpf"
-        else
-            [ -z "${sa_mc_o[@]}" ] || sed "${sa_mc_o[@]}" "$file" > "$_tmpf"
-        fi
-	if [ -f "$_tmpf" ] && ! mod_diff=$(diff -u "$_tmpf" "$file"); then
-            echo $"$file updated to replace obsoleted module references:"
-            echo "$mod_diff"
-            cp -fp "$_tmpf" "$file"
-            rm -f "$_tmpf"
-        fi
-    done
-}
-
-moduleconfig_add()
-{
-    # $1 = kernel version
-
-    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    local -a sa_mc_o=() sa_sck_o=()
-    modconfig_files="/etc/modprobe.d/dkms.conf
-        /etc/modprobe.d/dkms
-        /etc/modules.conf
-        /etc/modprobe.conf
-        /etc/modprobe.d/$package_name.conf
-        /etc/sysconfig/kernel"
-
-    moduleconfig_update_obsoletes $modconfig_files
-
-    for moduleconfig in $modconfig_files; do
-    [[ -e $moduleconfig ]] || continue
-    for ((index=0; index < ${#dest_module_name[@]}; index++)); do
-
-        # Only add it if it can't be found already in config file
-        if [[ ${modules_conf_alias_type[$index]} ]] && \
-           ! grep -qs "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}\b" $moduleconfig && \
-           [[ ${modules_conf_obsolete_only[$index]} != yes ]]; then
-            if [[ $modconfig_files = /etc/modprobe.d/$package_name.conf ]] && [[ ! -e /etc/modprobe.d/$package_name.conf ]]; then
-                touch /etc/modprobe.d/$package_name.conf
-                echo $"created /etc/modprobe.d/$package_name.conf.">&2
-            fi
-            aliases=$(awk "/^alias ${modules_conf_alias_type[$index]}/ {print \$2}" $moduleconfig)
-            if [[ $aliases ]]; then
-                alias_number=$(($(echo "$aliases" | sed "s/${modules_conf_alias_type[$index]}//" | sort -n | tail -n 1) + 1))
-            else
-                alias_number=0
-            fi
-            echo -e "alias ${modules_conf_alias_type[$index]}${alias_number} ${dest_module_name[$index]}" >> $moduleconfig
-            echo $"$moduleconfig: added alias reference for '${dest_module_name[$index]}'"
-        fi
-    done
-
-    # Add anything else
-    for ((index=0; index < ${#modules_conf_array[@]}; index++)); do
-        if [ -n "${modules_conf_array[$index]}" ] && \
-        ! grep -q "${modules_conf_array[$index]}" "$moduleconfig"; then
-        echo -e $"$moduleconfig: added '${modules_conf_array[$index]}'"
-        echo -e "${modules_conf_array[$index]}" >> $moduleconfig
-        fi
-    done
-    done
-
-    # Delete the temp dir
-    rm -rf $temp_dir_name
-}
-
-moduleconfig_remove()
-{
-    # $1 = kernel version
-
-    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    modconfig_files=""
-    [ -e /etc/modprobe.d/dkms.conf ] && modconfig_files="/etc/modprobe.d/dkms.conf"
-    [ -e /etc/modprobe.d/dkms ] && modconfig_files="/etc/modprobe.d/dkms"
-    [ -e /etc/modules.conf ] && modconfig_files="$modconfig_files /etc/modules.conf"
-    [ -e /etc/modprobe.conf ] && modconfig_files="$modconfig_files /etc/modprobe.conf"
-    [ -e /etc/modprobe.d/$package_name.conf ] && modconfig_files="/etc/modprobe.d/$package_name.conf"
-
-    for moduleconfig in $modconfig_files; do
-        for ((index=0; index < ${#dest_module_name[@]}; index++)); do
-            # Remove/Replace aliases (maybe)
-            [[ ${modules_conf_alias_type[$index]} ]] || continue
-            find "$install_tree/$1/" -name "${dest_module_name[$index]}.*" -quit 2>/dev/null && continue
-
-            local conf_replacement=""
-            for obsolete_module in ${modules_conf_obsoletes[$index]//,/ }; do
-                find $install_tree/$1/ -name "$obsolete_module.*" -quit 2>/dev/null || continue
-                conf_replacement=$obsolete_module
-                break
-            done
-
-            if [[ ! $conf_replacement ]]; then
-                grep -v "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}" $moduleconfig > $temp_dir_name/moduleconfig.new
-                mv -f $temp_dir_name/moduleconfig.new $moduleconfig
-                echo $"$moduleconfig: removed alias for '${dest_module_name[$index]}'"
-                if [[ $modconfig_files = /etc/modprobe.d/$package_name.conf ]]; then
-                    rm -f /etc/modprobe.d/$package_name.conf
-                    echo $"$moduleconfig: deleted /etc/modprobe.d/$package_name.conf file"
-                fi
-                elif grep -q "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}$" $moduleconfig; then
-                    sed "s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) ${dest_module_name[$index]}$/\1 $conf_replacement/g" \
-                        $moduleconfig > $temp_dir_name/moduleconfig.new
-                    mv -f $temp_dir_name/moduleconfig.new $moduleconfig
-                    echo $"$moduleconfig: alias for '${dest_module_name[$index]}' changed back to '$conf_replacement'"
-            fi
-        done
-
-        # Remove static conf entries
-        for ((index=0; index < ${#modules_conf_array[@]}; index++)); do
-            [[ ${modules_conf_array[$index]} ]] || continue
-            grep -v "${modules_conf_array[$index]}" "$moduleconfig" > $temp_dir_name/moduleconfig.new
-            echo $"$moduleconfig: removed '${modules_conf_array[$index]}'"
-            mv -f $temp_dir_name/moduleconfig.new $moduleconfig
-        done
-    done
-
-    # Delete the temp dir
-    rm -rf $temp_dir_name
-}
-
-etc_sysconfig_kernel_modify()
-(
-    [[ -f /etc/sysconfig/kernel && $remake_initrd ]] || return 0
-
-    # Make a temp directory to store files
-    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    if [[ $1 = add ]]; then
-        . /etc/sysconfig/kernel
-        for m in "${dest_module_name[@]}"; do
-            for l in "${INITRD_MODULES}"; do
-                [[ $m = $l ]] && continue 2
-            done
-            sed -e "s/INITRD_MODULES=\"\(.*\)\"/INITRD_MODULES=\"\1 $m\"/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
-            mv $temp_dir_name/kernel.new /etc/sysconfig/kernel
-        done
-    # Remove /etc/sysconfig/kernel entries
-    elif [[ $1 = delete ]]; then
-        for m in "${dest_module_name[@]}"; do
-            sed -e "s/\(INITRD_MODULES.*\)$m\b\(.*\)/\1\2/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
-            mv $temp_dir_name/kernel.new /etc/sysconfig/kernel
-        done
-    fi
-    # Delete the temp dir
-    rm -rf $temp_dir_name
-)
 
 check_module_args() {
     [[ $module && $module_version ]] && return
@@ -1404,11 +1162,6 @@ install_module()
     # Run the post_install script
     run_build_script post_install "$post_install"
 
-    # Make modules.conf changes as necessary
-    echo $""
-    moduleconfig_add "$kernelver"
-    etc_sysconfig_kernel_modify "add"
-
     invoke_command "do_depmod $kernelver" "depmod" background || {
         do_uninstall "$kernelver" "$arch"
         die 6 $"Problems with depmod detected. Automatically uninstalling this module." \
@@ -1423,13 +1176,6 @@ install_module()
             systemctl restart systemd-modules-load.service
         fi
     fi
-
-    # Do remake_initrd things (save old initrd)
-    [[ $remake_initrd ]] && ! make_initrd "$kernelver" "$arch" backup && {
-        do_uninstall "$kernelver" "$arch"
-        die 7 $"Problems with mkinitrd detected. Automatically uninstalling this module." \
-            $"Install Failed (mkinitrd problems). Module rolled back to built state."
-    }
 
     # Restore the status of $force
     force="$tmp_force"
@@ -1618,12 +1364,6 @@ do_uninstall()
             else
             echo $"   - No original module was found for this module on this kernel."
             echo $"   - Use the dkms install command to reinstall any previous module version."
-
-            # Remove modules_conf entries from /etc/modules.conf if remake_initrd is set or if this is last instance removed
-            if [[ $remake_initrd ]] || (do_status $module $module_version | grep -q "installed"); then
-                echo $""
-                moduleconfig_remove "$1"
-            fi
         fi
     done
     rm -f "$dkms_tree/$module/kernel-$1-$2"
@@ -1636,12 +1376,6 @@ do_uninstall()
 
     # Run depmod because we changed /lib/modules
     invoke_command "do_depmod $1" "depmod" background
-
-    # Do remake_initrd things (remake initrd)
-    if [[ $remake_initrd && $was_active ]] && ! make_initrd "$1" "$2" ''; then
-        warn $"There was a problem remaking your initrd.  You must manually remake it" \
-            $"before booting into this kernel."
-    fi
 
     # Delete the original_module if nothing for this kernel is installed anymore
     if [[ $was_active && -d $dkms_tree/$module/original_module/$1/$2 && ! -d $dkms_tree/$module/original_module/$1/$2/collisions ]]; then
@@ -1656,10 +1390,6 @@ do_uninstall()
         echo $"same-named modules and this directory is now where these are located."
     fi
     [[ $(find $dkms_tree/$module/original_module/* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module"
-
-    # Re-add entries to modules.conf if this module/version is still installed on another kernel
-    # But only do this if it was just ACTIVE on the kernel we just uninstalled from
-    [[ $was_active && $remake_initrd ]] && do_status $module $module_version | grep -q "installed" && moduleconfig_add "$1"
 }
 
 module_is_added_or_die()
@@ -1749,9 +1479,6 @@ remove_module()
     # Get rid of any remnant directories if necessary
     if (($(ls "$dkms_tree/$module" | wc -w | awk '{print $1}') == 0)); then
         rm -rf "$dkms_tree/$module" 2>/dev/null
-
-        # Its now safe to completely remove references in /etc/sysconfig/kernel for SuSE
-        etc_sysconfig_kernel_modify "delete"
     fi
 }
 
@@ -2527,9 +2254,6 @@ while (($# > 0)); do
             echo $"#RELEASE_STRING#"
             exit 0
             ;;
-        --no-initrd)
-            no_initrd="no-initrd"
-            ;;
         --binaries-only)
             binaries_only="binaries-only"
             ;;
@@ -2645,8 +2369,8 @@ if [[ $arch && $all ]]; then
         $"--all on the command line."
 fi
 
-# If initramfs/initrd rebuild is not requested, skip it with Redhat's weak-modules
-if [[ $no_initrd && $weak_modules ]]; then
+# Since initramfs/initrd rebuild is not requested, skip it with Redhat's weak-modules
+if [[ $weak_modules ]]; then
     weak_modules_no_initrd="--no-initramfs"
 fi
 
