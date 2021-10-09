@@ -370,89 +370,40 @@ make_initrd()
     return
 }
 
-# Grab our distro information from RPM-based distros.
-distro_version_rpm()
-{
-    which rpm > /dev/null 2>&1 || { echo unknown; return; }
-    local r wp ver dist
-
-    for r in redhat-release sles-release suse-release ovs-release; do
-        wp=$(rpm -q --whatprovides "$r") || continue
-        ver=$(rpm -q --qf "%{version}\n" ${wp})
-        case $r in
-            sles*)
-                echo sles${ver}
-                ;;
-            suse*)
-                echo suse${ver}
-                ;;
-            ovs*)
-                echo ovm${ver}
-                ;;
-            redhat*)
-                case $wp in
-                    redhat*|sl*)
-                        ver=$(echo $ver | \
-                        sed -e 's/^\([[:digit:]]*\).*/\1/g')
-                        echo el${ver}
-                        ;;
-                    centos*|enterprise*)
-                        echo el${ver}
-                        ;;
-                    fedora*)
-                        echo fc${ver}
-                        ;;
-                    *)
-                        echo unknown
-                        ;;
-                esac
-                ;;
-            *)
-                echo unknown
-                ;;
-        esac
-        return
-    done
-    echo unknown
-}
-
-# Grab distro information from LSB compliant distros.
-# Falls back to distro_version_rpm if needed.
+# Grab distro information from os-release.
+# Falls back to LSB for compliant distros.
 distro_version()
 {
-    # What distribution are we running?
-    local LSB_DESCRIPTION DISTRIB_ID DISTRIB_RELEASE ver
+    if [[ -r /etc/os-release ]]; then
+        . /etc/os-release
+        [[ ${#ID_LIKE[@]} ]] && echo ${ID_LIKE[0]} || echo $ID
+        return
+    fi
+
+    local DISTRIB_ID
 
     # Try the LSB-provided strings first
     if [ -r /etc/lsb-release ]; then
         . /etc/lsb-release
     elif type lsb_release >/dev/null 2>&1; then
         DISTRIB_ID=$(lsb_release -i -s)
-        DISTRIB_RELEASE=$(lsb_release -r -s)
     fi
 
     case ${DISTRIB_ID} in
         Fedora)
-            echo fc${DISTRIB_RELEASE}
+            echo fedora
             ;;
         RedHatEnterprise*|CentOS|ScientificSL)
-            # OEL also reports as such; format is 4.7, 5.3
-            ver=$(echo "${DISTRIB_RELEASE}" | \
-            sed -e 's/^\([[:digit:]]*\).*/\1/g')
-            echo el${ver}
+            echo rhel
             ;;
         SUSE*)
-            if [[ $(lsb_release -d -s) =~ Enterprise ]]; then
-                echo sles${DISTRIB_RELEASE}
-            else
-                echo suse${DISTRIB_RELEASE}
-            fi
+            echo sles
             ;;
         *)
-            if [[ ${DISTRIB_ID} && ${DISTRIB_RELEASE} ]]; then
-                echo "${DISTRIB_ID}${DISTRIB_RELEASE}"
+            if [[ ${DISTRIB_ID} ]]; then
+                echo "${DISTRIB_ID}"
             else
-                distro_version_rpm
+                echo unknown
             fi
             ;;
     esac
@@ -469,28 +420,16 @@ override_dest_module_location()
     fi
 
     case "$running_distribution" in
-    fc*)
+    fedora* | rhel* | ovm*)
         echo "/extra" && return
         ;;
-    el*)
-        echo "/extra" && return
-        ;;
-    ovm*)
-        echo "/extra" && return
-        ;;
-    sles*)
+    sles* | suse* | opensuse*)
         echo "/updates" && return
         ;;
-    suse*)
-        echo "/updates" && return
-        ;;
-    Ubuntu*)
+    debian* | ubuntu*)
         echo "/updates/dkms" && return
         ;;
-    Debian*)
-        echo "/updates/dkms" && return
-        ;;
-    Arch*)
+    arch*)
         echo "/updates/dkms" && return
         ;;
     *)
@@ -1526,7 +1465,7 @@ install_module()
         for original_module in $archive_pref1 $archive_pref2 $archive_pref3 $archive_pref4; do
             [[ -f $original_module ]] || continue
             case "$running_distribution" in
-                Debian* | Ubuntu* )
+                debian* | ubuntu* )
                     ;;
                 *)
                 echo $"   - Found $original_module"
@@ -1553,7 +1492,7 @@ install_module()
         echo $" - Multiple same named modules!"
         echo $"   - $module_count named $m$module_suffix in $lib_tree/"
         case "$running_distribution" in
-            Debian* | Ubuntu* )
+            debian* | ubuntu* )
                 ;;
             *)
                 echo $"   - All instances of this module will now be stored for reference purposes ONLY"
@@ -1565,7 +1504,7 @@ install_module()
             dup_name="${module_dup##*/}"
             dup_tree="${dup_tree/${dup_name}}"
             case "$running_distribution" in
-                Debian* | Ubuntu* )
+                debian* | ubuntu* )
                     ;;
                 *)
                    echo $"     - Stored $module_dup"
@@ -1803,7 +1742,7 @@ do_uninstall()
         local origmod=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$1/$2" "${dest_module_name[$count]}")
         if [[ -n "$origmod" ]]; then
             case "$running_distribution" in
-                Debian* | Ubuntu* )
+                debian* | ubuntu* )
                     ;;
                 *)
                     echo $"   - Archived original module found in the DKMS tree"
