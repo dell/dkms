@@ -72,13 +72,5 @@ TARBALL=$(BUILDDIR)/dist/$(RELEASE_STRING).tar.gz
 tarball: $(TARBALL)
 
 $(TARBALL): dkms dkms.8
-	mkdir -p $(BUILDDIR)/dist
-	tmp_dir=`mktemp -d --tmpdir dkms.XXXXXXXX` ; \
-	cp -a ../$(RELEASE_NAME) $${tmp_dir}/$(RELEASE_STRING) ; \
-	find $${tmp_dir}/$(RELEASE_STRING) -depth -name .git -type d -exec rm -rf \{\} \; ; \
-	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dist -type d -exec rm -rf \{\} \; ; \
-	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.tar.gz -type f -exec rm -f \{\} \; ; \
-	rm -rf $${tmp_dir}/$(RELEASE_STRING)/debian ; \
-	sync ; sync ; sync ; \
-	tar cvzf $(TARBALL) -C $${tmp_dir} $(RELEASE_STRING); \
-	rm -rf $${tmp_dir} ;
+	mkdir -p $(@D)
+	git archive --prefix=$(RELEASE_STRING)/ --add-file=dkms --add-file=dkms.8 -o $@ HEAD
