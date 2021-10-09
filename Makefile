@@ -43,7 +43,6 @@ install:
 	install -D -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
 	install -D -m 0755 kernel_prerm.d_dkms $(KCONF)/prerm.d/dkms
 	sed -i -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' $(SBIN)/dkms $(MAN)/dkms.8
-	gzip -9 $(MAN)/dkms.8
 
 DOCFILES=sample.spec sample.conf COPYING README.md sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
 
