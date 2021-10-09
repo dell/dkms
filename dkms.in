@@ -469,12 +469,6 @@ override_dest_module_location()
     fi
 
     case "$running_distribution" in
-    sles[123456789])
-        ;;
-    suse[123456789])
-        ;;
-    suse10\.[01])
-        ;;
     fc*)
         echo "/extra" && return
         ;;
