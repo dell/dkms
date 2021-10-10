@@ -1860,9 +1860,6 @@ module_is_installed_or_die()
 # Check our preconditions, and then let do_install do all the hard work.
 uninstall_module()
 {
-    # Check that $module is in the dkms tree
-    module_is_added_or_die
-
     local i
     for ((i=0; i < ${#kernelver[@]}; i++)); do
         # Only do stuff if module/module version is currently installed
@@ -1883,9 +1880,6 @@ do_unbuild()
 # This uninstalls any installed modules along the way
 unbuild_module()
 {
-    # Check that $module is in the dkms tree
-    module_is_added_or_die
-
     local i
     for ((i=0; i < ${#kernelver[@]}; i++)); do
         # Only do stuff if module/module version is currently built
@@ -1913,9 +1907,6 @@ remove_module()
             die 0 $"Remove cancelled because --rpm_safe_upgrade scenario detected."
         done
     fi
-
-    # Check that $module is in the dkms tree
-    module_is_added_or_die
 
     local i
     for ((i=0; i < ${#kernelver[@]}; i++)); do
@@ -2877,10 +2868,12 @@ for action_to_run in $action; do
     case "$action_to_run" in
     remove)
         check_module_args remove
+        module_is_added_or_die
         check_root && remove_module
         ;;
     unbuild)
         check_module_args unbuild
+        module_is_added_or_die
         check_root && unbuild_module
         ;;
     install)
@@ -2894,6 +2887,7 @@ for action_to_run in $action; do
         ;;
     uninstall)
         check_module_args uninstall
+        module_is_added_or_die
         check_root && uninstall_module
         ;;
     build)
