@@ -1905,24 +1905,8 @@ run_match()
         echo $"Module:  $template_module"
         echo $"Version: $template_version"
 
-        # Figure out what to do from here
-        if show_status "$template_module" "$template_version" "$kernelver" "$arch" 2>/dev/null | grep -q ": installed"; then
-            echo $""
-            echo $"This module/version combo is already installed. Nothing to be done."
-        elif show_status "$template_module" "$template_version" "$kernelver" "$arch" 2>/dev/null | grep -q ": built"; then
-            echo $""
-            echo $"This module/version combo is built. Installing it:"
-            module="$template_module"
-            module_version="$template_version"
-            install_module
-        else
-        echo $""
-        echo $"Building & Installing this module/version:"
-        module="$template_module"
-        module_version="$template_version"
-        build_module
-        install_module
-        fi
+        maybe_build_module "$template_module" "$template_version" "$kernelver" "$arch"
+        maybe_install_module "$template_module" "$template_version" "$kernelver" "$arch"
     done < <(echo "$template_kernel_status")
     fi
 }
