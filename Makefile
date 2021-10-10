@@ -29,62 +29,48 @@ TOPDIR := $(shell pwd)
 all: clean tarball
 
 clean:
-	-rm -rf *~ dist/
+	-rm -rf dist/
+	-rm -rf dkms
+	-rm -rf dkms.8
 
-install:
-	mkdir -p -m 0755 $(VAR) $(SBIN) $(MAN) $(ETC) $(BASHDIR) $(SHAREDIR) $(LIBDIR)
-	mkdir -p -m 0755 $(KCONF)/install.d $(KCONF)/prerm.d $(KCONF)/postinst.d
-	install -p -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
-	install -p -m 0755 dkms $(SBIN)
-	install -p -m 0755 dkms_autoinstaller $(LIBDIR)
-	install -p -m 0644 dkms_framework.conf $(ETC)/framework.conf
-	install -p -m 0755 sign_helper.sh $(ETC)
-	install -p -m 0644 dkms.bash-completion $(BASHDIR)/dkms
-	install -p -m 0644 dkms.8 $(MAN)/dkms.8
-	install -p -m 0755 kernel_install.d_dkms $(KCONF)/install.d/dkms
-	install -p -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
-	install -p -m 0755 kernel_prerm.d_dkms $(KCONF)/prerm.d/dkms
-	sed -i -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' $(SBIN)/dkms $(MAN)/dkms.8
-	gzip -9 $(MAN)/dkms.8
+dkms: dkms.in
+	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' $^ > $@
+
+dkms.8: dkms.8.in
+	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' $^ > $@
+
+install: dkms dkms.8
+	install -D -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
+	install -D -m 0755 dkms $(SBIN)/dkms
+	install -D -m 0755 dkms_autoinstaller $(LIBDIR)/dkms_autoinstaller
+	install -D -m 0644 dkms_framework.conf $(ETC)/framework.conf
+	install -D -m 0755 sign_helper.sh $(ETC)/sign_helper.sh
+	install -D -m 0644 dkms.bash-completion $(BASHDIR)/dkms
+	install -D -m 0644 dkms.8 $(MAN)/dkms.8
+	install -D -m 0755 kernel_install.d_dkms $(KCONF)/install.d/dkms
+	install -D -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
+	install -D -m 0755 kernel_prerm.d_dkms $(KCONF)/prerm.d/dkms
 
 DOCFILES=sample.spec sample.conf COPYING README.md sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
 
-doc-perms:
-	# ensure doc file permissions ok
-	chmod 0644 $(DOCFILES)
-
-install-redhat-systemd: install doc-perms
-	mkdir -m 0755 -p  $(SYSTEMD)
-	install -p -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
-	install -p -m 0755 dkms_find-provides $(LIBDIR)/find-provides
-	install -p -m 0755 lsb_release $(LIBDIR)/lsb_release
-	install -p -m 0644 dkms.service $(SYSTEMD)
+install-redhat-systemd: install
+	install -D -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
+	install -D -m 0755 dkms_find-provides $(LIBDIR)/find-provides
+	install -D -m 0755 lsb_release $(LIBDIR)/lsb_release
+	install -D -m 0644 dkms.service $(SYSTEMD)/dkms.service
 
 install-doc:
-	mkdir -m 0755 -p $(DOCDIR)
-	install -p -m 0644 $(DOCFILES) $(DOCDIR)
+	install -d -m 0644 $(DOCFILES) $(DOCDIR)
 
 install-debian: install install-doc
-	mkdir   -p -m 0755 $(SHAREDIR)/apport/package-hooks
-	install -p -m 0755 dkms_apport.py $(SHAREDIR)/apport/package-hooks/dkms_packages.py
-	mkdir   -p -m 0755 $(KCONF)/header_postinst.d
-	install -p -m 0755 kernel_postinst.d_dkms $(KCONF)/header_postinst.d/dkms
+	install -D -m 0755 dkms_apport.py $(SHAREDIR)/apport/package-hooks/dkms_packages.py
+	install -D -m 0755 kernel_postinst.d_dkms $(KCONF)/header_postinst.d/dkms
 	rm $(DOCDIR)/COPYING*
 	rm $(DOCDIR)/sample*
 
 TARBALL=$(BUILDDIR)/dist/$(RELEASE_STRING).tar.gz
 tarball: $(TARBALL)
 
-$(TARBALL):
-	mkdir -p $(BUILDDIR)/dist
-	tmp_dir=`mktemp -d --tmpdir dkms.XXXXXXXX` ; \
-	cp -a ../$(RELEASE_NAME) $${tmp_dir}/$(RELEASE_STRING) ; \
-	sed -e "s/#RELEASE_VERSION#/$(RELEASE_VERSION)/" dkms > $${tmp_dir}/$(RELEASE_STRING)/dkms ; \
-	find $${tmp_dir}/$(RELEASE_STRING) -depth -name .git -type d -exec rm -rf \{\} \; ; \
-	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dist -type d -exec rm -rf \{\} \; ; \
-	find $${tmp_dir}/$(RELEASE_STRING) -depth -name \*~ -type f -exec rm -f \{\} \; ; \
-	find $${tmp_dir}/$(RELEASE_STRING) -depth -name dkms\*.tar.gz -type f -exec rm -f \{\} \; ; \
-	rm -rf $${tmp_dir}/$(RELEASE_STRING)/debian ; \
-	sync ; sync ; sync ; \
-	tar cvzf $(TARBALL) -C $${tmp_dir} $(RELEASE_STRING); \
-	rm -rf $${tmp_dir} ;
+$(TARBALL): dkms dkms.8
+	mkdir -p $(@D)
+	git archive --prefix=$(RELEASE_STRING)/ --add-file=dkms --add-file=dkms.8 -o $@ HEAD
