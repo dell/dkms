@@ -51,22 +51,19 @@ install: dkms dkms.8
 	install -D -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
 	install -D -m 0755 kernel_prerm.d_dkms $(KCONF)/prerm.d/dkms
 
-DOCFILES=sample.spec sample.conf COPYING README.md sample-suse-9-mkkmp.spec sample-suse-10-mkkmp.spec
-
 install-redhat-systemd: install
 	install -D -m 0755 dkms_mkkerneldoth $(LIBDIR)/mkkerneldoth
 	install -D -m 0755 dkms_find-provides $(LIBDIR)/find-provides
 	install -D -m 0755 lsb_release $(LIBDIR)/lsb_release
 	install -D -m 0644 dkms.service $(SYSTEMD)/dkms.service
 
-install-doc:
-	install -d -m 0644 $(DOCFILES) $(DOCDIR)
-
-install-debian: install install-doc
+install-debian: install
 	install -D -m 0755 dkms_apport.py $(SHAREDIR)/apport/package-hooks/dkms_packages.py
 	install -D -m 0755 kernel_postinst.d_dkms $(KCONF)/header_postinst.d/dkms
-	rm $(DOCDIR)/COPYING*
-	rm $(DOCDIR)/sample*
+
+install-doc:
+	install -d -m 0644 COPYING $(DOCDIR)
+	install -d -m 0644 README.md $(DOCDIR)
 
 TARBALL=$(BUILDDIR)/dist/$(RELEASE_STRING).tar.gz
 tarball: $(TARBALL)
