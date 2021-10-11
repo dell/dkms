@@ -1880,34 +1880,33 @@ module_is_added_or_die()
         $"The module/version combo: $module-$module_version is not located in the DKMS tree."
 }
 
-module_is_built_or_die()
+maybe_unbuild_module()
 {
-    is_module_built "$module" "$module_version" "$1" "$2" || die 4 \
-        $"There is no instance of $module $module_version for kernel $1 ($2) located in the DKMS tree."
+    is_module_built "$module" "$module_version" "$1" "$2" || {
+        echo $"Module $module $module_version is not built for kernel $1 ($2)."\
+            $"Skipping..."
+        return 0
+    }
 
+    do_unbuild "$1" "$2"
 }
 
-module_is_installed_or_die()
+maybe_uninstall_module()
 {
-    is_module_installed "$module" "$module_version" "$1" "$2" || die 4 \
-        $"The module $module $module_version is not currently installed." \
-        $"This module is not currently ACTIVE for kernel $1 ($2)."
+    is_module_installed "$module" "$module_version" "$1" "$2" || {
+        echo $"Module $module $module_version is not installed for kernel $1 ($2)."\
+            $"Skipping..."
+        return 0
+    }
+    do_uninstall "$1" "$2"
 }
 
 # Check our preconditions, and then let do_install do all the hard work.
 uninstall_module()
 {
-    # Check that the right arguments were passed
-    check_module_args uninstall
-
-    # Check that $module is in the dkms tree
-    module_is_added_or_die
-
     local i
     for ((i=0; i < ${#kernelver[@]}; i++)); do
-        # Only do stuff if module/module version is currently installed
-        module_is_installed_or_die "${kernelver[$i]}" "${arch[$i]}"
-        do_uninstall "${kernelver[$i]}" "${arch[$i]}"
+        maybe_uninstall_module "${kernelver[$i]}" "${arch[$i]}"
     done
 }
 
@@ -1923,29 +1922,16 @@ do_unbuild()
 # This uninstalls any installed modules along the way
 unbuild_module()
 {
-    # Check that the right arguments were passed
-    check_module_args unbuild
-
-    # Check that $module is in the dkms tree
-    module_is_added_or_die
-
     local i
     for ((i=0; i < ${#kernelver[@]}; i++)); do
-        # Only do stuff if module/module version is currently built
-        module_is_built_or_die "${kernelver[$i]}" "${arch[$i]}"
-
-        do_uninstall "${kernelver[$i]}" "${arch[$i]}"
-
-        do_unbuild "${kernelver[$i]}" "${arch[$i]}"
+        maybe_uninstall_module "${kernelver[$i]}" "${arch[$i]}"
+        maybe_unbuild_module "${kernelver[$i]}" "${arch[$i]}"
     done
 }
 
 # Unregister a DKMS module.  This uninstalls any installed modules along the way.
 remove_module()
 {
-    # Check that the right arguments were passed
-    check_module_args remove
-
     # Do --rpm_safe_upgrade check (exit out and don't do remove if inter-release RPM upgrade scenario occurs)
     if [[ $rpm_safe_upgrade ]]; then
         local pppid=$(awk '/PPid:/ {print $2}' /proc/$PPID/status)
@@ -1960,17 +1946,10 @@ remove_module()
         done
     fi
 
-    # Check that $module is in the dkms tree
-    module_is_added_or_die
-
     local i
     for ((i=0; i < ${#kernelver[@]}; i++)); do
-        # Make sure its there first before removing
-        module_is_built_or_die "${kernelver[$i]}" "${arch[$i]}"
-
-        do_uninstall "${kernelver[$i]}" "${arch[$i]}"
-
-        do_unbuild "${kernelver[$i]}" "${arch[$i]}"
+        maybe_uninstall_module "${kernelver[$i]}" "${arch[$i]}"
+        maybe_unbuild_module "${kernelver[$i]}" "${arch[$i]}"
     done
 
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
@@ -2922,9 +2901,13 @@ for action_to_run in $action; do
     setup_kernels_arches "$action_to_run"
     case "$action_to_run" in
     remove)
+        check_module_args remove
+        module_is_added_or_die
         check_root && remove_module
         ;;
     unbuild)
+        check_module_args unbuild
+        module_is_added_or_die
         check_root && unbuild_module
         ;;
     install)
@@ -2937,6 +2920,8 @@ for action_to_run in $action; do
         check_root && have_one_kernel "match" && run_match
         ;;
     uninstall)
+        check_module_args uninstall
+        module_is_added_or_die
         check_root && uninstall_module
         ;;
     build)
