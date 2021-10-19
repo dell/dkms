@@ -13,8 +13,8 @@ remove_initrd_backup() {
 
 if [ -x /usr/sbin/dkms ]; then
 while read line; do
-   name=`echo "$line" | awk '{print $1}' | sed 's/,$//'` | cut -d'/' -f1
-   vers=`echo "$line" | awk '{print $1}' | sed 's/,$//'` | cut -d'/' -f2
+   name=`echo "$line" | awk '{print $1}' | sed 's/,$//' | cut -d'/' -f1`
+   vers=`echo "$line" | awk '{print $1}' | sed 's/,$//' | cut -d'/' -f2`
    arch=`echo "$line" | awk '{print $3}' | sed 's/:$//'`
    echo "dkms: removing: $name $vers ($inst_kern) ($arch)" >&2
    dkms remove -m $name -v $vers -k $inst_kern -a $arch
