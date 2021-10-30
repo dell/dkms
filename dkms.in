@@ -24,24 +24,23 @@ shopt -s extglob
 
 # All of the variables we will accept from dkms.conf.
 # Does not include directives
-readonly dkms_conf_variables="CLEAN REMAKE_INITRD remake_initrd PACKAGE_NAME
+# The last group of variables has been deprecated
+readonly dkms_conf_variables="CLEAN PACKAGE_NAME
    PACKAGE_VERSION POST_ADD POST_BUILD POST_INSTALL POST_REMOVE PRE_BUILD
    PRE_INSTALL BUILD_DEPENDS BUILD_EXCLUSIVE_KERNEL BUILD_EXCLUSIVE_ARCH
-   build_exclude OBSOLETE_BY MAKE MAKE_MATCH MODULES_CONF
-   modules_conf_array PATCH PATCH_MATCH patch_array BUILT_MODULE_NAME
+   build_exclude OBSOLETE_BY MAKE MAKE_MATCH
+   PATCH PATCH_MATCH patch_array BUILT_MODULE_NAME
    built_module_name BUILT_MODULE_LOCATION built_module_location
-   DEST_MODULE_NAME dest_module_name MODULES_CONF_OBSOLETES
+   DEST_MODULE_NAME dest_module_name
    DEST_MODULE_LOCATION dest_module_location
-   modules_conf_obsoletes MODULES_CONF_ALIAS_TYPE
-   modules_conf_alias_type STRIP strip MODULES_CONF_OBSOLETE_ONLY
-   modules_conf_obsolete_only AUTOINSTALL NO_WEAK_MODULES
-   SIGN_TOOL"
+   STRIP strip AUTOINSTALL NO_WEAK_MODULES SIGN_TOOL
+
+   REMAKE_INITRD MODULES_CONF MODULES_CONF_OBSOLETES
+   MODULES_CONF_ALIAS_TYPE MODULES_CONF_OBSOLETE_ONLY"
 
 # Some important regular expressions.  Requires bash 3 or above.
 # Any poor souls still running bash 2 or older really need an upgrade.
-readonly y_re='^(Y|y)'
 readonly mv_re='^([^/]*)/(.*)$'
-readonly rh_kernels='(debug|summit|smp|enterprise|bigmem|hugemem|BOOT|vmnix)'
 
 # Areas that will vary between Linux and other OS's
 _get_kernel_dir() {
@@ -140,9 +139,8 @@ show_usage()
     echo $"              [-c dkms.conf-location] [-q] [--force] [--force-version-override] [--all]"
     echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
     echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"
-    echo $"              [--kernelsourcedir=source-location] [--no-prepare-kernel] [--no-initrd]"
+    echo $"              [--kernelsourcedir=source-location]"
     echo $"              [--binaries-only] [--source-only] [--verbose]"
-    echo $"              [--size]"
     echo $"              [--no-depmod] [--modprobe-on-install] [-j number] [--version]"
 }
 
@@ -207,7 +205,6 @@ set_module_suffix()
     # $1 = the kernel to base the module_suffix on
     kernel_test="${1:-$(uname -r)}"
     module_uncompressed_suffix=".ko"
-    [[ $(VER $kernel_test) < $(VER 2.5) ]] && module_uncompressed_suffix=".o"
     grep -q '\.gz:' /lib/modules/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".gz"
     grep -q '\.xz:' /lib/modules/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".xz"
     grep -q '\.zst:' /lib/modules/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".zst"
@@ -308,152 +305,40 @@ do_depmod()
     fi
 }
 
-# This function is a little hairy -- every distro has slightly different tools
-# and naming conventions for creating initial ramdisks.  It should probably
-# be split out into one function per distro, with make_initrd left as a stub.
-make_initrd()
-{
-    # $1 = kernel version
-    # $2 = arch
-    # $3 = 'backup', if backup of old initrd is wanted (using .old-dkms filename suffix)
-
-    [[ $no_initrd ]] && return
-    local mkinitrd kernel_file initrd_dir="/boot"
-    for mkinitrd in dracut update-initramfs mkinitrd ''; do
-        [[ $mkinitrd ]] && which "$mkinitrd" >/dev/null 2>&1 && break
-    done
-
-    # No mkinitrd? Just return.
-    [[ $mkinitrd ]] || return 0
-
-    # Back up our current initrd
-    echo $""
-    # Find out what the proper filename will be
-    for initrd in "initrd-$1.img" "initramfs-$1.img" "initrd.img-$1" "initrd-$1" ''; do
-        [[ $initrd && -f $initrd_dir/$initrd ]] && break
-    done
-    if ! [[ $initrd ]]; then
-        # Return if we cannot find an initrd.
-        warn $"Unable to find an initial ram disk that I know how to handle." \
-            $"Will not try to make an initrd."
-        return 0
-    fi
-    if [[ $3 = backup ]]; then
-        echo $"Backing up $initrd to $initrd_dir/$initrd.old-dkms"
-        cp -f "$initrd_dir/$initrd" "$initrd_dir/$initrd.old-dkms"
-        echo $"Making new $initrd"
-        echo $"(If next boot fails, revert to $initrd.old-dkms image)"
-    fi
-
-    if [[ $mkinitrd = dracut ]]; then
-        invoke_command "$mkinitrd -f $initrd_dir/$initrd $1" "$mkinitrd" background
-    elif [[ $mkinitrd = update-initramfs ]]; then
-        invoke_command "$mkinitrd -u -k $1" "$mkinitrd" background
-    elif $mkinitrd --version >/dev/null 2>&1; then
-        invoke_command "$mkinitrd -f $initrd_dir/$initrd $1" "$mkinitrd" background
-    elif [[ -e /etc/SuSE-release || -d /etc/SuSEconfig ]]; then
-        for kernel_file in vmlinuz vmlinux ''; do
-            [[ $kernel_file && -f $initrd_dir/$kernel_file ]] && break
-        done
-        if [[ ! $kernel_file ]]; then
-            error $"Unable to find valid kernel file under " \
-            $"$initrd_dir for kernel version $1"
-            return 1;
-        fi
-        invoke_command "$mkinitrd -k $kernel_file-$1 -i $initrd" "$mkinitrd" background
-    elif [[ -e /etc/debian_version ]]; then
-        invoke_command "$mkinitrd -o $initrd_dir/$initrd $1" "$mkinitrd" background
-    else
-        echo $""
-        echo $"Calling $mkinitrd (bad exit status 9 may occur)"
-        invoke_command "$mkinitrd" "$mkinitrd" background
-    fi
-    return
-}
-
-# Grab our distro information from RPM-based distros.
-distro_version_rpm()
-{
-    which rpm > /dev/null 2>&1 || { echo unknown; return; }
-    local r wp ver dist
-
-    for r in redhat-release sles-release suse-release ovs-release; do
-        wp=$(rpm -q --whatprovides "$r") || continue
-        ver=$(rpm -q --qf "%{version}\n" ${wp})
-        case $r in
-            sles*)
-                echo sles${ver}
-                ;;
-            suse*)
-                echo suse${ver}
-                ;;
-            ovs*)
-                echo ovm${ver}
-                ;;
-            redhat*)
-                case $wp in
-                    redhat*|sl*)
-                        ver=$(echo $ver | \
-                        sed -e 's/^\([[:digit:]]*\).*/\1/g')
-                        echo el${ver}
-                        ;;
-                    centos*|enterprise*)
-                        echo el${ver}
-                        ;;
-                    fedora*)
-                        echo fc${ver}
-                        ;;
-                    *)
-                        echo unknown
-                        ;;
-                esac
-                ;;
-            *)
-                echo unknown
-                ;;
-        esac
-        return
-    done
-    echo unknown
-}
-
-# Grab distro information from LSB compliant distros.
-# Falls back to distro_version_rpm if needed.
+# Grab distro information from os-release.
+# Falls back to LSB for compliant distros.
 distro_version()
 {
-    # What distribution are we running?
-    local LSB_DESCRIPTION DISTRIB_ID DISTRIB_RELEASE ver
+    if [[ -r /etc/os-release ]]; then
+        . /etc/os-release
+        [[ ${#ID_LIKE[@]} ]] && echo ${ID_LIKE[0]} || echo $ID
+        return
+    fi
+
+    local DISTRIB_ID
 
     # Try the LSB-provided strings first
     if [ -r /etc/lsb-release ]; then
         . /etc/lsb-release
     elif type lsb_release >/dev/null 2>&1; then
         DISTRIB_ID=$(lsb_release -i -s)
-        DISTRIB_RELEASE=$(lsb_release -r -s)
     fi
 
     case ${DISTRIB_ID} in
         Fedora)
-            echo fc${DISTRIB_RELEASE}
+            echo fedora
             ;;
         RedHatEnterprise*|CentOS|ScientificSL)
-            # OEL also reports as such; format is 4.7, 5.3
-            ver=$(echo "${DISTRIB_RELEASE}" | \
-            sed -e 's/^\([[:digit:]]*\).*/\1/g')
-            echo el${ver}
+            echo rhel
             ;;
         SUSE*)
-            if [[ $(lsb_release -d -s) =~ Enterprise ]]; then
-                echo sles${DISTRIB_RELEASE}
-            else
-                echo suse${DISTRIB_RELEASE}
-            fi
+            echo sles
             ;;
         *)
-            if [[ ${DISTRIB_ID} && ${DISTRIB_RELEASE} ]]; then
-                echo "${DISTRIB_ID}${DISTRIB_RELEASE}"
+            if [[ ${DISTRIB_ID} ]]; then
+                echo "${DISTRIB_ID}"
             else
-                distro_version_rpm
+                echo unknown
             fi
             ;;
     esac
@@ -470,34 +355,16 @@ override_dest_module_location()
     fi
 
     case "$running_distribution" in
-    sles[123456789])
-        ;;
-    suse[123456789])
-        ;;
-    suse10\.[01])
-        ;;
-    fc*)
+    fedora* | rhel* | ovm*)
         echo "/extra" && return
         ;;
-    el*)
-        echo "/extra" && return
-        ;;
-    ovm*)
-        echo "/extra" && return
-        ;;
-    sles*)
+    sles* | suse* | opensuse*)
         echo "/updates" && return
         ;;
-    suse*)
-        echo "/updates" && return
-        ;;
-    Ubuntu*)
+    debian* | ubuntu*)
         echo "/updates/dkms" && return
         ;;
-    Debian*)
-        echo "/updates/dkms" && return
-        ;;
-    Arch*)
+    arch*)
         echo "/updates/dkms" && return
         ;;
     *)
@@ -582,6 +449,12 @@ read_conf()
         [ -e "$_conf_file" ] && safe_source "$_conf_file" $dkms_conf_variables
     done
 
+    (( ${#REMAKE_INITRD[@]} )) && die 5 $"REMAKE_INITRD has been deprecated."
+    (( ${#MODULES_CONF[@]} )) && die 5 $"MODULES_CONF has been deprecated."
+    (( ${#MODULES_CONF_OBSOLETES[@]} )) && die 5 $"MODULES_CONF_OBSOLETES has been deprecated."
+    (( ${#MODULES_CONF_ALIAS_TYPE[@]} )) && die 5 $"MODULES_CONF_ALIAS_TYPE has been deprecated."
+    (( ${#MODULES_CONF_OBSOLETE_ONLY[@]} )) && die 5 $"MODULES_CONF_OBSOLETE_ONLY has been deprecated."
+
     # Source in the directive_array
     for directive in "${directive_array[@]}"; do
         directive_name=${directive%%=*}
@@ -616,13 +489,6 @@ read_conf()
         built_module_location[$index]=${BUILT_MODULE_LOCATION[$index]}
         dest_module_name[$index]=${DEST_MODULE_NAME[$index]}
         dest_module_location[$index]=${DEST_MODULE_LOCATION[$index]}
-        modules_conf_obsoletes[$index]=${MODULES_CONF_OBSOLETES[$index]}
-        modules_conf_alias_type[$index]=${MODULES_CONF_ALIAS_TYPE[$index]}
-        case ${MODULES_CONF_OBSOLETE_ONLY[$index]} in
-            [yY]*)
-                modules_conf_obsolete_only[$index]="yes"
-                ;;
-        esac
         case ${STRIP[$index]} in
             [nN]*)
                 strip[$index]="no"
@@ -700,18 +566,8 @@ read_conf()
     done
 
     # Use the generic make and make clean commands if not specified
-    if [[ $(VER $1) < $(VER 2.6.6) ]]; then
-        [[ ! $make_command ]] && make_command="make -C $kernel_source_dir SUBDIRS=$dkms_tree/$module/$module_version/build modules"
-        [[ ! $clean ]] && clean="make -C $kernel_source_dir SUBDIRS=$dkms_tree/$module/$module_version/build clean"
-    else
-        [[ ! $make_command ]] && make_command="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build"
-        [[ ! $clean ]] && clean="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build clean"
-    fi
-
-    # Set modules_conf_array
-    for ((index=0; index < ${#MODULES_CONF[@]}; index++)); do
-        [[ ${MODULES_CONF[$index]} ]] && modules_conf_array[$index]="${MODULES_CONF[$index]}"
-    done
+    [[ ! $make_command ]] && make_command="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build"
+    [[ ! $clean ]] && clean="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build clean"
 
     # Set patch_array (including kernel specific patches)
     count=0
@@ -721,9 +577,6 @@ read_conf()
         count=$(($count+1))
     fi
     done
-
-    # Set remake_initrd
-    [[ $REMAKE_INITRD =~ $y_re ]] && remake_initrd="yes"
 
     # Set build_exclude
     [[ $BUILD_EXCLUSIVE_KERNEL && ! $1 =~ $BUILD_EXCLUSIVE_KERNEL ]] && build_exclude="yes"
@@ -860,175 +713,6 @@ check_version_sanity()
     return 0
 }
 
-moduleconfig_update_obsoletes()
-{
-    # $@ = files to process
-    # Do nothing if we have no obsoletes
-    ( IFS=; [[ "${modules_conf_obsoletes[*]}" ]] ) || return 0
-    # Generate sed args to remove obsolete modules
-    local mod_diff
-    for ((index=0; index < ${#dest_module_name[@]}; index++)); do
-        [[ ${modules_conf_obsoletes[$index]} ]] || continue
-        for obsolete_module in ${modules_conf_obsoletes[$index]//,/ }; do
-            # For module.conf style syntax
-            sa_mc_o[${#sa_mc_o[*]}]="-e"
-            sa_mc_o[${#sa_mc_o[*]}]="s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) $obsolete_module$/\1 ${dest_module_name[$index]}/g"
-            # For /etc/sysconfig/kernel style syntax
-            sa_sck_o[${#sa_sck_o[*]}]="-e"
-            sa_sck_o[${#sa_sck_o[*]}]="s/\(INITRD_MODULES.*\)$obsolete_module\b\(.*\)/\1${dest_module_name[$index]}\2/"
-        done
-    done
-
-    # Do all the changes at once, record the diffs for posterity
-    for file in "$@"; do
-        [[ $file && -w $file ]] || continue
-        _tmpf="$temp_dir_name/${file##*/}.new"
-        if [[ $file = /etc/sysconfig/kernel ]]; then
-            [ -z "${sa_sck_o[@]}" ] || sed "${sa_sck_o[@]}" "$file" > "$_tmpf"
-        else
-            [ -z "${sa_mc_o[@]}" ] || sed "${sa_mc_o[@]}" "$file" > "$_tmpf"
-        fi
-	if [ -f "$_tmpf" ] && ! mod_diff=$(diff -u "$_tmpf" "$file"); then
-            echo $"$file updated to replace obsoleted module references:"
-            echo "$mod_diff"
-            cp -fp "$_tmpf" "$file"
-            rm -f "$_tmpf"
-        fi
-    done
-}
-
-moduleconfig_add()
-{
-    # $1 = kernel version
-
-    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    local -a sa_mc_o=() sa_sck_o=()
-    modconfig_files="/etc/modprobe.d/dkms.conf
-        /etc/modprobe.d/dkms
-        /etc/modules.conf
-        /etc/modprobe.conf
-        /etc/modprobe.d/$package_name.conf
-        /etc/sysconfig/kernel"
-
-    moduleconfig_update_obsoletes $modconfig_files
-
-    for moduleconfig in $modconfig_files; do
-    [[ -e $moduleconfig ]] || continue
-    for ((index=0; index < ${#dest_module_name[@]}; index++)); do
-
-        # Only add it if it can't be found already in config file
-        if [[ ${modules_conf_alias_type[$index]} ]] && \
-           ! grep -qs "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}\b" $moduleconfig && \
-           [[ ${modules_conf_obsolete_only[$index]} != yes ]]; then
-            if [[ $modconfig_files = /etc/modprobe.d/$package_name.conf ]] && [[ ! -e /etc/modprobe.d/$package_name.conf ]]; then
-                touch /etc/modprobe.d/$package_name.conf
-                echo $"created /etc/modprobe.d/$package_name.conf.">&2
-            fi
-            aliases=$(awk "/^alias ${modules_conf_alias_type[$index]}/ {print \$2}" $moduleconfig)
-            if [[ $aliases ]]; then
-                alias_number=$(($(echo "$aliases" | sed "s/${modules_conf_alias_type[$index]}//" | sort -n | tail -n 1) + 1))
-            else
-                alias_number=0
-            fi
-            echo -e "alias ${modules_conf_alias_type[$index]}${alias_number} ${dest_module_name[$index]}" >> $moduleconfig
-            echo $"$moduleconfig: added alias reference for '${dest_module_name[$index]}'"
-        fi
-    done
-
-    # Add anything else
-    for ((index=0; index < ${#modules_conf_array[@]}; index++)); do
-        if [ -n "${modules_conf_array[$index]}" ] && \
-        ! grep -q "${modules_conf_array[$index]}" "$moduleconfig"; then
-        echo -e $"$moduleconfig: added '${modules_conf_array[$index]}'"
-        echo -e "${modules_conf_array[$index]}" >> $moduleconfig
-        fi
-    done
-    done
-
-    # Delete the temp dir
-    rm -rf $temp_dir_name
-}
-
-moduleconfig_remove()
-{
-    # $1 = kernel version
-
-    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    modconfig_files=""
-    [ -e /etc/modprobe.d/dkms.conf ] && modconfig_files="/etc/modprobe.d/dkms.conf"
-    [ -e /etc/modprobe.d/dkms ] && modconfig_files="/etc/modprobe.d/dkms"
-    [ -e /etc/modules.conf ] && modconfig_files="$modconfig_files /etc/modules.conf"
-    [ -e /etc/modprobe.conf ] && modconfig_files="$modconfig_files /etc/modprobe.conf"
-    [ -e /etc/modprobe.d/$package_name.conf ] && modconfig_files="/etc/modprobe.d/$package_name.conf"
-
-    for moduleconfig in $modconfig_files; do
-        for ((index=0; index < ${#dest_module_name[@]}; index++)); do
-            # Remove/Replace aliases (maybe)
-            [[ ${modules_conf_alias_type[$index]} ]] || continue
-            find "$install_tree/$1/" -name "${dest_module_name[$index]}.*" -quit 2>/dev/null && continue
-
-            local conf_replacement=""
-            for obsolete_module in ${modules_conf_obsoletes[$index]//,/ }; do
-                find $install_tree/$1/ -name "$obsolete_module.*" -quit 2>/dev/null || continue
-                conf_replacement=$obsolete_module
-                break
-            done
-
-            if [[ ! $conf_replacement ]]; then
-                grep -v "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}" $moduleconfig > $temp_dir_name/moduleconfig.new
-                mv -f $temp_dir_name/moduleconfig.new $moduleconfig
-                echo $"$moduleconfig: removed alias for '${dest_module_name[$index]}'"
-                if [[ $modconfig_files = /etc/modprobe.d/$package_name.conf ]]; then
-                    rm -f /etc/modprobe.d/$package_name.conf
-                    echo $"$moduleconfig: deleted /etc/modprobe.d/$package_name.conf file"
-                fi
-                elif grep -q "alias ${modules_conf_alias_type[$index]}[0-9]* ${dest_module_name[$index]}$" $moduleconfig; then
-                    sed "s/\(alias ${modules_conf_alias_type[$index]}[0-9]*\) ${dest_module_name[$index]}$/\1 $conf_replacement/g" \
-                        $moduleconfig > $temp_dir_name/moduleconfig.new
-                    mv -f $temp_dir_name/moduleconfig.new $moduleconfig
-                    echo $"$moduleconfig: alias for '${dest_module_name[$index]}' changed back to '$conf_replacement'"
-            fi
-        done
-
-        # Remove static conf entries
-        for ((index=0; index < ${#modules_conf_array[@]}; index++)); do
-            [[ ${modules_conf_array[$index]} ]] || continue
-            grep -v "${modules_conf_array[$index]}" "$moduleconfig" > $temp_dir_name/moduleconfig.new
-            echo $"$moduleconfig: removed '${modules_conf_array[$index]}'"
-            mv -f $temp_dir_name/moduleconfig.new $moduleconfig
-        done
-    done
-
-    # Delete the temp dir
-    rm -rf $temp_dir_name
-}
-
-etc_sysconfig_kernel_modify()
-(
-    [[ -f /etc/sysconfig/kernel && $remake_initrd ]] || return 0
-
-    # Make a temp directory to store files
-    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    if [[ $1 = add ]]; then
-        . /etc/sysconfig/kernel
-        for m in "${dest_module_name[@]}"; do
-            for l in "${INITRD_MODULES}"; do
-                [[ $m = $l ]] && continue 2
-            done
-            sed -e "s/INITRD_MODULES=\"\(.*\)\"/INITRD_MODULES=\"\1 $m\"/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
-            mv $temp_dir_name/kernel.new /etc/sysconfig/kernel
-        done
-    # Remove /etc/sysconfig/kernel entries
-    elif [[ $1 = delete ]]; then
-        for m in "${dest_module_name[@]}"; do
-            sed -e "s/\(INITRD_MODULES.*\)$m\b\(.*\)/\1\2/" /etc/sysconfig/kernel > $temp_dir_name/kernel.new
-            mv $temp_dir_name/kernel.new /etc/sysconfig/kernel
-        done
-    fi
-    # Delete the temp dir
-    rm -rf $temp_dir_name
-)
-
 check_module_args() {
     [[ $module && $module_version ]] && return
     die 1 $"Arguments <module> and <module-version> are not specified." \
@@ -1148,134 +832,9 @@ prepare_kernel()
 
     # Check that kernel-source exists
     _check_kernel_dir "$1" || {
-    case "$running_distribution" in
-        Debian* | Ubuntu* )
-            die 1 $"Your kernel headers for kernel $1 cannot be found." \
-                $"Please install the linux-headers-$1 package or use the --kernelsourcedir option to tell DKMS where it's located."
-                ;;
-        * )
-            die 1 $"Your kernel headers for kernel $1 cannot be found at /lib/modules/$1/build or /lib/modules/$1/source." \
-                $"You can use the --kernelsourcedir option to tell DKMS where it's located."
-            ;;
-    esac
+        die 1 $"Your kernel headers for kernel $1 cannot be found at /lib/modules/$1/build or /lib/modules/$1/source." \
+            $"Please install the linux-headers-$1 package or use the --kernelsourcedir option to tell DKMS where it's located."
     }
-
-    [[ $no_prepare_kernel ]] && return
-
-    if [[ (! ( $(VER $1) < $(VER 2.6.5) ) || -d /etc/SuSEconfig) && \
-        -d "$kernel_source_dir" && \
-        -z "$ksourcedir_fromcli" ]]; then
-        echo $""
-        echo $"Kernel preparation unnecessary for this kernel. Skipping..."
-        no_clean_kernel="no-clean-kernel"
-        return 1
-    fi
-
-    # Prepare kernel for module build
-    echo $""
-    echo $"Preparing kernel $1 for module build:"
-    echo $"(This is not compiling a kernel, just preparing kernel symbols)"
-    cd $kernel_source_dir
-    [[ -r .config ]] && {
-        config_contents=$(cat .config)
-        echo $"Storing current .config to be restored when complete"
-    }
-
-    # Set kernel_config
-    if [[ -e /etc/redhat-release || -e /etc/fedora-release ]]; then
-    # Note this also applies to VMware 3.x
-    if [[ -z $kernel_config && -d $kernel_source_dir/configs ]]; then
-        local kernel_trunc=${1%%-*}
-        # Try a .config specific to whatever kernel we are running
-        if [[ $1 =~ $rh_kernels && -e $kernel_source_dir/configs/kernel-$kernel_trunc-$2-${BASH_REMATCH[1]}.config ]]; then
-            kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$2-${BASH_REMATCH[1]}.config"
-        elif [[ -e $kernel_source_dir/configs/kernel-$kernel_trunc-$2.config ]]; then
-            # If that one does not exist, try a generic one.
-            kernel_config="$kernel_source_dir/configs/kernel-$kernel_trunc-$2.config"
-        else
-            # If that does not exist, fall back to no config file
-            kernel_config=""
-        fi
-    fi
-    elif [[ (-e /etc/SuSE-release || -d /etc/SuSEconfig) && -z $kernel_config && -d $kernel_source_dir/arch ]]; then
-        local kernel_trunc=${1%%-*}
-        case $2 in
-            i586|i686)
-                config_arch="i386"
-                ;;
-            *)
-                config_arch=$2
-                ;;
-        esac
-        for config_type in default smp bigsmp; do
-            [[ $1 =~ $config_type ]] && kernel_config="$kernel_source_dir/arch/$config_arch/defconfig.$config_type"
-            [[ -e $kernel_config ]] || kernel_config=""
-        done
-        [[ $kernel_config ]] || kernel_config="$kernel_source_dir/arch/$config_arch/defconfig.default"
-        [[ -e $kernel_config ]] || kernel_config=""
-    fi
-
-    # Do preparation
-    if [ -e /boot/vmlinuz.version.h ]; then
-        echo $"Running UnitedLinux preparation routine"
-        local kernel_config="/boot/vmlinuz.config"
-        invoke_command "make mrproper" "make mrproper" background
-        [[ $config_contents ]] && echo "$config_contents" > .config
-        invoke_command "cp /boot/vmlinuz.version.h include/linux/version.h" "using /boot/vmlinux.version.h"
-        invoke_command "cp -f $kernel_config .config" "using $kernel_config"
-        invoke_command "make KERNELRELEASE=$1 cloneconfig" "make cloneconfig" background
-        invoke_command "make -j$parallel_jobs CONFIG_MODVERSIONS=1 KERNELRELEASE=$1 dep" "make CONFIG_MODVERSIONS=1 dep" background
-    elif grep -q rhconfig.h $kernel_source_dir/include/linux/{modversions,version}.h 2>/dev/null; then
-        echo $"Running Red Hat style preparation routine"
-        invoke_command "make clean" "make clean" background
-        [[ $config_contents ]] && echo "$config_contents" > .config
-
-        if [[ $kernel_config ]]; then
-            echo $"using $kernel_config"
-            cp -f "$kernel_config" .config
-        elif [[ -e .config ]]; then
-            warn $"Using $kernel_source_dir/.config" \
-                $"(I hope this is the correct config for this kernel)"
-        else
-            warn $"Cannot find a .config file to prepare your kernel with." \
-                $"Try using the --config option to specify where one can be found." \
-                $"Your build will likely fail because of this."
-        fi
-
-        # Hack to workaround broken tmp_include_depends for Red Hat
-        if grep -q "/usr/src/build" $kernel_source_dir/tmp_include_depends 2>/dev/null; then
-            sed 's/\/usr\/src\/build\/.*\/install//g' $kernel_source_dir/tmp_include_depends > $kernel_source_dir/tmp_include_depends.new
-            mv -f $kernel_source_dir/tmp_include_depends.new $kernel_source_dir/tmp_include_depends
-        fi
-
-        invoke_command "make KERNELRELEASE=$1 oldconfig" "make oldconfig" background
-        kerneldoth_contents=$(cat /boot/kernel.h 2>/dev/null)
-        invoke_command "/usr/lib/dkms/mkkerneldoth --kernelver $1 --targetarch $2 --output /boot/kernel.h" "running mkkerneldoth" background
-    else
-        echo $"Running Generic preparation routine"
-        invoke_command "make mrproper" "make mrproper" background
-        [[ $config_contents ]] && echo "$config_contents" > .config
-
-        if [[ $kernel_config ]]; then
-            echo $"using $kernel_config"
-            cp -f "$kernel_config" .config
-        elif [[ -e .config ]]; then
-            warn $"using $kernel_source_dir/.config" \
-                $"(I hope this is the correct config for this kernel)"
-        else
-            warn $"Warning! Cannot find a .config file to prepare your kernel with." \
-                $"Try using the --config option to specify where one can be found." \
-                $"Your build will likely fail because of this."
-        fi
-
-        invoke_command "make KERNELRELEASE=$1 oldconfig" "make oldconfig" background
-        if [[ $(VER $1) < $(VER 2.5) ]]; then
-            invoke_command "make -j$parallel_jobs KERNELRELEASE=$1 dep" "make dep" background
-        else
-            invoke_command "make -j$parallel_jobs KERNELRELEASE=$1 prepare-all scripts" "make prepare-all" background
-        fi
-    fi
-    cd - >/dev/null
 }
 
 # Get ready to build a module that has been registered with DKMS.
@@ -1398,19 +957,6 @@ clean_build()
     cd "$dkms_tree/$module/$module_version/build"
     invoke_command "$clean" "cleaning build area" background
     cd - >/dev/null
-
-    if [[ ! ( $(VER $kernelver) < $(VER 2.6.6) ) && \
-       -d $kernel_source_dir && \
-       ! -h $kernel_source_dir && \
-       ! $ksourcedir_fromcli ]]; then
-        echo $"Kernel cleanup unnecessary for this kernel.  Skipping..."
-    elif [[ ! $no_clean_kernel ]]; then
-        cd "$kernel_source_dir"
-        [[ $kerneldoth_contents ]] || invoke_command "make mrproper" "cleaning kernel tree (make mrproper)" background
-        [[ $config_contents ]] || echo "$config_contents" > .config
-        [[ $kerneldoth_contents ]] && echo "$kerneldoth_contents" > /boot/kernel.h
-        cd - >/dev/null
-    fi
 
     # Clean the build directory
     rm -rf "$dkms_tree/$module/$module_version/build"
@@ -1541,7 +1087,7 @@ install_module()
         for original_module in $archive_pref1 $archive_pref2 $archive_pref3 $archive_pref4; do
             [[ -f $original_module ]] || continue
             case "$running_distribution" in
-                Debian* | Ubuntu* )
+                debian* | ubuntu* )
                     ;;
                 *)
                 echo $"   - Found $original_module"
@@ -1568,7 +1114,7 @@ install_module()
         echo $" - Multiple same named modules!"
         echo $"   - $module_count named $m$module_suffix in $lib_tree/"
         case "$running_distribution" in
-            Debian* | Ubuntu* )
+            debian* | ubuntu* )
                 ;;
             *)
                 echo $"   - All instances of this module will now be stored for reference purposes ONLY"
@@ -1580,7 +1126,7 @@ install_module()
             dup_name="${module_dup##*/}"
             dup_tree="${dup_tree/${dup_name}}"
             case "$running_distribution" in
-                Debian* | Ubuntu* )
+                debian* | ubuntu* )
                     ;;
                 *)
                    echo $"     - Stored $module_dup"
@@ -1616,11 +1162,6 @@ install_module()
     # Run the post_install script
     run_build_script post_install "$post_install"
 
-    # Make modules.conf changes as necessary
-    echo $""
-    moduleconfig_add "$kernelver"
-    etc_sysconfig_kernel_modify "add"
-
     invoke_command "do_depmod $kernelver" "depmod" background || {
         do_uninstall "$kernelver" "$arch"
         die 6 $"Problems with depmod detected. Automatically uninstalling this module." \
@@ -1635,13 +1176,6 @@ install_module()
             systemctl restart systemd-modules-load.service
         fi
     fi
-
-    # Do remake_initrd things (save old initrd)
-    [[ $remake_initrd ]] && ! make_initrd "$kernelver" "$arch" backup && {
-        do_uninstall "$kernelver" "$arch"
-        die 7 $"Problems with mkinitrd detected. Automatically uninstalling this module." \
-            $"Install Failed (mkinitrd problems). Module rolled back to built state."
-    }
 
     # Restore the status of $force
     force="$tmp_force"
@@ -1818,7 +1352,7 @@ do_uninstall()
         local origmod=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$1/$2" "${dest_module_name[$count]}")
         if [[ -n "$origmod" ]]; then
             case "$running_distribution" in
-                Debian* | Ubuntu* )
+                debian* | ubuntu* )
                     ;;
                 *)
                     echo $"   - Archived original module found in the DKMS tree"
@@ -1830,12 +1364,6 @@ do_uninstall()
             else
             echo $"   - No original module was found for this module on this kernel."
             echo $"   - Use the dkms install command to reinstall any previous module version."
-
-            # Remove modules_conf entries from /etc/modules.conf if remake_initrd is set or if this is last instance removed
-            if [[ $remake_initrd ]] || (do_status $module $module_version | grep -q "installed"); then
-                echo $""
-                moduleconfig_remove "$1"
-            fi
         fi
     done
     rm -f "$dkms_tree/$module/kernel-$1-$2"
@@ -1848,12 +1376,6 @@ do_uninstall()
 
     # Run depmod because we changed /lib/modules
     invoke_command "do_depmod $1" "depmod" background
-
-    # Do remake_initrd things (remake initrd)
-    if [[ $remake_initrd && $was_active ]] && ! make_initrd "$1" "$2" ''; then
-        warn $"There was a problem remaking your initrd.  You must manually remake it" \
-            $"before booting into this kernel."
-    fi
 
     # Delete the original_module if nothing for this kernel is installed anymore
     if [[ $was_active && -d $dkms_tree/$module/original_module/$1/$2 && ! -d $dkms_tree/$module/original_module/$1/$2/collisions ]]; then
@@ -1868,10 +1390,6 @@ do_uninstall()
         echo $"same-named modules and this directory is now where these are located."
     fi
     [[ $(find $dkms_tree/$module/original_module/* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module"
-
-    # Re-add entries to modules.conf if this module/version is still installed on another kernel
-    # But only do this if it was just ACTIVE on the kernel we just uninstalled from
-    [[ $was_active && $remake_initrd ]] && do_status $module $module_version | grep -q "installed" && moduleconfig_add "$1"
 }
 
 module_is_added_or_die()
@@ -1961,9 +1479,6 @@ remove_module()
     # Get rid of any remnant directories if necessary
     if (($(ls "$dkms_tree/$module" | wc -w | awk '{print $1}') == 0)); then
         rm -rf "$dkms_tree/$module" 2>/dev/null
-
-        # Its now safe to completely remove references in /etc/sysconfig/kernel for SuSE
-        etc_sysconfig_kernel_modify "delete"
     fi
 }
 
@@ -2421,17 +1936,6 @@ run_match()
         install_module
         fi
     done < <(echo "$template_kernel_status")
-
-    # Clean up the kernel tree
-    if [[ ! ( $(VER $kernelver) < $(VER 2.6.6) ) && -d "$kernel_source_dir" && ! -h "$kernel_source_dir" && -z "$ksourcedir_fromcli" ]]; then
-        echo $"Kernel cleanup unnecessary for this kernel. Skipping..."
-    elif [[ ! $no_clean_kernel ]]; then
-        cd "$kernel_source_dir"
-        [[ $kerneldoth_contents ]] || invoke_command "make mrproper" "cleaning kernel tree (make mrproper)" background
-        [[ $config_contents ]] && echo "$config_contents" > .config
-        [[ $kerneldoth_contents ]] && echo "$kerneldoth_contents" > /boot/kernel.h
-        cd - >/dev/null
-    fi
     fi
 }
 
@@ -2698,8 +2202,6 @@ ksourcedir_fromcli=""
 action=""
 force=""
 force_version_override=""
-no_prepare_kernel=""
-no_clean_kernel=""
 binaries_only=""
 source_only=""
 all=""
@@ -2707,7 +2209,6 @@ module_suffix=""
 module_uncompressed_suffix=""
 module_compressed_suffix=""
 rpm_safe_upgrade=""
-size="1440";
 declare -a directive_array=() kernelver=() arch=()
 weak_modules=''
 last_mvka=''
@@ -2753,15 +2254,6 @@ while (($# > 0)); do
             echo $"#RELEASE_STRING#"
             exit 0
             ;;
-        --no-prepare-kernel)
-            no_prepare_kernel="no-prepare-kernel"
-            ;;
-        --no-clean-kernel)
-            no_clean_kernel="no-clean-kernel"
-            ;;
-        --no-initrd)
-            no_initrd="no-initrd"
-            ;;
         --binaries-only)
             binaries_only="binaries-only"
             ;;
@@ -2804,9 +2296,6 @@ while (($# > 0)); do
         --arch*|-a)
             read_arg _aa "$1" "$2" || shift
             arch[${#arch[@]}]="$_aa"
-            ;;
-        --size*)
-            read_arg size "$1" "$2" || shift
             ;;
         --kernelsourcedir*)
             read_arg kernel_source_dir "$1" "$2" || shift
@@ -2880,8 +2369,8 @@ if [[ $arch && $all ]]; then
         $"--all on the command line."
 fi
 
-# If initramfs/initrd rebuild is not requested, skip it with Redhat's weak-modules
-if [[ $no_initrd && $weak_modules ]]; then
+# Since initramfs/initrd rebuild is not requested, skip it with Redhat's weak-modules
+if [[ $weak_modules ]]; then
     weak_modules_no_initrd="--no-initramfs"
 fi
 

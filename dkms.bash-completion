@@ -99,8 +99,7 @@ _dkms()
 			esac
 
 			options="$options -m -v -k -a --arch -q --quiet -V \
-				--version --all --no-prepare-kernel \
-				--no-clean-kernel --kernelsourcedir \
+				--version --all --kernelsourcedir \
 				--directive"
 
 			COMPREPLY=( $( compgen -W "$options" -- $cur ) )
