@@ -1771,22 +1771,24 @@ load_tarball()
     # Make sure its a sane tarball. Sane ones will have one of the two
     # directories we test for.
     for loc in dkms_source_tree dkms_binaries_only ''; do
-    if [[ ! $loc ]]; then
-        die 7 $"No valid dkms.conf in dkms_source_tree or dkms_binaries_only." \
-            $"$archive_location is not a valid DKMS tarball."
-    fi
-    local conf="$temp_dir_name/$loc/dkms.conf"
-    [[ -f $conf ]] || continue
-    if ! get_pkginfo_from_conf "$conf"; then
-        echo >&2
-        echo $"Malformed dkms.conf, refusing to load." >&2
-        continue
-    fi
-    if is_module_added "$PACKAGE_NAME" "$PACKAGE_VERSION" && \
-        [[ ! $force ]]; then
-        die 8  $"$PACKAGE_NAME-$PACKAGE_VERSION is already added!" \
-        $"Aborting."
-    fi
+        if [[ ! $loc ]]; then
+            die 7 $"No valid dkms.conf in dkms_source_tree or dkms_binaries_only." \
+                $"$archive_location is not a valid DKMS tarball."
+        fi
+        local conf="$temp_dir_name/$loc/dkms.conf"
+        [[ -f $conf ]] || continue
+        if ! get_pkginfo_from_conf "$conf"; then
+            echo >&2
+            echo $"Malformed dkms.conf, refusing to load." >&2
+            continue
+        fi
+        if is_module_added "$PACKAGE_NAME" "$PACKAGE_VERSION" && \
+            [[ ! $force ]]; then
+            die 8  $"$PACKAGE_NAME-$PACKAGE_VERSION is already added!" \
+            $"Aborting."
+        fi
+    done
+
     module="$PACKAGE_NAME"; module_version="$PACKAGE_VERSION"
     echo $""
     echo $"Loading tarball for $module-$module_version"
@@ -1805,12 +1807,7 @@ load_tarball()
                 cp -rf "$temp_dir_name/dkms_binaries_only/dkms.conf" "$source_dir"
             fi
             ;;
-        *)
-            die 8 $"$FUNCNAME:$LINENO: Cannot happen." \
-                $"Report this error to dkms-devel@dell.com";;
     esac
-    break
-    done
 
     # At this point, the source has been copied to the appropriate location
     # and registered with dkms, or a binary-only config has been noted.
@@ -1872,7 +1869,9 @@ run_match()
     if [[ ! $template_kernel_status ]]; then
         echo $""
         echo $"There is nothing to be done for this match."
-    else
+        return 0
+    fi
+
     prepare_kernel "$kernelver" "$arch"
 
     # Iterate over the kernel_status and match kernel to the template_kernel
@@ -1887,7 +1886,6 @@ run_match()
         maybe_build_module "$template_module" "$template_version" "$kernelver" "$arch"
         maybe_install_module "$template_module" "$template_version" "$kernelver" "$arch"
     done < <(echo "$template_kernel_status")
-    fi
 }
 
 report_build_problem()
