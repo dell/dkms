@@ -14,7 +14,7 @@ commands:
 ```
 make install
 make install_debian
-make install-redhat-systemd
+make install-redhat
 ```
 
 Distribution specific installations (RPM, DEB, etc.) are not contained in this
