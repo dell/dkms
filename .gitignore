@@ -1,2 +1,4 @@
 dist/*
 *.o
+dkms
+dkms.8
