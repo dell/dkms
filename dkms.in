@@ -1418,7 +1418,6 @@ maybe_uninstall_module()
     do_uninstall "$1" "$2"
 }
 
-# Check our preconditions, and then let do_install do all the hard work.
 uninstall_module()
 {
     local i
