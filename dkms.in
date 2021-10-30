@@ -1948,6 +1948,11 @@ check_root() {
     die 1 $"You must be root to use this command."
 }
 
+check_rw_dkms_tree() {
+    [[ -w "$dkms_tree" ]] && return
+    die 1 $"No write access to DKMS tree at ${dkms_tree}"
+}
+
 # Add a passed source tree to the default source location.
 # We will check the dkms.conf file to make sure it is valid
 # beforehand.
@@ -2317,38 +2322,23 @@ parallel_jobs=${parallel_jobs:-$(get_num_cpus)}
 
 setup_kernels_arches "$action"
 case "$action" in
-remove)
-    check_module_args remove
+remove | unbuild | uninstall)
+    check_module_args $action
     module_is_added_or_die
-    check_root && remove_module
+    [[ $action = uninstall ]] && check_root || check_rw_dkms_tree
+    ${action}_module
     ;;
-unbuild)
-    check_module_args unbuild
-    module_is_added_or_die
-    check_root && unbuild_module
-    ;;
-install)
-    check_module_args install
-    check_root && check_all_is_banned "install" && install_module
+add | build | install)
+    check_module_args $action
+    check_all_is_banned $action # TODO: fix/enable --all
+    [[ $action = install ]] && check_root || check_rw_dkms_tree
+    ${action}_module
     ;;
 autoinstall)
     check_root && autoinstall
     ;;
 match)
     check_root && have_one_kernel "match" && run_match
-    ;;
-uninstall)
-    check_module_args uninstall
-    module_is_added_or_die
-    check_root && uninstall_module
-    ;;
-build)
-    check_module_args build
-    [ ! -w "$dkms_tree" ] && die 1 $"No write access to create a DKMS tree at ${dkms_tree}"
-    check_all_is_banned "build" && build_module
-    ;;
-add)
-    check_root && check_all_is_banned "add" && add_module
     ;;
 mktarball)
     check_module_args mktarball
