@@ -1718,30 +1718,9 @@ make_tarball()
     echo $""
     echo $"Tarball location: $tarball_dest/$tarball_name"
 
-    local tarball_ext=${tarball_name##*.}
-    [[ $tarball_ext = tar ]] || tarball_name=${tarball_name%.$tarball_ext}
-
-    # Make the tarball
-    cd $temp_dir_name
-    if tar -cf $temp_dir_name/$tarball_name ./* 2>/dev/null; then
-        cd - >/dev/null
-        echo $""
-        mv -f "$temp_dir_name/$tarball_name" "$tarball_dest/$tarball_name"
-    else
-        cd - >/dev/null
+    if ! tar -C $temp_dir_name -caf $tarball_dest/$tarball_name . 2>/dev/null; then
         die 6 $"Failed to make tarball."
     fi
-    case $tarball_ext in
-        gz)
-            gzip -f -9 "$tarball_dest/$tarball_name"
-            ;;
-        bz2)
-            bzip2 -f -9 "$tarball_dest/$tarball_name"
-            ;;
-        xz)
-            xz -f -9 "$tarball_dest/$tarball_name"
-            ;;
-    esac
 }
 
 # A tiny helper function to make sure dkms.conf describes a valid package.
@@ -1772,29 +1751,10 @@ load_tarball()
        fi
     fi
 
-    # Figure out what kind of archive it is (tar.gz, tar, tar.bz, tar.xz, etc)
-    # Note that this does not depend on the extensions being correct.
-    local tar_options=""
-    for xpand in gzip bzip xz; do
-        $xpand -t $archive_location 2>/dev/null || continue
-        case $xpand in
-            gzip)
-                tar_options=z
-                ;;
-            bzip2)
-                tar_options=j
-                ;;
-            xz)
-                tar_options=J
-                ;;
-        esac
-        break
-    done
-
     # Untar it into $tmp_location
     local -r temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
     trap 'rm -rf $temp_dir_name' EXIT
-    tar -${tar_options}xf $archive_location -C $temp_dir_name
+    tar -xaf $archive_location -C $temp_dir_name
 
     if [[ ! $temp_dir_name/dkms_main_tree ]]; then
     # Tarball was not generated from mktarball.
