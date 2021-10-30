@@ -1263,12 +1263,6 @@ install_modules() {
     done
 }
 
-check_module_exists() {
-    is_module_added "$module" "$module_version" && return
-    die 2 $"DKMS tree does not contain: $module-$module_version" \
-        $"Build cannot continue without the proper tree."
-}
-
 possible_dest_module_locations()
 {
     # $1 = count
@@ -1637,8 +1631,6 @@ show_status()
 
 make_tarball()
 {
-    make_common_test
-
     # Read the conf file
     read_conf_or_die "$kernelver" "$arch"
 
@@ -1933,16 +1925,6 @@ run_match()
         fi
     done < <(echo "$template_kernel_status")
     fi
-}
-
-make_common_test()
-{
-    # Check that source symlink works
-    check_module_exists
-
-    # Make sure that its installed in the first place
-    [[ -d $dkms_tree/$module/$module_version ]] ||
-        die 3 $"Module $module-$module_version is not located in the DKMS tree."
 }
 
 report_build_problem()
@@ -2410,6 +2392,7 @@ add)
     ;;
 mktarball)
     check_module_args mktarball
+    module_is_added_or_die
     make_tarball
     ;;
 status)
