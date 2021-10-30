@@ -846,9 +846,6 @@ prepare_build()
     set_kernel_source_dir "$kernelver"
     local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
 
-    # Check that the right arguments were passed
-    check_module_args build
-
     # Check that the module has not already been built for this kernel
     [[ -d $base_dir ]] && die 3 \
         $"This module/version has already been built on: $kernelver" \
@@ -1023,7 +1020,6 @@ install_module()
     # If the module has not been built, try to build it first.
     is_module_built "$module" "$module_version" "$kernelver" "$arch" || build_module
     local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
-    check_module_args install
 
     # Save the status of $force
     tmp_force="$force"
@@ -1641,7 +1637,7 @@ show_status()
 
 make_tarball()
 {
-    make_common_test "mktarball"
+    make_common_test
 
     # Read the conf file
     read_conf_or_die "$kernelver" "$arch"
@@ -1941,10 +1937,6 @@ run_match()
 
 make_common_test()
 {
-    local create_type=$1
-    # Error if $module_version is set but $module is not
-    check_module_args $create_type
-
     # Check that source symlink works
     check_module_exists
 
@@ -2394,6 +2386,7 @@ unbuild)
     check_root && unbuild_module
     ;;
 install)
+    check_module_args install
     check_root && check_all_is_banned "install" && install_modules
     ;;
 autoinstall)
@@ -2408,6 +2401,7 @@ uninstall)
     check_root && uninstall_module
     ;;
 build)
+    check_module_args build
     [ ! -w "$dkms_tree" ] && die 1 $"No write access to create a DKMS tree at ${dkms_tree}"
     check_all_is_banned "build" && build_modules
     ;;
@@ -2415,6 +2409,7 @@ add)
     check_root && check_all_is_banned "add" && add_module
     ;;
 mktarball)
+    check_module_args mktarball
     make_tarball
     ;;
 status)
