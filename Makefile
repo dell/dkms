@@ -40,6 +40,7 @@ dkms.8: dkms.8.in
 	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' $^ > $@
 
 install: dkms dkms.8
+	mkdir -p $(VAR)
 	install -D -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
 	install -D -m 0755 dkms $(SBIN)/dkms
 	install -D -m 0755 dkms_autoinstaller $(LIBDIR)/dkms_autoinstaller
