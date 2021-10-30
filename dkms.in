@@ -1635,6 +1635,7 @@ make_tarball()
     read_conf_or_die "$kernelver" "$arch"
 
     temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
+    trap 'rm -rf $temp_dir_name' EXIT
     mkdir -p $temp_dir_name/dkms_main_tree
 
     if [[ $source_only ]]; then
@@ -1643,7 +1644,6 @@ make_tarball()
     local i
     for ((i=0; i<${#kernelver[@]}; i++)); do
         if ! [[ -d $dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]} ]]; then
-            rm -rf "$temp_dir_name" 2>/dev/null
             die 6  $"No modules built for ${kernelver[$i]} (${arch[$i]})." \
                 $"Modules must already be in the built state before using mktarball."
         fi
@@ -1710,10 +1710,8 @@ make_tarball()
         cd - >/dev/null
         echo $""
         mv -f "$temp_dir_name/$tarball_name" "$tarball_dest/$tarball_name"
-        rm -rf $temp_dir_name
     else
         cd - >/dev/null
-        rm -rf $temp_dir_name
         die 6 $"Failed to make tarball."
     fi
     case $tarball_ext in
@@ -1777,7 +1775,7 @@ load_tarball()
     done
 
     # Untar it into $tmp_location
-    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
+    local -r temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
     trap 'rm -rf $temp_dir_name' EXIT
     tar -${tar_options}xf $archive_location -C $temp_dir_name
 
@@ -1786,7 +1784,6 @@ load_tarball()
     # Just find the dkms.conf file and load the source.
     conf=$(find $temp_dir_name/ -name dkms.conf 2>/dev/null | head -n 1)
     if [[ ! $conf ]]; then
-        rm -rf $temp_dir_name
         die 3 $"Tarball does not appear to be a correctly formed DKMS archive. No dkms.conf found within it."
     fi
     add_source_tree "${conf%dkms.conf}"
