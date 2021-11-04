@@ -930,9 +930,9 @@ actual_build()
     # Save a copy of the new module
     mkdir "$base_dir/module" >/dev/null
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
-        local -r the_module="$build_dir/${built_module_location[$count]}${built_module_name[$count]}"
-        local -r built_module="$the_module$module_uncompressed_suffix"
-        local -r compressed_module="$the_module$module_suffix"
+        local the_module="$build_dir/${built_module_location[$count]}${built_module_name[$count]}"
+        local built_module="$the_module$module_uncompressed_suffix"
+        local compressed_module="$the_module$module_suffix"
 
         [[ ${strip[$count]} != no ]] && strip -g "$built_module"
 
