@@ -893,7 +893,7 @@ prepare_build()
 
 # Build our previously prepared source tree.  prepare_build must be called
 # before calling this function.
-do_build()
+actual_build()
 {
     local -r base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
     local -r build_dir="$dkms_tree/$module/$module_version/build"
@@ -987,10 +987,10 @@ sign_build()
     fi
 }
 
-build_module()
+do_build()
 {
     prepare_build
-    do_build
+    actual_build
     sign_build
     clean_build
 }
@@ -1024,10 +1024,10 @@ force_installation()
 # Install a previously built module
 # There are huge swaths of code here that special-case for various distros.
 # They should be split into their own functions.
-install_module()
+do_install()
 {
     # If the module has not been built, try to build it first.
-    is_module_built "$module" "$module_version" "$kernelver" "$arch" || build_module
+    is_module_built "$module" "$module_version" "$kernelver" "$arch" || do_build
     local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
 
     # Save the status of $force
@@ -1247,7 +1247,7 @@ maybe_build_module() (
         echo $"Module $1/$2 already built for kernel $3 ($4)."
         return 0
     }
-    module="$1" module_version="$2" kernelver="$3" arch="$4" build_module
+    module="$1" module_version="$2" kernelver="$3" arch="$4" do_build
 )
 
 maybe_install_module() (
@@ -1255,17 +1255,17 @@ maybe_install_module() (
         echo $"Module $1/$2 already installed on kernel $3 ($4)."
         return 0
     }
-    module="$1" module_version="$2" kernelver="$3" arch="$4" install_module
+    module="$1" module_version="$2" kernelver="$3" arch="$4" do_install
 )
 
-build_modules() {
+build_module() {
     local i=0
     for ((i=0; i < ${#kernelver[@]}; i++)); do
         maybe_build_module "$module" "$module_version" "${kernelver[$i]}" "${arch[$i]}"
     done
 }
 
-install_modules() {
+install_module() {
     local i=0
     for ((i=0; i < ${#kernelver[@]}; i++)); do
         maybe_install_module "$module" "$module_version" "${kernelver[$i]}" "${arch[$i]}"
@@ -1418,7 +1418,6 @@ maybe_uninstall_module()
     do_uninstall "$1" "$2"
 }
 
-# Check our preconditions, and then let do_install do all the hard work.
 uninstall_module()
 {
     local i
@@ -1949,6 +1948,11 @@ check_root() {
     die 1 $"You must be root to use this command."
 }
 
+check_rw_dkms_tree() {
+    [[ -w "$dkms_tree" ]] && return
+    die 1 $"No write access to DKMS tree at ${dkms_tree}"
+}
+
 # Add a passed source tree to the default source location.
 # We will check the dkms.conf file to make sure it is valid
 # beforehand.
@@ -2318,38 +2322,23 @@ parallel_jobs=${parallel_jobs:-$(get_num_cpus)}
 
 setup_kernels_arches "$action"
 case "$action" in
-remove)
-    check_module_args remove
+remove | unbuild | uninstall)
+    check_module_args $action
     module_is_added_or_die
-    check_root && remove_module
+    [[ $action = uninstall ]] && check_root || check_rw_dkms_tree
+    ${action}_module
     ;;
-unbuild)
-    check_module_args unbuild
-    module_is_added_or_die
-    check_root && unbuild_module
-    ;;
-install)
-    check_module_args install
-    check_root && check_all_is_banned "install" && install_modules
+add | build | install)
+    check_module_args $action
+    check_all_is_banned $action # TODO: fix/enable --all
+    [[ $action = install ]] && check_root || check_rw_dkms_tree
+    ${action}_module
     ;;
 autoinstall)
     check_root && autoinstall
     ;;
 match)
     check_root && have_one_kernel "match" && run_match
-    ;;
-uninstall)
-    check_module_args uninstall
-    module_is_added_or_die
-    check_root && uninstall_module
-    ;;
-build)
-    check_module_args build
-    [ ! -w "$dkms_tree" ] && die 1 $"No write access to create a DKMS tree at ${dkms_tree}"
-    check_all_is_banned "build" && build_modules
-    ;;
-add)
-    check_root && check_all_is_banned "add" && add_module
     ;;
 mktarball)
     check_module_args mktarball
