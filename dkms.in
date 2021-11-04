@@ -844,10 +844,10 @@ prepare_build()
     is_module_added "$module" "$module_version" || add_module
 
     set_kernel_source_dir "$kernelver"
-    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
 
-    # Check that the right arguments were passed
-    check_module_args build
+    local -r base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
+    local -r build_dir="$dkms_tree/$module/$module_version/build"
+    local -r source_dir="$dkms_tree/$module/$module_version/source"
 
     # Check that the module has not already been built for this kernel
     [[ -d $base_dir ]] && die 3 \
@@ -864,27 +864,27 @@ prepare_build()
         $"This indicates that it should not be built."
 
     # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
-    (($(ls $dkms_tree/$module/$module_version/source | wc -l | awk {'print $1'}) < 2)) && die 8 \
-        $"The directory $dkms_tree/$module/$module_version/source/ does not appear to have module source located within it."\
+    (($(ls $source_dir | wc -l | awk {'print $1'}) < 2)) && die 8 \
+        $"The directory $source_dir does not appear to have module source located within it."\
         $"Build halted."
 
     prepare_kernel "$kernelver" "$arch"
 
     # Set up temporary build directory for build
-    rm -rf "$dkms_tree/$module/$module_version/build"
-    cp -a "$dkms_tree/$module/$module_version/source/" "$dkms_tree/$module/$module_version/build"
+    rm -rf "$build_dir"
+    cp -a "$source_dir" "$build_dir"
 
-    cd "$dkms_tree/$module/$module_version/build"
+    cd "$build_dir"
 
     # Apply any patches
     for p in "${patch_array[@]}"; do
-        [[ ! -e $dkms_tree/$module/$module_version/build/patches/$p ]] && \
+        [[ ! -e $build_dir/patches/$p ]] && \
             report_build_problem 5 \
             $" Patch $p as specified in dkms.conf cannot be" \
-            $"found in $dkms_tree/$module/$module_version/build/patches/."
+            $"found in $build_dir/patches/."
         invoke_command "patch -p1 < ./patches/$p" "applying patch $p" || \
             report_build_problem 6 $"Application of patch $p failed." \
-            $"Check $dkms_tree/$module/$module_version/build/ for more information."
+            $"Check $build_dir for more information."
     done
 
     # Run the pre_build script
@@ -895,18 +895,21 @@ prepare_build()
 # before calling this function.
 do_build()
 {
-    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
+    local -r base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
+    local -r build_dir="$dkms_tree/$module/$module_version/build"
+    local -r build_log="$build_dir/make.log"
+
     echo $""
     echo $"Building module:"
 
     invoke_command "$clean" "cleaning build area" background
-    echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$dkms_tree/$module/$module_version/build/make.log"
-    date >> "$dkms_tree/$module/$module_version/build/make.log"
+    echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$build_log"
+    date >> "$build_log"
     local the_make_command="${make_command/#make/make -j$parallel_jobs KERNELRELEASE=$kernelver}"
 
-    invoke_command "{ $the_make_command; } >> $dkms_tree/$module/$module_version/build/make.log 2>&1" "$the_make_command" background || \
+    invoke_command "{ $the_make_command; } >> $build_log 2>&1" "$the_make_command" background || \
         report_build_problem 10 $"Bad return status for module build on kernel: $kernelver ($arch)" \
-        $"Consult $dkms_tree/$module/$module_version/build/make.log for more information."
+        $"Consult $build_log for more information."
 
     # Make sure all the modules built successfully
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
@@ -915,35 +918,38 @@ do_build()
             $" Build of ${built_module_name[$count]}$module_uncompressed_suffix failed for: $kernelver ($arch)" \
             $"Make sure the name of the generated module is correct and at the root of the" \
             $"build directory, or consult make.log in the build directory" \
-            $"$dkms_tree/$module/$module_version/build/ for more information."
+            $"$build_dir for more information."
     done
     cd - >/dev/null
 
     # Build success, so create DKMS structure for a built module
     mkdir -p "$base_dir/log"
     [[ $kernel_config ]] && cp -f "$kernel_config" "$base_dir/log/"
-    mv -f "$dkms_tree/$module/$module_version/build/make.log" "$base_dir/log/make.log" 2>/dev/null
+    mv -f "$build_log" "$base_dir/log/make.log" 2>/dev/null
 
     # Save a copy of the new module
     mkdir "$base_dir/module" >/dev/null
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
-        [[ ${strip[$count]} != no ]] && strip -g "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+        local -r the_module="$build_dir/${built_module_location[$count]}${built_module_name[$count]}"
+        local -r built_module="$the_module$module_uncompressed_suffix"
+        local -r compressed_module="$the_module$module_suffix"
+
+        [[ ${strip[$count]} != no ]] && strip -g "$built_module"
 
         if [ -n "${sign_tool}" ]; then
-            echo $"Signing module $dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+            echo $"Signing module $built_module"
             echo $""
-            run_sign_tool "${sign_tool}" "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+            run_sign_tool "${sign_tool}" "$built_module"
         fi
 
         if [ "$module_compressed_suffix" = ".gz" ]; then
-            gzip -9f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+            gzip -9f "$built_module"
         elif [ "$module_compressed_suffix" = ".xz" ]; then
-            xz -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+            xz -f "$built_module"
         elif [ "$module_compressed_suffix" = ".zst" ]; then
-            zstd -q -f -T0 -20 --ultra "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix"
+            zstd -q -f -T0 -20 --ultra "$built_module"
         fi
-        cp -f "$dkms_tree/$module/$module_version/build/${built_module_location[$count]}${built_module_name[$count]}$module_suffix" \
-            "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
+        cp -f "$compressed_module" "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
     done
 
     # Run the post_build script
@@ -1023,7 +1029,6 @@ install_module()
     # If the module has not been built, try to build it first.
     is_module_built "$module" "$module_version" "$kernelver" "$arch" || build_module
     local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
-    check_module_args install
 
     # Save the status of $force
     tmp_force="$force"
@@ -1265,12 +1270,6 @@ install_modules() {
     for ((i=0; i < ${#kernelver[@]}; i++)); do
         maybe_install_module "$module" "$module_version" "${kernelver[$i]}" "${arch[$i]}"
     done
-}
-
-check_module_exists() {
-    is_module_added "$module" "$module_version" && return
-    die 2 $"DKMS tree does not contain: $module-$module_version" \
-        $"Build cannot continue without the proper tree."
 }
 
 possible_dest_module_locations()
@@ -1641,12 +1640,11 @@ show_status()
 
 make_tarball()
 {
-    make_common_test "mktarball"
-
     # Read the conf file
     read_conf_or_die "$kernelver" "$arch"
 
     temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
+    trap 'rm -rf $temp_dir_name' EXIT
     mkdir -p $temp_dir_name/dkms_main_tree
 
     if [[ $source_only ]]; then
@@ -1654,8 +1652,10 @@ make_tarball()
     else
     local i
     for ((i=0; i<${#kernelver[@]}; i++)); do
-        if ! [[ -d $dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]} ]]; then
-            rm -rf "$temp_dir_name" 2>/dev/null
+        local -r intree_module_dir="$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}"
+        local -r temp_module_dir="$temp_dir_name/dkms_main_tree/${kernelver[$i]}"
+
+        if ! [[ -d "$intree_module_dir" ]]; then
             die 6  $"No modules built for ${kernelver[$i]} (${arch[$i]})." \
                 $"Modules must already be in the built state before using mktarball."
         fi
@@ -1668,25 +1668,30 @@ make_tarball()
         else
             kernel_version_list="${kernel_version_list}-kernel${kernelver[$i]}-${arch[$i]}"
         fi
-        mkdir -p "$temp_dir_name/dkms_main_tree/${kernelver[$i]}/${arch[$i]}"
-        cp -rf "$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}" "$temp_dir_name/dkms_main_tree/${kernelver[$i]}"
+        mkdir -p "$temp_module_dir"
+        cp -rf "$intree_module_dir" "$temp_module_dir"
     done
     fi
 
+    local -r source_dir="$dkms_tree/$module/$module_version/source"
+
     # Copy the source_tree or make special binaries-only structure
     if [[ $binaries_only ]]; then
+        local -r binary_only_dir="$temp_dir_name/dkms_binaries_only"
+
         echo $""
         echo $"Creating tarball structure to specifically accomodate binaries."
-        mkdir $temp_dir_name/dkms_binaries_only
-        echo "$module" > $temp_dir_name/dkms_binaries_only/PACKAGE_NAME
-        echo "$module_version" > $temp_dir_name/dkms_binaries_only/PACKAGE_VERSION
-        [[ ! $conf ]] && conf="$dkms_tree/$module/$module_version/source/dkms.conf"
-        cp -f $conf $temp_dir_name/dkms_binaries_only/ 2>/dev/null
+
+        mkdir "$binary_only_dir"
+        echo "$module" > "$binary_only_dir/PACKAGE_NAME"
+        echo "$module_version" > "$binary_only_dir/PACKAGE_VERSION"
+        [[ ! $conf ]] && conf="$source_dir/dkms.conf"
+        cp -f $conf "$binary_only_dir/" 2>/dev/null
     else
         echo $""
-        echo $"Marking $dkms_tree/$module/$module_version/source for archiving..."
+        echo $"Marking $source_dir for archiving..."
         mkdir -p $temp_dir_name/dkms_source_tree
-        cp -rf $dkms_tree/$module/$module_version/source/* $temp_dir_name/dkms_source_tree
+        cp -rf $source_dir/* $temp_dir_name/dkms_source_tree
     fi
 
     if (( $(echo $kernel_version_list | wc -m | awk {'print $1'}) > 200 )); then
@@ -1696,49 +1701,27 @@ make_tarball()
     local tarball_name="$module-$module_version-$kernel_version_list.dkms.tar.gz"
     local tarball_dest="$dkms_tree/$module/$module_version/tarball/"
 
-    # Die if we will not be able to create the tarball due to permissions.
     if [[ $archive_location ]]; then
         tarball_name="${archive_location##*/}"
-        if [[ ${archive_location%/*} != $archive_location && \
-            -d ${archive_location%/*} && -w ${archive_location%/*} ]]; then
+        if [[ ${archive_location%/*} != $archive_location ]]; then
             tarball_dest="${archive_location%/*}"
-        elif [[ ${archive_location%/*} != $archive_location ]] && ! mkdir -p $tarball_dest; then
-            die 9 $"Will not be able to create $archive_location due to a permissions problem."
         fi
-    fi
-    if [ ! -d $tarball_dest ]; then
-        mkdir -p "$dkms_tree/$module/$module_version/tarball/"
     fi
 
     echo $""
     echo $"Tarball location: $tarball_dest/$tarball_name"
 
-    local tarball_ext=${tarball_name##*.}
-    [[ $tarball_ext = tar ]] || tarball_name=${tarball_name%.$tarball_ext}
+    if [[ ! -d $tarball_dest ]]; then
+        if ! mkdir -p "$tarball_dest" 2>/dev/null; then
+            die 9 $"Missing write permissions for $tarball_dest."
+        fi
+    fi
 
-    # Make the tarball
-    cd $temp_dir_name
-    if tar -cf $temp_dir_name/$tarball_name ./* 2>/dev/null; then
-        cd - >/dev/null
-        echo $""
-        mv -f "$temp_dir_name/$tarball_name" "$tarball_dest/$tarball_name"
-        rm -rf $temp_dir_name
-    else
-        cd - >/dev/null
-        rm -rf $temp_dir_name
+    [[ -w $tarball_dest ]] || die 9 $"Missing write permissions for $tarball_dest."
+
+    if ! tar -C $temp_dir_name -caf $tarball_dest/$tarball_name . 2>/dev/null; then
         die 6 $"Failed to make tarball."
     fi
-    case $tarball_ext in
-        gz)
-            gzip -f -9 "$tarball_dest/$tarball_name"
-            ;;
-        bz2)
-            bzip2 -f -9 "$tarball_dest/$tarball_name"
-            ;;
-        xz)
-            xz -f -9 "$tarball_dest/$tarball_name"
-            ;;
-    esac
 }
 
 # A tiny helper function to make sure dkms.conf describes a valid package.
@@ -1769,36 +1752,16 @@ load_tarball()
        fi
     fi
 
-    # Figure out what kind of archive it is (tar.gz, tar, tar.bz, tar.xz, etc)
-    # Note that this does not depend on the extensions being correct.
-    local tar_options=""
-    for xpand in gzip bzip xz; do
-        $xpand -t $archive_location 2>/dev/null || continue
-        case $xpand in
-            gzip)
-                tar_options=z
-                ;;
-            bzip2)
-                tar_options=j
-                ;;
-            xz)
-                tar_options=J
-                ;;
-        esac
-        break
-    done
-
     # Untar it into $tmp_location
-    local temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
+    local -r temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
     trap 'rm -rf $temp_dir_name' EXIT
-    tar -${tar_options}xf $archive_location -C $temp_dir_name
+    tar -xaf $archive_location -C $temp_dir_name
 
     if [[ ! $temp_dir_name/dkms_main_tree ]]; then
     # Tarball was not generated from mktarball.
     # Just find the dkms.conf file and load the source.
     conf=$(find $temp_dir_name/ -name dkms.conf 2>/dev/null | head -n 1)
     if [[ ! $conf ]]; then
-        rm -rf $temp_dir_name
         die 3 $"Tarball does not appear to be a correctly formed DKMS archive. No dkms.conf found within it."
     fi
     add_source_tree "${conf%dkms.conf}"
@@ -1808,22 +1771,24 @@ load_tarball()
     # Make sure its a sane tarball. Sane ones will have one of the two
     # directories we test for.
     for loc in dkms_source_tree dkms_binaries_only ''; do
-    if [[ ! $loc ]]; then
-        die 7 $"No valid dkms.conf in dkms_source_tree or dkms_binaries_only." \
-            $"$archive_location is not a valid DKMS tarball."
-    fi
-    local conf="$temp_dir_name/$loc/dkms.conf"
-    [[ -f $conf ]] || continue
-    if ! get_pkginfo_from_conf "$conf"; then
-        echo >&2
-        echo $"Malformed dkms.conf, refusing to load." >&2
-        continue
-    fi
-    if is_module_added "$PACKAGE_NAME" "$PACKAGE_VERSION" && \
-        [[ ! $force ]]; then
-        die 8  $"$PACKAGE_NAME-$PACKAGE_VERSION is already added!" \
-        $"Aborting."
-    fi
+        if [[ ! $loc ]]; then
+            die 7 $"No valid dkms.conf in dkms_source_tree or dkms_binaries_only." \
+                $"$archive_location is not a valid DKMS tarball."
+        fi
+        local conf="$temp_dir_name/$loc/dkms.conf"
+        [[ -f $conf ]] || continue
+        if ! get_pkginfo_from_conf "$conf"; then
+            echo >&2
+            echo $"Malformed dkms.conf, refusing to load." >&2
+            continue
+        fi
+        if is_module_added "$PACKAGE_NAME" "$PACKAGE_VERSION" && \
+            [[ ! $force ]]; then
+            die 8  $"$PACKAGE_NAME-$PACKAGE_VERSION is already added!" \
+            $"Aborting."
+        fi
+    done
+
     module="$PACKAGE_NAME"; module_version="$PACKAGE_VERSION"
     echo $""
     echo $"Loading tarball for $module-$module_version"
@@ -1834,18 +1799,15 @@ load_tarball()
         dkms_binaries_only)
             #if there is a source tree on the system already, don't build a binaries stub
             if [[ ! -d $source_tree/$module-$module_version ]]; then
-                echo $"Creating $dkms_tree/$module/$module_version/source"
-                mkdir -p "$dkms_tree/$module/$module_version/source"
-                echo $"Copying dkms.conf to $dkms_tree/$module/$module_version/source..."
-                cp -rf "$temp_dir_name/dkms_binaries_only/dkms.conf" "$dkms_tree/$module/$module_version/source"
+                local -r source_dir="$dkms_tree/$module/$module_version/source"
+
+                echo $"Creating $source_dir"
+                mkdir -p "$source_dir"
+                echo $"Copying dkms.conf to $source_dir ..."
+                cp -rf "$temp_dir_name/dkms_binaries_only/dkms.conf" "$source_dir"
             fi
             ;;
-        *)
-            die 8 $"$FUNCNAME:$LINENO: Cannot happen." \
-                $"Report this error to dkms-devel@dell.com";;
     esac
-    break
-    done
 
     # At this point, the source has been copied to the appropriate location
     # and registered with dkms, or a binary-only config has been noted.
@@ -1854,8 +1816,10 @@ load_tarball()
     # Load precompiled modules.
     for directory in "$temp_dir_name/dkms_main_tree"/*/*; do
         [[ -d $directory ]] || continue
-        kernel_arch_to_load=${directory/*dkms_main_tree\/}
-        dkms_dir_location="$dkms_tree/$module/$module_version/$kernel_arch_to_load"
+
+        local -r kernel_arch_to_load=${directory/*dkms_main_tree\/}
+        local -r dkms_dir_location="$dkms_tree/$module/$module_version/$kernel_arch_to_load"
+
         if [[ -d $dkms_dir_location && ! $force ]]; then
             warn $"$dkms_dir_location already exists. Skipping..."
         else
@@ -1905,7 +1869,9 @@ run_match()
     if [[ ! $template_kernel_status ]]; then
         echo $""
         echo $"There is nothing to be done for this match."
-    else
+        return 0
+    fi
+
     prepare_kernel "$kernelver" "$arch"
 
     # Iterate over the kernel_status and match kernel to the template_kernel
@@ -1917,40 +1883,9 @@ run_match()
         echo $"Module:  $template_module"
         echo $"Version: $template_version"
 
-        # Figure out what to do from here
-        if show_status "$template_module" "$template_version" "$kernelver" "$arch" 2>/dev/null | grep -q ": installed"; then
-            echo $""
-            echo $"This module/version combo is already installed. Nothing to be done."
-        elif show_status "$template_module" "$template_version" "$kernelver" "$arch" 2>/dev/null | grep -q ": built"; then
-            echo $""
-            echo $"This module/version combo is built. Installing it:"
-            module="$template_module"
-            module_version="$template_version"
-            install_module
-        else
-        echo $""
-        echo $"Building & Installing this module/version:"
-        module="$template_module"
-        module_version="$template_version"
-        build_module
-        install_module
-        fi
+        maybe_build_module "$template_module" "$template_version" "$kernelver" "$arch"
+        maybe_install_module "$template_module" "$template_version" "$kernelver" "$arch"
     done < <(echo "$template_kernel_status")
-    fi
-}
-
-make_common_test()
-{
-    local create_type=$1
-    # Error if $module_version is set but $module is not
-    check_module_args $create_type
-
-    # Check that source symlink works
-    check_module_exists
-
-    # Make sure that its installed in the first place
-    [[ -d $dkms_tree/$module/$module_version ]] ||
-        die 3 $"Module $module-$module_version is not located in the DKMS tree."
 }
 
 report_build_problem()
@@ -2325,7 +2260,8 @@ while (($# > 0)); do
             ;;
         *)
             if [[ $1 =~ $action_re ]]; then
-                action="$action $1" # Add actions to the action list
+                [[ $action ]] && die 4 $"Cannot specify more than one action."
+                action="$1" # Add actions to the action list
             elif [[ -f $1 && $1 = *dkms.conf ]]; then
                 try_source_tree="${1%dkms.conf}./" # Flag as a source tree
             elif [[ -d $1 && -f $1/dkms.conf ]]; then
@@ -2380,65 +2316,57 @@ parallel_jobs=${parallel_jobs:-$(get_num_cpus)}
 # Make sure we're not passing -j0 to make; treat -j0 as just "-j"
 [[ "$parallel_jobs" = 0 ]] && parallel_jobs=""
 
-# Run the specified action
-if [ -z "$action" ]; then
+setup_kernels_arches "$action"
+case "$action" in
+remove)
+    check_module_args remove
+    module_is_added_or_die
+    check_root && remove_module
+    ;;
+unbuild)
+    check_module_args unbuild
+    module_is_added_or_die
+    check_root && unbuild_module
+    ;;
+install)
+    check_module_args install
+    check_root && check_all_is_banned "install" && install_modules
+    ;;
+autoinstall)
+    check_root && autoinstall
+    ;;
+match)
+    check_root && have_one_kernel "match" && run_match
+    ;;
+uninstall)
+    check_module_args uninstall
+    module_is_added_or_die
+    check_root && uninstall_module
+    ;;
+build)
+    check_module_args build
+    [ ! -w "$dkms_tree" ] && die 1 $"No write access to create a DKMS tree at ${dkms_tree}"
+    check_all_is_banned "build" && build_modules
+    ;;
+add)
+    check_root && check_all_is_banned "add" && add_module
+    ;;
+mktarball)
+    check_module_args mktarball
+    module_is_added_or_die
+    make_tarball
+    ;;
+status)
+    show_status
+    ;;
+ldtarball) # Make sure they're root if we're using --force
+    if [[ $(id -u) != 0 ]] && [[ $force = true ]]; then
+        die 1 $"You must be root to use this command with the --force option."
+    fi
+    load_tarball && add_module
+    ;;
+*)
+    error $"Unknown action specified: \"$action\""
     show_usage
-    die 4 $"No action was specified."
-fi
-
-for action_to_run in $action; do
-    setup_kernels_arches "$action_to_run"
-    case "$action_to_run" in
-    remove)
-        check_module_args remove
-        module_is_added_or_die
-        check_root && remove_module
-        ;;
-    unbuild)
-        check_module_args unbuild
-        module_is_added_or_die
-        check_root && unbuild_module
-        ;;
-    install)
-        check_root && check_all_is_banned "install" && install_modules
-        ;;
-    autoinstall)
-        check_root && autoinstall
-        ;;
-    match)
-        check_root && have_one_kernel "match" && run_match
-        ;;
-    uninstall)
-        check_module_args uninstall
-        module_is_added_or_die
-        check_root && uninstall_module
-        ;;
-    build)
-        [ ! -w "$dkms_tree" ] && die 1 $"No write access to create a DKMS tree at ${dkms_tree}"
-        check_all_is_banned "build" && build_modules
-        ;;
-    add)
-        check_root && check_all_is_banned "add" && add_module
-        ;;
-    mktarball)
-        make_tarball
-        ;;
-    status)
-        show_status
-        ;;
-    ldtarball) # Make sure they're root if we're using --force
-        if [[ $(id -u) != 0 ]] && [[ $force = true ]]; then
-            die 1 $"You must be root to use this command with the --force option."
-        fi
-        load_tarball && add_module
-        ;;
-    '')
-        error $"No action was specified."
-        show_usage
-        ;;
-    *)
-        error $"Unknown action specified: $action_to_run"
-        show_usage
-        ;;
-    esac
-done
+    ;;
+esac
