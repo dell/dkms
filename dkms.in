@@ -2193,6 +2193,10 @@ while (($# > 0)); do
             echo $"#RELEASE_STRING#"
             exit 0
             ;;
+        --no-initrd)
+            # This is a old option, consume and warn
+	    echo "--no-initrd has been deprecated"
+            ;;
         --binaries-only)
             binaries_only="binaries-only"
             ;;
