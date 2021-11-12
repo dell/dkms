@@ -872,7 +872,7 @@ prepare_build()
 
     # Set up temporary build directory for build
     rm -rf "$build_dir"
-    cp -a "$source_dir" "$build_dir"
+    cp -a "$source_dir/" "$build_dir"
 
     cd "$build_dir"
 
