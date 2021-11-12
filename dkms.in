@@ -113,6 +113,12 @@ warn() (
     for s in "$@"; do echo "$s"; done
 )
 
+deprecated() (
+    exec >&2
+    echo -n $"Deprecated feature: "
+    for s in "$@"; do echo "$s"; done
+)
+
 # Print an error message and die with the passed error code.
 die() {
     # $1 = error code to return with
@@ -449,11 +455,11 @@ read_conf()
         [ -e "$_conf_file" ] && safe_source "$_conf_file" $dkms_conf_variables
     done
 
-    (( ${#REMAKE_INITRD[@]} )) && warn $"REMAKE_INITRD has been deprecated."
-    (( ${#MODULES_CONF[@]} )) && warn $"MODULES_CONF has been deprecated."
-    (( ${#MODULES_CONF_OBSOLETES[@]} )) && warn $"MODULES_CONF_OBSOLETES has been deprecated."
-    (( ${#MODULES_CONF_ALIAS_TYPE[@]} )) && warn $"MODULES_CONF_ALIAS_TYPE has been deprecated."
-    (( ${#MODULES_CONF_OBSOLETE_ONLY[@]} )) && warn $"MODULES_CONF_OBSOLETE_ONLY has been deprecated."
+    (( ${#REMAKE_INITRD[@]} )) && deprecated $"REMAKE_INITRD"
+    (( ${#MODULES_CONF[@]} )) && deprecated $"MODULES_CONF"
+    (( ${#MODULES_CONF_OBSOLETES[@]} )) && deprecated $"MODULES_CONF_OBSOLETES"
+    (( ${#MODULES_CONF_ALIAS_TYPE[@]} )) && deprecated $"MODULES_CONF_ALIAS_TYPE"
+    (( ${#MODULES_CONF_OBSOLETE_ONLY[@]} )) && deprecated $"MODULES_CONF_OBSOLETE_ONLY"
 
     # Source in the directive_array
     for directive in "${directive_array[@]}"; do
@@ -2195,7 +2201,7 @@ while (($# > 0)); do
             ;;
         --no-initrd)
             # This is a old option, consume and warn
-	    echo "--no-initrd has been deprecated"
+	    deprecated $"--no-initrd"
             ;;
         --binaries-only)
             binaries_only="binaries-only"
