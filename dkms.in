@@ -2201,7 +2201,7 @@ while (($# > 0)); do
             ;;
         --no-initrd)
             # This is a old option, consume and warn
-	    deprecated $"--no-initrd"
+            deprecated $"--no-initrd"
             ;;
         --binaries-only)
             binaries_only="binaries-only"
