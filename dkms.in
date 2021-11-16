@@ -2200,8 +2200,16 @@ while (($# > 0)); do
             exit 0
             ;;
         --no-initrd)
-            # This is a old option, consume and warn
+            # This is an old option, consume and warn
             deprecated $"--no-initrd"
+            ;;
+        --no-clean-kernel)
+            # This is an old option, consume and warn
+            deprecated $"--no-clean-kernel"
+            ;;
+        --no-prepare-kernel)
+            # This is an old option, consume and warn
+            deprecated $"--no-prepare-kernel"
             ;;
         --binaries-only)
             binaries_only="binaries-only"
