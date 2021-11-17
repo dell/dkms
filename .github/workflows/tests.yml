@@ -1,0 +1,128 @@
+name: Run tests
+
+on: [push, pull_request]
+
+jobs:
+  test-distributions:
+    name: Build in containers
+    strategy:
+      matrix:
+        distro:
+          - {name: "alpine", tag: "3.14", variant: "-lts"}
+          - {name: "alpine", tag: "3.14", variant: "-virt"}
+          - {name: "alpine", tag: "3.13", variant: "-lts"}
+          - {name: "alpine", tag: "3.13", variant: "-virt"}
+          - {name: "alpine", tag: "3.12", variant: "-lts"}
+          - {name: "alpine", tag: "3.12", variant: "-virt"}
+          - {name: "alpine", tag: "3.11", variant: "-lts"}
+          - {name: "alpine", tag: "3.11", variant: "-virt"}
+          - {name: "alpine", tag: "3.10", variant: "-vanilla"}
+          - {name: "alpine", tag: "3.10", variant: "-virt"}
+          - {name: "archlinux", tag: "latest"}
+          - {name: "archlinux", tag: "latest", variant: "-lts"}
+          - {name: "archlinux", tag: "latest", variant: "-zen"}
+          - {name: "centos", tag: "7"}
+          - {name: "centos", tag: "8"}
+          - {name: "debian", tag: "11"}
+          - {name: "debian", tag: "10"}
+          - {name: "debian", tag: "9"}
+          - {name: "debian", tag: "8"}
+          - {name: "ubuntu", tag: "20.04"}
+          - {name: "ubuntu", tag: "18.04"}
+          - {name: "ubuntu", tag: "16.04"}
+    runs-on: ubuntu-20.04
+    container:
+      image: docker://docker.io/library/${{ matrix.distro.name }}:${{ matrix.distro.tag }}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Alpine dependencies
+      if: matrix.distro.name == 'alpine'
+      run: |
+        apk --no-cache --update add bash gcc linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-dev make
+
+    - name: Install Arch Linux dependencies
+      if: matrix.distro.name == 'archlinux'
+      run: |
+        pacman -Syu --noconfirm diffutils gcc make linux${{ matrix.distro.variant }}-headers
+
+    - name: Install CentOS dependencies
+      if: matrix.distro.name == 'centos'
+      run: |
+        yum install -y diffutils elfutils-libelf-devel gcc kernel kernel-devel make
+
+    - name: Install Debian dependencies
+      if: matrix.distro.name == 'debian'
+      run: |
+        apt-get update -q
+        apt-get install -qy gcc make linux-headers-amd64 linux-image-amd64
+
+    - name: Install Ubuntu dependencies
+      if: matrix.distro.name == 'ubuntu'
+      run: |
+        apt-get update -q
+        apt-get install -qy gcc make linux-headers-generic linux-image-generic
+
+    - name: Compute packaged kernel version
+      id: versions
+      run: |
+        KERNEL_VER=''
+        if [ "${{ matrix.distro.name }}" = alpine ] ; then
+            KERNEL_VER="$(apk info --contents "linux${{ matrix.distro.variant }}-dev" | sed -n 's:^lib/modules/\([^/][^/]*\)/.*:\1:p' | head -n 1)"
+        elif [ "${{ matrix.distro.name }}" = archlinux ] ; then
+            KERNEL_VER="$(pacman -Qql "linux${{ matrix.distro.variant }}-headers" | sed -n 's:^/usr/lib/modules/\([^/]\+\)/.*:\1:p' | head -n 1)"
+        elif [ "${{ matrix.distro.name }}" = centos ] ; then
+            KERNEL_VER="$(LANG=C rpm -qi kernel-devel | sed -n 's/^Source RPM *: kernel-\(.*\).src.rpm$/\1.x86_64/p' | tail -n 1)"
+        elif [ "${{ matrix.distro.name }}" = debian ] ; then
+            KERNEL_VER="$(LANG=C dpkg --status linux-headers-amd64 | sed -n 's/^Depends: linux-headers-\(\S\+\)\( .*\)\?/\1/p' | head -n 1)"
+        elif [ "${{ matrix.distro.name }}" = ubuntu ] ; then
+            KERNEL_VER="$(LANG=C dpkg --status linux-headers-generic | sed -n 's/^Depends: linux-headers-\(\S\+\)\( .*\)\?/\1/p' | head -n 1)"
+        fi
+        if [ -z "${KERNEL_VER}" ] ; then
+            echo >&2 "Error: no kernel package found"
+            exit 1
+        fi
+        echo "Found packaged kernel ${KERNEL_VER}"
+        echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
+
+    - name: Install dkms
+      run: make install
+
+    - name: Run tests
+      run: ./run_test.sh
+
+  test-vm:
+    name: Test in Ubuntu VM
+    strategy:
+      matrix:
+        version:
+          - 20.04
+          - 18.04
+    runs-on: ubuntu-${{ matrix.version }}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -qqy make
+
+        # Do not sign modules
+        sudo rm -r /var/lib/shim-signed/mok/
+
+    - name: Install dkms
+      run: sudo make install
+
+    - name: Run tests
+      run: sudo ./run_test.sh
+
+    - name: Install the test module
+      run: sudo dkms install test/dkms_test-1.0
+
+    - name: Load the test module
+      run: sudo modprobe dkms_test
+
+    - name: Remove the test module
+      run: sudo dkms remove --all -m dkms_test -v 1.0
