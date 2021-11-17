@@ -317,7 +317,7 @@ distro_version()
 {
     if [[ -r /etc/os-release ]]; then
         . /etc/os-release
-        [[ ${#ID_LIKE[@]} ]] && echo ${ID_LIKE[0]} || echo $ID
+        [[ ${#ID_LIKE[@]} != 0 ]] && echo ${ID_LIKE[0]} || echo $ID
         return
     fi
 
