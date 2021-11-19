@@ -570,6 +570,16 @@ read_conf()
         $1 =~ ${MAKE_MATCH[$index]} ]] && \
         make_command="${MAKE[$index]}"
     done
+    
+    # Check if clang was used to compile or lld was used to link the kernel.
+    if [[ -e $kernel_source_dir/vmlinux ]]; then
+      if  readelf -p .comment $kernel_source_dir/vmlinux | grep -q clang; then
+        make_command="${make_command} CC=clang"
+      fi
+      if  readelf -p .comment $kernel_source_dir/vmlinux | grep -q LLD; then
+        make_command="${make_command} LD=ld.lld"
+      fi
+    fi
 
     # Use the generic make and make clean commands if not specified
     [[ ! $make_command ]] && make_command="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build"
@@ -911,7 +921,7 @@ actual_build()
     invoke_command "$clean" "cleaning build area" background
     echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$build_log"
     date >> "$build_log"
-    local the_make_command="${make_command/#make/make -j$parallel_jobs KERNELRELEASE=$kernelver}"
+    local the_make_command="${make_command} -j$parallel_jobs KERNELRELEASE=$kernelver}"
 
     invoke_command "{ $the_make_command; } >> $build_log 2>&1" "$the_make_command" background || \
         report_build_problem 10 $"Bad return status for module build on kernel: $kernelver ($arch)" \
