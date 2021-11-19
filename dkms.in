@@ -575,6 +575,21 @@ read_conf()
     [[ ! $make_command ]] && make_command="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build"
     [[ ! $clean ]] && clean="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build clean"
 
+    # Check if clang was used to compile or lld was used to link the kernel.
+    if [[ -e $kernel_source_dir/vmlinux ]]; then
+      if  cat $kernel_source_dir/.config | grep -q CONFIG_CC_IS_CLANG=y; then
+        make_command="${make_command} CC=clang"
+      elif  readelf -p .comment $kernel_source_dir/vmlinux | grep -q clang; then
+        make_command="${make_command} CC=clang"
+      fi
+
+      if  cat $kernel_source_dir/.config | grep -q CONFIG_LD_IS_LLD=y; then
+        make_command="${make_command} LD=ld.lld"
+      elif  readelf -p .comment $kernel_source_dir/vmlinux | grep -q LLD; then
+        make_command="${make_command} LD=ld.lld"
+      fi
+    fi
+    
     # Set patch_array (including kernel specific patches)
     count=0
     for ((index=0; index < ${#PATCH[@]}; index++)); do
