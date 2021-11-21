@@ -36,7 +36,7 @@ run_with_expected_output() {
     cat > test_cmd_expected_output.log
     if "$@" > test_cmd_output.log 2>&1 ; then
         # "depmod..." lines can have multiple points. Replace them, to be able to compare
-        sed 's/\(depmod\|build\)\.\.\.\.*$/\1.../' -i test_cmd_output.log
+        sed 's/\([^.]\)\.\.\.\.*$/\1.../' -i test_cmd_output.log
         # On CentOS, weak-modules is executed. Drop it from the output, to be more generic
         sed '/^Adding any weak-modules$/d' -i test_cmd_output.log
         sed '/^Removing any linked weak-modules$/d' -i test_cmd_output.log
