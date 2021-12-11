@@ -1809,6 +1809,8 @@ load_tarball()
             die 8  $"$PACKAGE_NAME-$PACKAGE_VERSION is already added!" \
             $"Aborting."
         fi
+        # Success!
+        break
     done
 
     module="$PACKAGE_NAME"; module_version="$PACKAGE_VERSION"
