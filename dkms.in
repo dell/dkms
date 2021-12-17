@@ -1665,8 +1665,8 @@ make_tarball()
     # Read the conf file
     read_conf_or_die "$kernelver" "$arch"
 
-    temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    trap 'rm -rf $temp_dir_name' EXIT
+    local -r temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
+    trap "rm -rf $temp_dir_name" EXIT
     mkdir -p $temp_dir_name/dkms_main_tree
 
     if [[ $source_only ]]; then
@@ -1776,7 +1776,7 @@ load_tarball()
 
     # Untar it into $tmp_location
     local -r temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    trap 'rm -rf $temp_dir_name' EXIT
+    trap "rm -rf $temp_dir_name" EXIT
     tar -xaf $archive_location -C $temp_dir_name
 
     if [[ ! $temp_dir_name/dkms_main_tree ]]; then
