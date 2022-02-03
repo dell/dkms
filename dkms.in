@@ -2125,7 +2125,7 @@ autoinstall() {
 #############################
 
 # Set a standard path
-PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/lib/dkms"
+PATH="$PATH:/usr/lib/dkms"
 
 # Ensure files and directories we create are readable to anyone,
 # since we aim to build as a non-root user
