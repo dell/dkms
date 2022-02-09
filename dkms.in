@@ -966,13 +966,17 @@ actual_build()
         fi
 
         if [ "$module_compressed_suffix" = ".gz" ]; then
-            gzip -9f "$built_module"
+            gzip -9f "$built_module" || compressed_module=""
         elif [ "$module_compressed_suffix" = ".xz" ]; then
-            xz -f "$built_module"
+            xz -f "$built_module" || compressed_module=""
         elif [ "$module_compressed_suffix" = ".zst" ]; then
-            zstd -q -f -T0 -20 --ultra "$built_module"
+            zstd -q -f -T0 -20 --ultra "$built_module" || compressed_module=""
         fi
-        cp -f "$compressed_module" "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
+        if [ -n "$compressed_module" ]; then
+            cp -f "$compressed_module" "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
+        else
+            cp -f "$built_module" "$base_dir/module/${dest_module_name[$count]}$module_uncompressed_suffix" >/dev/null
+        fi
     done
 
     # Run the post_build script
