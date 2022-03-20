@@ -1,9 +1,0 @@
-#!/bin/sh
-
-if [ "$1" = "add" ]; then
-	/etc/kernel/postinst.d/dkms "$2"
-fi
-
-if [ "$1" = "remove" ]; then
-	/etc/kernel/prerm.d/dkms "$2"
-fi
