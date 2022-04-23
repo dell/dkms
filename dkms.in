@@ -995,23 +995,59 @@ clean_build()
     rm -rf "$dkms_tree/$module/$module_version/build"
 }
 
+# Different distros put scripts/sign-file in different places
+locate_sign_file()
+{
+    local kernel_release="$(uname -r)"
+    local debian_location="/usr/lib/linux-kbuild-${kernel_release%.*}/scripts/sign-file"
+    local ubuntu_location="/usr/src/linux-headers-$kernel_release/scripts/sign-file"
+    local fedora_location="/usr/src/kernels/$kenel_release/scripts/sign-file"
+
+    if [ -x "$debian_location" ]; then
+        echo "$debian_location"
+    elif [ -x "$ubuntu_location" ]; then
+        echo "$ubuntu_location"
+    elif [ -x "$fedora_location" ]; then
+        echo "$fedora_location"
+    elif command -v kmodsign >/dev/null; then
+        echo "kmodsign"
+    else
+        echo "not_found"
+    fi
+}
+
 sign_build()
 {
-    [[ -x "$(command -v kmodsign)" && -d "/var/lib/shim-signed/mok/" ]] || return
-    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
-    if type update-secureboot-policy >/dev/null 2>&1; then
-        echo $"Signing module:"
-        SHIM_NOTRIGGER=y update-secureboot-policy --new-key
-        for ko in `find "$base_dir/module/" -name "*.ko" -print`;
-        do
-            echo " - $ko"
-            kmodsign sha512 \
-                /var/lib/shim-signed/mok/MOK.priv \
-                /var/lib/shim-signed/mok/MOK.der \
-                "$ko"
-        done
-        update-secureboot-policy --enroll-key
+    local sign_file="$(locate_sign_file)"
+    if [ "$sign_file" = "not_found" ]; then
+        echo "scripts/sign-file not found, module won't be signed"
+        return
     fi
+    if [ ! -d "/var/lib/shim-signed/mok/" ]; then
+        echo "/var/lib/shim-signed/mok/ does not exist, module won't be signed"
+        return
+    fi
+    if ! command -v update-secureboot-policy >/dev/null; then
+        echo "update-secureboot-policy not found, module won't be signed"
+        return
+    fi
+
+    # update-secureboot-policy is not part of upstream shim, so this is
+    # effectively only useful for Debian and Ubuntu derivatives.
+    # https://git.launchpad.net/~ubuntu-core-dev/shim/+git/shim-signed/tree/update-secureboot-policy
+
+    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
+    echo $"Signing module:"
+    SHIM_NOTRIGGER=y update-secureboot-policy --new-key
+    for ko in `find "$base_dir/module/" -name "*.ko" -print`;
+    do
+        echo " - $ko"
+        "$sign_file" sha512 \
+            /var/lib/shim-signed/mok/MOK.priv \
+            /var/lib/shim-signed/mok/MOK.der \
+            "$ko"
+    done
+    update-secureboot-policy --enroll-key
 }
 
 do_build()
