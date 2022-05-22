@@ -740,14 +740,6 @@ controls whether binary modules are copied to /lib/modules or if only symlinks a
 be manipulated on the command line with \-\-dkmstree, \-\-sourcetree, \-\-installtree
 and \-\-symlink-modules options.
 .TP
-.B $sign_tool
-Script to be run at build for signing modules.
-Two arguments will be passed to the script. The first argument is the
-.B target kernel version
-, the second is the
-.B module file path.
-If the script exits with a non\-zero value, the build will be aborted.
-.TP
 .B $autoinstall_all_kernels
 used by the common postinst for DKMS modules. It controls if the build should be done for all installed kernels or only for the current and latest installed kernel. It has no command
 line equivalent.

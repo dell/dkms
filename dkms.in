@@ -33,12 +33,13 @@ readonly dkms_conf_variables="CLEAN PACKAGE_NAME
    built_module_name BUILT_MODULE_LOCATION built_module_location
    DEST_MODULE_NAME dest_module_name
    DEST_MODULE_LOCATION dest_module_location
-   STRIP strip AUTOINSTALL NO_WEAK_MODULES SIGN_TOOL
+   STRIP strip AUTOINSTALL NO_WEAK_MODULES
+   SIGN_FILE MOK_SIGNING_KEY MOK_CERTIFICATE
 
    REMAKE_INITRD MODULES_CONF MODULES_CONF_OBSOLETES
    MODULES_CONF_ALIAS_TYPE MODULES_CONF_OBSOLETE_ONLY"
 
-# Some important regular expressions.  Requires bash 3 or above.
+# Some important regular expressions. Requires bash 3 or above.
 # Any poor souls still running bash 2 or older really need an upgrade.
 readonly mv_re='^([^/]*)/(.*)$'
 
@@ -777,21 +778,6 @@ run_build_script() {
     fi
 }
 
-run_sign_tool() {
-    # $1 = sign tool to run
-    # $2 = module file to sign
-    local logfile="$base_dir/log/make.log"
-    if [[ -x "$1" ]]; then
-        echo "Signing $2" >> "$logfile"
-        "$1" "$kernelver" "$2" || \
-        report_build_problem 11 $"Bad exit status $? for sign tool." \
-            $"Consult $logfile for more information."
-    else
-        echo $""
-        warn $"The $1 is not executable."
-    fi
-}
-
 # Register a DKMS-ified source tree with DKMS.
 # This function is smart enough to register the module if we
 # passed a source tree or a tarball instead of relying on the source tree
@@ -860,6 +846,81 @@ prepare_kernel()
     }
 }
 
+prepare_signing()
+{
+    if [[ -x "$(command -v mokutil)" ]]; then
+        # Grep main line as second line says "Platform is in setup mode" if no keys are in the TPM
+        sb_state="$(mokutil --sb-state | grep ^SecureBoot)"
+    else
+        sb_state="SecureBoot is not available"
+    fi
+
+    if [ ! "${sign_file}" ]; then
+        case "$running_distribution" in
+            debian* )
+                sign_file="/usr/lib/linux-kbuild-${$kernelver%.*}/scripts/sign-file"
+                ;;
+            ubuntu* )
+                sign_file="/usr/src/linux-headers-$kernelver/scripts/sign-file"
+                ;;
+            fedora* | rhel* | ovm*)
+                sign_file="/lib/modules/$kernelver/build/scripts/sign-file"
+                ;;
+            * )
+                echo "Binary sign-file not found, module won't be signed"
+                ;;
+        esac
+    fi
+
+    if [ "${sign_file}" ]; then
+        echo "Sign command: $sign_file"
+    fi
+
+    if [ ! "${mok_signing_key}" ]; then
+        mok_signing_key="/var/lib/dkms/mok.key"
+    fi
+    echo "Signing key: $mok_signing_key"
+
+    if [ ! "${mok_certificate}" ]; then
+        mok_certificate="/var/lib/dkms/mok.pub"
+    fi
+    echo "Public certificate (MOK): $mok_certificate"
+
+    case "$running_distribution" in
+        debian* | ubuntu* )
+
+            if [[ -x "$(command -v kmodsign)" ]]; then
+                echo "Binary kmod-sign not found, modules won't be signed"
+                return
+            fi
+
+            if [[ -x "$(command -v update-secureboot-policy)" ]]; then
+                echo "Binary update-secureboot-policy not found, modules won't be signed"
+                return
+            fi
+
+            do_signing=1
+
+            if [[ "$sb_state" == "SecureBoot is enabled" ]]; then
+                SHIM_NOTRIGGER=y update-secureboot-policy --new-key
+                update-secureboot-policy --enroll-key
+            fi
+
+            ;;
+        *)
+
+            if [ ! -f $mok_signing_key ] || [ ! -f $mok_certificate ]; then
+                echo "Certificate or key are missing, generating self signed certificate for MOK..."
+                openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS module signing key" \
+                    -newkey rsa:2048 -keyout $mok_signing_key \
+                    -outform DER -out $mok_certificate > /dev/null 2>&1
+            fi
+
+            do_signing=1
+            ;;
+    esac
+}
+
 # Get ready to build a module that has been registered with DKMS.
 prepare_build()
 {
@@ -925,7 +986,7 @@ actual_build()
     echo $""
     echo $"Building module:"
 
-    invoke_command "$clean" "cleaning build area" background
+    invoke_command "$clean" "Cleaning build area" background
     echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$build_log"
     date >> "$build_log"
     local the_make_command="${make_command/#make/make -j$parallel_jobs KERNELRELEASE=$kernelver}"
@@ -959,10 +1020,16 @@ actual_build()
 
         [[ ${strip[$count]} != no ]] && strip -g "$built_module"
 
-        if [ -n "${sign_tool}" ]; then
-            echo $"Signing module $built_module"
-            echo $""
-            run_sign_tool "${sign_tool}" "$built_module"
+        if [ -n "${do_signing}" ]; then
+            echo "Signing module $built_module"
+            case "$running_distribution" in
+                debian* | ubuntu* )
+                    kmodsign sha512 $mok_signing_key $mok_certificate "$built_module"
+                    ;;
+                *)
+                    eval $sign_file sha512 $mok_signing_key $mok_certificate "$built_module"
+                    ;;
+            esac
         fi
 
         if [ "$module_compressed_suffix" = ".gz" ]; then
@@ -988,37 +1055,18 @@ clean_build()
 {
     # Run the clean commands
     cd "$dkms_tree/$module/$module_version/build"
-    invoke_command "$clean" "cleaning build area" background
+    invoke_command "$clean" "Cleaning build area" background
     cd - >/dev/null
 
     # Clean the build directory
     rm -rf "$dkms_tree/$module/$module_version/build"
 }
 
-sign_build()
-{
-    [[ -x "$(command -v kmodsign)" && -d "/var/lib/shim-signed/mok/" ]] || return
-    local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
-    if type update-secureboot-policy >/dev/null 2>&1; then
-        echo $"Signing module:"
-        SHIM_NOTRIGGER=y update-secureboot-policy --new-key
-        for ko in `find "$base_dir/module/" -name "*.ko" -print`;
-        do
-            echo " - $ko"
-            kmodsign sha512 \
-                /var/lib/shim-signed/mok/MOK.priv \
-                /var/lib/shim-signed/mok/MOK.der \
-                "$ko"
-        done
-        update-secureboot-policy --enroll-key
-    fi
-}
-
 do_build()
 {
+    prepare_signing
     prepare_build
     actual_build
-    sign_build
     clean_build
 }
 

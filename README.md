@@ -89,29 +89,37 @@ use `dkms install` to install any of the pre-built modules.
 Of course, since module source will not be located in your dkms tree, you will
 not be able to build any modules with DKMS for this package.
 
-
-Further Documentation
---
-
-Once DKMS is installed, you can reference its man page for further information
-on different DKMS options and also to understand the formatting of a module's
-dkms.conf configuration file.
-
-You may also wish to join the dkms-devel public mailing-list at
-https://lists.us.dell.com/mailman/listinfo/dkms-devel.
-
-The DKMS project is located at: https://github.com/dell/dkms
-
-
 Module signing
 --
 
-On an UEFI system with Secure Boot enabled, modules require signing before they
-can be loaded. First of all make sure the commands `openssl` and `mokutil` are
-installed.
+By default, DKMS generates a self signed certificate for signing modules at
+build time and signs every module that it builds before it gets compressed in
+the configured kernel compression mechanism of choice.
 
-For further customizations (scripts, certificates, etc.) please refer to the
-manual page (`dkms(8)`).
+This requires the `openssl` command to be present on the system.
+
+Private key and certificate are auto generated the first time DKMS is run and
+placed in `/var/lib/dkms`. These certificate files can be prepulated with your
+own certificates of choice.
+
+The location as well can be changed by setting the appropriate variables in
+`/etc/dkms/framework.conf`. For example, to awllow usage of the system default
+Debian and Ubuntu `update-secureboot-policy` set the configuration file as
+follows:
+```
+mok_signing_key="/var/lib/shim-signed/mok/MOK.der"
+mok_certificate="/var/lib/shim-signed/mok/MOK.priv"
+```
+
+Secure Boot
+--
+
+On an UEFI system with Secure Boot enabled, modules require signing (as
+described in the above paragraph) before they can be loaded and the firmware of
+the system must know the correct public certificate to verify the module
+signature.
+
+For importing the MOK certificate make sure `mokutil` is installed.
 
 To check if Secure Boot is enabled:
 
@@ -120,29 +128,10 @@ To check if Secure Boot is enabled:
 SecureBoot enabled
 ```
 
-To proceed with Signing with the standard settings, proceed as follows.
-
-First uncomment the `sign_tool` line in `/etc/dkms/framework.conf`, this allow
-using the script declared in that variable as a hook during the module build
-process for signing modules:
+With the appropriate key material on the system, enroll the public key:
 
 ```
-sign_tool="/etc/dkms/sign_helper.sh"
-```
-
-The script by defaults expects a private key and a matching certificate in the
-`root` home folder. To generate the key and the self signed certificate:
-
-```
-# openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS modules" \
-    -newkey rsa:2048 -keyout /root/dkms.key \
-    -outform DER -out /root/dkms.der
-```
-
-After generating the key, enroll the public key:
-
-```
-# mokutil --import /root/dkms.der
+# mokutil --import /var/lib/dkms/mok.pub"
 ```
 
 You'll be prompted to create a password. Enter it twice, it can also be blank.
@@ -160,14 +149,26 @@ After reboot, you can inspect the MOK certificates with the following command:
 
 ```
 # mokutil --list-enrolled | grep DKMS
-        Subject: CN=DKMS modules
+        Subject: CN=DKMS module signing key
 ```
 
 To check the signature on a built DKMS module that is installed on a system:
 
 ```
 # modinfo dkms_test | grep ^signer
-signer:         DKMS modules
+signer:         DKMS module signing key
 ```
 
-The module should be able to be loaded without issues.
+The module can now be loaded without issues.
+
+Further Documentation
+--
+
+Once DKMS is installed, you can reference its man page for further information
+on different DKMS options and also to understand the formatting of a module's
+dkms.conf configuration file.
+
+You may also wish to join the dkms-devel public mailing-list at
+https://lists.us.dell.com/mailman/listinfo/dkms-devel.
+
+The DKMS project is located at: https://github.com/dell/dkms
