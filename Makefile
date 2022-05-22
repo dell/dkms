@@ -45,6 +45,7 @@ install: dkms dkms.8
 	install -D -m 0755 dkms $(SBIN)/dkms
 	install -D -m 0755 dkms_autoinstaller $(LIBDIR)/dkms_autoinstaller
 	install -D -m 0644 dkms_framework.conf $(ETC)/framework.conf
+	mkdir -p $(ETC)/framework.conf.d
 	install -D -m 0644 dkms.bash-completion $(BASHDIR)/dkms
 	install -D -m 0644 dkms.8 $(MAN)/dkms.8
 	install -D -m 0755 kernel_install.d_dkms $(KCONF)/install.d/dkms

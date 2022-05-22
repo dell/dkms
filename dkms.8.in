@@ -380,11 +380,6 @@ Provides a location to place modules when a
 .I dkms install
 command is issued.
 .TP
-.B \-\-dkmsframework path/to/file
-A supplemental configuration file to the system-wide dkms framework, typically located
-in /etc/dkms/framework.conf. All option that are normally provided on a command line
-can be provided in this file.
-.TP
 .B \-j number
 Run no more than
 .I number
@@ -731,6 +726,10 @@ You can use these files to override settings in the module-provided dkms.conf fi
 This configuration file controls how the overall DKMS framework handles. It is sourced
 in every time the dkms command is run. Mainly it can currently be used to set different
 default values for the variables.
+
+Additionally to /etc/dkms/framework.conf,
+.B any file matching the glob
+/etc/dkms/framework.conf.d/*.conf will be loaded as well.
 .TP
 .B $dkms_tree, $source_tree, $install_tree
 control where DKMS looks for its framework.

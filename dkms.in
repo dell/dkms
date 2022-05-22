@@ -2195,7 +2195,6 @@ install_tree="/lib/modules"
 tmp_location=${TMPDIR:-/tmp}
 verbose=""
 symlink_modules=""
-dkms_frameworkconf="/etc/dkms/framework.conf"
 
 # These can come from the environment or the config file
 [[ ! ${ADDON_MODULES_DIR} && -e /etc/sysconfig/module-init-tools ]] && . /etc/sysconfig/module-init-tools
@@ -2203,8 +2202,11 @@ addon_modules_dir="${ADDON_MODULES_DIR}"
 [[ ! ${addon_modules_dir} ]] && running_distribution="$(distro_version)"
 weak_modules="${WEAK_MODULES_BIN}"
 
-# Source in /etc/dkms/framework.conf
-[ -e $dkms_frameworkconf ] && . $dkms_frameworkconf 2>/dev/null
+# Source in configuration
+for i in /etc/dkms/framework.conf /etc/dkms/framework.conf.d/*.conf; do
+    [[ -e "${i}" ]] && . "$i" >/dev/null
+done
+
 
 # Clear out command line argument variables
 module=""
@@ -2241,11 +2243,6 @@ action_re='^(remove|(auto|un)?install|match|mktarball|(un)?build|add|status|ldta
 # Parse command line arguments
 while (($# > 0)); do
     case $1 in
-        --dkmsframework*)
-            read_arg dkms_frameworkconf "$1" "$2" || shift
-            #immediately load this config
-            . $dkms_frameworkconf 2> /dev/null
-            ;;
         --module*|-m)
             read_arg _mv "$1" "$2" || shift
             parse_moduleversion "$_mv"
