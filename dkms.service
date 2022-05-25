@@ -8,4 +8,5 @@ RemainAfterExit=true
 ExecStart=/bin/sh -c 'dkms autoinstall --verbose --kernelver $(uname -r)'
 
 [Install]
+Before=network-pre.target graphical.target
 WantedBy=multi-user.target
