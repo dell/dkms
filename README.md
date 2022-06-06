@@ -13,7 +13,7 @@ commands:
 
 ```
 make install
-make install_debian
+make install-debian
 make install-redhat
 ```
 
