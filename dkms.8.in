@@ -685,6 +685,16 @@ This optional directive functions very similarly to
 except that it matches against the kernel architecture. For example, if you set
 it to ="i.86", your module would not be built for ia32e, x86_64, amd64, s390, etc.
 .TP
+.B BUILD_EXCLUSIVE_CONFIG=
+This optional directive allows you to specify a space separated list of
+kernel configuration options ("CONFIG_FOO") that must be enabled in the
+targeted kernels ".config" file (either to be compiled in or to be built
+as a module) or absent (if prefixed with an exclamation mark, e.g.
+"!CONFIG_BAR") in order to build the module.
+For example, if you set it as ="CONFIG_PCI !CONFIG_PREEMPT_RT", your module
+would only be built for kernels that have PCI enabled, but the RT patchset
+disabled.
+.TP
 .B POST_ADD=
 The name of the script to be run after an
 .B add
