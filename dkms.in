@@ -27,7 +27,7 @@ shopt -s extglob
 # The last group of variables has been deprecated
 readonly dkms_conf_variables="CLEAN PACKAGE_NAME
    PACKAGE_VERSION POST_ADD POST_BUILD POST_INSTALL POST_REMOVE PRE_BUILD
-   PRE_INSTALL BUILD_DEPENDS BUILD_EXCLUSIVE_ARCH
+   PRE_INSTALL BUILD_DEPENDS BUILD_EXCLUSIVE_ARCH BUILD_EXCLUSIVE_CONFIG
    BUILD_EXCLUSIVE_KERNEL BUILD_EXCLUSIVE_KERNEL_MIN BUILD_EXCLUSIVE_KERNEL_MAX
    build_exclude OBSOLETE_BY MAKE MAKE_MATCH
    PATCH PATCH_MATCH patch_array BUILT_MODULE_NAME
@@ -643,6 +643,15 @@ read_conf()
     [[ $BUILD_EXCLUSIVE_KERNEL_MIN && "$(VER "$1")" < "$(VER "$BUILD_EXCLUSIVE_KERNEL_MIN")" ]] && build_exclude="yes"
     [[ $BUILD_EXCLUSIVE_KERNEL_MAX && "$(VER "$1")" > "$(VER "$BUILD_EXCLUSIVE_KERNEL_MAX")" ]] && build_exclude="yes"
     [[ $BUILD_EXCLUSIVE_ARCH && ! $2 =~ $BUILD_EXCLUSIVE_ARCH ]] && build_exclude="yes"
+    if [[ $BUILD_EXCLUSIVE_CONFIG && -e "${kernel_config}" ]]; then
+        local kconf
+        for kconf in $BUILD_EXCLUSIVE_CONFIG ; do
+            case "$kconf" in
+                !*) grep -q "^${kconf#!}=[ym]" "${kernel_config}" && build_exclude="yes" ;;
+                *)  grep -q "^${kconf}=[ym]" "${kernel_config}" || build_exclude="yes" ;;
+            esac
+        done
+    fi
 
     # Set clean
     [[ $clean ]] || clean="make clean"
@@ -1027,7 +1036,7 @@ prepare_build()
 
     # Error out if build_exclude is set
     [[ $build_exclude ]] && die 77 \
-        $"The $base_dir/dkms.conf for module $module includes a BUILD_EXCLUSIVE directive which does not match this kernel/arch."\
+        $"The $base_dir/dkms.conf for module $module includes a BUILD_EXCLUSIVE directive which does not match this kernel/arch/config."\
         $"This indicates that it should not be built."
 
     # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
