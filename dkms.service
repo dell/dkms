@@ -5,7 +5,7 @@ Documentation=man:dkms(8)
 [Service]
 Type=oneshot
 RemainAfterExit=true
-ExecStart=/bin/sh -c 'dkms autoinstall --verbose --kernelver $(uname -r)'
+ExecStart=dkms autoinstall --verbose --kernelver %v
 
 [Install]
 Before=network-pre.target graphical.target
