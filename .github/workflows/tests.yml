@@ -73,7 +73,7 @@ jobs:
             KERNEL_VER="$(apk info --contents "linux${{ matrix.distro.variant }}-dev" | sed -n 's:^lib/modules/\([^/][^/]*\)/.*:\1:p' | head -n 1)"
         elif [ "${{ matrix.distro.name }}" = archlinux ] ; then
             KERNEL_VER="$(pacman -Qql "linux${{ matrix.distro.variant }}-headers" | sed -n 's:^/usr/lib/modules/\([^/]\+\)/.*:\1:p' | head -n 1)"
-        elif [ "${{ matrix.distro.name }}" = centos ] ; then
+        elif [ "${{ matrix.distro.name }}" = centos ] || [ "${{ matrix.distro.name }}" = almalinux ] ; then
             KERNEL_VER="$(LANG=C rpm -qi kernel-devel | sed -n 's/^Source RPM *: kernel-\(.*\).src.rpm$/\1.x86_64/p' | tail -n 1)"
         elif [ "${{ matrix.distro.name }}" = debian ] ; then
             KERNEL_VER="$(LANG=C dpkg --status linux-headers-amd64 | sed -n 's/^Depends: linux-headers-\(\S\+\)\( .*\)\?/\1/p' | head -n 1)"
