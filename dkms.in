@@ -717,6 +717,16 @@ check_version_sanity()
         kernels_info[1]=${kernels_info[2]}
     fi
 
+    if [[ $kernels_info && $dkms_info && ! ( $(VER $dkms_info) > $(VER $kernels_info) ) && ! $force ]]; then
+        error $"Module version $dkms_info for ${4}$module_suffix" \
+            $"is not newer than what is already found in kernel $1 ($kernels_info)." \
+            $"You may override by specifying --force."
+        return 1
+    else
+        return 0
+    fi
+
+
     if [[ ${kernels_info[1]} && ${dkms_info[1]} && ${kernels_info[1]} = ${dkms_info[1]} &&
 	  -n "${kernels_info[0]}" && -n "${dkms_info[0]}" && ${kernels_info[0]} = ${dkms_info[0]} && ! $force ]]; then
         echo $"" >&2
@@ -724,13 +734,6 @@ check_version_sanity()
         echo $"exactly matches what is already found in kernel $1." >&2
         echo $"DKMS will not replace this module." >&2
         echo $"You may override by specifying --force." >&2
-        return 1
-    fi
-
-    if [[ $kernels_info && $dkms_info && ! ( $(VER $dkms_info) > $(VER $kernels_info) ) && ! $force ]]; then
-        error $"Module version $dkms_info for ${4}$module_suffix" \
-            $"is not newer than what is already found in kernel $1 ($kernels_info)." \
-            $"You may override by specifying --force."
         return 1
     fi
 
