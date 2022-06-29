@@ -6,7 +6,7 @@ Before=network-pre.target graphical.target
 [Service]
 Type=oneshot
 RemainAfterExit=true
-ExecStart=dkms autoinstall --verbose --kernelver %v
+ExecStart=/usr/sbin/dkms autoinstall --verbose --kernelver %v
 
 [Install]
 WantedBy=multi-user.target
