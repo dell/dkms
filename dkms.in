@@ -866,11 +866,12 @@ prepare_signing()
             ubuntu* )
                 sign_file="/usr/src/linux-headers-$kernelver/scripts/sign-file"
                 ;;
-            fedora* | rhel* | ovm*)
-                sign_file="/lib/modules/$kernelver/build/scripts/sign-file"
-                ;;
             * )
-                echo "Binary sign-file not found, module won't be signed"
+                if [ -f "/lib/modules/$kernelver/build/scripts/sign-file" ]; then
+                    sign_file="/lib/modules/$kernelver/build/scripts/sign-file"
+                else
+                    echo "Binary sign-file not found, module won't be signed"
+                fi
                 ;;
         esac
     fi
@@ -911,6 +912,11 @@ prepare_signing()
 
             ;;
         *)
+
+            if [ ! "${sign_file}" ]; then
+                do_signing=0
+                return
+            fi
 
             if [ ! -f $mok_signing_key ] || [ ! -f $mok_certificate ]; then
                 echo "Certificate or key are missing, generating self signed certificate for MOK..."
