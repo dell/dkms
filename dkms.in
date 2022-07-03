@@ -867,11 +867,7 @@ prepare_signing()
                 sign_file="/usr/src/linux-headers-$kernelver/scripts/sign-file"
                 ;;
             * )
-                if [ -f "/lib/modules/$kernelver/build/scripts/sign-file" ]; then
-                    sign_file="/lib/modules/$kernelver/build/scripts/sign-file"
-                else
-                    echo "Binary sign-file not found, module won't be signed"
-                fi
+                sign_file="/lib/modules/$kernelver/build/scripts/sign-file"
                 ;;
         esac
     fi
@@ -913,8 +909,8 @@ prepare_signing()
             ;;
         *)
 
-            if [ ! "${sign_file}" ]; then
-                do_signing=0
+            if [[ ! -f "${sign_file}" || ! -x "${sign_file}" ]]; then
+                echo "Binary sign-file not found, module won't be signed"
                 return
             fi
 
