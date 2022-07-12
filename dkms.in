@@ -1030,7 +1030,9 @@ actual_build()
                     kmodsign sha512 $mok_signing_key $mok_certificate "$built_module"
                     ;;
                 *)
-                    eval $sign_file sha512 $mok_signing_key $mok_certificate "$built_module"
+                    if [ -n "${sign_file}" ]; then
+                        eval $sign_file sha512 $mok_signing_key $mok_certificate "$built_module"
+                    fi
                     ;;
             esac
         fi
