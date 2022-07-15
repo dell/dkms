@@ -168,7 +168,4 @@ Once DKMS is installed, you can reference its man page for further information
 on different DKMS options and also to understand the formatting of a module's
 dkms.conf configuration file.
 
-You may also wish to join the dkms-devel public mailing-list at
-https://lists.us.dell.com/mailman/listinfo/dkms-devel.
-
 The DKMS project is located at: https://github.com/dell/dkms
