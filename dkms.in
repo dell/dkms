@@ -861,7 +861,7 @@ prepare_signing()
     if [ ! "${sign_file}" ]; then
         case "$running_distribution" in
             debian* )
-                sign_file="/usr/lib/linux-kbuild-${$kernelver%.*}/scripts/sign-file"
+                sign_file="/usr/lib/linux-kbuild-${kernelver%.*}/scripts/sign-file"
                 ;;
             ubuntu* )
                 sign_file="/usr/src/linux-headers-$kernelver/scripts/sign-file"
