@@ -914,7 +914,7 @@ prepare_signing()
                 return
             fi
 
-            if [ ! -f $mok_signing_key ] || [ ! -f $mok_certificate ]; then
+            if ( [ ! -f $mok_signing_key ] && [[ ! "$mok_signing_key" == *":"* ]] ) || [ ! -f $mok_certificate ]; then
                 echo "Certificate or key are missing, generating self signed certificate for MOK..."
                 openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS module signing key" \
                     -newkey rsa:2048 -keyout $mok_signing_key \
@@ -1032,7 +1032,7 @@ actual_build()
                     kmodsign sha512 $mok_signing_key $mok_certificate "$built_module"
                     ;;
                 *)
-                    eval $sign_file sha512 $mok_signing_key $mok_certificate "$built_module"
+                    eval '"$sign_file" sha512 "$mok_signing_key" "$mok_certificate" "$built_module"'
                     ;;
             esac
         fi
