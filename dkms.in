@@ -648,9 +648,9 @@ get_module_verinfo(){
     done < <(modinfo $1)
 }
 
-# Perform some module version sanity checking whenever we are installing
+# Perform some module version correctness checking whenever we are installing
 # or removing modules.
-check_version_sanity()
+check_version_correctness()
 {
     # $1 = kernel_version
     # $2 = arch
@@ -658,7 +658,7 @@ check_version_sanity()
     # $4 = dest_module_name
 
     local lib_tree="$install_tree/$1" res=
-    echo $"Running module version sanity check."
+    echo $"Running module version correctness check."
     local i=0
     local -a kernels_info dkms_info
     if [ -n $3 ]; then
@@ -704,7 +704,7 @@ check_version_sanity()
     fi
 
     if [[ ${kernels_module[1]} ]]; then
-        warn $"Warning! Cannot do version sanity checking because multiple ${4}$module_suffix" \
+        warn $"Warning! Cannot do version correctness checking because multiple ${4}$module_suffix" \
             $"modules were found in kernel $1."
         return 0
     fi
@@ -820,7 +820,7 @@ add_module()
             $"Directory: $source_tree/$module-$module_version does not exist."
     fi
 
-    # Check the conf file for sanity
+    # Check the conf file for correctness
     read_conf_or_die "$kernelver" "$arch" "$conf"
 
     # Create the necessary dkms tree structure
@@ -1147,7 +1147,7 @@ do_install()
     echo $""
     echo $"${dest_module_name[$count]}$module_suffix:"
     # Check this version against what is already in the kernel
-    check_version_sanity "$kernelver" "$arch" "$obsolete_by" "${dest_module_name[$count]}" || continue
+    check_version_correctness "$kernelver" "$arch" "$obsolete_by" "${dest_module_name[$count]}" || continue
 
     if ((count == 0)) && ! run_build_script pre_install "$pre_install" && ! [[ $force ]]; then
         die 101 $"pre_install failed, aborting install." \

@@ -165,7 +165,7 @@ echo 'Installing the test module'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
 
 dkms_test.ko${mod_compression_ext}:
-Running module version sanity check.
+Running module version correctness check.
  - Original module
    - No original module exists within this kernel
  - Installation
@@ -279,7 +279,7 @@ make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build 
 cleaning build area...
 
 dkms_test.ko${mod_compression_ext}:
-Running module version sanity check.
+Running module version correctness check.
  - Original module
    - No original module exists within this kernel
  - Installation
@@ -342,7 +342,7 @@ echo "Running dkms autoinstall"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 
 dkms_test.ko${mod_compression_ext}:
-Running module version sanity check.
+Running module version correctness check.
  - Original module
    - No original module exists within this kernel
  - Installation
