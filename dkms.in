@@ -318,7 +318,14 @@ distro_version()
 {
     if [[ -r /etc/os-release ]]; then
         . /etc/os-release
-        [[ ${#ID_LIKE[@]} != 0 ]] && echo ${ID_LIKE[0]} || echo $ID
+        if [[ "$ID" = "ubuntu" ]]; then
+            # ID_LIKE=debian in ubuntu
+            echo $ID
+        elif [[ ${#ID_LIKE[@]} != 0 ]]; then
+            echo ${ID_LIKE[0]}
+        else
+            echo $ID
+        fi
         return
     fi
 
