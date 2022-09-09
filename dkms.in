@@ -858,29 +858,51 @@ prepare_kernel()
 
 prepare_signing()
 {
-    if [[ -x "$(command -v mokutil)" ]]; then
-        # Grep main line as second line says "Platform is in setup mode" if no keys are in the TPM
-        sb_state="$(mokutil --sb-state | grep ^SecureBoot)"
-    else
-        sb_state="SecureBoot is not available"
-    fi
-
     if [ ! "${sign_file}" ]; then
         case "$running_distribution" in
             debian* )
                 sign_file="/usr/lib/linux-kbuild-${kernelver%.*}/scripts/sign-file"
                 ;;
             ubuntu* )
-                sign_file="/usr/src/linux-headers-$kernelver/scripts/sign-file"
+                sign_file="$(command -v kmodsign)"
+                if [[ ! -x "${sign_file}" ]]; then
+                    sign_file="/usr/src/linux-headers-$kernelver/scripts/sign-file"
+                fi
                 ;;
             * )
                 sign_file="/lib/modules/$kernelver/build/scripts/sign-file"
                 ;;
         esac
     fi
+    echo "Sign command: $sign_file"
 
-    if [ "${sign_file}" ]; then
-        echo "Sign command: $sign_file"
+    if [[ ! -f "${sign_file}" ]] || [[ ! -x "${sign_file}" ]]; then
+        echo "Binary ${sign_file} not found, modules won't be signed"
+        return
+    fi
+
+    if [[ -z "${mok_signing_key}" ]]; then
+        # No custom key specified, use the default key created by update-secureboot-policy for Debian/Ubuntu
+        case "$running_distribution" in
+            debian* | ubuntu* )
+                mok_signing_key="/var/lib/shim-signed/mok/MOK.priv"
+                mok_certificate="/var/lib/shim-signed/mok/MOK.der"
+
+                if [[ ! -f "${mok_signing_key}" ]] || [[ ! -f "${mok_certificate}" ]]; then
+                    if [[ ! -x "$(command -v update-secureboot-policy)" ]]; then
+                        echo "Binary update-secureboot-policy not found, modules won't be signed"
+                        return
+                    fi
+                    # update-secureboot-policy won't create new key if $mok_certificate exists
+                    if [[ -f "${mok_certificate}" ]]; then
+                        rm -f "${mok_certificate}"
+                    fi
+                    echo "Certificate or key are missing, generating them using update-secureboot-policy..."
+                    SHIM_NOTRIGGER=y update-secureboot-policy --new-key
+                fi
+
+                ;;
+        esac
     fi
 
     if [ ! "${mok_signing_key}" ]; then
@@ -893,44 +915,14 @@ prepare_signing()
     fi
     echo "Public certificate (MOK): $mok_certificate"
 
-    case "$running_distribution" in
-        debian* | ubuntu* )
+    if ( [ ! -f $mok_signing_key ] && [[ ! "$mok_signing_key" == *":"* ]] ) || [ ! -f $mok_certificate ]; then
+        echo "Certificate or key are missing, generating self signed certificate for MOK..."
+        openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS module signing key" \
+            -newkey rsa:2048 -keyout $mok_signing_key \
+            -outform DER -out $mok_certificate > /dev/null 2>&1
+    fi
 
-            if [[ ! -x "$(command -v kmodsign)" ]]; then
-                echo "Binary kmod-sign not found, modules won't be signed"
-                return
-            fi
-
-            if [[ ! -x "$(command -v update-secureboot-policy)" ]]; then
-                echo "Binary update-secureboot-policy not found, modules won't be signed"
-                return
-            fi
-
-            do_signing=1
-
-            if [[ "$sb_state" == "SecureBoot is enabled" ]]; then
-                SHIM_NOTRIGGER=y update-secureboot-policy --new-key
-                update-secureboot-policy --enroll-key
-            fi
-
-            ;;
-        *)
-
-            if [[ ! -f "${sign_file}" || ! -x "${sign_file}" ]]; then
-                echo "Binary sign-file not found, module won't be signed"
-                return
-            fi
-
-            if ( [ ! -f $mok_signing_key ] && [[ ! "$mok_signing_key" == *":"* ]] ) || [ ! -f $mok_certificate ]; then
-                echo "Certificate or key are missing, generating self signed certificate for MOK..."
-                openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS module signing key" \
-                    -newkey rsa:2048 -keyout $mok_signing_key \
-                    -outform DER -out $mok_certificate > /dev/null 2>&1
-            fi
-
-            do_signing=1
-            ;;
-    esac
+    do_signing=1
 }
 
 # Get ready to build a module that has been registered with DKMS.
@@ -1034,14 +1026,7 @@ actual_build()
 
         if [ -n "${do_signing}" ]; then
             echo "Signing module $built_module"
-            case "$running_distribution" in
-                debian* | ubuntu* )
-                    kmodsign sha512 $mok_signing_key $mok_certificate "$built_module"
-                    ;;
-                *)
-                    eval '"$sign_file" sha512 "$mok_signing_key" "$mok_certificate" "$built_module"'
-                    ;;
-            esac
+            eval '"$sign_file" sha512 "$mok_signing_key" "$mok_certificate" "$built_module"'
         fi
 
         if [ "$module_compressed_suffix" = ".gz" ]; then
