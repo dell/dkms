@@ -889,12 +889,12 @@ prepare_signing()
     case "$running_distribution" in
         debian* | ubuntu* )
 
-            if [[ -x "$(command -v kmodsign)" ]]; then
+            if [[ ! -x "$(command -v kmodsign)" ]]; then
                 echo "Binary kmod-sign not found, modules won't be signed"
                 return
             fi
 
-            if [[ -x "$(command -v update-secureboot-policy)" ]]; then
+            if [[ ! -x "$(command -v update-secureboot-policy)" ]]; then
                 echo "Binary update-secureboot-policy not found, modules won't be signed"
                 return
             fi
