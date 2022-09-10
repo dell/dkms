@@ -1549,7 +1549,7 @@ remove_module()
     done
 
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
-    if ! find $dkms_tree/$module/$module_version/* -maxdepth 0 -type d 2>/dev/null | egrep -qv "(build|tarball|driver_disk|rpm|deb|source)$"; then
+    if ! find $dkms_tree/$module/$module_version/* -maxdepth 0 -type d 2>/dev/null | grep -Eqv "(build|tarball|driver_disk|rpm|deb|source)$"; then
         echo $"Deleting module $module-$module_version completely from the DKMS tree."
         rm -rf "$dkms_tree/$module/$module_version"
     fi
