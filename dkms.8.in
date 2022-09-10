@@ -448,7 +448,7 @@ should be put into
 .B MAKE[0].
 Other entries in the MAKE array will only be used if their corresponding entry in
 .B MAKE_MATCH[#]
-matches, as a regular expression (using egrep), the kernel that the module is being built for.
+matches, as a regular expression (using grep -E), the kernel that the module is being built for.
 Note that if no value is placed in
 .B MAKE_MATCH[#]
 for any
