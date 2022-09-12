@@ -1316,16 +1316,26 @@ maybe_add_module() (
 
 maybe_build_module() (
     is_module_built "$1" "$2" "$3" "$4" && {
-        echo $"Module $1/$2 already built for kernel $3 ($4)."
-        return 0
+        if [[ "$force" = "true" ]]; then
+            do_unbuild "$3" "$4"
+        else
+            echo $"Module $1/$2 already built for kernel $3 ($4), skip." \
+                 $"You may override by specifying --force."
+            return 0
+        fi
     }
     module="$1" module_version="$2" kernelver="$3" arch="$4" do_build
 )
 
 maybe_install_module() (
     is_module_installed "$1" "$2" "$3" "$4" && {
-        echo $"Module $1/$2 already installed on kernel $3 ($4)."
-        return 0
+        if [[ "$force" = "true" ]]; then
+            do_uninstall "$3" "$4"
+        else
+            echo $"Module $1/$2 already installed on kernel $3 ($4), skip." \
+                 $"You may override by specifying --force."
+            return 0
+        fi
     }
     module="$1" module_version="$2" kernelver="$3" arch="$4" do_install
 )

@@ -94,6 +94,7 @@ option in order to remove all instances for every kernel at once.
 .SY build
 .OP module/module\-version
 .OP -k kernel/arch
+.OP --force
 .YS
 .IP "" 4
 Builds the specified module/version combo for the specified kernel/arch. If
@@ -108,6 +109,9 @@ case
 can take the same arguments that
 .B add
 can.
+If the module is already built, it will not be rebuilt again by default, and the
+.B --force
+option should be used to override this.
 .SY unbuild
 .OP module/module\-version
 .OP -k kernel/arch
@@ -123,6 +127,7 @@ option in order to remove all instances for every kernel at once.
 .SY install
 .OP module/module\-version
 .OP -k kernel/arch
+.OP --force
 .OP /path/to/driver.rpm
 .YS
 .IP "" 4
@@ -136,6 +141,10 @@ command can then take the same arguments as the
 or
 .B add
 commands.
+If the module is already installed, it will not be reinstalled again
+by default, and the
+.B --force
+option should be used to override this.
 If you pass a .rpm file, dkms will try to install that file with
 .B rpm -Uvh
 , and it will perform an
