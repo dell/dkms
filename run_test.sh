@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # Test that dkms works properly
 set -eu
 
@@ -23,12 +23,12 @@ check_no_dkms_test() {
 
     found_moule="$(dkms_status_grep_dkms_test)"
     if [[ -n "$found_moule" ]] ; then
-        echo >&2 'Error: module dkms_test is still in DKMS tree'
-        return 1
+        echo >&2 'Warning: module dkms_test is already in DKMS tree, removing...'
+        dkms remove dkms_test/1.0 >/dev/null
     fi
     if [[ -d /usr/src/dkms_test-1.0 ]] ; then
-        echo >&2 'Error: directory /usr/src/dkms_test-1.0 still exists'
-        return 1
+        echo >&2 'Warning: directory /usr/src/dkms_test-1.0 already exists, removing'
+        rm -rf /usr/src/dkms_test-1.0
     fi
 }
 
@@ -44,6 +44,12 @@ run_with_expected_output() {
         if [[ $# -ge 2 && "$2" =~ uninstall|unbuild|remove ]] ; then
             sed '/^depmod\.\.\.$/d' -i test_cmd_output.log
         fi
+        # Signing related output. Drop it from the output, to be more generic
+        sed '/^Sign command:/d' -i test_cmd_output.log
+        sed '/^Signing key:/d' -i test_cmd_output.log
+        sed '/^Public certificate (MOK):/d' -i test_cmd_output.log
+        sed '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' -i test_cmd_output.log
+        sed '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' -i test_cmd_output.log
         if ! diff -U3 test_cmd_expected_output.log test_cmd_output.log ; then
             echo >&2 "Error: unexpected output from: $*"
             return 1
@@ -145,9 +151,9 @@ echo 'Building the test module'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
 
 Building module:
-cleaning build area...
+Cleaning build area...
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
-cleaning build area...
+Cleaning build area...
 EOF
 run_with_expected_output dkms_status_grep_dkms_test << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
@@ -155,11 +161,24 @@ EOF
 
 echo 'Building the test module again'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-Module dkms_test/1.0 already built for kernel ${KERNEL_VER} ($(uname -m)).
+Module dkms_test/1.0 already built for kernel ${KERNEL_VER} ($(uname -m)), skip. You may override by specifying --force.
 EOF
 run_with_expected_output dkms_status_grep_dkms_test << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
 EOF
+
+echo 'Building the test module again by force'
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
+Cleaning build area...
+EOF
+run_with_expected_output dkms_status_grep_dkms_test << EOF
+dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
+EOF
+
 
 echo 'Installing the test module'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
@@ -178,7 +197,7 @@ EOF
 
 echo 'Installing the test module again'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-Module dkms_test/1.0 already installed on kernel ${KERNEL_VER} ($(uname -m)).
+Module dkms_test/1.0 already installed on kernel ${KERNEL_VER} ($(uname -m)), skip. You may override by specifying --force.
 EOF
 run_with_expected_output dkms_status_grep_dkms_test << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): installed
@@ -187,6 +206,31 @@ if ! [[ -f "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_co
     echo >&2 "Error: module not found in /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}"
     exit 1
 fi
+
+echo 'Installing the test module again by force'
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+Module dkms_test-1.0 for kernel ${KERNEL_VER} ($(uname -m)).
+Before uninstall, this module version was ACTIVE on this kernel.
+
+dkms_test.ko${mod_compression_ext}:
+ - Uninstallation
+   - Deleting from: /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+ - Original module
+   - No original module was found for this module on this kernel.
+   - Use the dkms install command to reinstall any previous module version.
+depmod...
+
+dkms_test.ko${mod_compression_ext}:
+Running module version sanity check.
+ - Original module
+   - No original module exists within this kernel
+ - Installation
+   - Installing to /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+depmod...
+EOF
+run_with_expected_output dkms_status_grep_dkms_test << EOF
+dkms_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+EOF
 
 echo 'Checking modinfo'
 run_with_expected_output sh -c "modinfo /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext} | head -n 4" << EOF
@@ -274,9 +318,9 @@ run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << 
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 
 Building module:
-cleaning build area...
+Cleaning build area...
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
-cleaning build area...
+Cleaning build area...
 
 dkms_test.ko${mod_compression_ext}:
 Running module version sanity check.
@@ -330,9 +374,9 @@ run_with_expected_output dkms build -k "${KERNEL_VER}" test/dkms_test-1.0/dkms.c
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 
 Building module:
-cleaning build area...
+Cleaning build area...
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
-cleaning build area...
+Cleaning build area...
 EOF
 run_with_expected_output dkms_status_grep_dkms_test << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
