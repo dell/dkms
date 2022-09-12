@@ -171,12 +171,12 @@ VER()
 # option to make. Ignore hyperthreading for now.
 get_num_cpus()
 {
-   # use nproc(1) from coreutils 8.1-1+ if available, otherwise single job
-   if [ -x /usr/bin/nproc ]; then
-	nproc
-   else
-	echo "1"
-  fi
+    # use nproc(1) from coreutils 8.1-1+ if available, otherwise single job
+    if [ -x /usr/bin/nproc ]; then
+        nproc
+    else
+        echo "1"
+    fi
 }
 
 # Finds a .ko or .ko.xz based on a directory and module name
@@ -735,7 +735,7 @@ check_version_sanity()
 
 
     if [[ ${kernels_info[1]} && ${dkms_info[1]} && ${kernels_info[1]} = ${dkms_info[1]} &&
-	  -n "${kernels_info[0]}" && -n "${dkms_info[0]}" && ${kernels_info[0]} = ${dkms_info[0]} && ! $force ]]; then
+          -n "${kernels_info[0]}" && -n "${dkms_info[0]}" && ${kernels_info[0]} = ${dkms_info[0]} && ! $force ]]; then
         echo $"" >&2
         echo $"Good news! Module version $dkms_info for ${4}$module_suffix" >&2
         echo $"exactly matches what is already found in kernel $1." >&2
@@ -1229,12 +1229,12 @@ do_install()
     ln -s "$module_version/$kernelver/$arch" "$dkms_tree/$module/kernel-$kernelver-$arch" 2>/dev/null
 
     # Add to kabi-tracking
-	if [ -z "$NO_WEAK_MODULES" ]; then
-		if [[ ${weak_modules} ]]; then
-			echo $"Adding any weak-modules"
-			list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} ${weak_modules_no_initrd} --add-modules
-		fi
-	fi
+    if [ -z "$NO_WEAK_MODULES" ]; then
+        if [[ ${weak_modules} ]]; then
+            echo $"Adding any weak-modules"
+            list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} ${weak_modules_no_initrd} --add-modules
+        fi
+    fi
 
     # Run the post_install script
     run_build_script post_install "$post_install"
@@ -1410,47 +1410,47 @@ do_uninstall()
         was_active="true"
         echo $"Before uninstall, this module version was ACTIVE on this kernel."
         # remove kabi-tracking if last instance removed
-		if [ -z "$NO_WEAK_MODULES" ]; then
-			if [[ ${weak_modules} ]] && (module_status_built $module $module_version |grep -q "installed"); then
-				echo $"Removing any linked weak-modules"
-				list_each_installed_module "$module" "$1" "$2" | ${weak_modules} ${weak_modules_no_initrd} --remove-modules
-			fi
-		fi
+        if [ -z "$NO_WEAK_MODULES" ]; then
+            if [[ ${weak_modules} ]] && (module_status_built $module $module_version |grep -q "installed"); then
+                echo $"Removing any linked weak-modules"
+                list_each_installed_module "$module" "$1" "$2" | ${weak_modules} ${weak_modules_no_initrd} --remove-modules
+            fi
+        fi
 
-    for ((count=0; count < ${#built_module_name[@]}; count++)); do
-        real_dest_module_location="$(find_actual_dest_module_location $module $count $1 $2)"
-        echo $""
-        echo $"${dest_module_name[$count]}$module_suffix:"
-        echo $" - Uninstallation"
-        echo $"   - Deleting from: $install_tree/$1${real_dest_module_location}/"
-        rm -f "$install_tree/$1${real_dest_module_location}/${dest_module_name[$count]}$module_uncompressed_suffix"*
-        dir_to_remove="${real_dest_module_location#/}"
-        while [ "${dir_to_remove}" != "${dir_to_remove#/}" ]; do
-            dir_to_remove="${dir_to_remove#/}"
-        done
-        # dir_to_remove may be an empty string
-        if [[ -d "$dir_to_remove" ]]; then
-            (if cd "$install_tree/$1"; then rpm -qf "${dir_to_remove}" >/dev/null 2>&1 || rmdir -p --ignore-fail-on-non-empty "${dir_to_remove}"; fi || true)
-        fi
-        echo $" - Original module"
-        local origmod=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$1/$2" "${dest_module_name[$count]}")
-        if [[ -n "$origmod" ]]; then
-            case "$running_distribution" in
-                debian* | ubuntu* )
-                    ;;
-                *)
-                    echo $"   - Archived original module found in the DKMS tree"
-                    echo $"   - Moving it to: $install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
-                    mkdir -p "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
-                    mv -f "$origmod" "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/" 2>/dev/null
-                    ;;
-            esac
+        for ((count=0; count < ${#built_module_name[@]}; count++)); do
+            real_dest_module_location="$(find_actual_dest_module_location $module $count $1 $2)"
+            echo $""
+            echo $"${dest_module_name[$count]}$module_suffix:"
+            echo $" - Uninstallation"
+            echo $"   - Deleting from: $install_tree/$1${real_dest_module_location}/"
+            rm -f "$install_tree/$1${real_dest_module_location}/${dest_module_name[$count]}$module_uncompressed_suffix"*
+            dir_to_remove="${real_dest_module_location#/}"
+            while [ "${dir_to_remove}" != "${dir_to_remove#/}" ]; do
+                dir_to_remove="${dir_to_remove#/}"
+            done
+            # dir_to_remove may be an empty string
+            if [[ -d "$dir_to_remove" ]]; then
+                (if cd "$install_tree/$1"; then rpm -qf "${dir_to_remove}" >/dev/null 2>&1 || rmdir -p --ignore-fail-on-non-empty "${dir_to_remove}"; fi || true)
+            fi
+            echo $" - Original module"
+            local origmod=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$1/$2" "${dest_module_name[$count]}")
+            if [[ -n "$origmod" ]]; then
+                case "$running_distribution" in
+                    debian* | ubuntu* )
+                        ;;
+                    *)
+                        echo $"   - Archived original module found in the DKMS tree"
+                        echo $"   - Moving it to: $install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
+                        mkdir -p "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
+                        mv -f "$origmod" "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/" 2>/dev/null
+                        ;;
+                esac
             else
-            echo $"   - No original module was found for this module on this kernel."
-            echo $"   - Use the dkms install command to reinstall any previous module version."
-        fi
-    done
-    rm -f "$dkms_tree/$module/kernel-$1-$2"
+                echo $"   - No original module was found for this module on this kernel."
+                echo $"   - Use the dkms install command to reinstall any previous module version."
+            fi
+        done
+        rm -f "$dkms_tree/$module/kernel-$1-$2"
     else
         echo $"This module version was INACTIVE for this kernel."
     fi
@@ -1592,7 +1592,7 @@ find_module_from_ko()
 module_status_weak() {
     # $1 = module, $2 = module version, $3 = kernel version weak installed to,
     # $4 = kernel arch, $5 = kernel version built for
-	[ -z "$NO_WEAK_MODULES" ] || return 1
+    [ -z "$NO_WEAK_MODULES" ] || return 1
     [[ $weak_modules ]] || return 1
     local m v k a kern weak_ko mod installed_ko f ret=1 oifs=$IFS
     local -A already_found
@@ -1603,15 +1603,15 @@ module_status_weak() {
         kern=${weak_ko#$install_tree/}
         kern=${kern%/weak-updates/*}
         [[ $m = ${1:-*} && $v = ${2:-*} && $k = ${5:-*} && $a = ${4:-*} && $kern = ${3:-*} ]] || continue
-	already_found[$m/$v/$kern/$a/$k]+=${weak_ko##*/}" "
+        already_found[$m/$v/$kern/$a/$k]+=${weak_ko##*/}" "
     done
     # Check to see that all ko's are present for each module
     for mod in ${!already_found[@]}; do
-	IFS=/ read m v k a kern <<< "$mod"
-	# ensure each module is weak linked
-	for installed_ko in $(find $dkms_tree/$m/$v/$kern/$a/module -type f); do
-	    [[ ${already_found[$mod]} != *"$installed_ko"* ]] && continue 2
-	done
+        IFS=/ read m v k a kern <<< "$mod"
+        # ensure each module is weak linked
+        for installed_ko in $(find $dkms_tree/$m/$v/$kern/$a/module -type f); do
+            [[ ${already_found[$mod]} != *"$installed_ko"* ]] && continue 2
+        done
         ret=0
         echo "installed-weak $mod"
     done
