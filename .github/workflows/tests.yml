@@ -28,9 +28,9 @@ jobs:
           - {name: "debian", tag: "10"}
           - {name: "debian", tag: "9"}
           - {name: "debian", tag: "8"}
+          - {name: "ubuntu", tag: "22.04"}
           - {name: "ubuntu", tag: "20.04"}
           - {name: "ubuntu", tag: "18.04"}
-          - {name: "ubuntu", tag: "16.04"}
     runs-on: ubuntu-20.04
     container:
       image: docker://docker.io/library/${{ matrix.distro.name }}:${{ matrix.distro.tag }}
@@ -41,29 +41,34 @@ jobs:
     - name: Install Alpine dependencies
       if: matrix.distro.name == 'alpine'
       run: |
-        apk --no-cache --update add bash gcc linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-dev make
+        apk --no-cache --update add bash gcc linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-dev make openssl
 
     - name: Install Arch Linux dependencies
       if: matrix.distro.name == 'archlinux'
       run: |
-        pacman -Syu --noconfirm diffutils gcc make linux${{ matrix.distro.variant }}-headers
+        pacman -Syu --noconfirm diffutils gcc make linux${{ matrix.distro.variant }}-headers openssl
 
     - name: Install CentOS dependencies
       if: matrix.distro.name == 'centos'
       run: |
-        yum install -y diffutils elfutils-libelf-devel gcc kernel kernel-devel make
+        yum install -y diffutils elfutils-libelf-devel gcc kernel kernel-devel make openssl
+
+    - name: Install AlmaLinux dependencies
+      if: matrix.distro.name == 'almalinux'
+      run: |
+        yum install -y diffutils elfutils-libelf-devel gcc kernel kernel-devel make openssl
 
     - name: Install Debian dependencies
       if: matrix.distro.name == 'debian'
       run: |
         apt-get update -q
-        apt-get install -qy gcc make linux-headers-amd64 linux-image-amd64
+        apt-get install -qy gcc make linux-headers-amd64 linux-image-amd64 openssl
 
     - name: Install Ubuntu dependencies
       if: matrix.distro.name == 'ubuntu'
       run: |
         apt-get update -q
-        apt-get install -qy gcc make linux-headers-generic linux-image-generic
+        apt-get install -qy gcc make linux-headers-generic linux-image-generic openssl
 
     - name: Compute packaged kernel version
       id: versions
@@ -98,8 +103,8 @@ jobs:
     strategy:
       matrix:
         version:
+          - 22.04
           - 20.04
-          - 18.04
     runs-on: ubuntu-${{ matrix.version }}
 
     steps:
@@ -109,9 +114,6 @@ jobs:
       run: |
         sudo apt-get update -q
         sudo apt-get install -qqy make
-
-        # Do not sign modules
-        sudo rm -r /var/lib/shim-signed/mok/
 
     - name: Install dkms
       run: sudo make install

@@ -50,6 +50,11 @@ run_with_expected_output() {
         sed '/^Public certificate (MOK):/d' -i test_cmd_output.log
         sed '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' -i test_cmd_output.log
         sed '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' -i test_cmd_output.log
+        sed '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' -i test_cmd_output.log
+        sed "/^Binary .* not found, modules won't be signed$/d" -i test_cmd_output.log
+		# OpenSSL non-critical errors while signing. Remove them to be more generic
+        sed '/^At main.c:/d' -i test_cmd_output.log
+        sed '/^- SSL error:/d' -i test_cmd_output.log
         if ! diff -U3 test_cmd_expected_output.log test_cmd_output.log ; then
             echo >&2 "Error: unexpected output from: $*"
             return 1
@@ -94,7 +99,7 @@ run_with_expected_error() {
 os_id="$(sed -n 's/^ID\s*=\s*\(.*\)$/\1/p' /etc/os-release | tr -d '"')"
 mod_compression_ext=
 case "${os_id}" in
-    centos | fedora | rhel | ovm)
+    centos | fedora | rhel | ovm | almalinux)
         expected_dest_loc=extra
         mod_compression_ext=.xz
         ;;
