@@ -85,7 +85,10 @@ _dkms()
 					options='--rpm_safe_upgrade'
 					;;
 				build)
-					options='--config'
+					options='--config --force'
+					;;
+				install)
+					options='--force'
 					;;
 				ldtarball)
 					options='--archive --force'
