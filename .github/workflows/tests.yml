@@ -68,7 +68,7 @@ jobs:
       if: matrix.distro.name == 'ubuntu'
       run: |
         apt-get update -q
-        apt-get install -qy gcc make linux-headers-generic linux-image-generic openssl
+        apt-get install -qy gcc make linux-headers-generic linux-image-generic openssl shim-signed
 
     - name: Compute packaged kernel version
       id: versions
@@ -96,7 +96,14 @@ jobs:
       run: make install
 
     - name: Run tests
-      run: ./run_test.sh
+      run: |
+        if [ "${{ matrix.distro.name }}" = alpine ]; then
+            ./run_test.sh --no-signing-tool
+        elif [ "${{ matrix.distro.name }}" = debian ] && [ "${{ matrix.distro.tag }}" = 8 ]; then
+            ./run_test.sh --no-signing-tool
+        else
+            ./run_test.sh
+        fi
 
   test-vm:
     name: Test in Ubuntu VM

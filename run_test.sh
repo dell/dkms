@@ -13,6 +13,13 @@ echo "Using kernel ${KERNEL_VER}"
 PATH="$(pwd):$PATH"
 export PATH
 
+if [ "$#" = 1 ] && [ "$1" = "--no-signing-tool" ]; then
+    echo 'Ignore signing tool errors'
+    NO_SIGNING_TOOL=1
+else
+    NO_SIGNING_TOOL=0
+fi
+
 # Some helpers
 dkms_status_grep_dkms_test() {
     (dkms status | grep '^dkms_test/') || true
@@ -51,8 +58,10 @@ run_with_expected_output() {
         sed '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' -i test_cmd_output.log
         sed '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' -i test_cmd_output.log
         sed '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' -i test_cmd_output.log
-        sed "/^Binary .* not found, modules won't be signed$/d" -i test_cmd_output.log
-		# OpenSSL non-critical errors while signing. Remove them to be more generic
+        if [[ "${NO_SIGNING_TOOL}" = "1" ]]; then
+            sed "/^Binary .* not found, modules won't be signed$/d" -i test_cmd_output.log
+        fi
+        # OpenSSL non-critical errors while signing. Remove them to be more generic
         sed '/^At main.c:/d' -i test_cmd_output.log
         sed '/^- SSL error:/d' -i test_cmd_output.log
         if ! diff -U3 test_cmd_expected_output.log test_cmd_output.log ; then
