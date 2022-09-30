@@ -882,9 +882,10 @@ prepare_signing()
     fi
 
     if [[ -z "${mok_signing_key}" ]]; then
-        # No custom key specified, use the default key created by update-secureboot-policy for Debian/Ubuntu
+        # No custom key specified, use the default key created by update-secureboot-policy for Ubuntu
+        # Debian's update-secureboot-policy has no --new-key option
         case "$running_distribution" in
-            debian* | ubuntu* )
+            ubuntu* )
                 mok_signing_key="/var/lib/shim-signed/mok/MOK.priv"
                 mok_certificate="/var/lib/shim-signed/mok/MOK.der"
 
