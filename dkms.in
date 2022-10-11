@@ -916,11 +916,19 @@ prepare_signing()
     fi
     echo "Public certificate (MOK): $mok_certificate"
 
-    if ( [ ! -f $mok_signing_key ] && [[ ! "$mok_signing_key" == *":"* ]] ) || [ ! -f $mok_certificate ]; then
+    if [[ ! "$mok_signing_key" == "pkcs11:"* ]] && ([ ! -f "$mok_signing_key" ] || [ ! -f "$mok_certificate" ]); then
         echo "Certificate or key are missing, generating self signed certificate for MOK..."
         openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS module signing key" \
-            -newkey rsa:2048 -keyout $mok_signing_key \
-            -outform DER -out $mok_certificate > /dev/null 2>&1
+            -newkey rsa:2048 -keyout "$mok_signing_key" \
+            -outform DER -out "$mok_certificate" > /dev/null 2>&1
+        if [ ! -f "${mok_signing_key}" ]; then
+            echo "Key file ${mok_signing_key} not found and can't be generated, modules won't be signed"
+            return
+        fi
+    fi
+    if [ ! -f "${mok_certificate}" ]; then
+        echo "Certificate file ${mok_certificate} not found and can't be generated, modules won't be signed"
+        return
     fi
 
     do_signing=1
@@ -1027,7 +1035,7 @@ actual_build()
 
         if [ -n "${do_signing}" ]; then
             echo "Signing module $built_module"
-            eval '"$sign_file" sha512 "$mok_signing_key" "$mok_certificate" "$built_module"'
+            "$sign_file" sha512 "$mok_signing_key" "$mok_certificate" "$built_module"
         fi
 
         if [ "$module_compressed_suffix" = ".gz" ]; then
@@ -2418,6 +2426,13 @@ parallel_jobs=${parallel_jobs:-$(get_num_cpus)}
 [[ "$parallel_jobs" = 0 ]] && parallel_jobs=""
 
 setup_kernels_arches "$action"
+
+# Source in configuration again. Support variables like kernelver in
+# sign_file/mok_signing_key/mok_certificate
+for i in /etc/dkms/framework.conf /etc/dkms/framework.conf.d/*.conf; do
+    [[ -e "${i}" ]] && . "$i" >/dev/null
+done
+
 case "$action" in
 remove | unbuild | uninstall)
     check_module_args $action
