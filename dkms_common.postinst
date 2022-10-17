@@ -63,8 +63,8 @@ _get_newest_kernel_debian() {
         fi
 
         # if $kernel is greater than $COMPARE_TO
-        if [ `dpkg --compare-versions "$KERNEL_VERSION-$ABI" ge "$COMPARE_TO" && echo "yes" || \
-              echo "no"` = "yes" ]; then
+        if [ $(dpkg --compare-versions "$KERNEL_VERSION-$ABI" ge "$COMPARE_TO" && echo "yes" || \
+              echo "no") = "yes" ]; then
             NEWEST_KERNEL=$KERNEL
             NEWEST_VERSION=$KERNEL_VERSION
             NEWEST_ABI=$ABI
@@ -91,14 +91,14 @@ get_newest_kernel() {
         CURRENT_ABI=${CURRENT_ABI%%-*}
         NEWEST_KERNEL=$(_get_newest_kernel_debian "$CURRENT_VERSION-$CURRENT_ABI")
 
-    elif [ `which rpm >/dev/null` ]; then
+    elif [ $(which rpm >/dev/null) ]; then
         # If RPM based
         NEWEST_KERNEL=$(_get_newest_kernel_rhel)
     fi
 
     # Make sure that kernel name that we extracted corresponds to an installed
     # kernel
-    if [ -n "$NEWEST_KERNEL" ] && [ `_is_kernel_name_correct $NEWEST_KERNEL` = "no" ]; then
+    if [ -n "$NEWEST_KERNEL" ] && [ $(_is_kernel_name_correct $NEWEST_KERNEL) = "no" ]; then
         NEWEST_KERNEL=
     fi
 
@@ -156,7 +156,7 @@ elif [ -d "/usr/src/$NAME-$VERSION" ]; then
 fi
 
 # On 1st installation, let us look for a directory
-# in /lib/modules which matches `uname -r`. If none
+# in /lib/modules which matches $(uname -r). If none
 # is found it is possible that buildd is being used
 # and that uname -r is giving us the name of the
 # kernel used by the buildd machine.
@@ -178,7 +178,7 @@ NEWEST_KERNEL=$(get_newest_kernel)
 
 if [ -z "$autoinstall_all_kernels" ]; then
     # If the current kernel is installed on the system or chroot
-    if [ `_is_kernel_name_correct $CURRENT_KERNEL` = "yes" ]; then
+    if [ $(_is_kernel_name_correct $CURRENT_KERNEL) = "yes" ]; then
         if [ -n "$NEWEST_KERNEL" ] && [ ${CURRENT_KERNEL} != ${NEWEST_KERNEL} ]; then
             KERNELS="$CURRENT_KERNEL $NEWEST_KERNEL"
         else
@@ -216,8 +216,8 @@ if [ -n "$ARCH" ]; then
 fi
 
 for KERNEL in $KERNELS; do
-    dkms_status=`dkms status -m $NAME -v $VERSION -k $KERNEL $ARCH`
-    if [ `echo $KERNEL | grep -c "BOOT"` -gt 0 ]; then
+    dkms_status=$(dkms status -m $NAME -v $VERSION -k $KERNEL $ARCH)
+    if [ $(echo $KERNEL | grep -c "BOOT") -gt 0 ]; then
         echo ""
         echo "Module build and install for $KERNEL was skipped as "
         echo "it is a BOOT variant"
@@ -226,7 +226,7 @@ for KERNEL in $KERNELS; do
 
 
     #if the module isn't yet built, try to build it
-    if [ `echo $dkms_status | grep -c ": built"` -eq 0 ]; then
+    if [ $(echo $dkms_status | grep -c ": built") -eq 0 ]; then
         if [ ! -L /var/lib/dkms/$NAME/$VERSION/source ]; then
             echo "This package appears to be a binaries-only package"
             echo " you will not be able to build against kernel $KERNEL"
@@ -251,7 +251,7 @@ for KERNEL in $KERNELS; do
                 exit $?
                 ;;
             esac
-            dkms_status=`dkms status -m $NAME -v $VERSION -k $KERNEL $ARCH`
+            dkms_status=$(dkms status -m $NAME -v $VERSION -k $KERNEL $ARCH)
         else
             echo "Module build for kernel $KERNEL was skipped since the"
             echo "kernel headers for this kernel does not seem to be installed."
@@ -259,8 +259,8 @@ for KERNEL in $KERNELS; do
     fi
 
     #if the module is built (either pre-built or just now), install it
-    if [ `echo $dkms_status | grep -c ": built"` -eq 1 ] &&
-       [ `echo $dkms_status | grep -c ": installed"` -eq 0 ]; then
+    if [ $(echo $dkms_status | grep -c ": built") -eq 1 ] &&
+       [ $(echo $dkms_status | grep -c ": installed") -eq 0 ]; then
         dkms install -m $NAME -v $VERSION -k $KERNEL $ARCH
     fi
 done

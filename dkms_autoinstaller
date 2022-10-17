@@ -44,7 +44,7 @@ case "$1" in
 		if [ -n "$2" ]; then
 			kernel="$2"
 		else
-			kernel=`uname -r`
+			kernel=$(uname -r)
 		fi
 		if [ -f /etc/dkms/no-autoinstall ]; then
 			log_daemon_msg "$prog: autoinstall for dkms modules has been disabled"
