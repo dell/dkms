@@ -1963,8 +1963,8 @@ run_match()
 
     # Iterate over the kernel_status and match kernel to the template_kernel
     while read template_line; do
-        template_module=`echo "$template_line" | awk {'print $1'} | sed 's/,$//'`
-        template_version=`echo "$template_line" | awk {'print $2'} | sed 's/,$//'`
+        template_module=$(echo "$template_line" | awk {'print $1'} | sed 's/,$//')
+        template_version=$(echo "$template_line" | awk {'print $2'} | sed 's/,$//')
 
         # Print out a match header
         echo $"Module:  $template_module"

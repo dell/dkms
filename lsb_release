@@ -102,7 +102,7 @@ DESCSTR_DELI="release"
 
 # Display Program Version for internal use (needed by help2man)
 DisplayProgramVersion() { 
-    echo "FSG `basename $0` v$SCRIPTVERSION"
+    echo "FSG $(basename $0) v$SCRIPTVERSION"
     echo
     echo "Copyright (C) 2000, 2002, 2004 Free Standards Group, Inc."
     echo "This is free software; see the source for copying conditions.  There\
@@ -117,11 +117,11 @@ DisplayProgramVersion() {
 
 # defines the Usage for lsb_release
 Usage() {
-    echo "FSG `basename $0` v$SCRIPTVERSION prints certain LSB (Linux\
+    echo "FSG $(basename $0) v$SCRIPTVERSION prints certain LSB (Linux\
  Standard Base) and"
     echo "Distribution information."
     echo
-    echo "Usage: `basename $0` [OPTION]..."
+    echo "Usage: $(basename $0) [OPTION]..."
     echo "With no OPTION specified defaults to -v."
     echo
     echo "Options:"
@@ -193,7 +193,7 @@ GetLSBInfo() {
 	then
 	    for tag in "$INFO_ROOT/$INFO_LSB_DIR/"*
 	    do
-		LSB_VERSION=$LSB_VERSION:`basename $tag`
+		LSB_VERSION=$LSB_VERSION:$(basename $tag)
 	    done
 	fi
 }
