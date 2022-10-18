@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 # Test that dkms works properly
 set -eu
 
@@ -16,8 +16,10 @@ export PATH
 if [ "$#" = 1 ] && [ "$1" = "--no-signing-tool" ]; then
     echo 'Ignore signing tool errors'
     NO_SIGNING_TOOL=1
+    SIGNING_MESSAGE=""
 else
     NO_SIGNING_TOOL=0
+    SIGNING_MESSAGE=$'Signing module /var/lib/dkms/dkms_test/1.0/build/dkms_test.ko\n'
 fi
 
 # Some helpers
@@ -25,17 +27,31 @@ dkms_status_grep_dkms_test() {
     (dkms status | grep '^dkms_test/') || true
 }
 
+clean_env() {
+    local found_moule
+
+    found_moule="$(dkms_status_grep_dkms_test)"
+    if [[ -n "$found_moule" ]] ; then
+        dkms remove dkms_test/1.0 >/dev/null
+    fi
+    if [[ -d /usr/src/dkms_test-1.0 ]] ; then
+        rm -rf /usr/src/dkms_test-1.0
+    fi
+    rm -f /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    rm -f /tmp/tmp_dkms_sign_key
+}
+
 check_no_dkms_test() {
     local found_moule
 
     found_moule="$(dkms_status_grep_dkms_test)"
     if [[ -n "$found_moule" ]] ; then
-        echo >&2 'Warning: module dkms_test is already in DKMS tree, removing...'
-        dkms remove dkms_test/1.0 >/dev/null
+        echo >&2 'Error: module dkms_test is in DKMS tree'
+        exit 1
     fi
     if [[ -d /usr/src/dkms_test-1.0 ]] ; then
-        echo >&2 'Warning: directory /usr/src/dkms_test-1.0 already exists, removing'
-        rm -rf /usr/src/dkms_test-1.0
+        echo >&2 'Error: directory /usr/src/dkms_test-1.0 exists'
+        exit 1
     fi
 }
 
@@ -55,11 +71,12 @@ run_with_expected_output() {
         sed '/^Sign command:/d' -i test_cmd_output.log
         sed '/^Signing key:/d' -i test_cmd_output.log
         sed '/^Public certificate (MOK):/d' -i test_cmd_output.log
-        sed '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' -i test_cmd_output.log
         sed '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' -i test_cmd_output.log
         sed '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' -i test_cmd_output.log
+        sed '/^kmodsign: CMS_add1_signer: Success$/d' -i test_cmd_output.log
         if [[ "${NO_SIGNING_TOOL}" = "1" ]]; then
             sed "/^Binary .* not found, modules won't be signed$/d" -i test_cmd_output.log
+            #sed "/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d" -i test_cmd_output.log
         fi
         # OpenSSL non-critical errors while signing. Remove them to be more generic
         sed '/^At main.c:/d' -i test_cmd_output.log
@@ -128,8 +145,8 @@ case "${os_id}" in
 esac
 
 
-echo 'Checking that the environment is clean'
-check_no_dkms_test
+echo 'Preparing the environment for test'
+clean_env
 
 echo 'Adding the test module by version (expected error)'
 run_with_expected_error 2 dkms add -m dkms_test -v 1.0 << EOF
@@ -167,7 +184,7 @@ run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EO
 Building module:
 Cleaning build area...
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
-Cleaning build area...
+${SIGNING_MESSAGE}Cleaning build area...
 EOF
 run_with_expected_output dkms_status_grep_dkms_test << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
@@ -181,18 +198,58 @@ run_with_expected_output dkms_status_grep_dkms_test << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
 EOF
 
-echo 'Building the test module again by force'
-run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
+    echo 'Building the test module with bad sign_file path in framework file'
+    mkdir -p /etc/dkms/framework.conf.d/
+    cp test/framework/bad_sign_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+Binary /no/such/file not found, modules won't be signed
 
 Building module:
 Cleaning build area...
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
 Cleaning build area...
 EOF
+
+    echo 'Building the test module with bad mok_signing_key path in framework file'
+    mkdir -p /etc/dkms/framework.conf.d/
+    cp test/framework/bad_key_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+Key file /no/such/file not found and can't be generated, modules won't be signed
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
+Cleaning build area...
+EOF
+
+    echo 'Building the test module with bad mok_certificate path in framework file'
+    mkdir -p /etc/dkms/framework.conf.d/
+    cp test/framework/bad_cert_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+Certificate file /no/such/file not found and can't be generated, modules won't be signed
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
+Cleaning build area...
+EOF
+    rm /tmp/tmp_dkms_sign_key
+
+    rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
+fi
+
+echo 'Building the test module again by force'
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
+${SIGNING_MESSAGE}Cleaning build area...
+EOF
 run_with_expected_output dkms_status_grep_dkms_test << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
 EOF
-
 
 echo 'Installing the test module'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
@@ -253,6 +310,13 @@ version:        1.0
 description:    A Simple dkms test module
 license:        GPL
 EOF
+
+if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
+    echo 'Checking module signature'
+    run_with_expected_output sh -c "modinfo /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext} | grep ^sig_key | cut -f1 -d' '" << EOF
+sig_key:
+EOF
+fi
 
 echo 'Uninstalling the test module'
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
@@ -334,7 +398,7 @@ Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 Building module:
 Cleaning build area...
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
-Cleaning build area...
+${SIGNING_MESSAGE}Cleaning build area...
 
 dkms_test.ko${mod_compression_ext}:
 Running module version sanity check.
@@ -390,7 +454,7 @@ Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 Building module:
 Cleaning build area...
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
-Cleaning build area...
+${SIGNING_MESSAGE}Cleaning build area...
 EOF
 run_with_expected_output dkms_status_grep_dkms_test << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
@@ -427,7 +491,7 @@ EOF
 echo 'Removing /usr/src/dkms_test-1.0'
 rm -r /usr/src/dkms_test-1.0
 
-echo 'Checking that the environment is clean again'
+echo 'Checking that the environment is clean'
 check_no_dkms_test
 
 echo 'All tests successful :)'
