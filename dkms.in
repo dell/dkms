@@ -2186,9 +2186,10 @@ autoinstall() {
         for mv in "${to_install[@]}"; do
             IFS=/ read m v <<< "$mv"
             if [[ -z "${build_depends[$m]}" ]]; then
-                (module="$m" module_version="$v" kernelver="$kernelver" arch="$arch" install_module)
-                installed_modules[${#installed_modules[@]}]="$m"
-                install_count=$(($install_count +1))
+                if (module="$m" module_version="$v" kernelver="$kernelver" arch="$arch" install_module); then
+                    installed_modules[${#installed_modules[@]}]="$m"
+                    install_count=$(($install_count +1))
+                fi
             else
                 next_install[${#next_install[@]}]="$mv"
             fi
@@ -2196,13 +2197,13 @@ autoinstall() {
 
         wait
 
-        # Step 3: Keep going if at least one module was installed during
+        # Step 3: Remove modules that install was attempted for
+        # during Step 2 from the job queue.
+        to_install=( "${next_install[@]}" )
+
+        # Step 4: Keep going if at least one module was installed during
         # this iteration.
         [[ "$install_count" -gt 0 ]] || break;
-
-        # Step 4: Remove modules that were installed during Step 2 from
-        # the job queue.
-        to_install=( "${next_install[@]}" )
 
     done
     for mv in "${to_install[@]}"; do
