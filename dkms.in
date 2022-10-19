@@ -2354,7 +2354,7 @@ while (($# > 0)); do
         -j)
             read_arg parallel_jobs "$1" "$2" || shift
             ;;
-        -*|--*)
+        -*)
             error $" Unknown option: $1"
             show_usage
             exit 2
