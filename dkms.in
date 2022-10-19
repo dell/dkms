@@ -2118,6 +2118,7 @@ autoinstall() {
     local -a to_install=()
     local -a next_install=()
     local -a installed_modules=()
+    local -a failed_modules=()
     local -A build_depends=()
 
     # Walk through our list of installed and built modules, and create
@@ -2189,6 +2190,8 @@ autoinstall() {
                 if (module="$m" module_version="$v" kernelver="$kernelver" arch="$arch" install_module); then
                     installed_modules[${#installed_modules[@]}]="$m"
                     install_count=$(($install_count +1))
+                else
+                    failed_modules=[${#failed_modules[@]}]="$m"
                 fi
             else
                 next_install[${#next_install[@]}]="$mv"
@@ -2210,6 +2213,11 @@ autoinstall() {
         IFS=/ read m v <<< "$mv"
         echo "$m/$v autoinstall failed due to missing dependencies: ${build_depends[$m]}"
     done
+
+    if [[ "${#failed_modules[@]}" > 0 || "${#to_install[@]}" > 0 ]]; then
+        die 11 $"One or more modules failed to install during autoinstall." \
+            $"Refer to previous errors for more information."
+    fi
 }
 
 #############################
