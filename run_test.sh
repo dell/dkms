@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 # Test that dkms works properly
 set -eu
 
@@ -25,17 +25,29 @@ dkms_status_grep_dkms_test() {
     (dkms status | grep '^dkms_test/') || true
 }
 
+clean_dkms_env() {
+    local found_moule
+
+    found_moule="$(dkms_status_grep_dkms_test)"
+    if [[ -n "$found_moule" ]] ; then
+        dkms remove dkms_test/1.0 >/dev/null
+    fi
+    if [[ -d /usr/src/dkms_test-1.0 ]] ; then
+        rm -rf /usr/src/dkms_test-1.0
+    fi
+}
+
 check_no_dkms_test() {
     local found_moule
 
     found_moule="$(dkms_status_grep_dkms_test)"
     if [[ -n "$found_moule" ]] ; then
-        echo >&2 'Warning: module dkms_test is already in DKMS tree, removing...'
-        dkms remove dkms_test/1.0 >/dev/null
+        echo >&2 'Error: module dkms_test is still in DKMS tree' 
+        exit 1
     fi
     if [[ -d /usr/src/dkms_test-1.0 ]] ; then
-        echo >&2 'Warning: directory /usr/src/dkms_test-1.0 already exists, removing'
-        rm -rf /usr/src/dkms_test-1.0
+        echo >&2 'Error: directory /usr/src/dkms_test-1.0 still exists'
+        exit 1
     fi
 }
 
@@ -55,11 +67,12 @@ run_with_expected_output() {
         sed '/^Sign command:/d' -i test_cmd_output.log
         sed '/^Signing key:/d' -i test_cmd_output.log
         sed '/^Public certificate (MOK):/d' -i test_cmd_output.log
-        sed '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' -i test_cmd_output.log
         sed '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' -i test_cmd_output.log
         sed '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' -i test_cmd_output.log
         if [[ "${NO_SIGNING_TOOL}" = "1" ]]; then
             sed "/^Binary .* not found, modules won't be signed$/d" -i test_cmd_output.log
+        else
+            sed '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' -i test_cmd_output.log
         fi
         # OpenSSL non-critical errors while signing. Remove them to be more generic
         sed '/^At main.c:/d' -i test_cmd_output.log
@@ -128,8 +141,8 @@ case "${os_id}" in
 esac
 
 
-echo 'Checking that the environment is clean'
-check_no_dkms_test
+echo 'Preparing a clean environment'
+clean_dkms_env
 
 echo 'Adding the test module by version (expected error)'
 run_with_expected_error 2 dkms add -m dkms_test -v 1.0 << EOF
@@ -427,7 +440,7 @@ EOF
 echo 'Removing /usr/src/dkms_test-1.0'
 rm -r /usr/src/dkms_test-1.0
 
-echo 'Checking that the environment is clean again'
+echo 'Checking that the environment is clean'
 check_no_dkms_test
 
 echo 'All tests successful :)'
