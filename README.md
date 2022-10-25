@@ -140,14 +140,29 @@ With the appropriate key material on the system, enroll the public key:
 
 You'll be prompted to create a password. Enter it twice, it can also be blank.
 
-Reboot the computer. At boot you'll see the MOK Manager EFI interface, press any
-key to enter it.
+Reboot the computer. At boot you'll see the MOK Manager EFI interface:
 
-- "Enroll MOK"
-- "Continue".
-- "Yes".
-- Enter the password you set up just now.
-- Select "OK" and the computer will reboot again.
+![SHIM UEFI key management](/images/mok-key-1.png)
+
+Press any key to enter it, then select "Enroll MOK":
+
+![Perform MOK management](/images/mok-key-2.png)
+
+Then select "Continue":
+
+![Enroll MOK](/images/mok-key-3.png)
+
+And confirm with "Yes" when prompted:
+
+![Enroll the key(s)?](/images/mok-key-4.png)
+
+After this, enter the password you set up with `mokutil --import` in the previous step:
+
+![Enroll the key(s)?](/images/mok-key-5.png)
+
+At this point you are done, select "OK" and the computer will reboot trusting the key for your modules:
+
+![Perform MOK management](/images/mok-key-6.png)
 
 After reboot, you can inspect the MOK certificates with the following command:
 
