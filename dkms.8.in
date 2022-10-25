@@ -696,20 +696,6 @@ version in question will be substituted in its place. This is especially useful 
 commands when specifying which INCLUDE statements should be used when compiling your
 module (eg. MAKE="make all INCLUDEDIR=/lib/modules/${kernelver}/build/include").
 .TP
-.B $dkms_tree
-See the section on /etc/dkms/framework.conf for more information. This variable represents
-the location of the DKMS tree on the local system. By default this is
-.I /var/lib/dkms
-, but this value should not be hard\-coded into a dkms.conf in the event that the local user
-has changed it on their system.
-.TP
-.B $source_tree
-See the section on /etc/dkms/framework.conf for more information. This variable represents
-the location where DKMS keeps source on the local system. By default this is
-.I /usr/src
-, but this value should not be hard\-coded into a dkms.conf in the event that the local user
-has changed it on their system.
-.TP
 .B $kernel_source_dir
 This variable holds the value of the location of your kernel source directory. Usually, this
 will be
@@ -736,21 +722,39 @@ This configuration file controls how the overall DKMS framework handles. It is s
 in every time the dkms command is run. Mainly it can currently be used to set different
 default values for the variables.
 
+The file contains descriptions for each directive it supports.
+
 Additionally to /etc/dkms/framework.conf,
 .B any file matching the glob
 /etc/dkms/framework.conf.d/*.conf will be loaded as well.
 .TP
-.B $dkms_tree, $source_tree, $install_tree
-control where DKMS looks for its framework.
+.B $dkms_tree, $source_tree, $install_tree, $tmp_location
+Control which folders DKMS uses for components and artifacts.
+.TP
+.B $verbose
+Can be set to anything but a null value to enable verbose output in DKMS.
 .TP
 .B $symlink_modules
-controls whether binary modules are copied to /lib/modules or if only symlinks are created there. Note that these variables can also
+Controls whether binary modules are copied to /lib/modules or if only symlinks are created there. Note that these variables can also
 be manipulated on the command line with \-\-dkmstree, \-\-sourcetree, \-\-installtree
 and \-\-symlink-modules options.
 .TP
 .B $autoinstall_all_kernels
-used by the common postinst for DKMS modules. It controls if the build should be done for all installed kernels or only for the current and latest installed kernel. It has no command
+Used by the common postinst for DKMS modules. It controls if the build should be done for all installed kernels or only for the current and latest installed kernel. It has no command
 line equivalent.
+.TP
+.B $sign_file
+This is the path of the 
+.I sign-file
+kernel binary that is used to sign the kernel modules. The path for the binary depends on the distribution.
+.TP
+.B $mok_signing_key, $mok_certificate
+Location of the key and certificate files used for Secure boot.
+.I mok_signing_key
+can also be a "pkcs11:..." string for PKCS#11 engine, as long as the sign_file program supports it.
+.TP
+.B $modprobe_on_install
+Automatically load the built modules upon succesful installation.
 .SH dkms_autoinstaller
 This boot\-time service automatically installs any module which has
 .B AUTOINSTALL="yes"
@@ -760,9 +764,6 @@ file. The service works quite simply and if multiple versions of a module are in
 your system's DKMS tree, it will not do anything and instead explain that manual
 intervention is required.
 .SH AUTHOR
-Gary Lerhaupt
+Gary Lerhaupt, Emil Velikov, Simone Caronni, Xu Zhen
 .SH WEBPAGE
 .I https://github.com/dell/dkms
-.SH MAILING\-LIST
-dkms\-devel@dell.com
-.I http://lists.us.dell.com/mailman/listinfo/dkms\-devel
