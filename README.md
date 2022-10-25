@@ -111,6 +111,10 @@ mok_signing_key="/var/lib/shim-signed/mok/MOK.der"
 mok_certificate="/var/lib/shim-signed/mok/MOK.priv"
 ```
 
+The variable `mok_signing_key` can also be a `pkcs11:...` string for a [PKCS#11
+engine](https://www.rfc-editor.org/rfc/rfc7512), as long as the `sign_file`
+program supports it.
+
 Secure Boot
 --
 
