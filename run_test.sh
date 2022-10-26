@@ -16,6 +16,7 @@ export PATH
 # temporary files and directories created during tests
 TEST_TMPDIRS=(
     "/usr/src/dkms_test-1.0/"
+    "/tmp/dkms_test_dir_${KERNEL_VER}/"
 )
 TEST_TMPFILES=(
     "/tmp/dkms_test_private_key"
@@ -259,6 +260,18 @@ make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build 
 Cleaning build area...
 EOF
     rm /tmp/dkms_test_private_key
+
+    echo 'Building the test module with path contains variables in framework file'
+    mkdir "/tmp/dkms_test_dir_${KERNEL_VER}/"
+    cp test/framework/variables_in_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
+${SIGNING_MESSAGE}Cleaning build area...
+EOF
+    rm -r "/tmp/dkms_test_dir_${KERNEL_VER}/"
 
     rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 fi
