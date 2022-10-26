@@ -648,7 +648,7 @@ read_conf()
 # Source specified variables from dkms framework configuration files.
 read_framework_conf() {
     for i in /etc/dkms/framework.conf /etc/dkms/framework.conf.d/*.conf; do
-        [[ -e "${i}" ]] && safe_source "$i" "$@"
+        [[ -e "$i" ]] && safe_source "$i" "$@"
     done
 }
 
