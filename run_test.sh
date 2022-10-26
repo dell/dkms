@@ -16,9 +16,13 @@ export PATH
 # temporary files, directories, and modules created during tests
 TEST_MODULES=(
     "dkms_test"
+    "dkms_failing_test"
+    "dkms_dependencies_test"
 )
 TEST_TMPDIRS=(
     "/usr/src/dkms_test-1.0/"
+    "/usr/src/dkms_failing_test-1.0/"
+    "/usr/src/dkms_dependencies_test-1.0"
     "/tmp/dkms_test_dir_${KERNEL_VER}/"
 )
 TEST_TMPFILES=(
@@ -67,7 +71,7 @@ check_no_dkms_test() {
     for module in ${TEST_MODULES[@]}; do
         found_module="$(dkms_status_grep_dkms_module ${module})"
         if [[ -n "$found_module" ]] ; then
-            echo >&2 'Error: module dkms_test is still in DKMS tree' 
+            echo >&2 "Error: module ${module} is still in DKMS tree"
             exit 1
         fi
     done
@@ -217,7 +221,7 @@ case "${os_id}" in
 esac
 
 
-echo 'Preparing a clean environment'
+echo 'Checking that the environment is clean again'
 clean_dkms_env
 
 echo 'Test framework file hijacking'
@@ -616,6 +620,69 @@ rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
 echo 'Removing /usr/src/dkms_test-1.0'
 rm -r /usr/src/dkms_test-1.0
+
+echo 'Checking that the environment is clean again'
+clean_dkms_env
+
+echo 'Running autoinstall error testing'
+
+echo 'Adding failing test module by directory'
+run_with_expected_output dkms add test/dkms_failing_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_failing_test/1.0/source -> /usr/src/dkms_failing_test-1.0
+EOF
+echo 'Running autoinstall with failing test module (expected error)'
+run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
+
+Building module:
+Cleaning build area...(bad exit status: 2)
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} all...(bad exit status: 2)
+Error! Bad return status for module build on kernel: ${KERNEL_VER} ($(uname -m))
+Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
+Error! One or more modules failed to install during autoinstall.
+Refer to previous errors for more information.
+EOF
+
+echo 'Adding test module with dependencies on failing test module by directory'
+run_with_expected_output dkms add test/dkms_dependencies_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_dependencies_test/1.0/source -> /usr/src/dkms_dependencies_test-1.0
+EOF
+echo 'Running autoinstall with failing test module and test module with dependencies on the failing module (expected error)'
+run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
+
+Building module:
+Cleaning build area...(bad exit status: 2)
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} all...(bad exit status: 2)
+Error! Bad return status for module build on kernel: ${KERNEL_VER} ($(uname -m))
+Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
+dkms_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_failing_test
+Error! One or more modules failed to install during autoinstall.
+Refer to previous errors for more information.
+EOF
+
+echo 'Removing failing test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_failing_test -v 1.0 << EOF
+Module dkms_failing_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_failing_test 1.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Deleting module dkms_failing_test-1.0 completely from the DKMS tree.
+EOF
+echo 'Removing /usr/src/dkms_failing_test-1.0'
+rm -r /usr/src/dkms_failing_test-1.0
+
+echo 'Running autoinstall with test module with missing dependencies (expected error)'
+run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
+dkms_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_failing_test
+Error! One or more modules failed to install during autoinstall.
+Refer to previous errors for more information.
+EOF
+
+echo 'Removing test module with dependencies'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
+Module dkms_dependencies_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_dependencies_test 1.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Deleting module dkms_dependencies_test-1.0 completely from the DKMS tree.
+EOF
+echo 'Removing /usr/src/dkms_dependencies_test-1.0'
+rm -r /usr/src/dkms_dependencies_test-1.0
 
 echo 'Checking that the environment is clean'
 check_no_dkms_test
