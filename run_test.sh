@@ -16,8 +16,10 @@ export PATH
 if [ "$#" = 1 ] && [ "$1" = "--no-signing-tool" ]; then
     echo 'Ignore signing tool errors'
     NO_SIGNING_TOOL=1
+    SIGNING_MESSAGE=""
 else
     NO_SIGNING_TOOL=0
+    SIGNING_MESSAGE=$'Signing module /var/lib/dkms/dkms_test/1.0/build/dkms_test.ko\n'
 fi
 
 # Some helpers
@@ -71,8 +73,8 @@ run_with_expected_output() {
         sed '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' -i test_cmd_output.log
         if [[ "${NO_SIGNING_TOOL}" = "1" ]]; then
             sed "/^Binary .* not found, modules won't be signed$/d" -i test_cmd_output.log
-        else
-            sed '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' -i test_cmd_output.log
+            # Uncomment the following line to run this script with --no-signing-tool on platforms where the sign-file tool exists
+            # sed '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' -i test_cmd_output.log
         fi
         # OpenSSL non-critical errors while signing. Remove them to be more generic
         sed '/^At main.c:/d' -i test_cmd_output.log
@@ -180,7 +182,7 @@ run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EO
 Building module:
 Cleaning build area...
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
-Cleaning build area...
+${SIGNING_MESSAGE}Cleaning build area...
 EOF
 run_with_expected_output dkms_status_grep_dkms_test << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
@@ -200,7 +202,7 @@ run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --for
 Building module:
 Cleaning build area...
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
-Cleaning build area...
+${SIGNING_MESSAGE}Cleaning build area...
 EOF
 run_with_expected_output dkms_status_grep_dkms_test << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
@@ -266,6 +268,13 @@ version:        1.0
 description:    A Simple dkms test module
 license:        GPL
 EOF
+
+if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
+    echo 'Checking module signature'
+    run_with_expected_output sh -c "modinfo /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext} | grep ^sig_key | cut -f1 -d' '" << EOF
+sig_key:
+EOF
+fi
 
 echo 'Uninstalling the test module'
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
@@ -347,7 +356,7 @@ Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 Building module:
 Cleaning build area...
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
-Cleaning build area...
+${SIGNING_MESSAGE}Cleaning build area...
 
 dkms_test.ko${mod_compression_ext}:
 Running module version sanity check.
@@ -372,6 +381,13 @@ version:        1.0
 description:    A Simple dkms test module
 license:        GPL
 EOF
+
+if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
+    echo 'Checking module signature'
+    run_with_expected_output sh -c "modinfo /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext} | grep ^sig_key | cut -f1 -d' '" << EOF
+sig_key:
+EOF
+fi
 
 echo 'Removing the test module with --all'
 run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
@@ -403,7 +419,7 @@ Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 Building module:
 Cleaning build area...
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
-Cleaning build area...
+${SIGNING_MESSAGE}Cleaning build area...
 EOF
 run_with_expected_output dkms_status_grep_dkms_test << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
