@@ -113,70 +113,84 @@ run_status_with_expected_output() {
     fi
 }
 
+genericize_expected_output() {
+    local output_log=$1
+
+    # "depmod..." lines can have multiple points. Replace them, to be able to compare
+    sed 's/\([^.]\)\.\.\.\.*$/\1.../' -i ${output_log}
+    # On CentOS, weak-modules is executed. Drop it from the output, to be more generic
+    sed '/^Adding any weak-modules$/d' -i ${output_log}
+    sed '/^Removing any linked weak-modules$/d' -i ${output_log}
+    # "depmod..." lines are missing when uninstalling modules on CentOS. Remove them to be more generic
+    if [[ $# -ge 2 && "$2" =~ uninstall|unbuild|remove ]] ; then
+        sed '/^depmod\.\.\.$/d' -i ${output_log}
+    fi
+    # Signing related output. Drop it from the output, to be more generic
+    sed '/^Sign command:/d' -i ${output_log}
+    sed '/^Signing key:/d' -i ${output_log}
+    sed '/^Public certificate (MOK):/d' -i ${output_log}
+    sed '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' -i ${output_log}
+    sed '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' -i ${output_log}
+    if [[ "${NO_SIGNING_TOOL}" = "1" ]]; then
+        sed "/^Binary .* not found, modules won't be signed$/d" -i ${output_log}
+        # Uncomment the following line to run this script with --no-signing-tool on platforms where the sign-file tool exists
+        # sed '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' -i ${output_log}
+    fi
+    # OpenSSL non-critical errors while signing. Remove them to be more generic
+    sed '/^At main.c:/d' -i ${output_log}
+    sed '/^- SSL error:/d' -i ${output_log}
+}
+
 run_with_expected_output() {
-    cat > test_cmd_expected_output.log
-    if "$@" > test_cmd_output.log 2>&1 ; then
-        # "depmod..." lines can have multiple points. Replace them, to be able to compare
-        sed 's/\([^.]\)\.\.\.\.*$/\1.../' -i test_cmd_output.log
-        # On CentOS, weak-modules is executed. Drop it from the output, to be more generic
-        sed '/^Adding any weak-modules$/d' -i test_cmd_output.log
-        sed '/^Removing any linked weak-modules$/d' -i test_cmd_output.log
-        # "depmod..." lines are missing when uninstalling modules on CentOS. Remove them to be more generic
-        if [[ $# -ge 2 && "$2" =~ uninstall|unbuild|remove ]] ; then
-            sed '/^depmod\.\.\.$/d' -i test_cmd_output.log
-        fi
-        # Signing related output. Drop it from the output, to be more generic
-        sed '/^Sign command:/d' -i test_cmd_output.log
-        sed '/^Signing key:/d' -i test_cmd_output.log
-        sed '/^Public certificate (MOK):/d' -i test_cmd_output.log
-        sed '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' -i test_cmd_output.log
-        sed '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' -i test_cmd_output.log
-        if [[ "${NO_SIGNING_TOOL}" = "1" ]]; then
-            sed "/^Binary .* not found, modules won't be signed$/d" -i test_cmd_output.log
-            # Uncomment the following line to run this script with --no-signing-tool on platforms where the sign-file tool exists
-            # sed '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' -i test_cmd_output.log
-        fi
-        # OpenSSL non-critical errors while signing. Remove them to be more generic
-        sed '/^At main.c:/d' -i test_cmd_output.log
-        sed '/^- SSL error:/d' -i test_cmd_output.log
-        if ! diff -U3 test_cmd_expected_output.log test_cmd_output.log ; then
+    local dkms_command="$2"
+    local output_log=test_cmd_output.log
+    local expected_output_log=test_cmd_expected_output.log
+
+    cat > ${expected_output_log}
+    if "$@" > ${output_log} 2>&1 ; then
+        genericize_expected_output ${output_log} ${dkms_command}
+        if ! diff -U3 ${expected_output_log} ${output_log} ; then
             echo >&2 "Error: unexpected output from: $*"
             return 1
         fi
-        rm test_cmd_expected_output.log test_cmd_output.log
+        rm ${expected_output_log} ${output_log}
     else
         echo "Error: command '$*' returned status $?"
-        cat test_cmd_output.log
-        rm test_cmd_expected_output.log test_cmd_output.log
+        cat ${output_log}
+        rm ${expected_output_log} ${output_log}
         return 1
     fi
 }
 
 run_with_expected_error() {
     local expected_error_code="$1"
+    local dkms_command="$2"
+    local output_log=test_cmd_output.log
+    local expected_output_log=test_cmd_expected_output.log
     local error_code
 
     shift
-    cat > test_cmd_expected_output.log
-    if "$@" > test_cmd_output.log 2>&1 ; then
+    cat > ${expected_output_log}
+    if "$@" > ${output_log} 2>&1 ; then
         echo "Error: command '$*' was successful"
-        cat test_cmd_output.log
-        rm test_cmd_expected_output.log test_cmd_output.log
+        cat ${output_log}
+        rm ${expected_output_log} ${output_log}
         return 1
     else
         error_code=$?
     fi
     if [[ "${error_code}" != "${expected_error_code}" ]] ; then
         echo "Error: command '$*' returned status ${error_code} instead of expected ${expected_error_code}"
-        cat test_cmd_output.log
-        rm test_cmd_expected_output.log test_cmd_output.log
+        cat ${output_log}
+        rm ${expected_output_log} ${output_log}
         return 1
     fi
-    if ! diff -U3 test_cmd_expected_output.log test_cmd_output.log ; then
+    genericize_expected_output ${output_log} ${dkms_command}
+    if ! diff -U3 ${expected_output_log} ${output_log} ; then
         echo >&2 "Error: unexpected output from: $*"
         return 1
     fi
-    rm test_cmd_expected_output.log test_cmd_output.log
+    rm ${expected_output_log} ${output_log}
 }
 
 # Compute the expected destination module location
