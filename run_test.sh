@@ -37,6 +37,7 @@ clean_dkms_env() {
     if [[ -d /usr/src/dkms_test-1.0 ]] ; then
         rm -rf /usr/src/dkms_test-1.0
     fi
+    rm -f /etc/dkms/framework.conf.d/dkms_test_framework.conf
 }
 
 check_no_dkms_test() {
@@ -49,6 +50,10 @@ check_no_dkms_test() {
     fi
     if [[ -d /usr/src/dkms_test-1.0 ]] ; then
         echo >&2 'Error: directory /usr/src/dkms_test-1.0 still exists'
+        exit 1
+    fi
+    if [[ -f /etc/dkms/framework.conf.d/dkms_test_framework.conf ]] ; then
+        echo >&2 "Error: file /etc/dkms/framework.conf.d/dkms_test_framework.conf still exists"
         exit 1
     fi
 }
@@ -145,6 +150,13 @@ esac
 
 echo 'Preparing a clean environment'
 clean_dkms_env
+
+echo 'Test framework file hijacking'
+mkdir -p /etc/dkms/framework.conf.d/
+cp test/framework/hijacking.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+run_with_expected_output dkms status -m dkms_test << EOF
+EOF
+rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
 echo 'Adding the test module by version (expected error)'
 run_with_expected_error 2 dkms add -m dkms_test -v 1.0 << EOF

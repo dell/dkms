@@ -39,6 +39,12 @@ readonly dkms_conf_variables="CLEAN PACKAGE_NAME
    REMAKE_INITRD MODULES_CONF MODULES_CONF_OBSOLETES
    MODULES_CONF_ALIAS_TYPE MODULES_CONF_OBSOLETE_ONLY"
 
+# All of the variables we will accept from framework.conf.
+readonly dkms_framework_variables="source_tree dkms_tree install_tree tmp_location
+   verbose symlink_modules autoinstall_all_kernels
+   sign_file mok_signing_key mok_certificate
+   modprobe_on_install"
+
 # Some important regular expressions. Requires bash 3 or above.
 # Any poor souls still running bash 2 or older really need an upgrade.
 readonly mv_re='^([^/]*)/(.*)$'
@@ -2216,7 +2222,7 @@ weak_modules="${WEAK_MODULES_BIN}"
 
 # Source in configuration
 for i in /etc/dkms/framework.conf /etc/dkms/framework.conf.d/*.conf; do
-    [[ -e "${i}" ]] && . "$i" >/dev/null
+    [[ -e "${i}" ]] && safe_source "$i" $dkms_framework_variables >/dev/null
 done
 
 
