@@ -13,6 +13,17 @@ echo "Using kernel ${KERNEL_VER}"
 PATH="$(pwd):$PATH"
 export PATH
 
+# temporary files and directories created during tests
+TEST_TMPDIRS=(
+    "/usr/src/dkms_test-1.0/"
+)
+TEST_TMPFILES=(
+    "/tmp/dkms_test_private_key"
+    "/etc/dkms/framework.conf.d/dkms_test_framework.conf"
+    "test_cmd_output.log"
+    "test_cmd_expected_output.log"
+)
+
 if [ "$#" = 1 ] && [ "$1" = "--no-signing-tool" ]; then
     echo 'Ignore signing tool errors'
     NO_SIGNING_TOOL=1
@@ -34,10 +45,12 @@ clean_dkms_env() {
     if [[ -n "$found_moule" ]] ; then
         dkms remove dkms_test/1.0 >/dev/null
     fi
-    if [[ -d /usr/src/dkms_test-1.0 ]] ; then
-        rm -rf /usr/src/dkms_test-1.0
-    fi
-    rm -f /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    for dir in "${TEST_TMPDIRS[@]}"; do
+        rm -rf "$dir"
+    done
+    for file in "${TEST_TMPFILES[@]}"; do
+        rm -f "$file"
+    done
 }
 
 check_no_dkms_test() {
@@ -48,14 +61,18 @@ check_no_dkms_test() {
         echo >&2 'Error: module dkms_test is still in DKMS tree' 
         exit 1
     fi
-    if [[ -d /usr/src/dkms_test-1.0 ]] ; then
-        echo >&2 'Error: directory /usr/src/dkms_test-1.0 still exists'
-        exit 1
-    fi
-    if [[ -f /etc/dkms/framework.conf.d/dkms_test_framework.conf ]] ; then
-        echo >&2 "Error: file /etc/dkms/framework.conf.d/dkms_test_framework.conf still exists"
-        exit 1
-    fi
+    for dir in "${TEST_TMPDIRS[@]}"; do
+        if [[ -d "$dir" ]]; then
+            echo >&2 "Error: directory ${dir} still exists"
+            exit 1
+        fi
+    done
+    for file in "${TEST_TMPFILES[@]}"; do
+        if [[ -f "$file" ]]; then
+            echo >&2 "Error: file ${file} still exists"
+            exit 1
+        fi
+    done
 }
 
 run_with_expected_output() {
@@ -207,6 +224,44 @@ EOF
 run_with_expected_output dkms_status_grep_dkms_test << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
 EOF
+
+if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
+    echo 'Building the test module with bad sign_file path in framework file'
+    cp test/framework/bad_sign_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+Binary /no/such/file not found, modules won't be signed
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
+Cleaning build area...
+EOF
+
+    echo 'Building the test module with bad mok_signing_key path in framework file'
+    cp test/framework/bad_key_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+Key file /no/such/path.key not found and can't be generated, modules won't be signed
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
+Cleaning build area...
+EOF
+
+    echo 'Building the test module with bad mok_certificate path in framework file'
+    cp test/framework/bad_cert_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+Certificate file /no/such/path.crt not found and can't be generated, modules won't be signed
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
+Cleaning build area...
+EOF
+    rm /tmp/dkms_test_private_key
+
+    rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
+fi
 
 echo 'Building the test module again by force'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
