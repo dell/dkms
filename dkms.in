@@ -928,6 +928,15 @@ prepare_signing()
         openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS module signing key" \
             -newkey rsa:2048 -keyout "$mok_signing_key" \
             -outform DER -out "$mok_certificate" > /dev/null 2>&1
+        if [ ! -f "${mok_signing_key}" ]; then
+            echo "Key file ${mok_signing_key} not found and can't be generated, modules won't be signed"
+            return
+        fi
+    fi
+
+    if [ ! -f "${mok_certificate}" ]; then
+        echo "Certificate file ${mok_certificate} not found and can't be generated, modules won't be signed"
+        return
     fi
 
     do_signing=1
