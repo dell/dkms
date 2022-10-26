@@ -105,6 +105,53 @@ get_newest_kernel() {
     echo $NEWEST_KERNEL
 }
 
+# Grab distro information from os-release.
+# Falls back to LSB for compliant distros.
+# Copied from dkms.in
+distro_version()
+{
+    if [[ -r /etc/os-release ]]; then
+        . /etc/os-release
+        if [[ "$ID" = "ubuntu" ]]; then
+            # ID_LIKE=debian in ubuntu
+            echo $ID
+        elif [[ ${#ID_LIKE[@]} != 0 ]]; then
+            echo ${ID_LIKE[0]}
+        else
+            echo $ID
+        fi
+        return
+    fi
+
+    local DISTRIB_ID
+
+    # Try the LSB-provided strings first
+    if [ -r /etc/lsb-release ]; then
+        . /etc/lsb-release
+    elif type lsb_release >/dev/null 2>&1; then
+        DISTRIB_ID=$(lsb_release -i -s)
+    fi
+
+    case ${DISTRIB_ID} in
+        Fedora)
+            echo fedora
+            ;;
+        RedHatEnterprise*|CentOS|ScientificSL)
+            echo rhel
+            ;;
+        SUSE*)
+            echo sles
+            ;;
+        *)
+            if [[ ${DISTRIB_ID} ]]; then
+                echo "${DISTRIB_ID}"
+            else
+                echo unknown
+            fi
+            ;;
+    esac
+}
+
 NAME=$1
 VERSION=$2
 TARBALL_ROOT=$3
@@ -129,6 +176,8 @@ fi
 
 KERNELS=$(ls /lib/modules/ 2>/dev/null || true)
 CURRENT_KERNEL=$(uname -r)
+
+running_distribution="$(distro_version)"
 
 #We never want to keep an older version side by side to prevent conflicts
 if [ -e "/var/lib/dkms/$NAME/$VERSION" ]; then
@@ -201,7 +250,8 @@ echo "Building for $KERNELS" | tr '\n' ',' \
     | sed -e 's/,/, /g; s/, $/\n/; s/, \([^,]\+\)$/ and \1/'
 
 if [ -n "$ARCH" ]; then
-    if which lsb_release >/dev/null && [ $(lsb_release -s -i) = "Ubuntu" ]; then
+    case "$running_distribution" in
+    ubuntu*)
         case $ARCH in
             amd64)
                 ARCH="x86_64"
@@ -210,7 +260,10 @@ if [ -n "$ARCH" ]; then
                 ARCH="i686"
                 ;;
         esac
-    fi
+        ;;
+    *)
+        ;;
+    esac
     echo "Building for architecture $ARCH"
     ARCH="-a $ARCH"
 fi
