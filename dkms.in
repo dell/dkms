@@ -875,10 +875,10 @@ prepare_signing()
                     sign_file="/usr/src/linux-headers-$kernelver/scripts/sign-file"
                 fi
                 ;;
-            * )
-                sign_file="/lib/modules/$kernelver/build/scripts/sign-file"
-                ;;
         esac
+        if [[ ! -f "${sign_file}" ]]; then
+            sign_file="/lib/modules/$kernelver/build/scripts/sign-file"
+        fi
     fi
     echo "Sign command: $sign_file"
 
