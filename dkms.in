@@ -39,11 +39,12 @@ readonly dkms_conf_variables="CLEAN PACKAGE_NAME
    REMAKE_INITRD MODULES_CONF MODULES_CONF_OBSOLETES
    MODULES_CONF_ALIAS_TYPE MODULES_CONF_OBSOLETE_ONLY"
 
-# All of the variables we will accept from framework.conf.
-readonly dkms_framework_variables="source_tree dkms_tree install_tree tmp_location
+# All of the variables not related to signing we will accept from framework.conf.
+readonly dkms_framework_nonsigning_variables="source_tree dkms_tree install_tree tmp_location
    verbose symlink_modules autoinstall_all_kernels
-   sign_file mok_signing_key mok_certificate
    modprobe_on_install"
+# All of the signing related variables we will accept from framework.conf.
+readonly dkms_framework_signing_variables="sign_file mok_signing_key mok_certificate"
 
 # Some important regular expressions. Requires bash 3 or above.
 # Any poor souls still running bash 2 or older really need an upgrade.
@@ -644,6 +645,13 @@ read_conf()
     return $return_value
 }
 
+# Source specified variables from dkms framework configuration files.
+read_framework_conf() {
+    for i in /etc/dkms/framework.conf /etc/dkms/framework.conf.d/*.conf; do
+        [[ -e "${i}" ]] && safe_source "$i" "$@"
+    done
+}
+
 # Little helper function for parsing the output of modinfo.
 get_module_verinfo(){
     res=("" "" "")
@@ -864,6 +872,9 @@ prepare_kernel()
 
 prepare_signing()
 {
+   # Lazy source in signing related configuration
+   read_framework_conf $dkms_framework_signing_variables
+
     if [ ! "${sign_file}" ]; then
         case "$running_distribution" in
             debian* )
@@ -1043,7 +1054,7 @@ actual_build()
 
         if [ -n "${do_signing}" ]; then
             echo "Signing module $built_module"
-            eval '"$sign_file" sha512 "$mok_signing_key" "$mok_certificate" "$built_module"'
+            "$sign_file" sha512 "$mok_signing_key" "$mok_certificate" "$built_module"
         fi
 
         if [ "$module_compressed_suffix" = ".gz" ]; then
@@ -2229,10 +2240,8 @@ addon_modules_dir="${ADDON_MODULES_DIR}"
 [[ ! ${addon_modules_dir} ]] && running_distribution="$(distro_version)"
 weak_modules="${WEAK_MODULES_BIN}"
 
-# Source in configuration
-for i in /etc/dkms/framework.conf /etc/dkms/framework.conf.d/*.conf; do
-    [[ -e "${i}" ]] && safe_source "$i" $dkms_framework_variables >/dev/null
-done
+# Source in configuration not related to signing
+read_framework_conf $dkms_framework_nonsigning_variables
 
 
 # Clear out command line argument variables

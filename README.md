@@ -111,6 +111,12 @@ mok_signing_key="/var/lib/shim-signed/mok/MOK.der"
 mok_certificate="/var/lib/shim-signed/mok/MOK.priv"
 ```
 
+The paths specified in `mok_signing_key`, `mok_certificate` and `sign_file` can
+use the variable `${kernelver}` to represent the target kernel version. 
+```
+sign_file="/lib/modules/${kernelver}/build/scripts/sign-file"
+```
+
 The variable `mok_signing_key` can also be a `pkcs11:...` string for a [PKCS#11
 engine](https://www.rfc-editor.org/rfc/rfc7512), as long as the `sign_file`
 program supports it.
