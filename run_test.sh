@@ -20,6 +20,7 @@ TEST_TMPDIRS=(
 )
 TEST_TMPFILES=(
     "/tmp/dkms_test_private_key"
+    "/tmp/dkms_test_certificate"
     "/etc/dkms/framework.conf.d/dkms_test_framework.conf"
     "test_cmd_output.log"
     "test_cmd_expected_output.log"
@@ -74,6 +75,16 @@ check_no_dkms_test() {
             exit 1
         fi
     done
+}
+
+cert_serial() {
+    local ver="$(openssl version)"
+    # Some systems in CI test are still using ancient versions of openssl program.
+    if [[ "$ver" = "OpenSSL 1.0."* ]] || [[ "$ver" = "OpenSSL 0."* ]]; then
+        openssl x509 -text -inform DER -in "$1" -noout | grep -A 1 'X509v3 Subject Key Identifier' | tail -n 1 | tr 'a-z' 'A-Z' | tr -d ' :'
+    else
+        openssl x509 -serial -inform DER -in "$1" -noout | tr 'a-z' 'A-Z' | sed 's/^SERIAL=//'
+    fi
 }
 
 run_with_expected_output() {
@@ -276,6 +287,8 @@ EOF
     rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 fi
 
+cp test/framework/temp_key_cert.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+
 echo 'Building the test module again by force'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
 
@@ -288,6 +301,10 @@ run_with_expected_output dkms_status_grep_dkms_test << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
 EOF
 
+if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
+    echo 'Extracting serial number from the certificate'
+    MODULE_SERIAL="$(cert_serial /tmp/dkms_test_certificate)"
+fi
 
 echo 'Installing the test module'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
@@ -351,9 +368,18 @@ EOF
 
 if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
     echo 'Checking module signature'
-    run_with_expected_output sh -c "modinfo /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext} | grep ^sig_key | cut -f1 -d' '" << EOF
+    SIG_KEY="$(modinfo "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" | grep '^sig_key:')"
+    run_with_expected_output sh -c "echo '${SIG_KEY}' | cut -f1 -d' '" << EOF
 sig_key:
 EOF
+    if [[ "${SIG_KEY// /}" = "sig_key:" ]]; then
+        # kmod may not be linked with openssl and thus can't extract the key from module
+        echo "Warning: module was signed but the key is unknown"
+    else
+        run_with_expected_output sh -c "echo '${SIG_KEY}' | tr -d ' :'" << EOF
+sig_key${MODULE_SERIAL}
+EOF
+    fi
 fi
 
 echo 'Uninstalling the test module'
@@ -464,9 +490,18 @@ EOF
 
 if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
     echo 'Checking module signature'
-    run_with_expected_output sh -c "modinfo /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext} | grep ^sig_key | cut -f1 -d' '" << EOF
+    SIG_KEY="$(modinfo "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" | grep '^sig_key:')"
+    run_with_expected_output sh -c "echo '${SIG_KEY}' | cut -f1 -d' '" << EOF
 sig_key:
 EOF
+    if [[ "${SIG_KEY// /}" = "sig_key:" ]]; then
+        # kmod may not be linked with openssl and thus can't extract the key from module
+        echo "Warning: module was signed but the key is unknown"
+    else
+        run_with_expected_output sh -c "echo '${SIG_KEY}' | tr -d ' :'" << EOF
+sig_key${MODULE_SERIAL}
+EOF
+    fi
 fi
 
 echo 'Removing the test module with --all'
@@ -532,6 +567,12 @@ Deleting module dkms_test-1.0 completely from the DKMS tree.
 EOF
 run_with_expected_output dkms_status_grep_dkms_test << EOF
 EOF
+
+echo 'Removing temporary files'
+if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
+    rm /tmp/dkms_test_private_key /tmp/dkms_test_certificate
+fi
+rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
 echo 'Removing /usr/src/dkms_test-1.0'
 rm -r /usr/src/dkms_test-1.0
