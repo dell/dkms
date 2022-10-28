@@ -21,6 +21,7 @@ TEST_TMPDIRS=(
 TEST_TMPFILES=(
     "/tmp/dkms_test_private_key"
     "/tmp/dkms_test_certificate"
+    "/tmp/dkms_test_kconfig"
     "/etc/dkms/framework.conf.d/dkms_test_framework.conf"
     "test_cmd_output.log"
     "test_cmd_expected_output.log"
@@ -283,6 +284,32 @@ make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build 
 ${SIGNING_MESSAGE}Cleaning build area...
 EOF
     rm -r "/tmp/dkms_test_dir_${KERNEL_VER}/"
+
+    BUILT_MODULE_PATH="/var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/$(uname -m)/module/dkms_test.ko${mod_compression_ext}"
+    # If sig_key can't be extracted from module, the hash algorithm is also unknown
+    # sig_hashalgo itself may show bogus value if kmod version < 26
+    if [[ "$(modinfo "${BUILT_MODULE_PATH}" | grep '^sig_key:' | tr -d ' ')" != "sig_key:" ]]; then
+        echo 'Building the test module using a different hash algorithm'
+        cp test/framework/temp_key_cert.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+        CURRENT_HASH="$(modinfo "${BUILT_MODULE_PATH}" | grep '^sig_hashalgo:' | sed 's/sig_hashalgo: *//')"
+        if [[ "${CURRENT_HASH}" == "sha512" ]]; then
+            ALTER_HASH="sha256"
+        else
+            ALTER_HASH="sha512"
+        fi
+        echo "CONFIG_MODULE_SIG_HASH=\"${ALTER_HASH}\"" > /tmp/dkms_test_kconfig
+        run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --config /tmp/dkms_test_kconfig --force << EOF
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
+${SIGNING_MESSAGE}Cleaning build area...
+EOF
+        run_with_expected_output sh -c "modinfo '${BUILT_MODULE_PATH}' | grep '^sig_hashalgo:' | tr -d ' '" << EOF
+sig_hashalgo:${ALTER_HASH}
+EOF
+        rm /tmp/dkms_test_kconfig
+    fi
 
     rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 fi

@@ -953,6 +953,14 @@ prepare_signing()
         return
     fi
 
+    if [[ -f "${kernel_config}" ]]; then
+        sign_hash="$(grep "^CONFIG_MODULE_SIG_HASH=" "${kernel_config}" | sed 's/CONFIG_MODULE_SIG_HASH=//;s/"//g')"
+        # The kernel may be built without module signing facility. CONFIG_MODULE_SIG_HASH is unset in kconfig
+        sign_hash="${sign_hash:-sha512}"
+    else
+        sign_hash="sha512"
+    fi
+
     do_signing=1
 }
 
@@ -1057,7 +1065,7 @@ actual_build()
 
         if [ -n "${do_signing}" ]; then
             echo "Signing module $built_module"
-            "$sign_file" sha512 "$mok_signing_key" "$mok_certificate" "$built_module"
+            "$sign_file" "$sign_hash" "$mok_signing_key" "$mok_certificate" "$built_module"
         fi
 
         if [ "$module_compressed_suffix" = ".gz" ]; then
