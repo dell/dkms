@@ -143,6 +143,8 @@ genericize_expected_output() {
     # OpenSSL non-critical errors while signing. Remove them to be more generic
     sed '/^At main.c:/d' -i ${output_log}
     sed '/^- SSL error:/d' -i ${output_log}
+    # Apport related error that can occur in the CI. Drop from the output to be more generic
+    sed "/^python3: can't open file '\/usr\/share\/apport\/package-hooks\/dkms_packages.py'\: \[Errno 2\] No such file or directory$/d" -i ${output_log}
 }
 
 run_with_expected_output() {
