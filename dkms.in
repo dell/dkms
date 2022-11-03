@@ -1468,7 +1468,7 @@ do_uninstall()
                 dir_to_remove="${dir_to_remove#/}"
             done
             # dir_to_remove may be an empty string
-            if [[ -d "$dir_to_remove" ]]; then
+            if [[ "$dir_to_remove" ]]; then
                 (if cd "$install_tree/$1"; then rpm -qf "${dir_to_remove}" >/dev/null 2>&1 || rmdir -p --ignore-fail-on-non-empty "${dir_to_remove}"; fi || true)
             fi
             echo $" - Original module"
