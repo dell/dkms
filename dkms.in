@@ -1198,6 +1198,7 @@ do_install()
 
     # Save the original_module if one exists, none have been saved before, and this is the first module for this kernel
     local lib_tree="$install_tree/$kernelver"
+    local any_module_installed
     local count
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
         echo $""
@@ -1285,8 +1286,13 @@ do_install()
         [[ $symlink_modules ]] && symlink="-s"
         local toinstall=$(compressed_or_uncompressed "$base_dir/module" "$m")
         cp -f $symlink "$toinstall" "$install_tree/$kernelver${dest_module_location[$count]}/${toinstall##*/}"
+        any_module_installed=1
 
     done
+
+    if [[ ! "${any_module_installed}" ]]; then
+        die 6 $"Installation aborted."
+    fi
 
     # Create the kernel-<kernelver> symlink to designate this version as active
     rm -f "$dkms_tree/$module/kernel-$kernelver-$arch" 2>/dev/null
