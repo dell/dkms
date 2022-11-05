@@ -59,6 +59,8 @@ clean_dkms_env() {
         if [[ -n "$found_module" ]] ; then
             dkms remove ${module}/1.0 >/dev/null
         fi
+        rm -rf "/var/lib/dkms/${module}/"
+        rm -f "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/${module}.ko${mod_compression_ext}"
     done
     for dir in "${TEST_TMPDIRS[@]}"; do
         rm -rf "$dir"
@@ -75,6 +77,14 @@ check_no_dkms_test() {
         found_module="$(dkms_status_grep_dkms_module ${module})"
         if [[ -n "$found_module" ]] ; then
             echo >&2 "Error: module ${module} is still in DKMS tree"
+            exit 1
+        fi
+        if [[ -d "/var/lib/dkms/${module}" ]]; then
+            echo >&2 "Error: directory /var/lib/dkms/${module} still exists"
+            exit 1
+        fi
+        if [[ -f "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/${module}.ko${mod_compression_ext}" ]]; then
+            echo >&2 "Error: file /lib/modules/${KERNEL_VER}/${expected_dest_loc}/${module}.ko${mod_compression_ext} still exists"
             exit 1
         fi
     done
