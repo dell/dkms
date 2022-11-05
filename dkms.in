@@ -901,8 +901,8 @@ prepare_kernel()
 
 prepare_signing()
 {
-   # Lazy source in signing related configuration
-   read_framework_conf $dkms_framework_signing_variables
+    # Lazy source in signing related configuration
+    read_framework_conf $dkms_framework_signing_variables
 
     if [ ! "${sign_file}" ]; then
         case "$running_distribution" in
@@ -1200,91 +1200,91 @@ do_install()
     local lib_tree="$install_tree/$kernelver"
     local count
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
-    echo $""
-    echo $"${dest_module_name[$count]}$module_suffix:"
-    # Check this version against what is already in the kernel
-    check_version_sanity "$kernelver" "$arch" "$obsolete_by" "${dest_module_name[$count]}" || continue
+        echo $""
+        echo $"${dest_module_name[$count]}$module_suffix:"
+        # Check this version against what is already in the kernel
+        check_version_sanity "$kernelver" "$arch" "$obsolete_by" "${dest_module_name[$count]}" || continue
 
-    if ((count == 0)) && ! run_build_script pre_install "$pre_install" && ! [[ $force ]]; then
-        die 101 $"pre_install failed, aborting install." \
-            $"You may override by specifying --force."
-    fi
-    local m=${dest_module_name[$count]}
-    local installed_modules=$(find_module "$lib_tree" "$m")
-    local module_count=${#installed_modules[@]}
-    echo $" - Original module"
-    local original_copy=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$kernelver/$arch" "$m")
-    if [[ -L $dkms_tree/$module/kernel-$kernelver-$arch &&
-        -n "$original_copy" ]]; then
-        echo $"   - An original module was already stored during a previous install"
-    elif ! [[ -L $dkms_tree/$module/kernel-$kernelver-$arch ]]; then
-        local archive_pref1=$(compressed_or_uncompressed "$lib_tree/extra" "$m")
-        local archive_pref2=$(compressed_or_uncompressed "$lib_tree/updates" "$m")
-        local archive_pref3=$(compressed_or_uncompressed "$lib_tree${dest_module_location[$count]}" "$m")
-        local archive_pref4=""
-        ((module_count == 1)) && archive_pref4=${installed_modules[0]}
-        local original_module=""
-        local found_orginal=""
-        for original_module in $archive_pref1 $archive_pref2 $archive_pref3 $archive_pref4; do
-            [[ -f $original_module ]] || continue
-            case "$running_distribution" in
-                debian* | ubuntu* )
-                    ;;
-                *)
-                echo $"   - Found $original_module"
-                echo $"   - Storing in $dkms_tree/$module/original_module/$kernelver/$arch/"
-                echo $"   - Archiving for uninstallation purposes"
-                mkdir -p "$dkms_tree/$module/original_module/$kernelver/$arch"
-                mv -f "$original_module" "$dkms_tree/$module/original_module/$kernelver/$arch/"
-                ;;
-            esac
-            found_original="yes"
-            break
-        done
-        if [[ ! $found_original ]] && ((module_count > 1)); then
-            echo $"   - Multiple original modules exist but DKMS does not know which to pick"
-            echo $"   - Due to the confusion, none will be considered during a later uninstall"
-        elif [[ ! $found_original ]]; then
-            echo $"   - No original module exists within this kernel"
+        if ((count == 0)) && ! run_build_script pre_install "$pre_install" && ! [[ $force ]]; then
+            die 101 $"pre_install failed, aborting install." \
+                $"You may override by specifying --force."
         fi
-    else
-        echo $"   - This kernel never originally had a module by this name"
-    fi
+        local m=${dest_module_name[$count]}
+        local installed_modules=$(find_module "$lib_tree" "$m")
+        local module_count=${#installed_modules[@]}
+        echo $" - Original module"
+        local original_copy=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$kernelver/$arch" "$m")
+        if [[ -L $dkms_tree/$module/kernel-$kernelver-$arch &&
+            -n "$original_copy" ]]; then
+            echo $"   - An original module was already stored during a previous install"
+        elif ! [[ -L $dkms_tree/$module/kernel-$kernelver-$arch ]]; then
+            local archive_pref1=$(compressed_or_uncompressed "$lib_tree/extra" "$m")
+            local archive_pref2=$(compressed_or_uncompressed "$lib_tree/updates" "$m")
+            local archive_pref3=$(compressed_or_uncompressed "$lib_tree${dest_module_location[$count]}" "$m")
+            local archive_pref4=""
+            ((module_count == 1)) && archive_pref4=${installed_modules[0]}
+            local original_module=""
+            local found_orginal=""
+            for original_module in $archive_pref1 $archive_pref2 $archive_pref3 $archive_pref4; do
+                [[ -f $original_module ]] || continue
+                case "$running_distribution" in
+                    debian* | ubuntu* )
+                        ;;
+                    *)
+                        echo $"   - Found $original_module"
+                        echo $"   - Storing in $dkms_tree/$module/original_module/$kernelver/$arch/"
+                        echo $"   - Archiving for uninstallation purposes"
+                        mkdir -p "$dkms_tree/$module/original_module/$kernelver/$arch"
+                        mv -f "$original_module" "$dkms_tree/$module/original_module/$kernelver/$arch/"
+                        ;;
+                esac
+                found_original="yes"
+                break
+            done
+            if [[ ! $found_original ]] && ((module_count > 1)); then
+                echo $"   - Multiple original modules exist but DKMS does not know which to pick"
+                echo $"   - Due to the confusion, none will be considered during a later uninstall"
+            elif [[ ! $found_original ]]; then
+                echo $"   - No original module exists within this kernel"
+            fi
+        else
+            echo $"   - This kernel never originally had a module by this name"
+        fi
 
-    if ((module_count > 1)); then
-        echo $" - Multiple same named modules!"
-        echo $"   - $module_count named $m$module_suffix in $lib_tree/"
-        case "$running_distribution" in
-            debian* | ubuntu* )
-                ;;
-            *)
-                echo $"   - All instances of this module will now be stored for reference purposes ONLY"
-                echo $"   - Storing in $dkms_tree/$module/original_module/$kernelver/$arch/collisions/"
-                ;;
-        esac
-        for module_dup in $(find_module "$lib_tree" "$m"); do
-            dup_tree="${module_dup#$lib_tree}";
-            dup_name="${module_dup##*/}"
-            dup_tree="${dup_tree/${dup_name}}"
+        if ((module_count > 1)); then
+            echo $" - Multiple same named modules!"
+            echo $"   - $module_count named $m$module_suffix in $lib_tree/"
             case "$running_distribution" in
                 debian* | ubuntu* )
                     ;;
                 *)
-                   echo $"     - Stored $module_dup"
-                   mkdir -p "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
-                   mv -f $module_dup "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
-                   ;;
+                    echo $"   - All instances of this module will now be stored for reference purposes ONLY"
+                    echo $"   - Storing in $dkms_tree/$module/original_module/$kernelver/$arch/collisions/"
+                    ;;
             esac
-        done
-    fi
+            for module_dup in $(find_module "$lib_tree" "$m"); do
+                dup_tree="${module_dup#$lib_tree}";
+                dup_name="${module_dup##*/}"
+                dup_tree="${dup_tree/${dup_name}}"
+                case "$running_distribution" in
+                    debian* | ubuntu* )
+                        ;;
+                    *)
+                       echo $"     - Stored $module_dup"
+                       mkdir -p "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
+                       mv -f $module_dup "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
+                       ;;
+                esac
+            done
+        fi
 
-    # Copy module to its location
-    echo $" - Installation"
-    echo $"   - Installing to $install_tree/$kernelver${dest_module_location[$count]}/"
-    mkdir -p $install_tree/$kernelver${dest_module_location[$count]}
-    [[ $symlink_modules ]] && symlink="-s"
-    local toinstall=$(compressed_or_uncompressed "$base_dir/module" "$m")
-    cp -f $symlink "$toinstall" "$install_tree/$kernelver${dest_module_location[$count]}/${toinstall##*/}"
+        # Copy module to its location
+        echo $" - Installation"
+        echo $"   - Installing to $install_tree/$kernelver${dest_module_location[$count]}/"
+        mkdir -p $install_tree/$kernelver${dest_module_location[$count]}
+        [[ $symlink_modules ]] && symlink="-s"
+        local toinstall=$(compressed_or_uncompressed "$base_dir/module" "$m")
+        cp -f $symlink "$toinstall" "$install_tree/$kernelver${dest_module_location[$count]}/${toinstall##*/}"
 
     done
 
@@ -1307,7 +1307,7 @@ do_install()
         do_uninstall "$kernelver" "$arch"
         die 6 $"Problems with depmod detected. Automatically uninstalling this module." \
             $"Install Failed (depmod problems). Module rolled back to built state."
-            exit 6
+        exit 6
     }
 
     if [[ $modprobe_on_install ]]; then
