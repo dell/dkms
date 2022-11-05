@@ -18,11 +18,14 @@ TEST_MODULES=(
     "dkms_test"
     "dkms_failing_test"
     "dkms_dependencies_test"
+    "dkms_multiver_test"
 )
 TEST_TMPDIRS=(
     "/usr/src/dkms_test-1.0/"
     "/usr/src/dkms_failing_test-1.0/"
     "/usr/src/dkms_dependencies_test-1.0"
+    "/usr/src/dkms_multiver_test-1.0"
+    "/usr/src/dkms_multiver_test-2.0"
     "/tmp/dkms_test_dir_${KERNEL_VER}/"
 )
 TEST_TMPFILES=(
@@ -34,13 +37,12 @@ TEST_TMPFILES=(
     "test_cmd_expected_output.log"
 )
 
+SIGNING_MESSAGE=""
 if [ "$#" = 1 ] && [ "$1" = "--no-signing-tool" ]; then
     echo 'Ignore signing tool errors'
     NO_SIGNING_TOOL=1
-    SIGNING_MESSAGE=""
 else
     NO_SIGNING_TOOL=0
-    SIGNING_MESSAGE=$'Signing module /var/lib/dkms/dkms_test/1.0/build/dkms_test.ko\n'
 fi
 
 # Some helpers
@@ -97,6 +99,15 @@ cert_serial() {
         openssl x509 -text -inform DER -in "$1" -noout | grep -A 1 'X509v3 Subject Key Identifier' | tail -n 1 | tr 'a-z' 'A-Z' | tr -d ' :'
     else
         openssl x509 -serial -inform DER -in "$1" -noout | tr 'a-z' 'A-Z' | sed 's/^SERIAL=//'
+    fi
+}
+
+set_signing_message() {
+    # $1: module name
+    # $2: module version
+    # $3: module file name if not the same as $1
+    if [[ "$NO_SIGNING_TOOL" = 0 ]]; then
+        SIGNING_MESSAGE="Signing module /var/lib/dkms/$1/$2/build/${3:-$1}.ko"$'\n'
     fi
 }
 
@@ -265,6 +276,7 @@ You cannot add the same module/version combo more than once.
 EOF
 
 echo 'Building the test module'
+set_signing_message "dkms_test" "1.0"
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
 
 Building module:
@@ -649,6 +661,162 @@ rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
 echo 'Removing /usr/src/dkms_test-1.0'
 rm -r /usr/src/dkms_test-1.0
+
+echo 'Adding the multiver test modules by directory'
+run_with_expected_output dkms add test/dkms_multiver_test/1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_multiver_test/1.0/source -> /usr/src/dkms_multiver_test-1.0
+EOF
+run_status_with_expected_output 'dkms_multiver_test' << EOF
+dkms_multiver_test/1.0: added
+EOF
+if ! [[ -d /usr/src/dkms_multiver_test-1.0 ]] ; then
+    echo >&2 'Error: directory /usr/src/dkms_multiver_test-1.0 was not created'
+    exit 1
+fi
+run_with_expected_output dkms add test/dkms_multiver_test/2.0 << EOF
+Creating symlink /var/lib/dkms/dkms_multiver_test/2.0/source -> /usr/src/dkms_multiver_test-2.0
+EOF
+run_status_with_expected_output 'dkms_multiver_test' << EOF
+dkms_multiver_test/1.0: added
+dkms_multiver_test/2.0: added
+EOF
+if ! [[ -d /usr/src/dkms_multiver_test-1.0 ]] ; then
+    echo >&2 'Error: directory /usr/src/dkms_multiver_test-2.0 was not created'
+    exit 1
+fi
+
+echo 'Building the multiver test modules'
+set_signing_message "dkms_multiver_test" "1.0"
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_multiver_test -v 1.0 << EOF
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_multiver_test/1.0/build...
+${SIGNING_MESSAGE}Cleaning build area...
+EOF
+run_status_with_expected_output 'dkms_multiver_test' << EOF
+dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_multiver_test/2.0: added
+EOF
+set_signing_message "dkms_multiver_test" "2.0"
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_multiver_test -v 2.0 << EOF
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_multiver_test/2.0/build...
+${SIGNING_MESSAGE}Cleaning build area...
+EOF
+run_status_with_expected_output 'dkms_multiver_test' << EOF
+dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): built
+EOF
+
+echo 'Installing the multiver test modules'
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_multiver_test -v 1.0 << EOF
+
+dkms_multiver_test.ko${mod_compression_ext}:
+Running module version sanity check.
+ - Original module
+   - No original module exists within this kernel
+ - Installation
+   - Installing to /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+depmod...
+EOF
+run_status_with_expected_output 'dkms_multiver_test' << EOF
+dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): built
+EOF
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_multiver_test -v 2.0 << EOF
+
+dkms_multiver_test.ko${mod_compression_ext}:
+Running module version sanity check.
+ - Original module
+   - This kernel never originally had a module by this name
+ - Installation
+   - Installing to /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+depmod...
+EOF
+run_status_with_expected_output 'dkms_multiver_test' << EOF
+dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): installed
+EOF
+run_with_expected_error 6 dkms install -k "${KERNEL_VER}" -m dkms_multiver_test -v 1.0 << EOF
+
+dkms_multiver_test.ko${mod_compression_ext}:
+Running module version sanity check.
+Error! Module version 1.0 for dkms_multiver_test.ko${mod_compression_ext}
+is not newer than what is already found in kernel ${KERNEL_VER} (2.0).
+You may override by specifying --force.
+Error! Installation aborted.
+EOF
+run_status_with_expected_output 'dkms_multiver_test' << EOF
+dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): installed
+EOF
+
+echo 'Uninstalling the multiver test modules'
+run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_multiver_test -v 1.0 << EOF
+Module dkms_multiver_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+EOF
+run_status_with_expected_output 'dkms_multiver_test' << EOF
+dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): installed
+EOF
+run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_multiver_test -v 2.0 << EOF
+Module dkms_multiver_test-2.0 for kernel ${KERNEL_VER} ($(uname -m)).
+Before uninstall, this module version was ACTIVE on this kernel.
+
+dkms_multiver_test.ko${mod_compression_ext}:
+ - Uninstallation
+   - Deleting from: /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+ - Original module
+   - No original module was found for this module on this kernel.
+   - Use the dkms install command to reinstall any previous module version.
+EOF
+run_status_with_expected_output 'dkms_multiver_test' << EOF
+dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): built
+EOF
+if [[ -e "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_multiver_test.ko${mod_compression_ext}" ]] ; then
+    echo >&2 "Error: module not removed in /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_multiver_test.ko${mod_compression_ext}"
+    exit 1
+fi
+
+echo 'Unbuilding the multiver test modules'
+run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_multiver_test -v 1.0 << EOF
+Module dkms_multiver_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+EOF
+run_status_with_expected_output 'dkms_multiver_test' << EOF
+dkms_multiver_test/1.0: added
+dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): built
+EOF
+run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_multiver_test -v 2.0 << EOF
+Module dkms_multiver_test 2.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+EOF
+run_status_with_expected_output 'dkms_multiver_test' << EOF
+dkms_multiver_test/1.0: added
+dkms_multiver_test/2.0: added
+EOF
+
+echo 'Removing the multiver test modules'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_multiver_test -v 1.0 << EOF
+Module dkms_multiver_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_multiver_test 1.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Deleting module dkms_multiver_test-1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_multiver_test' << EOF
+dkms_multiver_test/2.0: added
+EOF
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_multiver_test -v 2.0 << EOF
+Module dkms_multiver_test 2.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_multiver_test 2.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Deleting module dkms_multiver_test-2.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_multiver_test' << EOF
+EOF
+
+echo 'Removing /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0'
+rm -r /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0
 
 echo 'Checking that the environment is clean again'
 clean_dkms_env
