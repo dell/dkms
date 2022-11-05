@@ -236,7 +236,7 @@ case "${os_id}" in
 esac
 
 
-echo 'Checking that the environment is clean again'
+echo 'Preparing a clean test environment'
 clean_dkms_env
 
 echo 'Test framework file hijacking'
@@ -819,8 +819,8 @@ EOF
 echo 'Removing /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0'
 rm -r /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0
 
-echo 'Checking that the environment is clean again'
-clean_dkms_env
+echo 'Checking that the environment is clean'
+check_no_dkms_test
 
 echo 'Running autoinstall error testing'
 
@@ -882,7 +882,7 @@ EOF
 echo 'Removing /usr/src/dkms_dependencies_test-1.0'
 rm -r /usr/src/dkms_dependencies_test-1.0
 
-echo 'Checking that the environment is clean'
+echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 echo 'All tests successful :)'
