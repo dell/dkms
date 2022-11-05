@@ -1448,7 +1448,7 @@ find_actual_dest_module_location()
 
     for l in $locations; do
         installed=$(compressed_or_uncompressed "${install_tree}/${kernelver}${l}" "${dest_module_name[${count}]}")
-        if [[ -n "${installed}" ]] && diff "${dkms_owned}" "${installed}" > /dev/null 2>&1; then
+        if [[ -n "${installed}" ]] && compare_module_version "${dkms_owned}" "${installed}" &>/dev/null; then
             echo "${l}"
             return 0
         fi
