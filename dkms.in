@@ -428,6 +428,12 @@ safe_source() {
     )
     . "$tmpfile"
     rm "$tmpfile"
+
+    (( ${#REMAKE_INITRD[@]} )) && deprecated "REMAKE_INITRD ($to_source_file)"
+    (( ${#MODULES_CONF[@]} )) && deprecated "MODULES_CONF ($to_source_file)"
+    (( ${#MODULES_CONF_OBSOLETES[@]} )) && deprecated "MODULES_CONF_OBSOLETES ($to_source_file)"
+    (( ${#MODULES_CONF_ALIAS_TYPE[@]} )) && deprecated "MODULES_CONF_ALIAS_TYPE ($to_source_file)"
+    (( ${#MODULES_CONF_OBSOLETE_ONLY[@]} )) && deprecated "MODULES_CONF_OBSOLETE_ONLY ($to_source_file)"
 }
 
 # Source a dkms.conf file and perform appropriate postprocessing on it.
@@ -472,12 +478,6 @@ read_conf()
         "/etc/dkms/$module-$module_version-$1-$2.conf"; do
         [ -e "$_conf_file" ] && safe_source "$_conf_file" $dkms_conf_variables
     done
-
-    (( ${#REMAKE_INITRD[@]} )) && deprecated $"REMAKE_INITRD"
-    (( ${#MODULES_CONF[@]} )) && deprecated $"MODULES_CONF"
-    (( ${#MODULES_CONF_OBSOLETES[@]} )) && deprecated $"MODULES_CONF_OBSOLETES"
-    (( ${#MODULES_CONF_ALIAS_TYPE[@]} )) && deprecated $"MODULES_CONF_ALIAS_TYPE"
-    (( ${#MODULES_CONF_OBSOLETE_ONLY[@]} )) && deprecated $"MODULES_CONF_OBSOLETE_ONLY"
 
     # Source in the directive_array
     for directive in "${directive_array[@]}"; do
@@ -1670,7 +1670,7 @@ do_status_weak()
 # interested in, but that the DKMS internals do not usually care about.
 module_status_built_extra() (
     set_module_suffix "$3"
-    read_conf "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf"
+    read_conf "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf" 2>/dev/null
     [[ -d $dkms_tree/$1/original_module/$3/$4 ]] && echo -n " (original_module exists)"
     for ((count=0; count < ${#dest_module_name[@]}; count++)); do
         tree_mod=$(compressed_or_uncompressed "$dkms_tree/$1/$2/$3/$4/module" "${dest_module_name[$count]}")
@@ -1729,6 +1729,9 @@ module_status() {
 # is easier to parse.
 do_status() {
     local status mvka m v k a
+    # separate deprecation warnings from status output
+    local tmpfile=$(mktemp_or_die)
+    (module_status "$@") >"$tmpfile"
     while read status mvka; do
         IFS=/ read m v k a <<< "$mvka"
         case $status in
@@ -1741,7 +1744,8 @@ do_status() {
                 echo
                 ;;
         esac
-    done < <(module_status "$@")
+    done < "$tmpfile"
+    rm "$tmpfile"
 }
 
 # Show all our status in the format that external callers expect, even
