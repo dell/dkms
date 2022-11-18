@@ -26,10 +26,17 @@ fi
 # We only have these functions on debian/ubuntu
 # so on other distros just stub them out
 if [ ! -f /etc/debian_version ]; then
-    alias log_daemon_msg=/bin/echo
     log_end_msg() { if [ "$1" = "0" ]; then echo " Done. "; else echo " Failed. "; fi; }
-    alias log_action_begin_msg=log_daemon_msg
-    alias log_action_end_msg=log_end_msg
+
+    # inspired from lsb init-functions script
+    log_action_msg_pre () { :; }
+    log_action_msg_post () { :; }
+    log_action_msg () {
+        log_action_msg_pre "$@"
+        echo "$@." || true
+        log_action_msg_post "$@"
+    }
+
 fi
 
 exec="/usr/sbin/dkms"
@@ -47,9 +54,9 @@ case "$1" in
 			kernel=$(uname -r)
 		fi
 		if [ -f /etc/dkms/no-autoinstall ]; then
-			log_daemon_msg "$prog: autoinstall for dkms modules has been disabled"
+			log_action_msg "$prog: autoinstall for dkms modules has been disabled"
 		else
-			log_daemon_msg "$prog: running auto installation service for kernel $kernel"
+			log_action_msg "$prog: running auto installation service for kernel $kernel"
 			dkms autoinstall --kernelver $kernel
 			log_end_msg $?
 		fi
