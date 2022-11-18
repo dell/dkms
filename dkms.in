@@ -920,6 +920,7 @@ prepare_signing()
                     fi
                     echo "Certificate or key are missing, generating them using update-secureboot-policy..."
                     SHIM_NOTRIGGER=y update-secureboot-policy --new-key &>/dev/null
+		    update-secureboot-policy --enroll-key
                 fi
 
                 ;;
