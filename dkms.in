@@ -28,6 +28,7 @@ shopt -s extglob
 readonly dkms_conf_variables="CLEAN PACKAGE_NAME
    PACKAGE_VERSION POST_ADD POST_BUILD POST_INSTALL POST_REMOVE PRE_BUILD
    PRE_INSTALL BUILD_DEPENDS BUILD_EXCLUSIVE_KERNEL BUILD_EXCLUSIVE_ARCH
+   BUILD_EXCLUSIVE_CONFIG
    build_exclude OBSOLETE_BY MAKE MAKE_MATCH
    PATCH PATCH_MATCH patch_array BUILT_MODULE_NAME
    built_module_name BUILT_MODULE_LOCATION built_module_location
@@ -622,6 +623,15 @@ read_conf()
     # Set build_exclude
     [[ $BUILD_EXCLUSIVE_KERNEL && ! $1 =~ $BUILD_EXCLUSIVE_KERNEL ]] && build_exclude="yes"
     [[ $BUILD_EXCLUSIVE_ARCH && ! $2 =~ $BUILD_EXCLUSIVE_ARCH ]] && build_exclude="yes"
+    if [[ $BUILD_EXCLUSIVE_CONFIG && -e $kernel_source_dir/.config ]]; then
+        local kconf
+        for kconf in $BUILD_EXCLUSIVE_CONFIG ; do
+            case "$kconf" in
+                !*) grep -q -E "^${kconf#!}=[ym]" $kernel_source_dir/.config && build_exclude="yes" ;;
+                *)  grep -q -E "^${kconf}=[ym]" $kernel_source_dir/.config || build_exclude="yes" ;;
+            esac
+        done
+    fi
 
     # Fail if absolutely no DEST_MODULE_LOCATION
     if ((${#dest_module_location[@]} == 0)); then
@@ -985,7 +995,7 @@ prepare_build()
 
     # Error out if build_exclude is set
     [[ $build_exclude ]] && die 9 \
-        $"The $base_dir/dkms.conf for module $module includes a BUILD_EXCLUSIVE directive which does not match this kernel/arch."\
+        $"The $base_dir/dkms.conf for module $module includes a BUILD_EXCLUSIVE directive which does not match this kernel/arch/config."\
         $"This indicates that it should not be built."
 
     # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
