@@ -1012,6 +1012,13 @@ prepare_build()
             $"Check $build_dir for more information."
     done
 
+    if [[ -e $kernel_source_dir/.config ]]; then
+        cc=$(sed -n 's|^CONFIG_CC_VERSION_TEXT="\([^ ]*\) .*"|\1|p' $kernel_source_dir/.config)
+        if command -v "$cc" >/dev/null; then
+            export CC="$cc"
+        fi
+    fi
+
     # Run the pre_build script
     run_build_script pre_build "$pre_build"
 }
