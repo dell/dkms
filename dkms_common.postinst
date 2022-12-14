@@ -91,7 +91,7 @@ get_newest_kernel() {
         CURRENT_ABI=${CURRENT_ABI%%-*}
         NEWEST_KERNEL=$(_get_newest_kernel_debian "$CURRENT_VERSION-$CURRENT_ABI")
 
-    elif which rpm &>/dev/null; then
+    elif which rpm >>/dev/null 2>&1; then
         # If RPM based
         NEWEST_KERNEL=$(_get_newest_kernel_rhel)
     fi
