@@ -758,7 +758,7 @@ can be used in path to represent the target kernel version.
 can also be a "pkcs11:..." string for PKCS#11 engine, as long as the sign_file program supports it.
 .TP
 .B $modprobe_on_install
-Automatically load the built modules upon succesful installation.
+Automatically load the built modules upon successful installation.
 .SH dkms_autoinstaller
 This boot\-time service automatically installs any module which has
 .B AUTOINSTALL="yes"
