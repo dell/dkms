@@ -61,8 +61,13 @@ jobs:
     - name: Install Debian dependencies
       if: matrix.distro.name == 'debian'
       run: |
+        EXTRA_ARGS=''
+        if [ "${{ matrix.distro.tag }}" = 8 ] ; then
+            # repo key is expired
+            EXTRA_ARGS="--allow-unauthenticated"
+        fi
         apt-get update -q
-        apt-get install -qy gcc make linux-headers-amd64 linux-image-amd64 openssl
+        apt-get install -qy $EXTRA_ARGS gcc make linux-headers-amd64 linux-image-amd64 openssl
 
     - name: Install Ubuntu dependencies
       if: matrix.distro.name == 'ubuntu'

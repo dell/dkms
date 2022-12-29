@@ -59,6 +59,8 @@ clean_dkms_env() {
         if [[ -n "$found_module" ]] ; then
             dkms remove ${module}/1.0 >/dev/null
         fi
+        rm -rf "/var/lib/dkms/${module}/"
+        rm -f "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/${module}.ko${mod_compression_ext}"
     done
     for dir in "${TEST_TMPDIRS[@]}"; do
         rm -rf "$dir"
@@ -75,6 +77,14 @@ check_no_dkms_test() {
         found_module="$(dkms_status_grep_dkms_module ${module})"
         if [[ -n "$found_module" ]] ; then
             echo >&2 "Error: module ${module} is still in DKMS tree"
+            exit 1
+        fi
+        if [[ -d "/var/lib/dkms/${module}" ]]; then
+            echo >&2 "Error: directory /var/lib/dkms/${module} still exists"
+            exit 1
+        fi
+        if [[ -f "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/${module}.ko${mod_compression_ext}" ]]; then
+            echo >&2 "Error: file /lib/modules/${KERNEL_VER}/${expected_dest_loc}/${module}.ko${mod_compression_ext} still exists"
             exit 1
         fi
     done
@@ -133,30 +143,31 @@ genericize_expected_output() {
     local output_log=$1
 
     # "depmod..." lines can have multiple points. Replace them, to be able to compare
-    sed 's/\([^.]\)\.\.\.\.*$/\1.../' -i ${output_log}
+    sed -i 's/\([^.]\)\.\.\.\.*$/\1.../' ${output_log}
     # On CentOS, weak-modules is executed. Drop it from the output, to be more generic
-    sed '/^Adding any weak-modules$/d' -i ${output_log}
-    sed '/^Removing any linked weak-modules$/d' -i ${output_log}
+    sed -i '/^Adding any weak-modules$/d' ${output_log}
+    sed -i '/^Removing any linked weak-modules$/d' ${output_log}
     # "depmod..." lines are missing when uninstalling modules on CentOS. Remove them to be more generic
     if [[ $# -ge 2 && "$2" =~ uninstall|unbuild|remove ]] ; then
-        sed '/^depmod\.\.\.$/d' -i ${output_log}
+        sed -i '/^depmod\.\.\.$/d' ${output_log}
     fi
     # Signing related output. Drop it from the output, to be more generic
-    sed '/^Sign command:/d' -i ${output_log}
-    sed '/^Signing key:/d' -i ${output_log}
-    sed '/^Public certificate (MOK):/d' -i ${output_log}
-    sed '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' -i ${output_log}
-    sed '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' -i ${output_log}
+    sed -i '/^Sign command:/d' ${output_log}
+    sed -i '/^Signing key:/d' ${output_log}
+    sed -i '/^Public certificate (MOK):/d' ${output_log}
+    sed -i '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' ${output_log}
+    sed -i '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' ${output_log}
     if [[ "${NO_SIGNING_TOOL}" = "1" ]]; then
-        sed "/^Binary .* not found, modules won't be signed$/d" -i ${output_log}
+        sed -i "/^Binary .* not found, modules won't be signed$/d" ${output_log}
         # Uncomment the following line to run this script with --no-signing-tool on platforms where the sign-file tool exists
-        # sed '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' -i ${output_log}
+        # sed -i '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' ${output_log}
     fi
     # OpenSSL non-critical errors while signing. Remove them to be more generic
-    sed '/^At main.c:/d' -i ${output_log}
-    sed '/^- SSL error:/d' -i ${output_log}
+    sed -i '/^At main.c:/d' ${output_log}
+    sed -i '/^- SSL error:/d' ${output_log}
     # Apport related error that can occur in the CI. Drop from the output to be more generic
-    sed "/^python3: can't open file '\/usr\/share\/apport\/package-hooks\/dkms_packages.py'\: \[Errno 2\] No such file or directory$/d" -i ${output_log}
+    sed -i "/^python3: can't open file '\/usr\/share\/apport\/package-hooks\/dkms_packages.py'\: \[Errno 2\] No such file or directory$/d" ${output_log}
+    sed -i "/^ERROR (dkms apport): /d" ${output_log}
 }
 
 run_with_expected_output() {
@@ -235,7 +246,7 @@ case "${os_id}" in
 esac
 
 
-echo 'Checking that the environment is clean again'
+echo 'Preparing a clean test environment'
 clean_dkms_env
 
 echo 'Test framework file hijacking'
@@ -818,8 +829,8 @@ EOF
 echo 'Removing /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0'
 rm -r /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0
 
-echo 'Checking that the environment is clean again'
-clean_dkms_env
+echo 'Checking that the environment is clean'
+check_no_dkms_test
 
 echo 'Running autoinstall error testing'
 
@@ -881,7 +892,7 @@ EOF
 echo 'Removing /usr/src/dkms_dependencies_test-1.0'
 rm -r /usr/src/dkms_dependencies_test-1.0
 
-echo 'Checking that the environment is clean'
+echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 echo 'All tests successful :)'
