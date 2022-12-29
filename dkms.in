@@ -690,10 +690,6 @@ compare_module_version()
 {
     readarray -t ver1 <<< "$(get_module_verinfo "$1")"
     readarray -t ver2 <<< "$(get_module_verinfo "$2")"
-    if [[ ! "$ver1" ]] || [[ ! "$ver2" ]]; then
-        echo "?"
-        return 1
-    fi
     if [[ "${ver1[0]}" = "${ver2[0]}" ]]; then
         if [[ "${ver1[1]}" = "${ver2[1]}" ]]; then
             echo "=="
@@ -701,6 +697,8 @@ compare_module_version()
             echo "="
         fi
         return 0
+    elif [[ ! "$ver1" ]] || [[ ! "$ver2" ]]; then
+        echo "?"
     elif [[ "$(VER "${ver1[0]}")" > "$(VER "${ver2[0]}")" ]]; then
         echo ">"
     else
