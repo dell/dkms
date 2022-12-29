@@ -19,6 +19,8 @@ TEST_MODULES=(
     "dkms_failing_test"
     "dkms_dependencies_test"
     "dkms_multiver_test"
+    "dkms_nover_test"
+    "dkms_emptyver_test"
 )
 TEST_TMPDIRS=(
     "/usr/src/dkms_test-1.0/"
@@ -26,6 +28,8 @@ TEST_TMPDIRS=(
     "/usr/src/dkms_dependencies_test-1.0"
     "/usr/src/dkms_multiver_test-1.0"
     "/usr/src/dkms_multiver_test-2.0"
+    "/usr/src/dkms_nover_test-1.0"
+    "/usr/src/dkms_emptyver_test-1.0"
     "/tmp/dkms_test_dir_${KERNEL_VER}/"
 )
 TEST_TMPFILES=(
@@ -828,6 +832,153 @@ EOF
 
 echo 'Removing /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0'
 rm -r /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0
+
+
+echo 'Adding the nover/emptyver test modules by directory'
+run_with_expected_output dkms add test/dkms_nover_test << EOF
+Creating symlink /var/lib/dkms/dkms_nover_test/1.0/source -> /usr/src/dkms_nover_test-1.0
+EOF
+run_status_with_expected_output 'dkms_nover_test' << EOF
+dkms_nover_test/1.0: added
+EOF
+if ! [[ -d /usr/src/dkms_nover_test-1.0 ]] ; then
+    echo >&2 'Error: directory /usr/src/dkms_nover_test-1.0 was not created'
+    exit 1
+fi
+run_with_expected_output dkms add test/dkms_emptyver_test << EOF
+Creating symlink /var/lib/dkms/dkms_emptyver_test/1.0/source -> /usr/src/dkms_emptyver_test-1.0
+EOF
+run_status_with_expected_output 'dkms_emptyver_test' << EOF
+dkms_emptyver_test/1.0: added
+EOF
+if ! [[ -d /usr/src/dkms_emptyver_test-1.0 ]] ; then
+    echo >&2 'Error: directory /usr/src/dkms_emptyver_test-1.0 was not created'
+    exit 1
+fi
+
+echo 'Building the nover/emptyver test modules'
+set_signing_message "dkms_nover_test" "1.0"
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_nover_test -v 1.0 << EOF
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_nover_test/1.0/build...
+${SIGNING_MESSAGE}Cleaning build area...
+EOF
+run_status_with_expected_output 'dkms_nover_test' << EOF
+dkms_nover_test/1.0, ${KERNEL_VER}, $(uname -m): built
+EOF
+set_signing_message "dkms_emptyver_test" "1.0"
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_emptyver_test -v 1.0 << EOF
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_emptyver_test/1.0/build...
+${SIGNING_MESSAGE}Cleaning build area...
+EOF
+run_status_with_expected_output 'dkms_emptyver_test' << EOF
+dkms_emptyver_test/1.0, ${KERNEL_VER}, $(uname -m): built
+EOF
+
+echo 'Installing the nover/emptyver test modules'
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_nover_test -v 1.0 << EOF
+
+dkms_nover_test.ko${mod_compression_ext}:
+Running module version sanity check.
+ - Original module
+   - No original module exists within this kernel
+ - Installation
+   - Installing to /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+depmod...
+EOF
+run_status_with_expected_output 'dkms_nover_test' << EOF
+dkms_nover_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+EOF
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_emptyver_test -v 1.0 << EOF
+
+dkms_emptyver_test.ko${mod_compression_ext}:
+Running module version sanity check.
+ - Original module
+   - No original module exists within this kernel
+ - Installation
+   - Installing to /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+depmod...
+EOF
+run_status_with_expected_output 'dkms_emptyver_test' << EOF
+dkms_emptyver_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+EOF
+
+echo 'Uninstalling the nover/emptyver test modules'
+run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_nover_test -v 1.0 << EOF
+Module dkms_nover_test-1.0 for kernel ${KERNEL_VER} ($(uname -m)).
+Before uninstall, this module version was ACTIVE on this kernel.
+
+dkms_nover_test.ko${mod_compression_ext}:
+ - Uninstallation
+   - Deleting from: /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+ - Original module
+   - No original module was found for this module on this kernel.
+   - Use the dkms install command to reinstall any previous module version.
+EOF
+run_status_with_expected_output 'dkms_nover_test' << EOF
+dkms_nover_test/1.0, ${KERNEL_VER}, $(uname -m): built
+EOF
+if [[ -e "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_nover_test.ko${mod_compression_ext}" ]] ; then
+    echo >&2 "Error: module not removed in /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_nover_test.ko${mod_compression_ext}"
+    exit 1
+fi
+run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_emptyver_test -v 1.0 << EOF
+Module dkms_emptyver_test-1.0 for kernel ${KERNEL_VER} ($(uname -m)).
+Before uninstall, this module version was ACTIVE on this kernel.
+
+dkms_emptyver_test.ko${mod_compression_ext}:
+ - Uninstallation
+   - Deleting from: /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+ - Original module
+   - No original module was found for this module on this kernel.
+   - Use the dkms install command to reinstall any previous module version.
+EOF
+run_status_with_expected_output 'dkms_emptyver_test' << EOF
+dkms_emptyver_test/1.0, ${KERNEL_VER}, $(uname -m): built
+EOF
+if [[ -e "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_emptyver_test.ko${mod_compression_ext}" ]] ; then
+    echo >&2 "Error: module not removed in /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_emptyver_test.ko${mod_compression_ext}"
+    exit 1
+fi
+
+echo 'Unbuilding the nover/emptyver test modules'
+run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_nover_test -v 1.0 << EOF
+Module dkms_nover_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+EOF
+run_status_with_expected_output 'dkms_nover_test' << EOF
+dkms_nover_test/1.0: added
+EOF
+run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_emptyver_test -v 1.0 << EOF
+Module dkms_emptyver_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+EOF
+run_status_with_expected_output 'dkms_emptyver_test' << EOF
+dkms_emptyver_test/1.0: added
+EOF
+
+echo 'Removing the nover/emptyver test modules'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_nover_test -v 1.0 << EOF
+Module dkms_nover_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_nover_test 1.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Deleting module dkms_nover_test-1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_nover_test' << EOF
+EOF
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_emptyver_test -v 1.0 << EOF
+Module dkms_emptyver_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_emptyver_test 1.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Deleting module dkms_emptyver_test-1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_emptyver_test' << EOF
+EOF
+
+echo 'Removing /usr/src/dkms_nover_test-1.0 /usr/src/dkms_emptyver_test-1.0'
+rm -r /usr/src/dkms_nover_test-1.0 /usr/src/dkms_emptyver_test-1.0
+
 
 echo 'Checking that the environment is clean'
 check_no_dkms_test
