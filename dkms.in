@@ -1040,6 +1040,7 @@ prepare_build()
         cc=$(sed -n 's|^CONFIG_CC_VERSION_TEXT="\([^ ]*\) .*"|\1|p' "${kernel_config}")
         if command -v "$cc" >/dev/null; then
             export CC="$cc"
+            export KERNEL_CC="$cc"
         fi
     fi
 
