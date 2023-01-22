@@ -1042,6 +1042,14 @@ prepare_build()
             export CC="$cc"
             export KERNEL_CC="$cc"
         fi
+
+        if grep -q 'CONFIG_LD_IS_LLD=y' "${kernel_config}"; then
+            ld=ld.lld
+            if command -v "$ld" >/dev/null; then
+                export LD="$ld"
+                export KERNEL_LD="$ld"
+            fi
+        fi
     fi
 
     # Run the pre_build script
