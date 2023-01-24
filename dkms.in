@@ -776,13 +776,17 @@ check_version_sanity()
                 $"You may override by specifying --force."
             return 1
         fi
-    elif [[ "${cmp_res}" = "="* ]]; then
+    elif [[ "${cmp_res}" = "==" ]]; then
         if [[ ! "$force" ]]; then
-            echo $"Module version $(get_module_verinfo "${dkms_module}" | head -n 1) for $4${module_suffix}" >&2
-            echo $"exactly matches what is already found in kernel $1." >&2
-            echo $"DKMS will not replace this module." >&2
-            echo $"You may override by specifying --force." >&2
-            return 1
+            # if the module has neither version nor srcversion/checksum, check the binary files instead
+            local verinfo="$(get_module_verinfo "${dkms_module}")"
+            if [[ "$(echo "$verinfo" | tr -d '[:space:]')" ]] || diff "${kernels_module}" "${dkms_module}" &>/dev/null; then
+                echo $"Module version $(echo "$verinfo" | head -n 1) for $4${module_suffix}" >&2
+                echo $"exactly matches what is already found in kernel $1." >&2
+                echo $"DKMS will not replace this module." >&2
+                echo $"You may override by specifying --force." >&2
+                return 1
+            fi
         fi
     fi
     return 0
