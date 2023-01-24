@@ -9,6 +9,11 @@ cd "$(dirname -- "$0")"
 KERNEL_VER="${KERNEL_VER:-$(uname -r)}"
 echo "Using kernel ${KERNEL_VER}"
 
+case "$(uname -s)" in
+    Linux)          KCONFIG="/lib/modules/${KERNEL_VER}/build/.config" ;;
+    GNU/kFreeBSD)   KCONFIG="/usr/src/kfreebsd-headers-${KERNEL_VER}/sys/.config" ;;
+esac
+
 # Override PATH to use the local dkms binary
 PATH="$(pwd):$PATH"
 export PATH
@@ -159,6 +164,9 @@ genericize_expected_output() {
     if [[ $# -ge 2 && "$2" =~ uninstall|unbuild|remove ]] ; then
         sed -i '/^depmod\.\.\.$/d' ${output_log}
     fi
+    # Remove "CC=... LD=..." part from the "make ..." line. They have different values on different platforms
+    sed -i '/^make /s/ CC=[0-9A-Za-z_\.\-]*[0-9A-Za-z]//' ${output_log}
+    sed -i '/^make /s/ LD=[0-9A-Za-z_\.\-]*[0-9A-Za-z]//' ${output_log}
     # Signing related output. Drop it from the output, to be more generic
     sed -i '/^Sign command:/d' ${output_log}
     sed -i '/^Signing key:/d' ${output_log}
@@ -374,7 +382,16 @@ EOF
         else
             ALTER_HASH="sha512"
         fi
-        echo "CONFIG_MODULE_SIG_HASH=\"${ALTER_HASH}\"" > /tmp/dkms_test_kconfig
+        if [[ -f "$KCONFIG" ]]; then
+            cp "$KCONFIG" /tmp/dkms_test_kconfig
+            if grep -q '^CONFIG_MODULE_SIG_HASH=' /tmp/dkms_test_kconfig; then
+                sed -i "s/^CONFIG_MODULE_SIG_HASH=.*$/CONFIG_MODULE_SIG_HASH=\"${ALTER_HASH}\"/" /tmp/dkms_test_kconfig
+            else
+                echo "CONFIG_MODULE_SIG_HASH=\"${ALTER_HASH}\"" >> /tmp/dkms_test_kconfig
+            fi
+        else
+            echo "CONFIG_MODULE_SIG_HASH=\"${ALTER_HASH}\"" > /tmp/dkms_test_kconfig
+        fi
         run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --config /tmp/dkms_test_kconfig --force << EOF
 
 Building module:
@@ -463,11 +480,11 @@ dkms_test/1.0, ${KERNEL_VER}, $(uname -m): installed
 EOF
 
 echo 'Checking modinfo'
-run_with_expected_output sh -c "modinfo /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext} | head -n 4" << EOF
-filename:       /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
-version:        1.0
+run_with_expected_output sh -c "modinfo /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext} | head -n 4 | sort" << EOF
 description:    A Simple dkms test module
+filename:       /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 license:        GPL
+version:        1.0
 EOF
 
 if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
@@ -585,11 +602,11 @@ if ! [[ -f "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_co
 fi
 
 echo 'Checking modinfo'
-run_with_expected_output sh -c "modinfo /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext} | head -n 4" << EOF
-filename:       /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
-version:        1.0
+run_with_expected_output sh -c "modinfo /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext} | head -n 4 | sort" << EOF
 description:    A Simple dkms test module
+filename:       /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 license:        GPL
+version:        1.0
 EOF
 
 if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
