@@ -1038,7 +1038,7 @@ prepare_build()
 
     if [[ -e "${kernel_config}" ]]; then
         if grep -q 'CONFIG_CC_IS_CLANG=y' "${kernel_config}"; then
-            cc=clang
+            local cc=clang
             if command -v "$cc" >/dev/null; then
                 export CC="$cc"
                 export KERNEL_CC="$cc"
@@ -1046,7 +1046,7 @@ prepare_build()
         fi
 
         if grep -q 'CONFIG_LD_IS_LLD=y' "${kernel_config}"; then
-            ld=ld.lld
+            local ld=ld.lld
             if command -v "$ld" >/dev/null; then
                 export LD="$ld"
                 export KERNEL_LD="$ld"
