@@ -593,23 +593,6 @@ read_conf()
     [[ ! $make_command ]] && make_command="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build"
     [[ ! $clean ]] && clean="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build clean"
 
-    # Check if clang was used to compile or lld was used to link the kernel.
-    if [[ -e $kernel_source_dir/vmlinux ]]; then
-      if  readelf -p .comment $kernel_source_dir/vmlinux | grep -q clang; then
-        make_command="${make_command} CC=clang"
-      fi
-      if  readelf -p .comment $kernel_source_dir/vmlinux | grep -q LLD; then
-        make_command="${make_command} LD=ld.lld"
-      fi
-    elif [[ -e "${kernel_config}" ]]; then
-      if grep -q CONFIG_CC_IS_CLANG=y "${kernel_config}"; then
-        make_command="${make_command} CC=clang"
-      fi
-      if grep -q CONFIG_LD_IS_LLD=y "${kernel_config}"; then
-        make_command="${make_command} LD=ld.lld"
-      fi
-    fi
-
     # Set patch_array (including kernel specific patches)
     count=0
     for ((index=0; index < ${#PATCH[@]}; index++)); do
@@ -833,6 +816,90 @@ run_build_script() {
     fi
 }
 
+# helper functions for getting cc/ld used by kernel
+detect_toolchain_version() {
+    # $1 = program name, e.g. gcc, ld.lld
+    # $2 = major version
+    # $3 = minor version
+    # $4 = patch version, optional
+    local -a filenames
+    if [[ "$4" ]]; then
+        filenames+=( "$1-$(printf "%d.%d.%d" "$2" "$3" "$4")" )
+    fi
+    filenames+=(
+        "$1-$(printf "%d.%d" "$2" "$3")"
+        "$1-$(printf "%d" "$2")"
+        "$1"
+    )
+    for f in "${filenames[@]}"; do
+        if command -V "$f" &>/dev/null; then
+            echo "$f"
+            return 0
+        fi
+    done
+    return 1
+}
+detect_toolchain_from_text() {
+    # $1 = program version text, contains x.y.z
+    # $2 = program name, e.g. gcc, clang
+    local patterns=(
+        's/^.*\b([0-9]+\.[0-9]+\.[0-9]+).*$/\1/p'
+    )
+    local -a ver
+    for p in "${patterns[@]}"; do
+        readarray -d '.' -t ver <<< "$(echo "$1" | sed -En "$p")"
+        if [[ "$ver" ]]; then
+            if detect_toolchain_version "$2" ${ver[0]} ${ver[1]} ${ver[2]}; then
+                return 0
+            fi
+        fi
+    done
+    return 1
+}
+detect_toolchain_from_kconfig() {
+    # $1 = program name in kconfig, e.g. GCC, CLANG, LD, LLD
+    # $2 = program name, e.g. gcc, clang, ld.bfd, ld.lld
+    local ver_full="$(grep "^CONFIG_$1_VERSION=" "${kernel_config}" | cut -f2 -d= )"
+    if [[ -z "${ver_full}" ]] || [[ "${ver_full}" = 0 ]]; then
+        return 1
+    fi
+    local ver_major="${ver_full:0: -4}"
+    local ver_minor="${ver_full: -4:2}"
+    local ver_patch="${ver_full: -2}"
+    detect_toolchain_version "$2" "${ver_major}" "${ver_minor}" "${ver_patch}"
+    return $?
+}
+detect_toolchain_from_cc_version_text() {
+    # since kernel 5.8
+    local text="$(grep "^CONFIG_CC_VERSION_TEXT=" "${kernel_config}" | cut -f2 -d= )"
+    if [[ -z "$text" ]]; then
+        return 1
+    fi
+    if echo "$text" | grep -q gcc; then
+        detect_toolchain_from_text "$text" "gcc"
+        return $?
+    elif echo "$text" | grep -q clang; then
+        detect_toolchain_from_text "$text" "clang"
+        return $?
+    fi
+    return 1
+}
+detect_toolchain_from_vmlinux() {
+    # $1 = string in vmlinux .comment section, e.g. clang, LLD
+    # $2 = program name, e.g. clang, ld.lld
+    local vmlinux="${kernel_source_dir}/vmlinux"
+    if [[ ! -f "$vmlinux" ]]; then
+        return 1
+    fi
+    local text="$(readelf -p .comment "$vmlinux" 2>/dev/null | grep "$1" 2>/dev/null)"
+    if [[ -z "$text" ]]; then
+        return 1
+    fi
+    detect_toolchain_from_text "$text" "$2"
+    return $?
+}
+
+
 # Register a DKMS-ified source tree with DKMS.
 # This function is smart enough to register the module if we
 # passed a source tree or a tarball instead of relying on the source tree
@@ -1040,21 +1107,51 @@ prepare_build()
             $"Check $build_dir for more information."
     done
 
-    if [[ -e "${kernel_config}" ]]; then
-        if grep -q 'CONFIG_CC_IS_CLANG=y' "${kernel_config}"; then
-            local cc=clang
-            if command -v "$cc" >/dev/null; then
-                export CC="$cc"
-                export KERNEL_CC="$cc"
+    # Detect CC and LD used by kernel
+    if ! grep -qE '(^|\s)CC=' <<< "${make_command}"; then
+        # No CC specified within MAKE in dkms.conf
+        if [[ -e "${kernel_config}" ]]; then
+            if grep -q '^CONFIG_CC_IS_GCC=y' "${kernel_config}"; then
+                # Since kernel 4.18
+                KERNEL_CC="$(detect_toolchain_from_kconfig GCC gcc)"
+            elif grep -q '^CONFIG_CC_IS_CLANG=y' "${kernel_config}"; then
+                # Since kernel 4.18
+                KERNEL_CC="$(detect_toolchain_from_kconfig CLANG clang)"
+            elif [[ -f "$kernel_source_dir/.kernelvariables" ]]; then
+                # Debian specific
+                KERNEL_CC="$(echo -e "show-%:\n\t@echo \$(\$*)\ninclude $kernel_source_dir/.kernelvariables" | make -f - show-CC)"
+            else
+                KERNEL_CC="$(detect_toolchain_from_cc_version_text)"
             fi
         fi
-
-        if grep -q 'CONFIG_LD_IS_LLD=y' "${kernel_config}"; then
-            local ld=ld.lld
-            if command -v "$ld" >/dev/null; then
-                export LD="$ld"
-                export KERNEL_LD="$ld"
+        if [[ -z "$KERNEL_CC" ]]; then
+            KERNEL_CC="$(detect_toolchain_from_vmlinux GCC gcc || \
+                         detect_toolchain_from_vmlinux clang clang)"
+        fi
+        if [[ "$KERNEL_CC" ]]; then
+            make_command="${make_command} CC=${KERNEL_CC}"
+            # the pre_build script may need these, e.g. zfs-dkms
+            export CC="${KERNEL_CC}" KERNEL_CC
+        fi
+    fi
+    if ! grep -qE '(^|\s)LD=' <<< "${make_command}"; then
+        # No LD specified within MAKE in dkms.conf
+        if [[ -e "${kernel_config}" ]]; then
+            if grep -q '^CONFIG_LD_IS_LLD=y' "${kernel_config}"; then
+                # Since kernel 5.8
+                KERNEL_LD="$(detect_toolchain_from_kconfig LLD ld.lld)"
+            elif grep -q '^CONFIG_LD_IS_BFD=y' "${kernel_config}"; then
+                # Since kernel 5.14
+                KERNEL_LD="$(detect_toolchain_from_kconfig LD ld.bfd)"
             fi
+        fi
+        if [[ -z "$KERNEL_LD" ]]; then
+            KERNEL_LD="$(detect_toolchain_from_vmlinux LLD ld.lld)"
+        fi
+        if [[ "$KERNEL_LD" ]]; then
+            make_command="${make_command} LD=${KERNEL_LD}"
+            # the pre_build script may need these, e.g. zfs-dkms
+            export LD="${KERNEL_LD}" KERNEL_LD
         fi
     fi
 
@@ -1072,12 +1169,6 @@ actual_build()
 
     echo $""
     echo $"Building module:"
-
-    if [ -f "$kernel_source_dir/.kernelvariables" ]; then
-        export CC=$(echo -e "show-%:\n\t@echo \$(\$*)\ninclude $kernel_source_dir/.kernelvariables" | make -f - show-CC)
-    else
-        unset CC
-    fi
 
     invoke_command "$clean" "Cleaning build area" background
     echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$build_log"
@@ -2304,7 +2395,7 @@ PATH="$PATH:/usr/lib/dkms"
 umask 022
 
 # Unset environment variables that may interfere with the build
-unset CC CXX CFLAGS CXXFLAGS LDFLAGS
+unset CC CXX LD CFLAGS CXXFLAGS LDFLAGS KERNEL_CC KERNEL_LD
 
 # Set important variables
 current_kernel=$(uname -r)
