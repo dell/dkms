@@ -1036,10 +1036,21 @@ prepare_build()
             $"Check $build_dir for more information."
     done
 
-    if [[ -e $kernel_source_dir/.config ]]; then
-        cc=$(sed -n 's|^CONFIG_CC_VERSION_TEXT="\([^ ]*\) .*"|\1|p' $kernel_source_dir/.config)
-        if command -v "$cc" >/dev/null; then
-            export CC="$cc"
+    if [[ -e "${kernel_config}" ]]; then
+        if grep -q 'CONFIG_CC_IS_CLANG=y' "${kernel_config}"; then
+            local cc=clang
+            if command -v "$cc" >/dev/null; then
+                export CC="$cc"
+                export KERNEL_CC="$cc"
+            fi
+        fi
+
+        if grep -q 'CONFIG_LD_IS_LLD=y' "${kernel_config}"; then
+            local ld=ld.lld
+            if command -v "$ld" >/dev/null; then
+                export LD="$ld"
+                export KERNEL_LD="$ld"
+            fi
         fi
     fi
 
