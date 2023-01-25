@@ -21,6 +21,7 @@ TEST_MODULES=(
     "dkms_multiver_test"
     "dkms_nover_test"
     "dkms_emptyver_test"
+    "dkms_nover_update_test"
 )
 TEST_TMPDIRS=(
     "/usr/src/dkms_test-1.0/"
@@ -30,6 +31,9 @@ TEST_TMPDIRS=(
     "/usr/src/dkms_multiver_test-2.0"
     "/usr/src/dkms_nover_test-1.0"
     "/usr/src/dkms_emptyver_test-1.0"
+    "/usr/src/dkms_nover_update_test-1.0"
+    "/usr/src/dkms_nover_update_test-2.0"
+    "/usr/src/dkms_nover_update_test-3.0"
     "/tmp/dkms_test_dir_${KERNEL_VER}/"
 )
 TEST_TMPFILES=(
@@ -978,6 +982,156 @@ EOF
 
 echo 'Removing /usr/src/dkms_nover_test-1.0 /usr/src/dkms_emptyver_test-1.0'
 rm -r /usr/src/dkms_nover_test-1.0 /usr/src/dkms_emptyver_test-1.0
+
+
+echo 'Adding the nover update test modules 1.0 by directory'
+run_with_expected_output dkms add test/dkms_nover_update_test/1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_nover_update_test/1.0/source -> /usr/src/dkms_nover_update_test-1.0
+EOF
+run_status_with_expected_output 'dkms_nover_update_test' << EOF
+dkms_nover_update_test/1.0: added
+EOF
+if ! [[ -d /usr/src/dkms_nover_update_test-1.0 ]] ; then
+    echo >&2 'Error: directory /usr/src/dkms_nover_update_test-1.0 was not created'
+    exit 1
+fi
+
+echo 'Installing the nover update test 1.0 modules'
+set_signing_message "dkms_nover_update_test" "1.0"
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_nover_update_test -v 1.0 << EOF
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_nover_update_test/1.0/build...
+${SIGNING_MESSAGE}Cleaning build area...
+
+dkms_nover_update_test.ko${mod_compression_ext}:
+Running module version sanity check.
+ - Original module
+   - No original module exists within this kernel
+ - Installation
+   - Installing to /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+depmod...
+EOF
+run_status_with_expected_output 'dkms_nover_update_test' << EOF
+dkms_nover_update_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+EOF
+
+echo 'Adding the nover update test modules 2.0 by directory'
+run_with_expected_output dkms add test/dkms_nover_update_test/2.0 << EOF
+Creating symlink /var/lib/dkms/dkms_nover_update_test/2.0/source -> /usr/src/dkms_nover_update_test-2.0
+EOF
+run_status_with_expected_output 'dkms_nover_update_test' << EOF
+dkms_nover_update_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_nover_update_test/2.0: added
+EOF
+if ! [[ -d /usr/src/dkms_nover_update_test-2.0 ]] ; then
+    echo >&2 'Error: directory /usr/src/dkms_nover_update_test-2.0 was not created'
+    exit 1
+fi
+
+echo 'Installing the nover update test 2.0 modules'
+set_signing_message "dkms_nover_update_test" "2.0"
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_nover_update_test -v 2.0 << EOF
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_nover_update_test/2.0/build...
+${SIGNING_MESSAGE}Cleaning build area...
+
+dkms_nover_update_test.ko${mod_compression_ext}:
+Running module version sanity check.
+ - Original module
+   - This kernel never originally had a module by this name
+ - Installation
+   - Installing to /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+depmod...
+EOF
+run_status_with_expected_output 'dkms_nover_update_test' << EOF
+dkms_nover_update_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_nover_update_test/2.0, ${KERNEL_VER}, $(uname -m): installed
+EOF
+
+echo 'Adding the nover update test modules 3.0 by directory'
+run_with_expected_output dkms add test/dkms_nover_update_test/3.0 << EOF
+Creating symlink /var/lib/dkms/dkms_nover_update_test/3.0/source -> /usr/src/dkms_nover_update_test-3.0
+EOF
+run_status_with_expected_output 'dkms_nover_update_test' << EOF
+dkms_nover_update_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_nover_update_test/2.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_nover_update_test/3.0: added
+EOF
+if ! [[ -d /usr/src/dkms_nover_update_test-3.0 ]] ; then
+    echo >&2 'Error: directory /usr/src/dkms_nover_update_test-3.0 was not created'
+    exit 1
+fi
+
+echo 'Building the nover update test 3.0 modules'
+set_signing_message "dkms_nover_update_test" "3.0"
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_nover_update_test -v 3.0 << EOF
+
+Building module:
+Cleaning build area...
+make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_nover_update_test/3.0/build...
+${SIGNING_MESSAGE}Cleaning build area...
+EOF
+run_status_with_expected_output 'dkms_nover_update_test' << EOF
+dkms_nover_update_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_nover_update_test/2.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_nover_update_test/3.0, ${KERNEL_VER}, $(uname -m): built
+EOF
+
+MODULE_PATH_2="/var/lib/dkms/dkms_nover_update_test/2.0/${KERNEL_VER}/$(uname -m)/module/dkms_nover_update_test.ko${mod_compression_ext}"
+MODULE_PATH_3="/var/lib/dkms/dkms_nover_update_test/3.0/${KERNEL_VER}/$(uname -m)/module/dkms_nover_update_test.ko${mod_compression_ext}"
+if ! modinfo "${MODULE_PATH_3}" | grep -q '^srcversion:' && ! diff "${MODULE_PATH_2}" "${MODULE_PATH_3}" &>/dev/null; then
+    # On debian, no srcversion in modinfo's output, the installation will always succeed
+    echo 'Notice: Skip installation test on this platform'
+else
+    echo 'Installing the nover update test 3.0 modules (expected error)'
+    set_signing_message "dkms_nover_update_test" "3.0"
+    run_with_expected_error 6 dkms install -k "${KERNEL_VER}" -m dkms_nover_update_test -v 3.0 << EOF
+
+dkms_nover_update_test.ko${mod_compression_ext}:
+Running module version sanity check.
+Module version  for dkms_nover_update_test.ko${mod_compression_ext}
+exactly matches what is already found in kernel ${KERNEL_VER}.
+DKMS will not replace this module.
+You may override by specifying --force.
+Error! Installation aborted.
+EOF
+    run_status_with_expected_output 'dkms_nover_update_test' << EOF
+dkms_nover_update_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_nover_update_test/2.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_nover_update_test/3.0, ${KERNEL_VER}, $(uname -m): built
+EOF
+fi
+
+echo 'Removing the nover update test modules'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_nover_update_test -v 3.0 << EOF
+Module dkms_nover_update_test 3.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Deleting module dkms_nover_update_test-3.0 completely from the DKMS tree.
+EOF
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_nover_update_test -v 2.0 << EOF
+Module dkms_nover_update_test-2.0 for kernel ${KERNEL_VER} ($(uname -m)).
+Before uninstall, this module version was ACTIVE on this kernel.
+
+dkms_nover_update_test.ko${mod_compression_ext}:
+ - Uninstallation
+   - Deleting from: /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+ - Original module
+   - No original module was found for this module on this kernel.
+   - Use the dkms install command to reinstall any previous module version.
+Deleting module dkms_nover_update_test-2.0 completely from the DKMS tree.
+EOF
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_nover_update_test -v 1.0 << EOF
+Module dkms_nover_update_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Deleting module dkms_nover_update_test-1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_nover_update_test' << EOF
+EOF
+
+echo 'Removing /usr/src/dkms_nover_update_test-{1,2,3}.0'
+rm -r /usr/src/dkms_nover_update_test-{1,2,3}.0
 
 
 echo 'Checking that the environment is clean'
