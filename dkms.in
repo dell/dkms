@@ -824,11 +824,11 @@ detect_toolchain_version() {
     # $4 = patch version, optional
     local -a filenames
     if [[ "$4" ]]; then
-        filenames+=( "$1-$(printf "%d.%d.%d" "$2" "$3" "$4")" )
+        filenames+=( "$1-$((10#$2)).$((10#$3)).$((10#$4))" )
     fi
     filenames+=(
-        "$1-$(printf "%d.%d" "$2" "$3")"
-        "$1-$(printf "%d" "$2")"
+        "$1-$((10#$2)).$((10#$3))"
+        "$1-$((10#$2))"
         "$1"
     )
     for f in "${filenames[@]}"; do
