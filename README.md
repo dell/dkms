@@ -107,8 +107,8 @@ The location as well can be changed by setting the appropriate variables in
 Debian and Ubuntu `update-secureboot-policy` set the configuration file as
 follows:
 ```
-mok_signing_key="/var/lib/shim-signed/mok/MOK.der"
-mok_certificate="/var/lib/shim-signed/mok/MOK.priv"
+mok_signing_key="/var/lib/shim-signed/mok/MOK.priv"
+mok_certificate="/var/lib/shim-signed/mok/MOK.der"
 ```
 
 The paths specified in `mok_signing_key`, `mok_certificate` and `sign_file` can
