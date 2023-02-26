@@ -230,6 +230,13 @@ run_with_expected_error() {
     rm ${expected_output_log} ${output_log}
 }
 
+# sig_hashalgo itself may show bogus value if kmod version < 26
+kmod_broken_hashalgo() {
+    local -ri kmod_ver=$(kmod --version | grep version | cut -f 3 -d ' ')
+
+    (( kmod_ver < 26 ))
+}
+
 # Compute the expected destination module location
 os_id="$(sed -n 's/^ID\s*=\s*\(.*\)$/\1/p' /etc/os-release | tr -d '"')"
 mod_compression_ext=
@@ -363,12 +370,16 @@ EOF
     rm -r "/tmp/dkms_test_dir_${KERNEL_VER}/"
 
     BUILT_MODULE_PATH="/var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/$(uname -m)/module/dkms_test.ko${mod_compression_ext}"
-    # If sig_key can't be extracted from module, the hash algorithm is also unknown
-    # sig_hashalgo itself may show bogus value if kmod version < 26
-    if [[ "$(modinfo "${BUILT_MODULE_PATH}" | grep '^sig_key:' | tr -d ' ')" != "sig_key:" ]]; then
-        echo 'Building the test module using a different hash algorithm'
+    CURRENT_HASH="$(modinfo -F sig_hashalgo "${BUILT_MODULE_PATH}")"
+
+    echo 'Building the test module using a different hash algorithm'
+    if kmod_broken_hashalgo; then
+        echo 'Current kmod has broken hash algorithm code. Skipping...'
+    elif [[ "${CURRENT_HASH}" == "unknown" ]]; then
+        echo 'Current kmod reports unknown hash algorithm. Skipping...'
+    else
         cp test/framework/temp_key_cert.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
-        CURRENT_HASH="$(modinfo "${BUILT_MODULE_PATH}" | grep '^sig_hashalgo:' | sed 's/sig_hashalgo: *//')"
+
         if [[ "${CURRENT_HASH}" == "sha512" ]]; then
             ALTER_HASH="sha256"
         else
@@ -382,8 +393,8 @@ Cleaning build area...
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
 ${SIGNING_MESSAGE}Cleaning build area...
 EOF
-        run_with_expected_output sh -c "modinfo '${BUILT_MODULE_PATH}' | grep '^sig_hashalgo:' | tr -d ' '" << EOF
-sig_hashalgo:${ALTER_HASH}
+        run_with_expected_output sh -c "modinfo -F sig_hashalgo '${BUILT_MODULE_PATH}'" << EOF
+${ALTER_HASH}
 EOF
         rm /tmp/dkms_test_kconfig
     fi
@@ -472,16 +483,19 @@ EOF
 
 if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
     echo 'Checking module signature'
-    SIG_KEY="$(modinfo "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" | grep '^sig_key:')"
-    run_with_expected_output sh -c "echo '${SIG_KEY}' | cut -f1 -d' '" << EOF
-sig_key:
-EOF
-    if [[ "${SIG_KEY// /}" = "sig_key:" ]]; then
-        # kmod may not be linked with openssl and thus can't extract the key from module
-        echo "Warning: module was signed but the key is unknown"
+    SIG_KEY="$(modinfo -F sig_key "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" | tr -d ':')"
+    SIG_HASH="$(modinfo -F sig_hashalgo "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}")"
+
+    if kmod_broken_hashalgo; then
+        echo 'Current kmod has broken hash algorithm code. Skipping...'
+    elif [[ "${SIG_HASH}" == "unknown" ]]; then
+        echo 'Current kmod reports unknown hash algorithm. Skipping...'
+    elif [[ ! "${SIG_KEY}" ]]; then
+        echo >&2 "Error: module was not signed"
+        exit 1
     else
-        run_with_expected_output sh -c "echo '${SIG_KEY}' | tr -d ' :'" << EOF
-sig_key${MODULE_SERIAL}
+        run_with_expected_output sh -c "echo '${SIG_KEY}'" << EOF
+${MODULE_SERIAL}
 EOF
     fi
 fi
@@ -594,16 +608,20 @@ EOF
 
 if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
     echo 'Checking module signature'
-    SIG_KEY="$(modinfo "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" | grep '^sig_key:')"
-    run_with_expected_output sh -c "echo '${SIG_KEY}' | cut -f1 -d' '" << EOF
-sig_key:
-EOF
-    if [[ "${SIG_KEY// /}" = "sig_key:" ]]; then
+    SIG_KEY="$(modinfo -F sig_key "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" | tr -d ':')"
+    SIG_HASH="$(modinfo -F sig_hashalgo "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}")"
+
+    if kmod_broken_hashalgo; then
+        echo 'Current kmod has broken hash algorithm code. Skipping...'
+    elif [[ "${SIG_HASH}" == "unknown" ]]; then
+        echo 'Current kmod reports unknown hash algorithm. Skipping...'
+    elif [[ ! "${SIG_KEY}" ]]; then
         # kmod may not be linked with openssl and thus can't extract the key from module
-        echo "Warning: module was signed but the key is unknown"
+        echo >&2 "Error: modules was not signed, or key is unknown"
+        exit 1
     else
-        run_with_expected_output sh -c "echo '${SIG_KEY}' | tr -d ' :'" << EOF
-sig_key${MODULE_SERIAL}
+        run_with_expected_output sh -c "echo '${SIG_KEY}'" << EOF
+${MODULE_SERIAL}
 EOF
     fi
 fi
