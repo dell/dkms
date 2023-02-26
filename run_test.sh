@@ -279,7 +279,7 @@ dkms_test/1.0: added
 EOF
 if ! [[ -d /usr/src/dkms_test-1.0 ]] ; then
     echo >&2 'Error: directory /usr/src/dkms_test-1.0 was not created'
-    return 1
+    exit 1
 fi
 
 echo 'Adding the test module again (expected error)'
@@ -541,7 +541,7 @@ run_status_with_expected_output 'dkms_test' << EOF
 EOF
 if ! [[ -d /usr/src/dkms_test-1.0 ]] ; then
     echo >&2 'Error: directory /usr/src/dkms_test-1.0 was removed'
-    return 1
+    exit 1
 fi
 
 echo 'Adding the test module by version'
