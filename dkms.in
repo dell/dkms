@@ -903,6 +903,8 @@ prepare_kernel()
 
 prepare_signing()
 {
+    do_signing=0
+
     # Lazy source in signing related configuration
     read_framework_conf $dkms_framework_signing_variables
 
@@ -1113,7 +1115,7 @@ actual_build()
 
         [[ ${strip[$count]} != no ]] && strip -g "$built_module"
 
-        if [ -n "${do_signing}" ]; then
+        if (( do_signing )); then
             echo "Signing module $built_module"
             "$sign_file" "$sign_hash" "$mok_signing_key" "$mok_certificate" "$built_module"
         fi
