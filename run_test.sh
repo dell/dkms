@@ -161,12 +161,13 @@ genericize_expected_output() {
         sed -i '/^depmod\.\.\.$/d' ${output_log}
     fi
     # Signing related output. Drop it from the output, to be more generic
-    sed -i '/^Sign command:/d' ${output_log}
-    sed -i '/^Signing key:/d' ${output_log}
-    sed -i '/^Public certificate (MOK):/d' ${output_log}
-    sed -i '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' ${output_log}
-    sed -i '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' ${output_log}
-    if (( NO_SIGNING_TOOL == 1 )); then
+    if (( NO_SIGNING_TOOL == 0 )); then
+        sed -i '/^Sign command:/d' ${output_log}
+        sed -i '/^Signing key:/d' ${output_log}
+        sed -i '/^Public certificate (MOK):/d' ${output_log}
+        sed -i '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' ${output_log}
+        sed -i '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' ${output_log}
+    else
         sed -i "/^The kernel is be built without module signing facility, modules won't be signed$/d" ${output_log}
         sed -i "/^Binary .* not found, modules won't be signed$/d" ${output_log}
         # Uncomment the following line to run this script with --no-signing-tool on platforms where the sign-file tool exists
