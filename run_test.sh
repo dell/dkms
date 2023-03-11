@@ -46,6 +46,7 @@ TEST_TMPFILES=(
 )
 
 SIGNING_MESSAGE=""
+declare -i NO_SIGNING_TOOL
 if [ "$#" = 1 ] && [ "$1" = "--no-signing-tool" ]; then
     echo 'Ignore signing tool errors'
     NO_SIGNING_TOOL=1
@@ -124,7 +125,7 @@ set_signing_message() {
     # $1: module name
     # $2: module version
     # $3: module file name if not the same as $1
-    if [[ "$NO_SIGNING_TOOL" = 0 ]]; then
+    if (( NO_SIGNING_TOOL == 0 )); then
         SIGNING_MESSAGE="Signing module /var/lib/dkms/$1/$2/build/${3:-$1}.ko"$'\n'
     fi
 }
@@ -165,7 +166,7 @@ genericize_expected_output() {
     sed -i '/^Public certificate (MOK):/d' ${output_log}
     sed -i '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' ${output_log}
     sed -i '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' ${output_log}
-    if [[ "${NO_SIGNING_TOOL}" = "1" ]]; then
+    if (( NO_SIGNING_TOOL == 1 )); then
         sed -i "/^The kernel is be built without module signing facility, modules won't be signed$/d" ${output_log}
         sed -i "/^Binary .* not found, modules won't be signed$/d" ${output_log}
         # Uncomment the following line to run this script with --no-signing-tool on platforms where the sign-file tool exists
@@ -323,7 +324,7 @@ run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
 EOF
 
-if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
+if (( NO_SIGNING_TOOL == 0 )); then
     echo 'Building the test module with bad sign_file path in framework file'
     cp test/framework/bad_sign_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
     run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
@@ -417,7 +418,7 @@ run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
 EOF
 
-if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
+if (( NO_SIGNING_TOOL == 0 )); then
     echo 'Extracting serial number from the certificate'
     MODULE_SERIAL="$(cert_serial /tmp/dkms_test_certificate)"
 fi
@@ -482,7 +483,7 @@ description:    A Simple dkms test module
 license:        GPL
 EOF
 
-if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
+if (( NO_SIGNING_TOOL == 0 )); then
     echo 'Checking module signature'
     SIG_KEY="$(modinfo -F sig_key "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" | tr -d ':')"
     SIG_HASH="$(modinfo -F sig_hashalgo "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}")"
@@ -607,7 +608,7 @@ description:    A Simple dkms test module
 license:        GPL
 EOF
 
-if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
+if (( NO_SIGNING_TOOL == 0 )); then
     echo 'Checking module signature'
     SIG_KEY="$(modinfo -F sig_key "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" | tr -d ':')"
     SIG_HASH="$(modinfo -F sig_hashalgo "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}")"
@@ -692,7 +693,7 @@ run_status_with_expected_output 'dkms_test' << EOF
 EOF
 
 echo 'Removing temporary files'
-if [[ "${NO_SIGNING_TOOL}" = 0 ]]; then
+if (( NO_SIGNING_TOOL == 0 )); then
     rm /tmp/dkms_test_private_key /tmp/dkms_test_certificate
 fi
 rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
