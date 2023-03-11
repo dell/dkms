@@ -905,6 +905,14 @@ prepare_signing()
 {
     do_signing=0
 
+    if [[ -f "${kernel_config}" ]]; then
+        sign_hash="$(grep "^CONFIG_MODULE_SIG_HASH=" "${kernel_config}" | sed 's/CONFIG_MODULE_SIG_HASH=//;s/"//g')"
+        # The kernel may be built without module signing facility. CONFIG_MODULE_SIG_HASH is unset in kconfig
+        sign_hash="${sign_hash:-sha512}"
+    else
+        sign_hash="sha512"
+    fi
+
     # Lazy source in signing related configuration
     read_framework_conf $dkms_framework_signing_variables
 
@@ -981,14 +989,6 @@ prepare_signing()
     if [ ! -f "${mok_certificate}" ]; then
         echo "Certificate file ${mok_certificate} not found and can't be generated, modules won't be signed"
         return
-    fi
-
-    if [[ -f "${kernel_config}" ]]; then
-        sign_hash="$(grep "^CONFIG_MODULE_SIG_HASH=" "${kernel_config}" | sed 's/CONFIG_MODULE_SIG_HASH=//;s/"//g')"
-        # The kernel may be built without module signing facility. CONFIG_MODULE_SIG_HASH is unset in kconfig
-        sign_hash="${sign_hash:-sha512}"
-    else
-        sign_hash="sha512"
     fi
 
     do_signing=1
