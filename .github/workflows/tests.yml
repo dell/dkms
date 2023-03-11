@@ -104,7 +104,7 @@ jobs:
       run: |
         if [ "${{ matrix.distro.name }}" = alpine ] && ([ "${{ matrix.distro.tag }}" = 3.10 ] || [ "${{ matrix.distro.variant }}" = "-lts" ]); then
             ./run_test.sh --no-signing-tool
-        elif [ "${{ matrix.distro.name }}" = debian ] && [ "${{ matrix.distro.tag }}" = 8 ]; then
+        elif [ "${{ matrix.distro.name }}" = debian ] && ([ "${{ matrix.distro.tag }}" = 8 ] || [ "${{ matrix.distro.tag }}" = 9 ]); then
             ./run_test.sh --no-signing-tool
         else
             ./run_test.sh
