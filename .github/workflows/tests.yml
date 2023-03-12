@@ -1,6 +1,11 @@
 name: Run tests
 
-on: [push, pull_request]
+on:
+  # Build at 23:00 every Sunday
+  schedule:
+    - cron: "0 23 * * 1"
+  pull_request:
+  push:
 
 jobs:
   test-distributions:
