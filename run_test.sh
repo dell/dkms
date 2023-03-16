@@ -7,7 +7,8 @@ cd "$(dirname -- "$0")"
 
 # To use a specific kernel version, use the environment variable KERNEL_VER
 KERNEL_VER="${KERNEL_VER:-$(uname -r)}"
-echo "Using kernel ${KERNEL_VER}"
+KERNEL_ARCH="$(uname -m)"
+echo "Using kernel ${KERNEL_VER}/${KERNEL_ARCH}"
 
 # Override PATH to use the local dkms binary
 PATH="$(pwd):$PATH"
@@ -314,15 +315,15 @@ make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build 
 ${SIGNING_MESSAGE}Cleaning build area...
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
 echo 'Building the test module again'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-Module dkms_test/1.0 already built for kernel ${KERNEL_VER} ($(uname -m)), skip. You may override by specifying --force.
+Module dkms_test/1.0 already built for kernel ${KERNEL_VER} (${KERNEL_ARCH}), skip. You may override by specifying --force.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
 if (( NO_SIGNING_TOOL == 0 )); then
@@ -372,7 +373,7 @@ ${SIGNING_MESSAGE}Cleaning build area...
 EOF
     rm -r "/tmp/dkms_test_dir_${KERNEL_VER}/"
 
-    BUILT_MODULE_PATH="/var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/$(uname -m)/module/dkms_test.ko${mod_compression_ext}"
+    BUILT_MODULE_PATH="/var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/module/dkms_test.ko${mod_compression_ext}"
     CURRENT_HASH="$(modinfo -F sig_hashalgo "${BUILT_MODULE_PATH}")"
 
     echo 'Building the test module using a different hash algorithm'
@@ -416,7 +417,7 @@ make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build 
 ${SIGNING_MESSAGE}Cleaning build area...
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
 if (( NO_SIGNING_TOOL == 0 )); then
@@ -436,15 +437,15 @@ Running module version sanity check.
 depmod...
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 echo 'Installing the test module again'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-Module dkms_test/1.0 already installed on kernel ${KERNEL_VER} ($(uname -m)), skip. You may override by specifying --force.
+Module dkms_test/1.0 already installed on kernel ${KERNEL_VER} (${KERNEL_ARCH}), skip. You may override by specifying --force.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 if ! [[ -f "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" ]] ; then
     echo >&2 "Error: module not found in /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}"
@@ -453,7 +454,7 @@ fi
 
 echo 'Installing the test module again by force'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
-Module dkms_test-1.0 for kernel ${KERNEL_VER} ($(uname -m)).
+Module dkms_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
 Before uninstall, this module version was ACTIVE on this kernel.
 
 dkms_test.ko${mod_compression_ext}:
@@ -473,7 +474,7 @@ Running module version sanity check.
 depmod...
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 echo 'Checking modinfo'
@@ -505,7 +506,7 @@ fi
 
 echo 'Uninstalling the test module'
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-Module dkms_test-1.0 for kernel ${KERNEL_VER} ($(uname -m)).
+Module dkms_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
 Before uninstall, this module version was ACTIVE on this kernel.
 
 dkms_test.ko${mod_compression_ext}:
@@ -516,7 +517,7 @@ dkms_test.ko${mod_compression_ext}:
    - Use the dkms install command to reinstall any previous module version.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 if [[ -e "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" ]] ; then
     echo >&2 "Error: module not removed in /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}"
@@ -525,15 +526,15 @@ fi
 
 echo 'Uninstalling the test module again'
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-Module dkms_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
 echo 'Unbuilding the test module'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-Module dkms_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0: added
@@ -541,8 +542,8 @@ EOF
 
 echo 'Unbuilding the test module again'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-Module dkms_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
-Module dkms_test 1.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_test 1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0: added
@@ -550,8 +551,8 @@ EOF
 
 echo 'Removing the test module'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-Module dkms_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
-Module dkms_test 1.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_test 1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_test-1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
@@ -594,7 +595,7 @@ Running module version sanity check.
 depmod...
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 if ! [[ -f "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" ]] ; then
     echo >&2 "Error: module not found in /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}"
@@ -631,7 +632,7 @@ fi
 
 echo 'Removing the test module with --all'
 run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
-Module dkms_test-1.0 for kernel ${KERNEL_VER} ($(uname -m)).
+Module dkms_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
 Before uninstall, this module version was ACTIVE on this kernel.
 
 dkms_test.ko${mod_compression_ext}:
@@ -662,7 +663,7 @@ make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build 
 ${SIGNING_MESSAGE}Cleaning build area...
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
 echo "Running dkms autoinstall"
@@ -679,7 +680,7 @@ EOF
 
 echo 'Removing the test module with --all'
 run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
-Module dkms_test-1.0 for kernel ${KERNEL_VER} ($(uname -m)).
+Module dkms_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
 Before uninstall, this module version was ACTIVE on this kernel.
 
 dkms_test.ko${mod_compression_ext}:
@@ -735,7 +736,7 @@ make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build 
 ${SIGNING_MESSAGE}Cleaning build area...
 EOF
 run_status_with_expected_output 'dkms_multiver_test' << EOF
-dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_multiver_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 dkms_multiver_test/2.0: added
 EOF
 set_signing_message "dkms_multiver_test" "2.0"
@@ -747,8 +748,8 @@ make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build 
 ${SIGNING_MESSAGE}Cleaning build area...
 EOF
 run_status_with_expected_output 'dkms_multiver_test' << EOF
-dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): built
-dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): built
+dkms_multiver_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+dkms_multiver_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
 echo 'Installing the multiver test modules'
@@ -763,8 +764,8 @@ Running module version sanity check.
 depmod...
 EOF
 run_status_with_expected_output 'dkms_multiver_test' << EOF
-dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): installed
-dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): built
+dkms_multiver_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+dkms_multiver_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_multiver_test -v 2.0 << EOF
 
@@ -777,8 +778,8 @@ Running module version sanity check.
 depmod...
 EOF
 run_status_with_expected_output 'dkms_multiver_test' << EOF
-dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): built
-dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_multiver_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+dkms_multiver_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 run_with_expected_error 6 dkms install -k "${KERNEL_VER}" -m dkms_multiver_test -v 1.0 << EOF
 
@@ -790,20 +791,20 @@ You may override by specifying --force.
 Error! Installation aborted.
 EOF
 run_status_with_expected_output 'dkms_multiver_test' << EOF
-dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): built
-dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_multiver_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+dkms_multiver_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 echo 'Uninstalling the multiver test modules'
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_multiver_test -v 1.0 << EOF
-Module dkms_multiver_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_multiver_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 EOF
 run_status_with_expected_output 'dkms_multiver_test' << EOF
-dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): built
-dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_multiver_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+dkms_multiver_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_multiver_test -v 2.0 << EOF
-Module dkms_multiver_test-2.0 for kernel ${KERNEL_VER} ($(uname -m)).
+Module dkms_multiver_test-2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
 Before uninstall, this module version was ACTIVE on this kernel.
 
 dkms_multiver_test.ko${mod_compression_ext}:
@@ -814,8 +815,8 @@ dkms_multiver_test.ko${mod_compression_ext}:
    - Use the dkms install command to reinstall any previous module version.
 EOF
 run_status_with_expected_output 'dkms_multiver_test' << EOF
-dkms_multiver_test/1.0, ${KERNEL_VER}, $(uname -m): built
-dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): built
+dkms_multiver_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+dkms_multiver_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 if [[ -e "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_multiver_test.ko${mod_compression_ext}" ]] ; then
     echo >&2 "Error: module not removed in /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_multiver_test.ko${mod_compression_ext}"
@@ -824,14 +825,14 @@ fi
 
 echo 'Unbuilding the multiver test modules'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_multiver_test -v 1.0 << EOF
-Module dkms_multiver_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_multiver_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 EOF
 run_status_with_expected_output 'dkms_multiver_test' << EOF
 dkms_multiver_test/1.0: added
-dkms_multiver_test/2.0, ${KERNEL_VER}, $(uname -m): built
+dkms_multiver_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_multiver_test -v 2.0 << EOF
-Module dkms_multiver_test 2.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_multiver_test 2.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 EOF
 run_status_with_expected_output 'dkms_multiver_test' << EOF
 dkms_multiver_test/1.0: added
@@ -840,16 +841,16 @@ EOF
 
 echo 'Removing the multiver test modules'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_multiver_test -v 1.0 << EOF
-Module dkms_multiver_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
-Module dkms_multiver_test 1.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_multiver_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_multiver_test 1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_multiver_test-1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_multiver_test' << EOF
 dkms_multiver_test/2.0: added
 EOF
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_multiver_test -v 2.0 << EOF
-Module dkms_multiver_test 2.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
-Module dkms_multiver_test 2.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_multiver_test 2.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_multiver_test 2.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_multiver_test-2.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_multiver_test' << EOF
@@ -891,7 +892,7 @@ make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build 
 ${SIGNING_MESSAGE}Cleaning build area...
 EOF
 run_status_with_expected_output 'dkms_nover_test' << EOF
-dkms_nover_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_nover_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 set_signing_message "dkms_emptyver_test" "1.0"
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_emptyver_test -v 1.0 << EOF
@@ -902,7 +903,7 @@ make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build 
 ${SIGNING_MESSAGE}Cleaning build area...
 EOF
 run_status_with_expected_output 'dkms_emptyver_test' << EOF
-dkms_emptyver_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_emptyver_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
 echo 'Installing the nover/emptyver test modules'
@@ -917,7 +918,7 @@ Running module version sanity check.
 depmod...
 EOF
 run_status_with_expected_output 'dkms_nover_test' << EOF
-dkms_nover_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_nover_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_emptyver_test -v 1.0 << EOF
 
@@ -930,12 +931,12 @@ Running module version sanity check.
 depmod...
 EOF
 run_status_with_expected_output 'dkms_emptyver_test' << EOF
-dkms_emptyver_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_emptyver_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 echo 'Uninstalling the nover/emptyver test modules'
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_nover_test -v 1.0 << EOF
-Module dkms_nover_test-1.0 for kernel ${KERNEL_VER} ($(uname -m)).
+Module dkms_nover_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
 Before uninstall, this module version was ACTIVE on this kernel.
 
 dkms_nover_test.ko${mod_compression_ext}:
@@ -946,14 +947,14 @@ dkms_nover_test.ko${mod_compression_ext}:
    - Use the dkms install command to reinstall any previous module version.
 EOF
 run_status_with_expected_output 'dkms_nover_test' << EOF
-dkms_nover_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_nover_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 if [[ -e "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_nover_test.ko${mod_compression_ext}" ]] ; then
     echo >&2 "Error: module not removed in /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_nover_test.ko${mod_compression_ext}"
     exit 1
 fi
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_emptyver_test -v 1.0 << EOF
-Module dkms_emptyver_test-1.0 for kernel ${KERNEL_VER} ($(uname -m)).
+Module dkms_emptyver_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
 Before uninstall, this module version was ACTIVE on this kernel.
 
 dkms_emptyver_test.ko${mod_compression_ext}:
@@ -964,7 +965,7 @@ dkms_emptyver_test.ko${mod_compression_ext}:
    - Use the dkms install command to reinstall any previous module version.
 EOF
 run_status_with_expected_output 'dkms_emptyver_test' << EOF
-dkms_emptyver_test/1.0, ${KERNEL_VER}, $(uname -m): built
+dkms_emptyver_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 if [[ -e "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_emptyver_test.ko${mod_compression_ext}" ]] ; then
     echo >&2 "Error: module not removed in /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_emptyver_test.ko${mod_compression_ext}"
@@ -973,13 +974,13 @@ fi
 
 echo 'Unbuilding the nover/emptyver test modules'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_nover_test -v 1.0 << EOF
-Module dkms_nover_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_nover_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 EOF
 run_status_with_expected_output 'dkms_nover_test' << EOF
 dkms_nover_test/1.0: added
 EOF
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_emptyver_test -v 1.0 << EOF
-Module dkms_emptyver_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_emptyver_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 EOF
 run_status_with_expected_output 'dkms_emptyver_test' << EOF
 dkms_emptyver_test/1.0: added
@@ -987,15 +988,15 @@ EOF
 
 echo 'Removing the nover/emptyver test modules'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_nover_test -v 1.0 << EOF
-Module dkms_nover_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
-Module dkms_nover_test 1.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_nover_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_nover_test 1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_nover_test-1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_nover_test' << EOF
 EOF
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_emptyver_test -v 1.0 << EOF
-Module dkms_emptyver_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
-Module dkms_emptyver_test 1.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_emptyver_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_emptyver_test 1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_emptyver_test-1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_emptyver_test' << EOF
@@ -1035,7 +1036,7 @@ Running module version sanity check.
 depmod...
 EOF
 run_status_with_expected_output 'dkms_nover_update_test' << EOF
-dkms_nover_update_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_nover_update_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 echo 'Adding the nover update test modules 2.0 by directory'
@@ -1043,7 +1044,7 @@ run_with_expected_output dkms add test/dkms_nover_update_test/2.0 << EOF
 Creating symlink /var/lib/dkms/dkms_nover_update_test/2.0/source -> /usr/src/dkms_nover_update_test-2.0
 EOF
 run_status_with_expected_output 'dkms_nover_update_test' << EOF
-dkms_nover_update_test/1.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_nover_update_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 dkms_nover_update_test/2.0: added
 EOF
 if ! [[ -d /usr/src/dkms_nover_update_test-2.0 ]] ; then
@@ -1069,8 +1070,8 @@ Running module version sanity check.
 depmod...
 EOF
 run_status_with_expected_output 'dkms_nover_update_test' << EOF
-dkms_nover_update_test/1.0, ${KERNEL_VER}, $(uname -m): built
-dkms_nover_update_test/2.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_nover_update_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+dkms_nover_update_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 echo 'Adding the nover update test modules 3.0 by directory'
@@ -1078,8 +1079,8 @@ run_with_expected_output dkms add test/dkms_nover_update_test/3.0 << EOF
 Creating symlink /var/lib/dkms/dkms_nover_update_test/3.0/source -> /usr/src/dkms_nover_update_test-3.0
 EOF
 run_status_with_expected_output 'dkms_nover_update_test' << EOF
-dkms_nover_update_test/1.0, ${KERNEL_VER}, $(uname -m): built
-dkms_nover_update_test/2.0, ${KERNEL_VER}, $(uname -m): installed
+dkms_nover_update_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+dkms_nover_update_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 dkms_nover_update_test/3.0: added
 EOF
 if ! [[ -d /usr/src/dkms_nover_update_test-3.0 ]] ; then
@@ -1097,13 +1098,13 @@ make -j$(nproc) KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build 
 ${SIGNING_MESSAGE}Cleaning build area...
 EOF
 run_status_with_expected_output 'dkms_nover_update_test' << EOF
-dkms_nover_update_test/1.0, ${KERNEL_VER}, $(uname -m): built
-dkms_nover_update_test/2.0, ${KERNEL_VER}, $(uname -m): installed
-dkms_nover_update_test/3.0, ${KERNEL_VER}, $(uname -m): built
+dkms_nover_update_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+dkms_nover_update_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+dkms_nover_update_test/3.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
-MODULE_PATH_2="/var/lib/dkms/dkms_nover_update_test/2.0/${KERNEL_VER}/$(uname -m)/module/dkms_nover_update_test.ko${mod_compression_ext}"
-MODULE_PATH_3="/var/lib/dkms/dkms_nover_update_test/3.0/${KERNEL_VER}/$(uname -m)/module/dkms_nover_update_test.ko${mod_compression_ext}"
+MODULE_PATH_2="/var/lib/dkms/dkms_nover_update_test/2.0/${KERNEL_VER}/${KERNEL_ARCH}/module/dkms_nover_update_test.ko${mod_compression_ext}"
+MODULE_PATH_3="/var/lib/dkms/dkms_nover_update_test/3.0/${KERNEL_VER}/${KERNEL_ARCH}/module/dkms_nover_update_test.ko${mod_compression_ext}"
 if ! modinfo "${MODULE_PATH_3}" | grep -q '^srcversion:' && ! diff "${MODULE_PATH_2}" "${MODULE_PATH_3}" &>/dev/null; then
     # On debian, no srcversion in modinfo's output, the installation will always succeed
     echo 'Notice: Skip installation test on this platform'
@@ -1121,19 +1122,19 @@ You may override by specifying --force.
 Error! Installation aborted.
 EOF
     run_status_with_expected_output 'dkms_nover_update_test' << EOF
-dkms_nover_update_test/1.0, ${KERNEL_VER}, $(uname -m): built
-dkms_nover_update_test/2.0, ${KERNEL_VER}, $(uname -m): installed
-dkms_nover_update_test/3.0, ${KERNEL_VER}, $(uname -m): built
+dkms_nover_update_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+dkms_nover_update_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+dkms_nover_update_test/3.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 fi
 
 echo 'Removing the nover update test modules'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_nover_update_test -v 3.0 << EOF
-Module dkms_nover_update_test 3.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_nover_update_test 3.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_nover_update_test-3.0 completely from the DKMS tree.
 EOF
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_nover_update_test -v 2.0 << EOF
-Module dkms_nover_update_test-2.0 for kernel ${KERNEL_VER} ($(uname -m)).
+Module dkms_nover_update_test-2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
 Before uninstall, this module version was ACTIVE on this kernel.
 
 dkms_nover_update_test.ko${mod_compression_ext}:
@@ -1145,7 +1146,7 @@ dkms_nover_update_test.ko${mod_compression_ext}:
 Deleting module dkms_nover_update_test-2.0 completely from the DKMS tree.
 EOF
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_nover_update_test -v 1.0 << EOF
-Module dkms_nover_update_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_nover_update_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_nover_update_test-1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_nover_update_test' << EOF
@@ -1170,7 +1171,7 @@ run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
 Building module:
 Cleaning build area...(bad exit status: 2)
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} all...(bad exit status: 2)
-Error! Bad return status for module build on kernel: ${KERNEL_VER} ($(uname -m))
+Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
 Error! One or more modules failed to install during autoinstall.
 Refer to previous errors for more information.
@@ -1186,7 +1187,7 @@ run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
 Building module:
 Cleaning build area...(bad exit status: 2)
 make -j$(nproc) KERNELRELEASE=${KERNEL_VER} all...(bad exit status: 2)
-Error! Bad return status for module build on kernel: ${KERNEL_VER} ($(uname -m))
+Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
 dkms_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_failing_test
 Error! One or more modules failed to install during autoinstall.
@@ -1195,8 +1196,8 @@ EOF
 
 echo 'Removing failing test module'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_failing_test -v 1.0 << EOF
-Module dkms_failing_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
-Module dkms_failing_test 1.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_failing_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_failing_test 1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_failing_test-1.0 completely from the DKMS tree.
 EOF
 echo 'Removing /usr/src/dkms_failing_test-1.0'
@@ -1211,8 +1212,8 @@ EOF
 
 echo 'Removing test module with dependencies'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
-Module dkms_dependencies_test 1.0 is not installed for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
-Module dkms_dependencies_test 1.0 is not built for kernel ${KERNEL_VER} ($(uname -m)). Skipping...
+Module dkms_dependencies_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_dependencies_test 1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_dependencies_test-1.0 completely from the DKMS tree.
 EOF
 echo 'Removing /usr/src/dkms_dependencies_test-1.0'
