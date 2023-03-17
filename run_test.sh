@@ -704,6 +704,7 @@ EOF
 
 echo "Running dkms autoinstall for a kernel without headers installed (expected error)"
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}-noheaders" << EOF
+dkms autoinstall on ${KERNEL_VER}-noheaders/x86_64 failed for dkms_test(1)
 Error! Your kernel headers for kernel ${KERNEL_VER}-noheaders cannot be found at /lib/modules/${KERNEL_VER}-noheaders/build or /lib/modules/${KERNEL_VER}-noheaders/source.
 Please install the linux-headers-${KERNEL_VER}-noheaders package or use the --kernelsourcedir option to tell DKMS where it's located.
 Error! One or more modules failed to install during autoinstall.
@@ -1315,6 +1316,7 @@ run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
 Building module:
 Cleaning build area...
 make -j1 KERNELRELEASE=${KERNEL_VER} all...(bad exit status: 2)
+dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} failed for dkms_failing_test(10)
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
 Error! One or more modules failed to install during autoinstall.
@@ -1331,6 +1333,7 @@ run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
 Building module:
 Cleaning build area...
 make -j1 KERNELRELEASE=${KERNEL_VER} all...(bad exit status: 2)
+dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} failed for dkms_failing_test(10)
 dkms_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_failing_test
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
@@ -1397,6 +1400,7 @@ EOF
 
 echo "Running dkms autoinstall (1 x skip) (THIS SHOULD NOT FAIL!)"
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
+dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} failed for dkms_build_exclusive_test(9)
 Error! The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf for module dkms_build_exclusive_test includes a BUILD_EXCLUSIVE directive which does not match this kernel/arch.
 This indicates that it should not be built.
 Error! One or more modules failed to install during autoinstall.
