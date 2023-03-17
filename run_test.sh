@@ -1409,6 +1409,59 @@ run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
 dkms_build_exclusive_test/1.0: added
 EOF
 
+echo 'Adding the test module by directory'
+run_with_expected_output dkms add test/dkms_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+
+echo "Running dkms autoinstall (1 x skip, 1 x pass)"
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+
+Building module:
+Cleaning build area...
+make -j1 KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
+${SIGNING_MESSAGE}Cleaning build area...
+
+dkms_test.ko${mod_compression_ext}:
+Running module version sanity check.
+ - Original module
+   - No original module exists within this kernel
+ - Installation
+   - Installing to /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+depmod...
+dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} succeeded for dkms_test
+dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} was skipped for dkms_build_exclusive_test
+Error! The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf for module dkms_build_exclusive_test includes a BUILD_EXCLUSIVE directive which does not match this kernel/arch.
+This indicates that it should not be built.
+EOF
+run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
+dkms_build_exclusive_test/1.0: added
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Removing the test module'
+run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
+Module dkms_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
+Before uninstall, this module version was ACTIVE on this kernel.
+
+dkms_test.ko${mod_compression_ext}:
+ - Uninstallation
+   - Deleting from: /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+ - Original module
+   - No original module was found for this module on this kernel.
+   - Use the dkms install command to reinstall any previous module version.
+Deleting module dkms_test-1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+echo 'Removing /usr/src/dkms_test-1.0'
+rm -r /usr/src/dkms_test-1.0
+
 echo 'Removing the build-exclusive test module'
 run_with_expected_output dkms remove --all -m dkms_build_exclusive_test -v 1.0 << EOF
 Deleting module dkms_build_exclusive_test-1.0 completely from the DKMS tree.
