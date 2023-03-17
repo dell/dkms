@@ -664,6 +664,21 @@ skip the respective modules.
 For example, if you set it as ="^2\.4.*", your module would not be built for 2.6
 or later kernels.
 .TP
+.B BUILD_EXCLUSIVE_KERNEL_MIN=
+and
+.B BUILD_EXCLUSIVE_KERNEL_MAX=
+These optional directives allow one to specify the minimal and maximal kernel
+versions supported by the module. If one (or both) of these are defined, the
+module will not be built for kernels outside the specified version limits.
+For example, if you set
+.B BUILD_EXCLUSIVE_KERNEL_MIN
+as "=3.5", your module would be built for e.g. "3.5-rc2", "3.6.18" or other
+later versions but not for "3.4.999" or earlier kernels.
+Similarly, if you set
+.B BUILD_EXCLUSIVE_KERNEL_MAX
+as ="4.12", your module would be built for e.g. "4.11.999", "3.9-rc5" or
+other earlier versions, but not for "4.12-rc1" or later kernels.
+.TP
 .B BUILD_EXCLUSIVE_ARCH=
 This optional directive functions very similarly to
 .B BUILD_EXCLUSIVE_KERNEL
