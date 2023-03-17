@@ -27,6 +27,7 @@ TEST_MODULES=(
     "dkms_emptyver_test"
     "dkms_nover_update_test"
     "dkms_conf_test"
+    "dkms_build_exclusive_test"
 )
 TEST_TMPDIRS=(
     "/usr/src/dkms_test-1.0/"
@@ -40,6 +41,7 @@ TEST_TMPDIRS=(
     "/usr/src/dkms_nover_update_test-2.0"
     "/usr/src/dkms_nover_update_test-3.0"
     "/usr/src/dkms_conf_test-1.0"
+    "/usr/src/dkms_build_exclusive_test-1.0"
     "/tmp/dkms_test_dir_${KERNEL_VER}/"
 )
 TEST_TMPFILES=(
@@ -1360,6 +1362,58 @@ Deleting module dkms_dependencies_test-1.0 completely from the DKMS tree.
 EOF
 echo 'Removing /usr/src/dkms_dependencies_test-1.0'
 rm -r /usr/src/dkms_dependencies_test-1.0
+
+echo 'Checking that the environment is clean again'
+check_no_dkms_test
+
+############################################################################
+### Testing BUILD_EXCLUSIVE_*                                            ###
+############################################################################
+
+echo 'Running tests with BUILD_EXCLUSIVE_* modules'
+set_signing_message "dkms_test" "1.0"
+
+echo 'Adding the build-exclusive test module by directory'
+run_with_expected_output dkms add test/dkms_build_exclusive_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_build_exclusive_test/1.0/source -> /usr/src/dkms_build_exclusive_test-1.0
+EOF
+run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
+dkms_build_exclusive_test/1.0: added
+EOF
+if ! [[ -d /usr/src/dkms_build_exclusive_test-1.0 ]] ; then
+    echo >&2 'Error: directory /usr/src/dkms_build_exclusive_test-1.0 was not created'
+    return 1
+fi
+
+# Should this really fail?
+echo '(Not) building the build-exclusive test module'
+run_with_expected_error 9 dkms build -k "${KERNEL_VER}" -m dkms_build_exclusive_test -v 1.0 << EOF
+Error! The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf for module dkms_build_exclusive_test includes a BUILD_EXCLUSIVE directive which does not match this kernel/arch.
+This indicates that it should not be built.
+EOF
+run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
+dkms_build_exclusive_test/1.0: added
+EOF
+
+echo "Running dkms autoinstall (1 x skip) (THIS SHOULD NOT FAIL!)"
+run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
+Error! The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf for module dkms_build_exclusive_test includes a BUILD_EXCLUSIVE directive which does not match this kernel/arch.
+This indicates that it should not be built.
+Error! One or more modules failed to install during autoinstall.
+Refer to previous errors for more information.
+EOF
+run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
+dkms_build_exclusive_test/1.0: added
+EOF
+
+echo 'Removing the build-exclusive test module'
+run_with_expected_output dkms remove --all -m dkms_build_exclusive_test -v 1.0 << EOF
+Deleting module dkms_build_exclusive_test-1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
+EOF
+echo 'Removing /usr/src/dkms_build_exclusive_test-1.0'
+rm -r /usr/src/dkms_build_exclusive_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
