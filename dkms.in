@@ -2264,7 +2264,7 @@ autoinstall() {
                     installed_modules[${#installed_modules[@]}]="$m"
                     install_count=$(($install_count +1))
                 else
-                    failed_modules=[${#failed_modules[@]}]="$m"
+                    failed_modules[${#failed_modules[@]}]="$m($?)"
                 fi
             else
                 next_install[${#next_install[@]}]="$mv"
@@ -2282,6 +2282,11 @@ autoinstall() {
         [[ "$install_count" -gt 0 ]] || break;
 
     done
+
+    if [[ "${#failed_modules[@]}" > 0 ]]; then
+        echo "dkms autoinstall on $kernelver/$arch failed for ${failed_modules[@]}"
+    fi
+
     for mv in "${to_install[@]}"; do
         IFS=/ read m v <<< "$mv"
         echo "$m/$v autoinstall failed due to missing dependencies: ${build_depends[$m]}"
