@@ -700,6 +700,7 @@ Running module version sanity check.
  - Installation
    - Installing to /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
 depmod...
+dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} succeeded for dkms_test
 EOF
 
 echo "Running dkms autoinstall for a kernel without headers installed (expected error)"

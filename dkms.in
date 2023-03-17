@@ -2283,6 +2283,10 @@ autoinstall() {
 
     done
 
+    if [[ "${#installed_modules[@]}" > 0 ]]; then
+        echo "dkms autoinstall on $kernelver/$arch succeeded for ${installed_modules[@]}"
+    fi
+
     if [[ "${#failed_modules[@]}" > 0 ]]; then
         echo "dkms autoinstall on $kernelver/$arch failed for ${failed_modules[@]}"
     fi
