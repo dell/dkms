@@ -2193,30 +2193,28 @@ add_source_tree() {
 # functionality, and makes it much easier to reinstall DKMS kernel modules
 # by hand if dkms_autoinstaller is not used.
 autoinstall() {
-    local status mv mvka m v k a last_v last_m tenative
+    local status mv mvka m v k a
     local install_count next_depends
     local -a to_install=()
     local -a next_install=()
     local -a installed_modules=()
     local -a failed_modules=()
     local -A build_depends=()
+    local -A latest=()
 
     # Walk through our list of installed and built modules, and create
-    # a list of modules that need to be reinstalled.
-    # Assuming all versions of same module to be parsed sequentially.
+    # a list of modules and their latest version.
     while read status mvka; do
         IFS='/' read m v k a <<< "$mvka"
-        [[ ! $last_m ]] && last_m="$m"
-        # autoinstall previous module's latest version after its deps.
-        if [[ $last_m != $m ]]; then
-            if [[ $tenative ]]; then
-                to_install[${#to_install[@]}]="$tenative"
-                build_depends["$last_m"]="${BUILD_DEPENDS[@]}"
-            fi
-            last_m="$m"
-            last_v='0'
-            tenative=''
+        if [[ ("$(VER "$v")" > "$(VER "${latest["$m"]}")") ]]; then
+            latest["$m"]="$v"
         fi
+    done < <(module_status)
+
+    # Walk through our list of known modules, and create
+    # a list of modules that need to be reinstalled.
+    for m in "${!latest[@]}"; do
+        v="${latest["$m"]}"
         # If the module is already installed or weak-installed, skip it.
         if _is_module_installed "$m" "$v" "$kernelver" "$arch"; then
             installed_modules[${#installed_modules[@]}]="$m"
@@ -2226,24 +2224,15 @@ autoinstall() {
             installed_modules[${#installed_modules[@]}]="$m"
             continue
         fi
-        # if the module does not want to be autoinstalled, skip it.
-        read_conf_or_die "$k" "$a" "$dkms_tree/$m/$v/source/dkms.conf"
+        # If the module does not want to be autoinstalled, skip it.
+        read_conf_or_die "$kernelver" "$arch" "$dkms_tree/$m/$v/source/dkms.conf"
         if [[ ! $AUTOINSTALL ]]; then
             continue
         fi
-        # otherwise, only autoinstall the latest version we have hanging around.
-        if [[ ($(VER $v) > $(VER $last_v)) ]]; then
-            last_v="$v"
-            tenative="$m/$v"
-        fi
-    done < <(module_status)
-
-    # We may have exited the loop with $tenative set.  If it is,
-    # it contains something that should be updated.
-    if [[ $tenative ]]; then
-        to_install[${#to_install[@]}]="$tenative"
+        # Otherwise, autoinstall the latest version we have hanging around.
+        to_install[${#to_install[@]}]="$m/$v"
         build_depends["$m"]="${BUILD_DEPENDS[@]}"
-    fi
+    done
 
     [[ $to_install ]] || return 0
 
