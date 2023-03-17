@@ -1444,6 +1444,66 @@ run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
+echo 'Unbuilding the test module'
+run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+Module dkms_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
+Before uninstall, this module version was ACTIVE on this kernel.
+
+dkms_test.ko${mod_compression_ext}:
+ - Uninstallation
+   - Deleting from: /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+ - Original module
+   - No original module was found for this module on this kernel.
+   - Use the dkms install command to reinstall any previous module version.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+
+echo 'Adding failing test module by directory'
+run_with_expected_output dkms add test/dkms_failing_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_failing_test/1.0/source -> /usr/src/dkms_failing_test-1.0
+EOF
+
+echo "Running dkms autoinstall (1 x skip, 1 x fail, 1 x pass) (expected error)"
+run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
+
+Building module:
+Cleaning build area...
+make -j1 KERNELRELEASE=${KERNEL_VER} all...(bad exit status: 2)
+
+Building module:
+Cleaning build area...
+make -j1 KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build...
+${SIGNING_MESSAGE}Cleaning build area...
+
+dkms_test.ko${mod_compression_ext}:
+Running module version sanity check.
+ - Original module
+   - No original module exists within this kernel
+ - Installation
+   - Installing to /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+depmod...
+dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} succeeded for dkms_test
+dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} was skipped for dkms_build_exclusive_test
+dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} failed for dkms_failing_test(10)
+Error! The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf for module dkms_build_exclusive_test includes a BUILD_EXCLUSIVE directive which does not match this kernel/arch.
+This indicates that it should not be built.
+Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
+Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
+Error! One or more modules failed to install during autoinstall.
+Refer to previous errors for more information.
+EOF
+
+echo 'Removing failing test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_failing_test -v 1.0 << EOF
+Module dkms_failing_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_failing_test 1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Deleting module dkms_failing_test-1.0 completely from the DKMS tree.
+EOF
+echo 'Removing /usr/src/dkms_failing_test-1.0'
+rm -r /usr/src/dkms_failing_test-1.0
+
 echo 'Removing the test module'
 run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
 Module dkms_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
