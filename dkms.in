@@ -1023,7 +1023,7 @@ prepare_build()
     read_conf_or_die "$kernelver" "$arch"
 
     # Error out if build_exclude is set
-    [[ $build_exclude ]] && die 9 \
+    [[ $build_exclude ]] && die 77 \
         $"The $base_dir/dkms.conf for module $module includes a BUILD_EXCLUSIVE directive which does not match this kernel/arch."\
         $"This indicates that it should not be built."
 

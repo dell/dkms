@@ -654,10 +654,13 @@ missing or broken dependencies cause non-fatal warnings.
 .TP
 .B BUILD_EXCLUSIVE_KERNEL=
 This optional directive allows you to specify a regular expression which defines
-the subset of kernels which DKMS is allowed to build your module for. If the kernel
-being built for does not match against this regular expression, the dkms build
-will error out. For example, if you set it as ="^2\.4.*", your module would not be
-built for 2.6 kernels.
+the subset of kernels which DKMS is allowed to build your module for.
+If the kernel being built for does not match against this regular expression (or
+does not the satisfy the constraints of any other
+.B BUILD_EXCLUSIVE_*
+directive), the dkms build will error out with exit code 77.
+For example, if you set it as ="^2\.4.*", your module would not be built for 2.6
+or later kernels.
 .TP
 .B BUILD_EXCLUSIVE_ARCH=
 This optional directive functions very similarly to

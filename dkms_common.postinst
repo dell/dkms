@@ -238,7 +238,7 @@ for KERNEL in $KERNELS; do
             set +e
             dkms build -m $NAME -v $VERSION -k $KERNEL $ARCH > /dev/null
             case $? in
-            9)
+            77)
                 set -e
                 echo "Skipped."
                 continue
