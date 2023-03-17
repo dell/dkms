@@ -27,7 +27,8 @@ shopt -s extglob
 # The last group of variables has been deprecated
 readonly dkms_conf_variables="CLEAN PACKAGE_NAME
    PACKAGE_VERSION POST_ADD POST_BUILD POST_INSTALL POST_REMOVE PRE_BUILD
-   PRE_INSTALL BUILD_DEPENDS BUILD_EXCLUSIVE_KERNEL BUILD_EXCLUSIVE_ARCH
+   PRE_INSTALL BUILD_DEPENDS BUILD_EXCLUSIVE_ARCH
+   BUILD_EXCLUSIVE_KERNEL BUILD_EXCLUSIVE_KERNEL_MIN BUILD_EXCLUSIVE_KERNEL_MAX
    build_exclude OBSOLETE_BY MAKE MAKE_MATCH
    PATCH PATCH_MATCH patch_array BUILT_MODULE_NAME
    built_module_name BUILT_MODULE_LOCATION built_module_location
@@ -639,6 +640,8 @@ read_conf()
 
     # Set build_exclude
     [[ $BUILD_EXCLUSIVE_KERNEL && ! $1 =~ $BUILD_EXCLUSIVE_KERNEL ]] && build_exclude="yes"
+    [[ $BUILD_EXCLUSIVE_KERNEL_MIN && "$(VER "$1")" < "$(VER "$BUILD_EXCLUSIVE_KERNEL_MIN")" ]] && build_exclude="yes"
+    [[ $BUILD_EXCLUSIVE_KERNEL_MAX && "$(VER "$1")" > "$(VER "$BUILD_EXCLUSIVE_KERNEL_MAX")" ]] && build_exclude="yes"
     [[ $BUILD_EXCLUSIVE_ARCH && ! $2 =~ $BUILD_EXCLUSIVE_ARCH ]] && build_exclude="yes"
 
     # Set clean
