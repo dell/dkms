@@ -1399,13 +1399,11 @@ run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
 dkms_build_exclusive_test/1.0: added
 EOF
 
-echo "Running dkms autoinstall (1 x skip) (THIS SHOULD NOT FAIL!)"
-run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
-dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} failed for dkms_build_exclusive_test(77)
+echo "Running dkms autoinstall (1 x skip)"
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} was skipped for dkms_build_exclusive_test
 Error! The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf for module dkms_build_exclusive_test includes a BUILD_EXCLUSIVE directive which does not match this kernel/arch.
 This indicates that it should not be built.
-Error! One or more modules failed to install during autoinstall.
-Refer to previous errors for more information.
 EOF
 run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
 dkms_build_exclusive_test/1.0: added

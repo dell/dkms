@@ -2199,6 +2199,7 @@ autoinstall() {
     local -a next_install=()
     local -a known_modules=()
     local -a installed_modules=()
+    local -a skipped_modules=()
     local -a failed_modules=()
     local -A build_depends=()
     local -A latest=()
@@ -2260,11 +2261,15 @@ autoinstall() {
         for mv in "${to_install[@]}"; do
             IFS=/ read m v <<< "$mv"
             if [[ -z "${build_depends[$m]}" ]]; then
-                if (module="$m" module_version="$v" kernelver="$kernelver" arch="$arch" install_module); then
+                (module="$m" module_version="$v" kernelver="$kernelver" arch="$arch" install_module)
+                status=$?
+                if [ "$status" = 0 ]; then
                     installed_modules[${#installed_modules[@]}]="$m"
                     install_count=$(($install_count +1))
+                elif [ "$status" = 77 ]; then
+                    skipped_modules[${#skipped_modules[@]}]="$m"
                 else
-                    failed_modules[${#failed_modules[@]}]="$m($?)"
+                    failed_modules[${#failed_modules[@]}]="$m($status)"
                 fi
             else
                 next_install[${#next_install[@]}]="$mv"
@@ -2285,6 +2290,10 @@ autoinstall() {
 
     if [[ "${#installed_modules[@]}" > 0 ]]; then
         echo "dkms autoinstall on $kernelver/$arch succeeded for ${installed_modules[@]}"
+    fi
+
+    if [[ "${#skipped_modules[@]}" > 0 ]]; then
+        echo "dkms autoinstall on $kernelver/$arch was skipped for ${skipped_modules[@]}"
     fi
 
     if [[ "${#failed_modules[@]}" > 0 ]]; then
