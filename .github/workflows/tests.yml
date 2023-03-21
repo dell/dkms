@@ -146,3 +146,61 @@ jobs:
 
     - name: Remove the test module
       run: sudo dkms remove --all -m dkms_test -v 1.0
+
+  test-vm-clang:
+    name: Test in Ubuntu VM with clang
+    strategy:
+      matrix:
+        version:
+          - 22.04
+    runs-on: ubuntu-${{ matrix.version }}
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        sudo apt update -q
+        sudo apt install -qqy make libc6-dev llvm clang lld llvm-11 clang-11 lld-11 llvm-14 clang-14 lld-14 flex bison libssl-dev openssl
+
+    - name: Remove apport
+      run: |
+        sudo apt remove -qqy apport
+
+    - name: Build tiny kernels with clang
+      run: |
+        sudo apt install linux-source-5.19.0
+        tar -C /tmp -xf /usr/src/linux-source-5.19.0.tar.bz2
+        cd /tmp/linux-source-5.19.0
+        # make `make clean` happy
+        mkdir ubuntu/hio
+        touch ubuntu/hio/Makefile
+        # LLVM=-version is supported since 5.18 
+        make LLVM=-11 tinyconfig
+        echo "CONFIG_MODULES=y" >> .config
+        echo "CONFIG_MODULE_SIG=y" >> .config
+        echo "CONFIG_MODULE_SIG_SHA1=y" >> .config
+        echo "CONFIG_MODULE_SIG_HASH=\"sha1\"" >> .config
+        sed -i 's/^CONFIG_LOCALVERSION=.*$/CONFIG_LOCALVERSION="-clang11"/' .config
+        yes $'\n' | make LLVM=-11
+        sudo make modules_install
+        sudo make install
+        make clean
+        make LLVM=-14 tinyconfig
+        echo "CONFIG_MODULES=y" >> .config
+        echo "CONFIG_MODULE_SIG=y" >> .config
+        echo "CONFIG_MODULE_SIG_SHA512=y" >> .config
+        echo "CONFIG_MODULE_SIG_HASH=\"sha512\"" >> .config
+        sed -i 's/^CONFIG_LOCALVERSION=.*$/CONFIG_LOCALVERSION="-clang14"/' .config
+        yes $'\n' | make LLVM=-14
+        sudo make modules_install
+        sudo make install
+
+    - name: Install dkms
+      run: sudo make install
+
+    - name: Run tests
+      run: |
+        KERNEL_VER="$(cd /tmp/linux-source-5.19.0 && make kernelversion)"
+        sudo env KERNEL_VER="${KERNEL_VER}-clang11" ./run_test.sh
+        sudo env KERNEL_VER="${KERNEL_VER}-clang14" ./run_test.sh
