@@ -38,6 +38,27 @@ test -f $exec || exit 0
 
 [ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
 
+uname_s=$(uname -s)
+
+_get_kernel_dir() {
+    KVER=$1
+    case ${uname_s} in
+	Linux)		DIR="/lib/modules/$KVER/build" ;;
+	GNU/kFreeBSD)	DIR="/usr/src/kfreebsd-headers-$KVER/sys" ;;
+    esac
+    echo $DIR
+}
+
+_check_kernel_dir() {
+    DIR=$(_get_kernel_dir $1)
+    case ${uname_s} in
+	Linux)		test -e $DIR/include ;;
+	GNU/kFreeBSD)	test -e $DIR/kern && test -e $DIR/conf/kmod.mk ;;
+	*)		return 1 ;;
+    esac
+    return $?
+}
+
 case "$1" in
     start)
 		if [ -n "$2" ]; then
@@ -47,6 +68,8 @@ case "$1" in
 		fi
 		if [ -f /etc/dkms/no-autoinstall ]; then
 			log_action_msg "$prog: autoinstall for dkms modules has been disabled"
+		elif ! _check_kernel_dir $kernel; then
+			log_action_msg "$prog: autoinstall for kernel $kernel was skipped since the kernel headers for this kernel do not seem to be installed"
 		else
 			log_daemon_msg "$prog: running auto installation service for kernel $kernel"
 			dkms autoinstall --kernelver $kernel
