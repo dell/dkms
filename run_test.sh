@@ -10,14 +10,10 @@ KERNEL_VER="${KERNEL_VER:-$(uname -r)}"
 KERNEL_ARCH="$(uname -m)"
 echo "Using kernel ${KERNEL_VER}/${KERNEL_ARCH}"
 
-# Override PATH to use the local dkms binary
-PATH="$(pwd):$PATH"
-export PATH
-
 # Avoid output variations due to parallelism
 export parallel_jobs=1
 
-# temporary files, directories, and modules created during tests
+# Temporary files, directories, and modules created during tests
 TEST_MODULES=(
     "dkms_test"
     "dkms_failing_test"
