@@ -1027,8 +1027,6 @@ prepare_build()
         $"The directory $source_dir does not appear to have module source located within it."\
         $"Build halted."
 
-    prepare_kernel "$kernelver" "$arch"
-
     # Set up temporary build directory for build
     rm -rf "$build_dir"
     cp -a "$source_dir/" "$build_dir"
@@ -1157,6 +1155,7 @@ clean_build()
 do_build()
 {
     set_kernel_source_dir_and_kconfig "$kernelver"
+    prepare_kernel "$kernelver" "$arch"
     prepare_signing
     prepare_build
     actual_build
