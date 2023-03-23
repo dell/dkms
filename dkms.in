@@ -2249,7 +2249,7 @@ autoinstall() {
         for m in ${!build_depends[@]}; do
             next_depends=
             for d in ${build_depends[$m]}; do
-                for i in ${installed_modules[@]}; do
+                for i in ${installed_modules[@]} ${skipped_modules[@]}; do
                     [[ "$d" = "$i" ]] && continue 2
                 done
                 next_depends+="$d "
