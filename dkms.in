@@ -2194,7 +2194,7 @@ add_source_tree() {
 # by hand if dkms_autoinstaller is not used.
 autoinstall() {
     local status mv mvka m v k a
-    local install_count next_depends
+    local progress next_depends
     local -a to_install=()
     local -a next_install=()
     local -a known_modules=()
@@ -2242,7 +2242,7 @@ autoinstall() {
     [[ $to_install ]] || return 0
 
     while true; do
-        install_count=0
+        progress=0
         next_install=( )
 
         # Step 1: Remove installed modules from all dependency lists.
@@ -2265,9 +2265,10 @@ autoinstall() {
                 status=$?
                 if [ "$status" = 0 ]; then
                     installed_modules[${#installed_modules[@]}]="$m"
-                    install_count=$(($install_count +1))
+                    progress=$(($progress +1))
                 elif [ "$status" = 77 ]; then
                     skipped_modules[${#skipped_modules[@]}]="$m"
+                    progress=$(($progress +1))
                 else
                     failed_modules[${#failed_modules[@]}]="$m($status)"
                 fi
@@ -2284,7 +2285,7 @@ autoinstall() {
 
         # Step 4: Keep going if at least one module was installed during
         # this iteration.
-        [[ "$install_count" -gt 0 ]] || break;
+        [[ "$progress" -gt 0 ]] || break;
 
     done
 
