@@ -983,6 +983,10 @@ prepare_signing()
     # scripts/sign-file.c in kernel source also supports using "pkcs11:..." as private key
     if [[ "$mok_signing_key" != "pkcs11:"* ]] && ( [ ! -f "$mok_signing_key" ] || [ ! -f "$mok_certificate" ] ); then
         echo "Certificate or key are missing, generating self signed certificate for MOK..."
+        if ! command -v openssl >/dev/null; then
+            echo "openssl not found, can't generate key and certificate."
+            return
+        fi
         openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS module signing key" \
             -newkey rsa:2048 -keyout "$mok_signing_key" \
             -outform DER -out "$mok_certificate" > /dev/null 2>&1
