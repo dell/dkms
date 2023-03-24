@@ -281,6 +281,10 @@ run_with_expected_output dkms status -m dkms_test << EOF
 EOF
 rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
+############################################################################
+### Testing dkms on a regular module                                     ###
+############################################################################
+
 echo 'Adding the test module by version (expected error)'
 run_with_expected_error 2 dkms add -m dkms_test -v 1.0 << EOF
 Error! Could not find module source directory.
@@ -709,6 +713,13 @@ rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 echo 'Removing /usr/src/dkms_test-1.0'
 rm -r /usr/src/dkms_test-1.0
 
+echo 'Checking that the environment is clean again'
+check_no_dkms_test
+
+############################################################################
+### Testing dkms on a module with multiple versions                      ###
+############################################################################
+
 echo 'Adding the multiver test modules by directory'
 run_with_expected_output dkms add test/dkms_multiver_test/1.0 << EOF
 Creating symlink /var/lib/dkms/dkms_multiver_test/1.0/source -> /usr/src/dkms_multiver_test-1.0
@@ -865,6 +876,9 @@ EOF
 echo 'Removing /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0'
 rm -r /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0
 
+############################################################################
+### Testing dkms operations ...
+############################################################################
 
 echo 'Adding the nover/emptyver test modules by directory'
 run_with_expected_output dkms add test/dkms_nover_test << EOF
@@ -1161,9 +1175,12 @@ EOF
 echo 'Removing /usr/src/dkms_nover_update_test-{1,2,3}.0'
 rm -r /usr/src/dkms_nover_update_test-{1,2,3}.0
 
-
 echo 'Checking that the environment is clean'
 check_no_dkms_test
+
+############################################################################
+### Testing dkms autoinstall                                             ###
+############################################################################
 
 echo 'Running autoinstall error testing'
 
