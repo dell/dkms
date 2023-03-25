@@ -256,6 +256,7 @@ case "${os_id}" in
         ;;
     alpine)
         expected_dest_loc=kernel/extra
+        mod_compression_ext=.gz
         ;;
     *)
         echo >&2 "Error: unknown Linux distribution ID ${os_id}"
