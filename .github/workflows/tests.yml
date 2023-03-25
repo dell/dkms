@@ -13,16 +13,12 @@ jobs:
     strategy:
       matrix:
         distro:
-          - {name: "alpine", tag: "3.14", variant: "-lts"}
-          - {name: "alpine", tag: "3.14", variant: "-virt"}
-          - {name: "alpine", tag: "3.13", variant: "-lts"}
-          - {name: "alpine", tag: "3.13", variant: "-virt"}
-          - {name: "alpine", tag: "3.12", variant: "-lts"}
-          - {name: "alpine", tag: "3.12", variant: "-virt"}
-          - {name: "alpine", tag: "3.11", variant: "-lts"}
-          - {name: "alpine", tag: "3.11", variant: "-virt"}
-          - {name: "alpine", tag: "3.10", variant: "-vanilla"}
-          - {name: "alpine", tag: "3.10", variant: "-virt"}
+          - {name: "alpine", tag: "3.17", variant: "-lts"}
+          - {name: "alpine", tag: "3.17", variant: "-virt"}
+          - {name: "alpine", tag: "3.16", variant: "-lts"}
+          - {name: "alpine", tag: "3.16", variant: "-virt"}
+          - {name: "alpine", tag: "3.15", variant: "-lts"}
+          - {name: "alpine", tag: "3.15", variant: "-virt"}
           - {name: "archlinux", tag: "latest"}
           - {name: "archlinux", tag: "latest", variant: "-lts"}
           - {name: "archlinux", tag: "latest", variant: "-zen"}
@@ -101,7 +97,7 @@ jobs:
 
     - name: Run tests
       run: |
-        if [ "${{ matrix.distro.name }}" = alpine ] && ([ "${{ matrix.distro.tag }}" = 3.10 ] || [ "${{ matrix.distro.variant }}" = "-lts" ]); then
+        if [ "${{ matrix.distro.name }}" = alpine ] && [ "${{ matrix.distro.variant }}" = "-lts" ]; then
             ./run_test.sh --no-signing-tool
         elif [ "${{ matrix.distro.name }}" = debian ] && [ "${{ matrix.distro.tag }}" = 9 ]; then
             ./run_test.sh --no-signing-tool
