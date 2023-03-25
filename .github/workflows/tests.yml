@@ -23,8 +23,8 @@ jobs:
           - {name: "archlinux", tag: "latest", variant: "-lts"}
           - {name: "archlinux", tag: "latest", variant: "-zen"}
           - {name: "centos", tag: "7"}
-          - {name: "almalinux", tag: "8"}
           - {name: "almalinux", tag: "9"}
+          - {name: "almalinux", tag: "8"}
           - {name: "debian", tag: "11"}
           - {name: "debian", tag: "10"}
           - {name: "debian", tag: "9"}
