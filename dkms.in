@@ -499,6 +499,18 @@ read_conf()
     pre_install="$PRE_INSTALL"
     obsolete_by="$OBSOLETE_BY"
 
+    # Fail if no PACKAGE_NAME
+    if [[ ! $package_name ]]; then
+        echo $"dkms.conf: Error! No 'PACKAGE_NAME' directive specified.">&2
+        return_value=1
+    fi
+
+    # Fail if no PACKAGE_VERSION
+    if [[ ! $package_version ]]; then
+        echo $"dkms.conf: Error! No 'PACKAGE_VERSION' directive specified.">&2
+        return_value=1
+    fi
+
     # Set module naming/location arrays
     local index array_size=0 s
     for s in ${#BUILT_MODULE_NAME[@]} \
@@ -557,7 +569,7 @@ read_conf()
                 ;;
         esac
 
-        # Override location for specific kernels
+        # Override location for specific distributions
         dest_module_location[$index]="$(override_dest_module_location ${dest_module_location[$index]})"
 
         # Fail if no DEST_MODULE_LOCATION
@@ -565,7 +577,8 @@ read_conf()
             echo $"dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified for record #$index.">&2
             return_value=1
         fi
-            # Fail if bad DEST_MODULE_LOCATION
+
+        # Fail if bad DEST_MODULE_LOCATION
         case ${DEST_MODULE_LOCATION[$index]} in
             /kernel*)
                 ;;
@@ -626,18 +639,6 @@ read_conf()
     # Fail if absolutely no DEST_MODULE_LOCATION
     if ((${#dest_module_location[@]} == 0)); then
         echo $"dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified." >&2
-        return_value=1
-    fi
-
-    # Fail if no PACKAGE_NAME
-    if [[ ! $package_name ]]; then
-        echo $"dkms.conf: Error! No 'PACKAGE_NAME' directive specified.">&2
-        return_value=1
-    fi
-
-    # Fail if no PACKAGE_VERSION
-    if [[ ! $package_version ]]; then
-        echo $"dkms.conf: Error! No 'PACKAGE_VERSION' directive specified.">&2
         return_value=1
     fi
 

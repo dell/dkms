@@ -724,9 +724,9 @@ check_no_dkms_test
 
 echo 'Testing dkms add with empty dkms.conf (expected error)'
 run_with_expected_error 8 dkms add test/dkms_conf_test_empty << EOF
-dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified.
 dkms.conf: Error! No 'PACKAGE_NAME' directive specified.
 dkms.conf: Error! No 'PACKAGE_VERSION' directive specified.
+dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified.
 Error! Bad conf file.
 File:  does not represent a valid dkms.conf file.
 EOF
