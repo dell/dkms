@@ -733,7 +733,6 @@ EOF
 
 echo 'Testing dkms.conf with invalid values (expected error)'
 run_with_expected_error 8 dkms add test/dkms_conf_test_invalid << EOF
-dkms.conf: Error! No 'BUILT_MODULE_NAME' directive specified for record #0.
 dkms.conf: Error! 'DEST_MODULE_NAME' directive ends in '.o' or '.ko' in record #0.
 dkms.conf: Error! Directive 'DEST_MODULE_LOCATION' does not begin with
 '/kernel', '/updates', or '/extra' in record #0.
@@ -746,11 +745,15 @@ File: $(readlink -f .)/test/dkms_conf_test_invalid/dkms.conf does not represent 
 EOF
 
 echo 'Testing dkms.conf with defaulted BUILT_MODULE_NAME'
-run_with_expected_error 8 dkms add test/dkms_conf_test_defaulted_BUILT_MODULE_NAME << EOF
-dkms.conf: Error! No 'BUILT_MODULE_NAME' directive specified for record #0.
-Error! Bad conf file.
-File: $(readlink -f .)/test/dkms_conf_test_defaulted_BUILT_MODULE_NAME/dkms.conf does not represent a valid dkms.conf file.
+run_with_expected_output dkms add test/dkms_conf_test_defaulted_BUILT_MODULE_NAME << EOF
+Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
 EOF
+run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
+Deleting module dkms_conf_test-1.0 completely from the DKMS tree.
+EOF
+
+echo 'Removing /usr/src/dkms_conf_test-1.0'
+rm -r /usr/src/dkms_conf_test-1.0
 
 ############################################################################
 ### Testing dkms on a module with multiple versions                      ###

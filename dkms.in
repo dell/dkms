@@ -540,7 +540,7 @@ read_conf()
         # If unset, set by defaults
         [[ ! ${built_module_name[$index]} ]] && \
             ((${#DEST_MODULE_LOCATION[@]} == 1)) && \
-            built_module_name[$index]=$module
+            built_module_name[$index]=$PACKAGE_NAME
         [[ ! ${dest_module_name[$index]} ]] && \
             dest_module_name[$index]=${built_module_name[$index]}
         [[ ${built_module_location[$index]} && \
