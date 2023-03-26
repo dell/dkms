@@ -10,6 +10,10 @@ KERNEL_VER="${KERNEL_VER:-$(uname -r)}"
 KERNEL_ARCH="$(uname -m)"
 echo "Using kernel ${KERNEL_VER}/${KERNEL_ARCH}"
 
+# debconf can trigger at random points, in the testing process. Where a bunch of
+# the frontends cannot work in our CI. Just opt for the noninteractive one.
+export DEBIAN_FRONTEND=noninteractive
+
 # Avoid output variations due to parallelism
 export parallel_jobs=1
 
