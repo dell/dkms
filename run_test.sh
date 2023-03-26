@@ -166,6 +166,8 @@ genericize_expected_output() {
     fi
     # Signing related output. Drop it from the output, to be more generic
     if (( NO_SIGNING_TOOL == 0 )); then
+        sed -i '/^EFI variables are not supported on this system/d' ${output_log}
+        sed -i '/^\/sys\/firmware\/efi\/efivars not found, aborting./d' ${output_log}
         sed -i '/^Sign command:/d' ${output_log}
         sed -i '/^Signing key:/d' ${output_log}
         sed -i '/^Public certificate (MOK):/d' ${output_log}
