@@ -728,7 +728,7 @@ dkms.conf: Error! No 'PACKAGE_NAME' directive specified.
 dkms.conf: Error! No 'PACKAGE_VERSION' directive specified.
 dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified.
 Error! Bad conf file.
-File:  does not represent a valid dkms.conf file.
+File: $(readlink -f .)/test/dkms_conf_test_empty/dkms.conf does not represent a valid dkms.conf file.
 EOF
 
 ############################################################################
