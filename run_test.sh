@@ -731,6 +731,20 @@ Error! Bad conf file.
 File: $(readlink -f .)/test/dkms_conf_test_empty/dkms.conf does not represent a valid dkms.conf file.
 EOF
 
+echo 'Testing dkms.conf with invalid values (expected error)'
+run_with_expected_error 8 dkms add test/dkms_conf_test_invalid << EOF
+dkms.conf: Error! No 'BUILT_MODULE_NAME' directive specified for record #0.
+dkms.conf: Error! 'DEST_MODULE_NAME' directive ends in '.o' or '.ko' in record #0.
+dkms.conf: Error! Directive 'DEST_MODULE_LOCATION' does not begin with
+'/kernel', '/updates', or '/extra' in record #0.
+dkms.conf: Error! 'BUILT_MODULE_NAME' directive ends in '.o' or '.ko' in record #1.
+dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified for record #1.
+dkms.conf: Error! Directive 'DEST_MODULE_LOCATION' does not begin with
+'/kernel', '/updates', or '/extra' in record #1.
+Error! Bad conf file.
+File: $(readlink -f .)/test/dkms_conf_test_invalid/dkms.conf does not represent a valid dkms.conf file.
+EOF
+
 ############################################################################
 ### Testing dkms on a module with multiple versions                      ###
 ############################################################################
