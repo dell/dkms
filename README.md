@@ -112,7 +112,7 @@ mok_certificate="/var/lib/shim-signed/mok/MOK.der"
 ```
 
 The paths specified in `mok_signing_key`, `mok_certificate` and `sign_file` can
-use the variable `${kernelver}` to represent the target kernel version. 
+use the variable `${kernelver}` to represent the target kernel version.
 ```
 sign_file="/lib/modules/${kernelver}/build/scripts/sign-file"
 ```
@@ -162,11 +162,13 @@ And confirm with "Yes" when prompted:
 
 ![Enroll the key(s)?](/images/mok-key-4.png)
 
-After this, enter the password you set up with `mokutil --import` in the previous step:
+After this, enter the password you set up with `mokutil --import` in the
+previous step:
 
 ![Enroll the key(s)?](/images/mok-key-5.png)
 
-At this point you are done, select "OK" and the computer will reboot trusting the key for your modules:
+At this point you are done, select "OK" and the computer will reboot trusting
+the key for your modules:
 
 ![Perform MOK management](/images/mok-key-6.png)
 
