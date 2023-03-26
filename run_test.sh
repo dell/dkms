@@ -745,6 +745,13 @@ Error! Bad conf file.
 File: $(readlink -f .)/test/dkms_conf_test_invalid/dkms.conf does not represent a valid dkms.conf file.
 EOF
 
+echo 'Testing dkms.conf with defaulted BUILT_MODULE_NAME'
+run_with_expected_error 8 dkms add test/dkms_conf_test_defaulted_BUILT_MODULE_NAME << EOF
+dkms.conf: Error! No 'BUILT_MODULE_NAME' directive specified for record #0.
+Error! Bad conf file.
+File: $(readlink -f .)/test/dkms_conf_test_defaulted_BUILT_MODULE_NAME/dkms.conf does not represent a valid dkms.conf file.
+EOF
+
 ############################################################################
 ### Testing dkms on a module with multiple versions                      ###
 ############################################################################
