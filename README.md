@@ -99,11 +99,11 @@ the configured kernel compression mechanism of choice.
 This requires the `openssl` command to be present on the system.
 
 Private key and certificate are auto generated the first time DKMS is run and
-placed in `/var/lib/dkms`. These certificate files can be prepulated with your
-own certificates of choice.
+placed in `/var/lib/dkms`. These certificate files can be pre-populated with
+your own certificates of choice.
 
 The location as well can be changed by setting the appropriate variables in
-`/etc/dkms/framework.conf`. For example, to awllow usage of the system default
+`/etc/dkms/framework.conf`. For example, to allow usage of the system default
 Debian and Ubuntu `update-secureboot-policy` set the configuration file as
 follows:
 ```
