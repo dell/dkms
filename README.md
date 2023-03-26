@@ -104,8 +104,7 @@ your own certificates of choice.
 
 The location as well can be changed by setting the appropriate variables in
 `/etc/dkms/framework.conf`. For example, to allow usage of the system default
-Debian and Ubuntu `update-secureboot-policy` set the configuration file as
-follows:
+Ubuntu `update-secureboot-policy` set the configuration file as follows:
 ```
 mok_signing_key="/var/lib/shim-signed/mok/MOK.priv"
 mok_certificate="/var/lib/shim-signed/mok/MOK.der"
