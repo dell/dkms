@@ -26,6 +26,7 @@ TEST_MODULES=(
     "dkms_nover_test"
     "dkms_emptyver_test"
     "dkms_nover_update_test"
+    "dkms_conf_test"
 )
 TEST_TMPDIRS=(
     "/usr/src/dkms_test-1.0/"
@@ -38,6 +39,7 @@ TEST_TMPDIRS=(
     "/usr/src/dkms_nover_update_test-1.0"
     "/usr/src/dkms_nover_update_test-2.0"
     "/usr/src/dkms_nover_update_test-3.0"
+    "/usr/src/dkms_conf_test-1.0"
     "/tmp/dkms_test_dir_${KERNEL_VER}/"
 )
 TEST_TMPFILES=(
@@ -715,6 +717,19 @@ rm -r /usr/src/dkms_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
+
+############################################################################
+### Testing malformed dkms.conf                                          ###
+############################################################################
+
+echo 'Testing dkms add with empty dkms.conf (expected error)'
+run_with_expected_error 8 dkms add test/dkms_conf_test_empty << EOF
+dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified.
+dkms.conf: Error! No 'PACKAGE_NAME' directive specified.
+dkms.conf: Error! No 'PACKAGE_VERSION' directive specified.
+Error! Bad conf file.
+File:  does not represent a valid dkms.conf file.
+EOF
 
 ############################################################################
 ### Testing dkms on a module with multiple versions                      ###
