@@ -724,6 +724,14 @@ check_no_dkms_test
 
 abspwd=$(readlink -f $(pwd))
 
+echo 'Testing dkms add of source tree without dkms.conf (expected error)'
+run_with_expected_error 1 dkms add ${abspwd}/test/dkms_conf_test_no_conf << EOF
+Error! Arguments <module> and <module-version> are not specified.
+Usage: add <module>/<module-version> or
+       add -m <module>/<module-version> or
+       add -m <module> -v <module-version>
+EOF
+
 echo 'Testing dkms add with empty dkms.conf (expected error)'
 run_with_expected_error 8 dkms add test/dkms_conf_test_empty << EOF
 dkms.conf: Error! No 'PACKAGE_NAME' directive specified.
