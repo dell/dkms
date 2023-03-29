@@ -755,6 +755,13 @@ Error! Bad conf file.
 File: ${abspwd}/test/dkms_conf_test_invalid/dkms.conf does not represent a valid dkms.conf file.
 EOF
 
+echo 'Testing dkms.conf defining zero modules (expected error) (SHOULD THIS REALLY FAIL?)'
+run_with_expected_error 8 dkms add test/dkms_conf_test_zero_modules << EOF
+dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified.
+Error! Bad conf file.
+File: ${abspwd}/test/dkms_conf_test_zero_modules/dkms.conf does not represent a valid dkms.conf file.
+EOF
+
 echo 'Testing dkms.conf with defaulted BUILT_MODULE_NAME'
 run_with_expected_output dkms add test/dkms_conf_test_defaulted_BUILT_MODULE_NAME << EOF
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
