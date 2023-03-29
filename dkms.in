@@ -594,6 +594,11 @@ read_conf()
         esac
     done
 
+    # Warn if no modules are specified
+    if ((array_size == 0)); then
+        echo $"dkms.conf: Warning! Zero modules specified." >&2
+    fi
+
     # Get the correct make command
     [[ ${MAKE_MATCH[0]} ]] || make_command="${MAKE[0]}"
     for ((index=0; index < ${#MAKE[@]}; index++)); do
@@ -635,12 +640,6 @@ read_conf()
     # Set build_exclude
     [[ $BUILD_EXCLUSIVE_KERNEL && ! $1 =~ $BUILD_EXCLUSIVE_KERNEL ]] && build_exclude="yes"
     [[ $BUILD_EXCLUSIVE_ARCH && ! $2 =~ $BUILD_EXCLUSIVE_ARCH ]] && build_exclude="yes"
-
-    # Fail if absolutely no DEST_MODULE_LOCATION
-    if ((${#dest_module_location[@]} == 0)); then
-        echo $"dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified." >&2
-        return_value=1
-    fi
 
     # Set clean
     [[ $clean ]] || clean="make clean"
