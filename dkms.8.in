@@ -55,13 +55,16 @@ is a framework which allows kernel modules to be dynamically built
 for each kernel on your system in a simplified and organized fashion.
 .SH ACTIONS
 .SY add
-.OP module/module\-version
-.OP /path/to/source\-tree
-.OP /path/to/tarball.tar
+.OP "module/module\-version | /path/to/source\-tree | /path/to/tarball.tar"
 .YS
 .IP "" 4
 Adds a module/module\-version combination to the tree for builds and installs.
-If module/module\-version, \-m module/module\-version, or \-m module\ \-v version are passed as options, this command
+If
+.IR module/module\-version ,
+.IR "\-m module/module\-version" ,
+or
+.I \-m module\ \-v module\-version
+are passed as options, this command
 requires source in
 .I /usr/src/<module>\-<module\-version>/
 as well as a properly
@@ -74,7 +77,7 @@ is passed as an option, and source-tree contains a
 file, it will copy
 .I /path/to/source\-tree
 to
-.I /usr/src/module\-module\-version.
+.IR /usr/src/module\-module\-version .
 If
 .I /path/to/tarball.tar
 is passed, this command behaves like the
@@ -755,7 +758,7 @@ Used by the common postinst for DKMS modules. It controls if the build should be
 line equivalent.
 .TP
 .B $sign_file
-This is the path of the 
+This is the path of the
 .I sign-file
 kernel binary that is used to sign the kernel modules. The variable
 .B $kernelver
