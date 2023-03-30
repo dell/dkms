@@ -539,7 +539,7 @@ read_conf()
 
         # If unset, set by defaults
         [[ ! ${built_module_name[$index]} ]] && \
-            ((${#DEST_MODULE_LOCATION[@]} == 1)) && \
+            ((array_size == 1)) && \
             built_module_name[$index]=$PACKAGE_NAME
         [[ ! ${dest_module_name[$index]} ]] && \
             dest_module_name[$index]=${built_module_name[$index]}
