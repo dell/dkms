@@ -1326,7 +1326,7 @@ do_install()
 
     done
 
-    if [[ ! "${any_module_installed}" ]]; then
+    if ((${#built_module_name[@]} > 0)) && [[ ! "${any_module_installed}" ]]; then
         die 6 $"Installation aborted."
     fi
 
