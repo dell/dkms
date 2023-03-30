@@ -759,6 +759,16 @@ echo 'Testing dkms.conf with defaulted BUILT_MODULE_NAME'
 run_with_expected_output dkms add test/dkms_conf_test_defaulted_BUILT_MODULE_NAME << EOF
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
 EOF
+
+echo 'Building test module without source (expected error)'
+run_with_expected_error 8 dkms build -k "${KERNEL_VER}" -m dkms_conf_test -v 1.0 << EOF
+Error! The directory /var/lib/dkms/dkms_conf_test/1.0/source does not appear to have module source located within it.
+Build halted.
+EOF
+run_status_with_expected_output 'dkms_conf_test' << EOF
+dkms_conf_test/1.0: added
+EOF
+
 run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
 Deleting module dkms_conf_test-1.0 completely from the DKMS tree.
 EOF
