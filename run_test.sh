@@ -719,7 +719,7 @@ echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 ############################################################################
-### Testing malformed dkms.conf                                          ###
+### Testing malformed/borderline dkms.conf                               ###
 ############################################################################
 
 abspwd=$(readlink -f $(pwd))
@@ -766,8 +766,8 @@ run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
 Deleting module dkms_conf_test-1.0 completely from the DKMS tree.
 EOF
 
-echo 'Testing add/build/install of a test module building zero kernel modules (expected error) (TODO)'
-run_with_expected_error 6 dkms install -k "${KERNEL_VER}" -m dkms_conf_test -v 1.0 << EOF
+echo 'Testing add/build/install of a test module building zero kernel modules'
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_conf_test -v 1.0 << EOF
 dkms.conf: Warning! Zero modules specified.
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
 
@@ -775,17 +775,18 @@ Building module:
 Cleaning build area...
 make -j1 KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_conf_test/1.0/build...
 Cleaning build area...
-Error! Installation aborted.
+depmod...
 EOF
 run_status_with_expected_output 'dkms_conf_test' << EOF
 dkms.conf: Warning! Zero modules specified.
-dkms_conf_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+dkms_conf_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
 dkms.conf: Warning! Zero modules specified.
 dkms.conf: Warning! Zero modules specified.
-Module dkms_conf_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_conf_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
+Before uninstall, this module version was ACTIVE on this kernel.
 Deleting module dkms_conf_test-1.0 completely from the DKMS tree.
 EOF
 
