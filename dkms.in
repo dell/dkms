@@ -803,7 +803,7 @@ check_module_args() {
 read_conf_or_die() {
     read_conf "$@" && return
     die 8 $"Bad conf file."\
-        $"File: $3 does not represent a valid dkms.conf file."
+        $"File: ${3:-$conf} does not represent a valid dkms.conf file."
 }
 
 run_build_script() {
