@@ -2519,6 +2519,12 @@ done
 
 # Sanity checking
 
+# The <(cmd) idiom does not work if /proc is not mounted
+read line < <(echo "Hello, DKMS!")
+if [ "$line" != "Hello, DKMS!" ]; then
+    warn $"dkms will not function properly if /proc is not mounted."
+fi
+
 # Error out if binaries-only is set and source-only is set
 if [[ $binaries_only && $source_only ]]; then
     die 8 $" You have specified both --binaries-only and --source-only." \
