@@ -2326,6 +2326,14 @@ tmp_location=${TMPDIR:-/tmp}
 verbose=""
 symlink_modules=""
 
+# Check that we can write temporary files
+tmpfile=$(mktemp_or_die)
+echo "Hello, DKMS!" > "$tmpfile"
+if [ "$(cat "$tmpfile")" != "Hello, DKMS!" ]; then
+    warn $"dkms will not function properly without some free space in \$TMPDIR ($tmp_location)."
+fi
+rm -f "$tmpfile"
+
 # These can come from the environment or the config file
 [[ ! ${ADDON_MODULES_DIR} && -e /etc/sysconfig/module-init-tools ]] && . /etc/sysconfig/module-init-tools
 addon_modules_dir="${ADDON_MODULES_DIR}"
