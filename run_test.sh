@@ -212,7 +212,7 @@ run_with_expected_output() {
 
 run_with_expected_error() {
     local expected_error_code="$1"
-    local dkms_command="$2"
+    local dkms_command="$3"
     local output_log=test_cmd_output.log
     local expected_output_log=test_cmd_expected_output.log
     local error_code
