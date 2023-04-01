@@ -1303,7 +1303,7 @@ echo 'Running autoinstall with failing test module (expected error)'
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
 
 Building module:
-Cleaning build area...(bad exit status: 2)
+Cleaning build area...
 make -j1 KERNELRELEASE=${KERNEL_VER} all...(bad exit status: 2)
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
@@ -1319,7 +1319,7 @@ echo 'Running autoinstall with failing test module and test module with dependen
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
 
 Building module:
-Cleaning build area...(bad exit status: 2)
+Cleaning build area...
 make -j1 KERNELRELEASE=${KERNEL_VER} all...(bad exit status: 2)
 dkms_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_failing_test
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
