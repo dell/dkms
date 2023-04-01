@@ -193,9 +193,11 @@ run_with_expected_output() {
     local dkms_command="$2"
     local output_log=test_cmd_output.log
     local expected_output_log=test_cmd_expected_output.log
+    local error_code=0
 
     cat > ${expected_output_log}
-    if "$@" > ${output_log} 2>&1 ; then
+    "$@" > ${output_log} 2>&1 || error_code=$?
+    if [[ "${error_code}" = "0" ]] ; then
         genericize_expected_output ${output_log} ${dkms_command}
         if ! diff -U3 ${expected_output_log} ${output_log} ; then
             echo >&2 "Error: unexpected output from: $*"
@@ -203,7 +205,7 @@ run_with_expected_output() {
         fi
         rm ${expected_output_log} ${output_log}
     else
-        echo "Error: command '$*' returned status $?"
+        echo "Error: command '$*' returned status $error_code"
         cat ${output_log}
         rm ${expected_output_log} ${output_log}
         return 1
@@ -215,19 +217,17 @@ run_with_expected_error() {
     local dkms_command="$3"
     local output_log=test_cmd_output.log
     local expected_output_log=test_cmd_expected_output.log
-    local error_code
+    local error_code=0
 
     shift
     cat > ${expected_output_log}
-    if "$@" > ${output_log} 2>&1 ; then
+    "$@" > ${output_log} 2>&1 || error_code=$?
+    if [[ "${error_code}" = "0" ]] ; then
         echo "Error: command '$*' was successful"
         cat ${output_log}
         rm ${expected_output_log} ${output_log}
         return 1
-    else
-        error_code=$?
-    fi
-    if [[ "${error_code}" != "${expected_error_code}" ]] ; then
+    elif [[ "${error_code}" != "${expected_error_code}" ]] ; then
         echo "Error: command '$*' returned status ${error_code} instead of expected ${expected_error_code}"
         cat ${output_log}
         rm ${expected_output_log} ${output_log}
