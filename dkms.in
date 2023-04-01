@@ -2197,6 +2197,7 @@ autoinstall() {
     local install_count next_depends
     local -a to_install=()
     local -a next_install=()
+    local -a known_modules=()
     local -a installed_modules=()
     local -a failed_modules=()
     local -A build_depends=()
@@ -2206,14 +2207,17 @@ autoinstall() {
     # a list of modules and their latest version.
     while read status mvka; do
         IFS='/' read m v k a <<< "$mvka"
-        if [[ ("$(VER "$v")" > "$(VER "${latest["$m"]}")") ]]; then
+        if [[ -z "${latest["$m"]}" ]]; then
+            known_modules[${#known_modules[@]}]="$m"
+            latest["$m"]="$v"
+        elif [[ ("$(VER "$v")" > "$(VER "${latest["$m"]}")") ]]; then
             latest["$m"]="$v"
         fi
     done < <(module_status)
 
     # Walk through our list of known modules, and create
     # a list of modules that need to be reinstalled.
-    for m in "${!latest[@]}"; do
+    for m in "${known_modules[@]}"; do
         v="${latest["$m"]}"
         # If the module is already installed or weak-installed, skip it.
         if _is_module_installed "$m" "$v" "$kernelver" "$arch"; then
