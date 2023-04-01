@@ -48,6 +48,8 @@ TEST_TMPFILES=(
     "/tmp/dkms_test_kconfig"
     "/etc/dkms/framework.conf.d/dkms_test_framework.conf"
     "test_cmd_output.log"
+    "test_cmd_stdout.log"
+    "test_cmd_stderr.log"
     "test_cmd_expected_output.log"
 )
 
@@ -191,12 +193,16 @@ genericize_expected_output() {
 
 run_with_expected_output() {
     local dkms_command="$2"
+    local stdout_log=test_cmd_stdout.log
+    local stderr_log=test_cmd_stderr.log
     local output_log=test_cmd_output.log
     local expected_output_log=test_cmd_expected_output.log
     local error_code=0
 
     cat > ${expected_output_log}
-    "$@" > ${output_log} 2>&1 || error_code=$?
+    "$@" > ${stdout_log} 2> ${stderr_log} || error_code=$?
+    cat ${stdout_log} ${stderr_log} > ${output_log}
+    rm ${stdout_log} ${stderr_log}
     if [[ "${error_code}" = "0" ]] ; then
         genericize_expected_output ${output_log} ${dkms_command}
         if ! diff -U3 ${expected_output_log} ${output_log} ; then
@@ -215,13 +221,17 @@ run_with_expected_output() {
 run_with_expected_error() {
     local expected_error_code="$1"
     local dkms_command="$3"
+    local stdout_log=test_cmd_stdout.log
+    local stderr_log=test_cmd_stderr.log
     local output_log=test_cmd_output.log
     local expected_output_log=test_cmd_expected_output.log
     local error_code=0
 
     shift
     cat > ${expected_output_log}
-    "$@" > ${output_log} 2>&1 || error_code=$?
+    "$@" > ${stdout_log} 2> ${stderr_log} || error_code=$?
+    cat ${stdout_log} ${stderr_log} > ${output_log}
+    rm ${stdout_log} ${stderr_log}
     if [[ "${error_code}" = "0" ]] ; then
         echo "Error: command '$*' was successful"
         cat ${output_log}
