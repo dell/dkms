@@ -700,6 +700,14 @@ Running module version sanity check.
 depmod...
 EOF
 
+echo "Running dkms autoinstall for a kernel without headers installed (expected error)"
+run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}-noheaders" << EOF
+Error! Your kernel headers for kernel ${KERNEL_VER}-noheaders cannot be found at /lib/modules/${KERNEL_VER}-noheaders/build or /lib/modules/${KERNEL_VER}-noheaders/source.
+Please install the linux-headers-${KERNEL_VER}-noheaders package or use the --kernelsourcedir option to tell DKMS where it's located.
+Error! One or more modules failed to install during autoinstall.
+Refer to previous errors for more information.
+EOF
+
 echo 'Removing the test module with --all'
 run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
 Module dkms_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
