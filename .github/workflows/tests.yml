@@ -41,7 +41,7 @@ jobs:
     - name: Install Alpine dependencies
       if: matrix.distro.name == 'alpine'
       run: |
-        apk --no-cache --update add bash gcc linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-dev make openssl
+        apk --no-cache --update add bash gcc linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-dev make openssl coreutils
 
     - name: Install Arch Linux dependencies
       if: matrix.distro.name == 'archlinux'
