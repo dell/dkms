@@ -750,9 +750,9 @@ EOF
 
 echo 'Testing dkms.conf defining zero modules'
 run_with_expected_output dkms add test/dkms_conf_test_zero_modules << EOF
+dkms.conf: Warning! Zero modules specified.
+dkms.conf: Warning! Zero modules specified.
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
-dkms.conf: Warning! Zero modules specified.
-dkms.conf: Warning! Zero modules specified.
 EOF
 
 run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
@@ -761,6 +761,7 @@ EOF
 
 echo 'Testing add/build/install of a test module building zero kernel modules'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_conf_test -v 1.0 << EOF
+dkms.conf: Warning! Zero modules specified.
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
 
 Building module:
@@ -768,7 +769,6 @@ Cleaning build area...
 make -j1 KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_conf_test/1.0/build...
 Cleaning build area...
 depmod...
-dkms.conf: Warning! Zero modules specified.
 EOF
 run_status_with_expected_output 'dkms_conf_test' << EOF
 dkms.conf: Warning! Zero modules specified.
@@ -776,11 +776,11 @@ dkms_conf_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
+dkms.conf: Warning! Zero modules specified.
+dkms.conf: Warning! Zero modules specified.
 Module dkms_conf_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting module dkms_conf_test-1.0 completely from the DKMS tree.
-dkms.conf: Warning! Zero modules specified.
-dkms.conf: Warning! Zero modules specified.
 EOF
 
 echo 'Removing /usr/src/dkms_conf_test-1.0'
@@ -1305,10 +1305,10 @@ run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
 Building module:
 Cleaning build area...
 make -j1 KERNELRELEASE=${KERNEL_VER} all...(bad exit status: 2)
-dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} failed for dkms_failing_test(10)
-dkms_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_failing_test
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
+dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} failed for dkms_failing_test(10)
+dkms_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_failing_test
 Error! One or more modules failed to install during autoinstall.
 Refer to previous errors for more information.
 EOF
