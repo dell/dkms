@@ -196,30 +196,7 @@ genericize_expected_output() {
 }
 
 run_with_expected_output() {
-    local dkms_command="$2"
-    local stdout_log=test_cmd_stdout.log
-    local stderr_log=test_cmd_stderr.log
-    local output_log=test_cmd_output.log
-    local expected_output_log=test_cmd_expected_output.log
-    local error_code=0
-
-    cat > ${expected_output_log}
-    "$@" > ${stdout_log} 2> ${stderr_log} || error_code=$?
-    cat ${stdout_log} ${stderr_log} > ${output_log}
-    rm ${stdout_log} ${stderr_log}
-    if [[ "${error_code}" = "0" ]] ; then
-        genericize_expected_output ${output_log} ${dkms_command}
-        if ! diff -U3 ${expected_output_log} ${output_log} ; then
-            echo >&2 "Error: unexpected output from: $*"
-            return 1
-        fi
-        rm ${expected_output_log} ${output_log}
-    else
-        echo "Error: command '$*' returned status $error_code"
-        cat ${output_log}
-        rm ${expected_output_log} ${output_log}
-        return 1
-    fi
+    run_with_expected_error 0 "$@"
 }
 
 run_with_expected_error() {
