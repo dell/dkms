@@ -672,7 +672,7 @@ get_module_verinfo(){
             ;;
     esac
     done < <(modinfo "$1")
-    
+
     echo -E "${ver}"
     # Use obsolete checksum info if srcversion is not available
     echo -E "${srcver:-$checksum}"
@@ -767,7 +767,7 @@ check_version_sanity()
         return 0
     fi
     local dkms_module=$(compressed_or_uncompressed "$dkms_tree/$module/$module_version/$1/$2/module/" "${4}")
-    
+
     local cmp_res="$(compare_module_version "${kernels_module}" "${dkms_module}")"
     if [[ "${cmp_res}" = ">" ]]; then
         if [[ ! "$force" ]]; then
