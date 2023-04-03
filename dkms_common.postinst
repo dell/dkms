@@ -127,7 +127,7 @@ if [ -r /etc/dkms/framework.conf ]; then
     . /etc/dkms/framework.conf
 fi
 
-KERNELS=$(ls /lib/modules/ 2>/dev/null || true)
+KERNELS=$(ls -v /lib/modules/ 2>/dev/null || true)
 CURRENT_KERNEL=$(uname -r)
 
 #We never want to keep an older version side by side to prevent conflicts
