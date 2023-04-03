@@ -42,7 +42,7 @@
 # * Changes in 1.2
 # - Fixed more bash'isms
 # - LSB_VERSION is no longer required in /etc/lsb-release file
-# 
+#
 # * Changes in 1.1
 # - removed some bash-ism and typos
 #   Notice: script remains broken with ash because of awk issues
@@ -101,7 +101,7 @@ DESCSTR_DELI="release"
 ###############################################################################
 
 # Display Program Version for internal use (needed by help2man)
-DisplayProgramVersion() { 
+DisplayProgramVersion() {
     echo "FSG $(basename $0) v$SCRIPTVERSION"
     echo
     echo "Copyright (C) 2000, 2002, 2004 Free Standards Group, Inc."
@@ -389,7 +389,7 @@ else
     fi
 fi
 
-# Update args to All if requested 
+# Update args to All if requested
 if [ -n "$ARG_A" ]
 then
     [ -z "$ARG_C" ] && ARG_C="y"
