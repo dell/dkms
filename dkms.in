@@ -269,7 +269,7 @@ setup_kernels_arches()
             kernelver[$i]=${line%/*}
             arch[$i]=${line#*/}
             i=$(($i + 1))
-        done < <(module_status_built "$module" "$module_version")
+        done < <(module_status_built "$module" "$module_version" | sort -V)
     fi
 
     # Set default kernel version and arch, if none set (but only --all isn't set)
