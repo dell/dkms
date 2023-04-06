@@ -236,12 +236,7 @@ run_with_expected_error() {
     "$@" > ${stdout_log} 2> ${stderr_log} || error_code=$?
     cat ${stdout_log} ${stderr_log} > ${output_log}
     rm ${stdout_log} ${stderr_log}
-    if [[ "${error_code}" = "0" ]] ; then
-        echo "Error: command '$*' was successful"
-        cat ${output_log}
-        rm ${expected_output_log} ${output_log}
-        return 1
-    elif [[ "${error_code}" != "${expected_error_code}" ]] ; then
+    if [[ "${error_code}" != "${expected_error_code}" ]] ; then
         echo "Error: command '$*' returned status ${error_code} instead of expected ${expected_error_code}"
         cat ${output_log}
         rm ${expected_output_log} ${output_log}
@@ -250,6 +245,7 @@ run_with_expected_error() {
     genericize_expected_output ${output_log} ${dkms_command}
     if ! diff -U3 ${expected_output_log} ${output_log} ; then
         echo >&2 "Error: unexpected output from: $*"
+        rm ${expected_output_log} ${output_log}
         return 1
     fi
     rm ${expected_output_log} ${output_log}
