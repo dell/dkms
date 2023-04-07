@@ -1964,7 +1964,7 @@ load_tarball()
     trap "rm -rf $temp_dir_name" EXIT
     tar -xaf $archive_location -C $temp_dir_name
 
-    if [[ ! $temp_dir_name/dkms_main_tree ]]; then
+    if [[ ! -d $temp_dir_name/dkms_main_tree ]]; then
     # Tarball was not generated from mktarball.
     # Just find the dkms.conf file and load the source.
     conf=$(find $temp_dir_name/ -name dkms.conf 2>/dev/null | head -n 1)
