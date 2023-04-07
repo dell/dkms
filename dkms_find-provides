@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/bash
 
 # heavily based upon find-suggests.ksyms by Andreas Gruenbacher <agruen@suse.de>.
 # with modifications by Michael Brown <Michael_E_Brown@dell.com>
