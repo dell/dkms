@@ -731,7 +731,7 @@ check_version_sanity()
     local lib_tree="$install_tree/$1" res=
     echo $"Running module version sanity check."
     local i=0
-    if [ -n $3 ]; then
+    if [ -n "$3" ]; then
         # Magic split into array syntax saves trivial awk and cut calls.
         local -a obs=(${3//-/ })
         local -a my=(${1//-/ })
