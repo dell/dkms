@@ -2343,6 +2343,7 @@ unset CC CXX CFLAGS CXXFLAGS LDFLAGS
 # Set important variables
 current_kernel=$(uname -r)
 current_os=$(uname -s)
+running_distribution=$(distro_version)
 dkms_tree="/var/lib/dkms"
 source_tree="/usr/src"
 install_tree="/lib/modules"
@@ -2361,7 +2362,6 @@ rm -f "$tmpfile"
 # These can come from the environment or the config file
 [[ ! ${ADDON_MODULES_DIR} && -e /etc/sysconfig/module-init-tools ]] && . /etc/sysconfig/module-init-tools
 addon_modules_dir="${ADDON_MODULES_DIR}"
-[[ ! ${addon_modules_dir} ]] && running_distribution="$(distro_version)"
 weak_modules="${WEAK_MODULES_BIN}"
 
 # Source in configuration not related to signing
