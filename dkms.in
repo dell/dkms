@@ -397,6 +397,11 @@ setup_kernels_arches()
             kernelver[0]=$(uname -r)
         fi
         if [[ ! $arch ]]; then
+            case "$running_distribution" in
+                debian* | ubuntu* | arch*)
+                    arch[0]=$(uname -m)
+                    ;;
+                *)
             kernelver_rpm=$(rpm -qf "$install_tree/$kernelver" 2>/dev/null | \
             grep -v "not owned by any package" | grep kernel | head -n 1)
             if ! arch[0]=$(rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null); then
@@ -405,6 +410,8 @@ setup_kernels_arches()
                     arch[0]="ia32e"
                 fi
             fi
+                    ;;
+            esac
         fi
         if [[ ! $arch ]]; then
             die 12 "Could not determine architecture."
@@ -1739,7 +1746,15 @@ do_uninstall()
                 while [[ ${dir_to_remove} != ${dir_to_remove#/} ]]; do
                     dir_to_remove="${dir_to_remove#/}"
                 done
+
+                case "$running_distribution" in
+                    debian* | ubuntu* | arch*)
+                        (if cd "$install_tree/$1"; then rmdir -p --ignore-fail-on-non-empty "${dir_to_remove}"; fi || true)
+                        ;;
+                    *)
                 (if cd "$install_tree/$1"; then rpm -qf "${dir_to_remove}" >/dev/null 2>&1 || rmdir -p --ignore-fail-on-non-empty "${dir_to_remove}"; fi || true)
+                        ;;
+                esac
             else
                 echo "Module ${dest_module_name[$count]}$module_suffix was not found within $install_tree/$1/"
             fi
