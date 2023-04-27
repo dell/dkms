@@ -27,7 +27,6 @@ jobs:
           - {name: "almalinux", tag: "8"}
           - {name: "debian", tag: "11"}
           - {name: "debian", tag: "10"}
-          - {name: "debian", tag: "9"}
           - {name: "ubuntu", tag: "22.04"}
           - {name: "ubuntu", tag: "20.04"}
           - {name: "ubuntu", tag: "18.04"}
@@ -98,8 +97,6 @@ jobs:
     - name: Run tests
       run: |
         if [ "${{ matrix.distro.name }}" = alpine ] && [ "${{ matrix.distro.variant }}" = "-lts" ]; then
-            ./run_test.sh --no-signing-tool
-        elif [ "${{ matrix.distro.name }}" = debian ] && [ "${{ matrix.distro.tag }}" = 9 ]; then
             ./run_test.sh --no-signing-tool
         else
             ./run_test.sh
