@@ -1061,6 +1061,12 @@ prepare_build()
             $"Check $build_dir for more information."
     done
 
+    if [ -f "$kernel_source_dir/.kernelvariables" ]; then
+        export CC=$(echo -e "show-%:\n\t@echo \$(\$*)\ninclude $kernel_source_dir/.kernelvariables" | make -f - show-CC)
+    else
+        unset CC
+    fi
+
     if [[ -e "${kernel_config}" ]]; then
         local cc=$(sed -n 's|^CONFIG_CC_VERSION_TEXT="\([^ ]*\) .*"|\1|p' "${kernel_config}")
         if command -v "$cc" >/dev/null; then
@@ -1099,12 +1105,6 @@ actual_build()
 
     echo $""
     echo $"Building module:"
-
-    if [ -f "$kernel_source_dir/.kernelvariables" ]; then
-        export CC=$(echo -e "show-%:\n\t@echo \$(\$*)\ninclude $kernel_source_dir/.kernelvariables" | make -f - show-CC)
-    else
-        unset CC
-    fi
 
     invoke_command "$clean" "Cleaning build area" background
     echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$build_log"
