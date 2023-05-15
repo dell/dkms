@@ -1062,6 +1062,12 @@ prepare_build()
     done
 
     if [[ -e "${kernel_config}" ]]; then
+        local cc=$(sed -n 's|^CONFIG_CC_VERSION_TEXT="\([^ ]*\) .*"|\1|p' "${kernel_config}")
+        if command -v "$cc" >/dev/null; then
+            export CC="$cc"
+            export KERNEL_CC="$cc"
+        fi
+
         if grep -q 'CONFIG_CC_IS_CLANG=y' "${kernel_config}"; then
             local cc=clang
             if command -v "$cc" >/dev/null; then
