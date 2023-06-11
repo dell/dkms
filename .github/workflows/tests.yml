@@ -62,7 +62,7 @@ jobs:
       if: matrix.distro.name == 'debian'
       run: |
         apt-get update -q
-        apt-get install -qy gcc make linux-headers-amd64 linux-image-amd64 openssl
+        apt-get install -qy make linux-headers-amd64 linux-image-amd64 openssl
 
     - name: Install Ubuntu dependencies
       if: matrix.distro.name == 'ubuntu'
