@@ -287,6 +287,9 @@ setup_kernels_arches()
                 fi
             fi
         fi
+        if [[ ! $arch ]]; then
+            die 12 $"Could not determine architecture."
+        fi
     fi
 
     # If only one arch is specified, make it so for all the kernels
