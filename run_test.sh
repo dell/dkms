@@ -678,7 +678,7 @@ echo "Running dkms autoinstall for a kernel without headers installed (expected 
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}-noheaders" << EOF
 Error! Your kernel headers for kernel ${KERNEL_VER}-noheaders cannot be found at /lib/modules/${KERNEL_VER}-noheaders/build or /lib/modules/${KERNEL_VER}-noheaders/source.
 Please install the linux-headers-${KERNEL_VER}-noheaders package or use the --kernelsourcedir option to tell DKMS where it's located.
-dkms autoinstall on ${KERNEL_VER}-noheaders/x86_64 failed for dkms_test(1)
+dkms autoinstall on ${KERNEL_VER}-noheaders/${KERNEL_ARCH} failed for dkms_test(1)
 Error! One or more modules failed to install during autoinstall.
 Refer to previous errors for more information.
 EOF
