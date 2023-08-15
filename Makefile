@@ -12,7 +12,7 @@ LIBDIR = $(DESTDIR)/usr/lib/dkms
 KCONF = $(DESTDIR)/etc/kernel
 SHAREDIR = $(DESTDIR)/usr/share
 DOCDIR = $(SHAREDIR)/doc/dkms
-SYSTEMD = $(DESTDIR)/usr/lib/systemd/system
+SYSTEMD = /usr/lib/systemd/system
 
 #Define the top-level build directory
 BUILDDIR := $(shell pwd)
@@ -49,7 +49,10 @@ install: dkms dkms.8
 	install -D -m 0755 kernel_prerm.d_dkms $(KCONF)/prerm.d/dkms
 
 install-redhat: install
-	install -D -m 0644 dkms.service $(SYSTEMD)/dkms.service
+ifneq (,$(DESTDIR))
+	$(if $(filter $(DESTDIR)%,$(SYSTEMD)),$(error Using a DESTDIR as prefix for SYSTEMD is no longer supported))
+endif
+	install -D -m 0644 dkms.service $(DESTDIR)$(SYSTEMD)/dkms.service
 
 install-debian: install
 	install -D -m 0755 dkms_apport.py $(SHAREDIR)/apport/package-hooks/dkms_packages.py
