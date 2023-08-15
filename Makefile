@@ -5,14 +5,12 @@ RELEASE_MICRO := 11
 RELEASE_NAME := dkms
 RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_MICRO)
 RELEASE_STRING := $(RELEASE_NAME)-$(RELEASE_VERSION)
-DIST := unstable
 SHELL=bash
 
 SBIN = $(DESTDIR)/usr/sbin
 ETC = $(DESTDIR)/etc/dkms
 VAR = $(DESTDIR)/var/lib/dkms
 MAN = $(DESTDIR)/usr/share/man/man8
-INITD = $(DESTDIR)/etc/rc.d/init.d
 LIBDIR = $(DESTDIR)/usr/lib/dkms
 BASHDIR = $(DESTDIR)/usr/share/bash-completion/completions
 KCONF = $(DESTDIR)/etc/kernel
@@ -22,7 +20,6 @@ SYSTEMD = $(DESTDIR)/usr/lib/systemd/system
 
 #Define the top-level build directory
 BUILDDIR := $(shell pwd)
-TOPDIR := $(shell pwd)
 
 .PHONY = tarball
 
