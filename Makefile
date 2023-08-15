@@ -10,7 +10,6 @@ SHELL=bash
 SBIN = $(DESTDIR)/usr/sbin
 MAN = $(DESTDIR)/usr/share/man/man8
 LIBDIR = $(DESTDIR)/usr/lib/dkms
-BASHDIR = $(DESTDIR)/usr/share/bash-completion/completions
 KCONF = $(DESTDIR)/etc/kernel
 SHAREDIR = $(DESTDIR)/usr/share
 DOCDIR = $(SHAREDIR)/doc/dkms
@@ -43,7 +42,8 @@ install: dkms dkms.8
 	$(if $(strip $(ETC)),$(error Setting ETC is not supported))
 	install -D -m 0644 dkms_framework.conf $(DESTDIR)/etc/dkms/framework.conf
 	install -d -m 0755 $(DESTDIR)/etc/dkms/framework.conf.d
-	install -D -m 0644 dkms.bash-completion $(BASHDIR)/dkms
+	$(if $(strip $(BASHDIR)),$(error Setting BASHDIR is not supported))
+	install -D -m 0644 dkms.bash-completion $(DESTDIR)/usr/share/bash-completion/completions/dkms
 	install -D -m 0644 dkms.8 $(MAN)/dkms.8
 	install -D -m 0755 kernel_install.d_dkms $(KCONF)/install.d/40-dkms.install
 	install -D -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
