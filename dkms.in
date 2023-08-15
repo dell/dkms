@@ -327,10 +327,10 @@ do_depmod()
 }
 
 # Grab distro information from os-release.
-# Falls back to LSB for compliant distros.
 distro_version()
 {
-    if [[ -r /etc/os-release ]]; then
+    [[ -r /etc/os-release ]] || die 4 $"System is missing /etc/os-release file."
+    (
         . /etc/os-release
         if [[ "$ID" = "ubuntu" ]]; then
             # ID_LIKE=debian in ubuntu
@@ -340,36 +340,7 @@ distro_version()
         else
             echo $ID
         fi
-        return
-    fi
-
-    local DISTRIB_ID
-
-    # Try the LSB-provided strings first
-    if [ -r /etc/lsb-release ]; then
-        . /etc/lsb-release
-    elif type lsb_release >/dev/null 2>&1; then
-        DISTRIB_ID=$(lsb_release -i -s)
-    fi
-
-    case ${DISTRIB_ID} in
-        Fedora)
-            echo fedora
-            ;;
-        RedHatEnterprise*|CentOS|ScientificSL)
-            echo rhel
-            ;;
-        SUSE*)
-            echo sles
-            ;;
-        *)
-            if [[ ${DISTRIB_ID} ]]; then
-                echo "${DISTRIB_ID}"
-            else
-                echo unknown
-            fi
-            ;;
-    esac
+    )
 }
 
 override_dest_module_location()
@@ -2338,9 +2309,6 @@ autoinstall() {
 #### Program Starts Here ####
 ####                     ####
 #############################
-
-# Set a standard path
-PATH="$PATH:/usr/lib/dkms"
 
 # Ensure files and directories we create are readable to anyone,
 # since we aim to build as a non-root user
