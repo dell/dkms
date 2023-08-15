@@ -15,7 +15,7 @@ SYSTEMD = /usr/lib/systemd/system
 #Define the top-level build directory
 BUILDDIR := $(shell pwd)
 
-all: dkms dkms.8 dkms_autoinstaller dkms.service kernel_postinst.d_dkms
+all: dkms dkms.8 dkms_autoinstaller dkms.service kernel_install.d_dkms kernel_postinst.d_dkms
 
 clean:
 	-rm -rf dist/
@@ -23,6 +23,7 @@ clean:
 	-rm -rf dkms.8
 	-rm -rf dkms_autoinstaller
 	-rm -rf dkms.service
+	-rm -rf kernel_install.d_dkms
 	-rm -rf kernel_postinst.d_dkms
 
 dkms: dkms.in
@@ -36,6 +37,9 @@ dkms_autoinstaller: dkms_autoinstaller.in
 
 dkms.service: dkms.service.in
 	sed -e 's,@SBINDIR@,$(SBIN),g' $^ > $@
+
+kernel_install.d_dkms: kernel_install.d_dkms.in
+	sed -e 's,@KCONFDIR@,$(KCONF),g' $^ > $@
 
 kernel_postinst.d_dkms: kernel_postinst.d_dkms.in
 	sed -e 's,@LIBDIR@,$(LIBDIR),g' $^ > $@
