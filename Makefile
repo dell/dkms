@@ -15,9 +15,7 @@ SYSTEMD = /usr/lib/systemd/system
 #Define the top-level build directory
 BUILDDIR := $(shell pwd)
 
-.PHONY = tarball
-
-all: clean tarball
+all: dkms dkms.8
 
 clean:
 	-rm -rf dist/
@@ -30,7 +28,7 @@ dkms: dkms.in
 dkms.8: dkms.8.in
 	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' $^ > $@
 
-install: dkms dkms.8
+install: all
 	$(if $(strip $(VAR)),$(error Setting VAR is not supported))
 	install -d -m 0755 $(DESTDIR)/var/lib/dkms
 	install -D -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
@@ -65,9 +63,11 @@ install-doc:
 	install -d -m 0755 $(DESTDIR)/usr/share/doc/dkms
 	install -m 0644 COPYING README.md $(DESTDIR)/usr/share/doc/dkms
 
+.PHONY = tarball
+
 TARBALL=$(BUILDDIR)/dist/$(RELEASE_STRING).tar.gz
 tarball: $(TARBALL)
 
-$(TARBALL): dkms dkms.8
+$(TARBALL): all
 	mkdir -p $(@D)
 	git archive --prefix=$(RELEASE_STRING)/ --add-file=dkms --add-file=dkms.8 -o $@ HEAD
