@@ -31,7 +31,7 @@ if [ ! -f /etc/debian_version ]; then
     alias log_action_msg=/bin/echo
 fi
 
-exec="/usr/sbin/dkms"
+exec="@SBINDIR@/dkms"
 prog=${exec##*/}
 
 test -f $exec || exit 0
