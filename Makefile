@@ -8,7 +8,6 @@ RELEASE_STRING := $(RELEASE_NAME)-$(RELEASE_VERSION)
 SHELL=bash
 
 SBIN = $(DESTDIR)/usr/sbin
-ETC = $(DESTDIR)/etc/dkms
 MAN = $(DESTDIR)/usr/share/man/man8
 LIBDIR = $(DESTDIR)/usr/lib/dkms
 BASHDIR = $(DESTDIR)/usr/share/bash-completion/completions
@@ -41,8 +40,9 @@ install: dkms dkms.8
 	install -D -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
 	install -D -m 0755 dkms $(SBIN)/dkms
 	install -D -m 0755 dkms_autoinstaller $(LIBDIR)/dkms_autoinstaller
-	install -D -m 0644 dkms_framework.conf $(ETC)/framework.conf
-	install -d -m 0755 $(ETC)/framework.conf.d
+	$(if $(strip $(ETC)),$(error Setting ETC is not supported))
+	install -D -m 0644 dkms_framework.conf $(DESTDIR)/etc/dkms/framework.conf
+	install -d -m 0755 $(DESTDIR)/etc/dkms/framework.conf.d
 	install -D -m 0644 dkms.bash-completion $(BASHDIR)/dkms
 	install -D -m 0644 dkms.8 $(MAN)/dkms.8
 	install -D -m 0755 kernel_install.d_dkms $(KCONF)/install.d/40-dkms.install
