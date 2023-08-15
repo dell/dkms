@@ -9,7 +9,6 @@ SHELL=bash
 
 SBIN = $(DESTDIR)/usr/sbin
 ETC = $(DESTDIR)/etc/dkms
-VAR = $(DESTDIR)/var/lib/dkms
 MAN = $(DESTDIR)/usr/share/man/man8
 LIBDIR = $(DESTDIR)/usr/lib/dkms
 BASHDIR = $(DESTDIR)/usr/share/bash-completion/completions
@@ -37,7 +36,8 @@ dkms.8: dkms.8.in
 	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' $^ > $@
 
 install: dkms dkms.8
-	install -d -m 0755 $(VAR)
+	$(if $(strip $(VAR)),$(error Setting VAR is not supported))
+	install -d -m 0755 $(DESTDIR)/var/lib/dkms
 	install -D -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
 	install -D -m 0755 dkms $(SBIN)/dkms
 	install -D -m 0755 dkms_autoinstaller $(LIBDIR)/dkms_autoinstaller
