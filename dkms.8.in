@@ -595,17 +595,6 @@ This also introduces a implicit distribution/version dependency on the
 package, as the value of
 .B OBSOLETE_BY
 is meaningful only in the context of a single distribution/version.
-
-If you feel you must use it, please use as such in dkms.conf:
-
- ubuntu_804="Ubuntu
- 8.04"
- if [ \-x /usr/bin/lsb_release ]; then
-   if [ "$(/usr/bin/lsb_release \-sir)" == "${ubuntu_804}" ]; then
-     OBSOLETE_BY="2.6.25"
-   fi
- fi
-
 .TP
 .B PATCH[#]=
 Use the PATCH directive array to specify patches which should be applied to your source before a build occurs.
