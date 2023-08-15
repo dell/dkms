@@ -34,8 +34,8 @@ case "${uname_s}" in
     ;;
 esac
 
-if [ -x /usr/lib/dkms/dkms_autoinstaller ]; then
-    exec /usr/lib/dkms/dkms_autoinstaller start "$inst_kern"
+if [ -x @LIBDIR@/dkms_autoinstaller ]; then
+    exec @LIBDIR@/dkms_autoinstaller start "$inst_kern"
 fi
 
 if ! _check_kernel_dir "$inst_kern" ; then
