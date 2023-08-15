@@ -7,7 +7,7 @@ RELEASE_VERSION := $(RELEASE_MAJOR).$(RELEASE_MINOR).$(RELEASE_MICRO)
 RELEASE_STRING := $(RELEASE_NAME)-$(RELEASE_VERSION)
 SHELL=bash
 
-SBIN = $(DESTDIR)/usr/sbin
+SBIN = /usr/sbin
 LIBDIR = $(DESTDIR)/usr/lib/dkms
 KCONF = $(DESTDIR)/etc/kernel
 SYSTEMD = /usr/lib/systemd/system
@@ -34,7 +34,10 @@ install: dkms dkms.8
 	$(if $(strip $(VAR)),$(error Setting VAR is not supported))
 	install -d -m 0755 $(DESTDIR)/var/lib/dkms
 	install -D -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
-	install -D -m 0755 dkms $(SBIN)/dkms
+ifneq (,$(DESTDIR))
+	$(if $(filter $(DESTDIR)%,$(SBIN)),$(error Using a DESTDIR as prefix for SBIN is no longer supported))
+endif
+	install -D -m 0755 dkms $(DESTDIR)$(SBIN)/dkms
 	install -D -m 0755 dkms_autoinstaller $(LIBDIR)/dkms_autoinstaller
 	$(if $(strip $(ETC)),$(error Setting ETC is not supported))
 	install -D -m 0644 dkms_framework.conf $(DESTDIR)/etc/dkms/framework.conf
