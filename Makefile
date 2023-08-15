@@ -48,7 +48,6 @@ install: dkms dkms.8
 	install -D -m 0755 kernel_install.d_dkms $(KCONF)/install.d/40-dkms.install
 	install -D -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
 	install -D -m 0755 kernel_prerm.d_dkms $(KCONF)/prerm.d/dkms
-	gzip -n -9 $(MAN)/dkms.8
 
 install-redhat: install
 	install -D -m 0644 dkms.service $(SYSTEMD)/dkms.service
