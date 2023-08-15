@@ -9,7 +9,7 @@ SHELL=bash
 
 SBIN = /usr/sbin
 LIBDIR = /usr/lib/dkms
-KCONF = $(DESTDIR)/etc/kernel
+KCONF = /etc/kernel
 SYSTEMD = /usr/lib/systemd/system
 
 #Define the top-level build directory
@@ -46,6 +46,7 @@ install: all
 ifneq (,$(DESTDIR))
 	$(if $(filter $(DESTDIR)%,$(SBIN)),$(error Using a DESTDIR as prefix for SBIN is no longer supported))
 	$(if $(filter $(DESTDIR)%,$(LIBDIR)),$(error Using a DESTDIR as prefix for LIBDIR is no longer supported))
+	$(if $(filter $(DESTDIR)%,$(KCONF)),$(error Using a DESTDIR as prefix for KCONF is no longer supported))
 endif
 	install -D -m 0755 dkms $(DESTDIR)$(SBIN)/dkms
 	install -D -m 0755 dkms_common.postinst $(DESTDIR)$(LIBDIR)/common.postinst
@@ -56,9 +57,9 @@ endif
 	$(if $(strip $(BASHDIR)),$(error Setting BASHDIR is not supported))
 	install -D -m 0644 dkms.bash-completion $(DESTDIR)/usr/share/bash-completion/completions/dkms
 	install -D -m 0644 dkms.8 $(DESTDIR)/usr/share/man/man8/dkms.8
-	install -D -m 0755 kernel_install.d_dkms $(KCONF)/install.d/40-dkms.install
-	install -D -m 0755 kernel_postinst.d_dkms $(KCONF)/postinst.d/dkms
-	install -D -m 0755 kernel_prerm.d_dkms $(KCONF)/prerm.d/dkms
+	install -D -m 0755 kernel_install.d_dkms $(DESTDIR)$(KCONF)/install.d/40-dkms.install
+	install -D -m 0755 kernel_postinst.d_dkms $(DESTDIR)$(KCONF)/postinst.d/dkms
+	install -D -m 0755 kernel_prerm.d_dkms $(DESTDIR)$(KCONF)/prerm.d/dkms
 
 install-redhat: install
 ifneq (,$(DESTDIR))
@@ -69,7 +70,7 @@ endif
 install-debian: install
 	$(if $(strip $(SHAREDIR)),$(error Setting SHAREDIR is not supported))
 	install -D -m 0755 dkms_apport.py $(DESTDIR)/usr/share/apport/package-hooks/dkms_packages.py
-	install -D -m 0755 kernel_postinst.d_dkms $(KCONF)/header_postinst.d/dkms
+	install -D -m 0755 kernel_postinst.d_dkms $(DESTDIR)$(KCONF)/header_postinst.d/dkms
 
 install-doc:
 	$(if $(strip $(DOC)),$(error Setting DOCDIR is not supported))
