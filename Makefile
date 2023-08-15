@@ -37,12 +37,12 @@ dkms.8: dkms.8.in
 	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' $^ > $@
 
 install: dkms dkms.8
-	mkdir -p $(VAR)
+	install -d -m 0755 $(VAR)
 	install -D -m 0755 dkms_common.postinst $(LIBDIR)/common.postinst
 	install -D -m 0755 dkms $(SBIN)/dkms
 	install -D -m 0755 dkms_autoinstaller $(LIBDIR)/dkms_autoinstaller
 	install -D -m 0644 dkms_framework.conf $(ETC)/framework.conf
-	mkdir -p $(ETC)/framework.conf.d
+	install -d -m 0755 $(ETC)/framework.conf.d
 	install -D -m 0644 dkms.bash-completion $(BASHDIR)/dkms
 	install -D -m 0644 dkms.8 $(MAN)/dkms.8
 	install -D -m 0755 kernel_install.d_dkms $(KCONF)/install.d/40-dkms.install
