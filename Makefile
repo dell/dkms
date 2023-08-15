@@ -15,18 +15,26 @@ SYSTEMD = /usr/lib/systemd/system
 #Define the top-level build directory
 BUILDDIR := $(shell pwd)
 
-all: dkms dkms.8
+all: dkms dkms.8 dkms_autoinstaller dkms.service
 
 clean:
 	-rm -rf dist/
 	-rm -rf dkms
 	-rm -rf dkms.8
+	-rm -rf dkms_autoinstaller
+	-rm -rf dkms.service
 
 dkms: dkms.in
 	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' $^ > $@
 
 dkms.8: dkms.8.in
 	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' $^ > $@
+
+dkms_autoinstaller: dkms_autoinstaller.in
+	sed -e 's,@SBINDIR@,$(SBIN),g' $^ > $@
+
+dkms.service: dkms.service.in
+	sed -e 's,@SBINDIR@,$(SBIN),g' $^ > $@
 
 install: all
 	$(if $(strip $(VAR)),$(error Setting VAR is not supported))
