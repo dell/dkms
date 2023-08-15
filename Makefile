@@ -10,8 +10,6 @@ SHELL=bash
 SBIN = $(DESTDIR)/usr/sbin
 LIBDIR = $(DESTDIR)/usr/lib/dkms
 KCONF = $(DESTDIR)/etc/kernel
-SHAREDIR = $(DESTDIR)/usr/share
-DOCDIR = $(SHAREDIR)/doc/dkms
 SYSTEMD = /usr/lib/systemd/system
 
 #Define the top-level build directory
@@ -55,12 +53,14 @@ endif
 	install -D -m 0644 dkms.service $(DESTDIR)$(SYSTEMD)/dkms.service
 
 install-debian: install
-	install -D -m 0755 dkms_apport.py $(SHAREDIR)/apport/package-hooks/dkms_packages.py
+	$(if $(strip $(SHAREDIR)),$(error Setting SHAREDIR is not supported))
+	install -D -m 0755 dkms_apport.py $(DESTDIR)/usr/share/apport/package-hooks/dkms_packages.py
 	install -D -m 0755 kernel_postinst.d_dkms $(KCONF)/header_postinst.d/dkms
 
 install-doc:
-	install -d -m 0644 COPYING $(DOCDIR)
-	install -d -m 0644 README.md $(DOCDIR)
+	$(if $(strip $(DOC)),$(error Setting DOCDIR is not supported))
+	install -d -m 0755 $(DESTDIR)/usr/share/doc/dkms
+	install -m 0644 COPYING README.md $(DESTDIR)/usr/share/doc/dkms
 
 TARBALL=$(BUILDDIR)/dist/$(RELEASE_STRING).tar.gz
 tarball: $(TARBALL)
