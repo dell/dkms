@@ -54,7 +54,6 @@ install: dkms dkms.8
 	gzip -n -9 $(MAN)/dkms.8
 
 install-redhat: install
-	install -D -m 0755 lsb_release $(LIBDIR)/lsb_release
 	install -D -m 0644 dkms.service $(SYSTEMD)/dkms.service
 
 install-debian: install
