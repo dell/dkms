@@ -926,7 +926,7 @@ prepare_signing()
     fi
 
     if ! grep -q "^CONFIG_MODULE_SIG_HASH=" "${kernel_config}"; then
-        echo "The kernel is be built without module signing facility, modules won't be signed"
+        echo "The kernel is built without module signing facility, modules won't be signed"
         return
     fi
 
