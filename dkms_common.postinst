@@ -201,7 +201,7 @@ echo "Building for $KERNELS" | tr '\n' ',' \
     | sed -e 's/,/, /g; s/, $/\n/; s/, \([^,]\+\)$/ and \1/'
 
 if [ -n "$ARCH" ]; then
-    if which lsb_release >/dev/null && [ $(lsb_release -s -i) = "Ubuntu" ]; then
+    if which lsb_release >/dev/null && ([ $(lsb_release -s -i) = "Ubuntu" ] || [ $(lsb_release -s -i) = "Tuxedo" ]); then
         case $ARCH in
             amd64)
                 ARCH="x86_64"
