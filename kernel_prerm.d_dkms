@@ -1,13 +1,22 @@
 #!/bin/sh
 
-# We're passed the version of the kernel being removed
+# This script is triggered when the kernel (linux-image) package is being
+# removed.  We're passed the version of the kernel being removed.
 inst_kern=$1
 
 if command -v dkms > /dev/null; then
 	dkms status -k "$inst_kern" 2>/dev/null | while IFS=",:/ " read -r name vers _ arch status; do
 		[ "$status" = "installed" ] || continue
 		echo "dkms: removing: $name $vers ($inst_kern) ($arch)" >&2
-		dkms remove -m "$name" -v "$vers" -k "$inst_kern" -a "$arch"
+		# Compromise on using 'unbuild' to remove the module when a
+		# kernel is being removed.  The 'remove' command is too
+		# destructive.  The 'uninstall' command leaves built files
+		# around that have no other trigger to 'unbuild' them.
+		# (Triggering 'unbuild' on kernel header removal would not be
+		# a good idea because that would also cause the module to be
+		# uninstalled for the kernel, even though only the headers are
+		# being removed.)
+		dkms unbuild -m "$name" -v "$vers" -k "$inst_kern" -a "$arch"
 	done
 fi
 
