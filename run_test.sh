@@ -249,6 +249,9 @@ case "${os_id}" in
         expected_dest_loc=kernel/extra
         mod_compression_ext=.gz
         ;;
+    gentoo)
+        expected_dest_loc=kernel/extra
+        ;;
     *)
         echo >&2 "Error: unknown Linux distribution ID ${os_id}"
         exit 1
