@@ -43,33 +43,45 @@ jobs:
       if: matrix.distro.name == 'alpine'
       run: |
         apk --no-cache --update add bash gcc linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-dev make openssl coreutils
+        KERNEL_VER="$(apk info --contents "linux${{ matrix.distro.variant }}-dev" | sed -n 's:^lib/modules/\([^/][^/]*\)/.*:\1:p' | head -n 1)"
+        echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
 
     - name: Install Arch Linux dependencies
       if: matrix.distro.name == 'archlinux'
       run: |
         pacman -Syu --noconfirm diffutils gcc make linux${{ matrix.distro.variant }}-headers openssl
+        KERNEL_VER="$(pacman -Qql "linux${{ matrix.distro.variant }}-headers" | sed -n 's:^/usr/lib/modules/\([^/]\+\)/.*:\1:p' | head -n 1)"
+        echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
 
     - name: Install CentOS dependencies
       if: matrix.distro.name == 'centos'
       run: |
         yum install -y diffutils elfutils-libelf-devel gcc kernel kernel-devel make openssl
+        KERNEL_VER="$(LANG=C rpm -qi kernel-devel | sed -n 's/^Source RPM *: kernel-\(.*\).src.rpm$/\1.x86_64/p' | tail -n 1)"
+        echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
 
     - name: Install AlmaLinux dependencies
       if: matrix.distro.name == 'almalinux'
       run: |
         yum install -y diffutils elfutils-libelf-devel gcc kernel kernel-devel make openssl
+        KERNEL_VER="$(LANG=C rpm -qi kernel-devel | sed -n 's/^Source RPM *: kernel-\(.*\).src.rpm$/\1.x86_64/p' | tail -n 1)"
+        echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
 
     - name: Install Debian dependencies
       if: matrix.distro.name == 'debian'
       run: |
         apt-get update -q
         apt-get install -qy make linux-headers-amd64 linux-image-amd64 openssl
+        KERNEL_VER="$(LANG=C dpkg --status linux-headers-amd64 | sed -n 's/^Depends: linux-headers-\(\S\+\)\( .*\)\?/\1/p' | head -n 1)"
+        echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
 
     - name: Install Ubuntu dependencies
       if: matrix.distro.name == 'ubuntu'
       run: |
         apt-get update -q
         apt-get install -qy gcc make linux-headers-generic linux-image-generic openssl shim-signed
+        KERNEL_VER="$(LANG=C dpkg --status linux-headers-generic | sed -n 's/^Depends: linux-headers-\(\S\+\)\( .*\)\?/\1/p' | head -n 1)"
+        echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
 
     - name: Install Gentoo Linux dependencies
       if: matrix.distro.name == 'gentoo/stage3'
@@ -77,30 +89,8 @@ jobs:
         echo -e "sys-kernel/gentoo-kernel-bin\nvirtual/dist-kernel" >> /etc/portage/package.accept_keywords/latest-kernel
         emerge --sync
         emerge --noreplace -j$(nproc) -l$(nproc) gentoo-kernel-bin
-
-    - name: Compute packaged kernel version
-      id: versions
-      run: |
-        KERNEL_VER=''
-        if [ "${{ matrix.distro.name }}" = alpine ] ; then
-            KERNEL_VER="$(apk info --contents "linux${{ matrix.distro.variant }}-dev" | sed -n 's:^lib/modules/\([^/][^/]*\)/.*:\1:p' | head -n 1)"
-        elif [ "${{ matrix.distro.name }}" = archlinux ] ; then
-            KERNEL_VER="$(pacman -Qql "linux${{ matrix.distro.variant }}-headers" | sed -n 's:^/usr/lib/modules/\([^/]\+\)/.*:\1:p' | head -n 1)"
-        elif [ "${{ matrix.distro.name }}" = centos ] || [ "${{ matrix.distro.name }}" = almalinux ] ; then
-            KERNEL_VER="$(LANG=C rpm -qi kernel-devel | sed -n 's/^Source RPM *: kernel-\(.*\).src.rpm$/\1.x86_64/p' | tail -n 1)"
-        elif [ "${{ matrix.distro.name }}" = debian ] ; then
-            KERNEL_VER="$(LANG=C dpkg --status linux-headers-amd64 | sed -n 's/^Depends: linux-headers-\(\S\+\)\( .*\)\?/\1/p' | head -n 1)"
-        elif [ "${{ matrix.distro.name }}" = ubuntu ] ; then
-            KERNEL_VER="$(LANG=C dpkg --status linux-headers-generic | sed -n 's/^Depends: linux-headers-\(\S\+\)\( .*\)\?/\1/p' | head -n 1)"
-        elif [ "${{ matrix.distro.name }}" = gentoo/stage3 ] ; then
-            dist_kernel_ver="$(emerge --search gentoo-kernel-bin | sed -n 's/^[[:space:]]*Latest version installed: \([0-9.]\)/\1/p' | head -n 1)"
-            KERNEL_VER="${dist_kernel_ver%-r*}-gentoo-dist"
-        fi
-        if [ -z "${KERNEL_VER}" ] ; then
-            echo >&2 "Error: no kernel package found"
-            exit 1
-        fi
-        echo "Found packaged kernel ${KERNEL_VER}"
+        dist_kernel_ver="$(emerge --search gentoo-kernel-bin | sed -n 's/^[[:space:]]*Latest version installed: \([0-9.]\)/\1/p' | head -n 1)"
+        KERNEL_VER="${dist_kernel_ver%-r*}-gentoo-dist"
         echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
 
     - name: Install dkms
@@ -108,6 +98,11 @@ jobs:
 
     - name: Run tests
       run: |
+        if [ -z "${KERNEL_VER}" ] ; then
+            echo >&2 "Error: no kernel package found"
+            exit 1
+        fi
+        echo "Found packaged kernel ${KERNEL_VER}"
         if [ "${{ matrix.distro.name }}" = alpine ] && [ "${{ matrix.distro.variant }}" = "-lts" ]; then
             ./run_test.sh --no-signing-tool
         else
