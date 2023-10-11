@@ -22,6 +22,8 @@ jobs:
           - {name: "archlinux", tag: "latest"}
           - {name: "archlinux", tag: "latest", variant: "-lts"}
           - {name: "archlinux", tag: "latest", variant: "-zen"}
+          - {name: "quay.io/centos/centos", tag: "stream9"}
+          - {name: "quay.io/centos/centos", tag: "stream8"}
           - {name: "centos", tag: "7"}
           - {name: "almalinux", tag: "9"}
           - {name: "almalinux", tag: "8"}
@@ -34,7 +36,7 @@ jobs:
           - {name: "gentoo/stage3", tag: "latest"}
     runs-on: ubuntu-20.04
     container:
-      image: docker://docker.io/${{ matrix.distro.name }}:${{ matrix.distro.tag }}
+      image: ${{ matrix.distro.name }}:${{ matrix.distro.tag }}
 
     steps:
     - uses: actions/checkout@v3
@@ -54,7 +56,7 @@ jobs:
         echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
 
     - name: Install CentOS dependencies
-      if: matrix.distro.name == 'centos'
+      if: contains(matrix.distro.name, 'centos')
       run: |
         yum install -y diffutils elfutils-libelf-devel gcc kernel kernel-devel make openssl
         KERNEL_VER="$(LANG=C rpm -qi kernel-devel | sed -n 's/^Source RPM *: kernel-\(.*\).src.rpm$/\1.x86_64/p' | tail -n 1)"
