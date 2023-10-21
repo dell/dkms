@@ -36,6 +36,8 @@ jobs:
           - {name: "fedora/fedora", tag: "39", url: "quay.io/"}
           - {name: "fedora/fedora", tag: "38", url: "quay.io/"}
           - {name: "gentoo/stage3", tag: "latest"}
+          - {name: "opensuse/tumbleweed", tag: "latest", variant: "-default", url: "registry.opensuse.org/"}
+          - {name: "opensuse/leap", tag: "15.5", variant: "-default", url: "registry.opensuse.org/"}
           - {name: "ubuntu", tag: "23.10"}
           - {name: "ubuntu", tag: "22.04"}
           - {name: "ubuntu", tag: "20.04"}
@@ -45,6 +47,11 @@ jobs:
       image: ${{ matrix.distro.url }}${{ matrix.distro.name }}:${{ matrix.distro.tag }}
 
     steps:
+    - name: Install git for checkout action
+      if: contains(matrix.distro.name, 'opensuse')
+      run: |
+        zypper --non-interactive install git
+
     - uses: actions/checkout@v3
 
     - name: Install AlmaLinux dependencies
@@ -84,6 +91,11 @@ jobs:
         echo -e "ACCEPT_KEYWORDS=\"~amd64\"\nACCEPT_LICENSE=\"*\"" >> /etc/portage/make.conf
         emerge --sync
         FEATURES="getbinpkg binpkg-ignore-signature" USE="generic-uki" emerge --noreplace -j$(nproc) -l$(nproc) --autounmask-continue '>=sys-kernel/gentoo-kernel-bin-6.6.0'
+
+    - name: Install openSUSE leap dependencies
+      if: contains(matrix.distro.name, 'opensuse')
+      run: |
+        zypper --non-interactive install diffutils elfutils gcc kernel${{ matrix.distro.variant }} kernel${{ matrix.distro.variant }}-devel make openssl
 
     - name: Install Ubuntu dependencies
       if: matrix.distro.name == 'ubuntu'
