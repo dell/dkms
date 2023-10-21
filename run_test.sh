@@ -248,13 +248,14 @@ case "${os_id}" in
         expected_dest_loc=extra
         mod_compression_ext=.xz
         ;;
-    sles | suse | opensuse)
+    sles | suse | opensuse*)
         expected_dest_loc=updates
+        mod_compression_ext=.zst
         ;;
     arch)
         expected_dest_loc=updates/dkms
         ;;
-    debian | ubuntu | linuxmint)
+    debian* | ubuntu | linuxmint)
         expected_dest_loc=updates/dkms
         ;;
     alpine)
