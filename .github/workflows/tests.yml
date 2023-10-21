@@ -105,6 +105,12 @@ jobs:
 
         echo "Found kernel ${KERNEL_VER}"
         export KERNEL_VER
+
+        echo "Module search paths"
+        for depmod in /etc/depmod.d/ /usr/lib/depmod.d/ /lib/depmod.d/; do
+            [ -e "$depmod" ] && grep -r ^search "$depmod" || true
+        done
+
         if [ "${{ matrix.distro.name }}" = alpine ] && [ "${{ matrix.distro.variant }}" = "-lts" ]; then
             ./run_test.sh --no-signing-tool
         else
