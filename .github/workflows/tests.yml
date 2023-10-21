@@ -44,7 +44,7 @@ jobs:
     - name: Install AlmaLinux dependencies
       if: matrix.distro.name == 'almalinux'
       run: |
-        yum install -y diffutils elfutils-libelf-devel gcc kernel kernel-devel make openssl
+        yum install -y diffutils elfutils-libelf gcc kernel kernel-devel make openssl
 
     - name: Install Alpine dependencies
       if: matrix.distro.name == 'alpine'
@@ -59,7 +59,7 @@ jobs:
     - name: Install CentOS dependencies
       if: contains(matrix.distro.name, 'centos')
       run: |
-        yum install -y diffutils elfutils-libelf-devel gcc kernel kernel-devel make openssl
+        yum install -y diffutils elfutils-libelf gcc kernel kernel-devel make openssl
 
     - name: Install Debian dependencies
       if: matrix.distro.name == 'debian'
