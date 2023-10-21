@@ -22,8 +22,8 @@ jobs:
           - {name: "archlinux", tag: "latest"}
           - {name: "archlinux", tag: "latest", variant: "-lts"}
           - {name: "archlinux", tag: "latest", variant: "-zen"}
-          - {name: "quay.io/centos/centos", tag: "stream9"}
-          - {name: "quay.io/centos/centos", tag: "stream8"}
+          - {name: "centos/centos", tag: "stream9", url: "quay.io/"}
+          - {name: "centos/centos", tag: "stream8", url: "quay.io/"}
           - {name: "centos", tag: "7"}
           - {name: "almalinux", tag: "9"}
           - {name: "almalinux", tag: "8"}
@@ -36,7 +36,7 @@ jobs:
           - {name: "gentoo/stage3", tag: "latest"}
     runs-on: ubuntu-20.04
     container:
-      image: ${{ matrix.distro.name }}:${{ matrix.distro.tag }}
+      image: ${{ matrix.distro.url }}${{ matrix.distro.name }}:${{ matrix.distro.tag }}
 
     steps:
     - uses: actions/checkout@v3
