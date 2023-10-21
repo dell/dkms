@@ -13,6 +13,8 @@ jobs:
     strategy:
       matrix:
         distro:
+          - {name: "almalinux", tag: "9"}
+          - {name: "almalinux", tag: "8"}
           - {name: "alpine", tag: "3.17", variant: "-lts"}
           - {name: "alpine", tag: "3.17", variant: "-virt"}
           - {name: "alpine", tag: "3.16", variant: "-lts"}
@@ -25,21 +27,26 @@ jobs:
           - {name: "centos/centos", tag: "stream9", url: "quay.io/"}
           - {name: "centos/centos", tag: "stream8", url: "quay.io/"}
           - {name: "centos", tag: "7"}
-          - {name: "almalinux", tag: "9"}
-          - {name: "almalinux", tag: "8"}
           - {name: "debian", tag: "12"}
           - {name: "debian", tag: "11"}
           - {name: "debian", tag: "10"}
+          - {name: "gentoo/stage3", tag: "latest"}
           - {name: "ubuntu", tag: "22.04"}
           - {name: "ubuntu", tag: "20.04"}
           - {name: "ubuntu", tag: "18.04"}
-          - {name: "gentoo/stage3", tag: "latest"}
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.distro.url }}${{ matrix.distro.name }}:${{ matrix.distro.tag }}
 
     steps:
     - uses: actions/checkout@v3
+
+    - name: Install AlmaLinux dependencies
+      if: matrix.distro.name == 'almalinux'
+      run: |
+        yum install -y diffutils elfutils-libelf-devel gcc kernel kernel-devel make openssl
+        KERNEL_VER="$(LANG=C rpm -qi kernel-devel | sed -n 's/^Source RPM *: kernel-\(.*\).src.rpm$/\1.x86_64/p' | tail -n 1)"
+        echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
 
     - name: Install Alpine dependencies
       if: matrix.distro.name == 'alpine'
@@ -62,27 +69,12 @@ jobs:
         KERNEL_VER="$(LANG=C rpm -qi kernel-devel | sed -n 's/^Source RPM *: kernel-\(.*\).src.rpm$/\1.x86_64/p' | tail -n 1)"
         echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
 
-    - name: Install AlmaLinux dependencies
-      if: matrix.distro.name == 'almalinux'
-      run: |
-        yum install -y diffutils elfutils-libelf-devel gcc kernel kernel-devel make openssl
-        KERNEL_VER="$(LANG=C rpm -qi kernel-devel | sed -n 's/^Source RPM *: kernel-\(.*\).src.rpm$/\1.x86_64/p' | tail -n 1)"
-        echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
-
     - name: Install Debian dependencies
       if: matrix.distro.name == 'debian'
       run: |
         apt-get update -q
         apt-get install -qy make linux-headers-amd64 linux-image-amd64 openssl
         KERNEL_VER="$(LANG=C dpkg --status linux-headers-amd64 | sed -n 's/^Depends: linux-headers-\(\S\+\)\( .*\)\?/\1/p' | head -n 1)"
-        echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
-
-    - name: Install Ubuntu dependencies
-      if: matrix.distro.name == 'ubuntu'
-      run: |
-        apt-get update -q
-        apt-get install -qy gcc make linux-headers-generic linux-image-generic openssl shim-signed
-        KERNEL_VER="$(LANG=C dpkg --status linux-headers-generic | sed -n 's/^Depends: linux-headers-\(\S\+\)\( .*\)\?/\1/p' | head -n 1)"
         echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
 
     - name: Install Gentoo Linux dependencies
@@ -93,6 +85,14 @@ jobs:
         emerge --noreplace -j$(nproc) -l$(nproc) gentoo-kernel-bin
         dist_kernel_ver="$(emerge --search gentoo-kernel-bin | sed -n 's/^[[:space:]]*Latest version installed: \([0-9.]\)/\1/p' | head -n 1)"
         KERNEL_VER="${dist_kernel_ver%-r*}-gentoo-dist"
+        echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
+
+    - name: Install Ubuntu dependencies
+      if: matrix.distro.name == 'ubuntu'
+      run: |
+        apt-get update -q
+        apt-get install -qy gcc make linux-headers-generic linux-image-generic openssl shim-signed
+        KERNEL_VER="$(LANG=C dpkg --status linux-headers-generic | sed -n 's/^Depends: linux-headers-\(\S\+\)\( .*\)\?/\1/p' | head -n 1)"
         echo "KERNEL_VER=${KERNEL_VER}" >> "$GITHUB_ENV"
 
     - name: Install dkms
