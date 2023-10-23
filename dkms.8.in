@@ -231,6 +231,14 @@ Returns the current status of modules, versions and kernels within
 the tree as well as whether they have been added, built or installed.
 Status can be shown for just a certain module, a certain kernel,
 a module/version combination or a module/version/kernel combination.
+
+If the source directory, or the symbolic link 'source' pointing to it is missing,
+the status of the module/version combination will be displayed as 'broken'.
+In that case dkms will not perform any other action on that particular module/version combination.
+Manual intervention is required.
+If only the symbolic link 'source' is missing, the
+.B add
+action may be used to re-add the module/version combination to dkms.
 .SY autoinstall
 .YS
 .IP "" 4

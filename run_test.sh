@@ -1769,4 +1769,194 @@ trap - EXIT
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
+############################################################################
+### Testing 'broken' status                                              ###
+############################################################################
+
+echo
+echo 'Running BROKEN tests'
+echo
+
+echo 'Adding the test module by directory'
+run_with_expected_output dkms add test/dkms_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+EOF
+
+echo ' Removing symlink /var/lib/dkms/dkms_test/1.0/source'
+rm /var/lib/dkms/dkms_test/1.0/source
+
+echo 'Checking broken status'
+run_with_expected_output dkms status dkms_test/1.0 << EOF
+dkms_test/1.0: broken
+Error! dkms_test/1.0: Missing the module source directory or the symbolic link pointing to it.
+Manual intervention is required!
+EOF
+
+echo 'Re-adding the test module'
+run_with_expected_output dkms add dkms_test/1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+EOF
+
+echo ' Removing symlink /var/lib/dkms/dkms_test/1.0/source'
+rm /var/lib/dkms/dkms_test/1.0/source
+
+echo 'Building broken test module (expected erorr)'
+run_with_expected_error 4 dkms build dkms_test/1.0 << EOF
+Error! dkms_test/1.0 is broken!
+Missing the source directory or the symbolic link pointing to it.
+Manual intervention is required!
+EOF
+
+echo 'Installing broken test module (expected erorr)'
+run_with_expected_error 4 dkms install dkms_test/1.0 << EOF
+Error! dkms_test/1.0 is broken!
+Missing the source directory or the symbolic link pointing to it.
+Manual intervention is required!
+EOF
+
+echo 'Unbuild broken test module (expected erorr)'
+run_with_expected_error 4 dkms unbuild dkms_test/1.0 << EOF
+Error! dkms_test/1.0 is broken!
+Missing the source directory or the symbolic link pointing to it.
+Manual intervention is required!
+EOF
+
+echo 'Uninstall broken test module (expected erorr)'
+run_with_expected_error 4 dkms uninstall dkms_test/1.0 << EOF
+Error! dkms_test/1.0 is broken!
+Missing the source directory or the symbolic link pointing to it.
+Manual intervention is required!
+EOF
+
+echo 'Adding the multiver test module 1.0 by directory'
+run_with_expected_output dkms add test/dkms_multiver_test/1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_multiver_test/1.0/source -> /usr/src/dkms_multiver_test-1.0
+EOF
+
+echo 'Checking broken status'
+run_with_expected_output dkms status << EOF
+dkms_multiver_test/1.0: added
+dkms_test/1.0: broken
+Error! dkms_test/1.0: Missing the module source directory or the symbolic link pointing to it.
+Manual intervention is required!
+EOF
+
+echo 'Remove broken test module (expected erorr)'
+run_with_expected_error 4 dkms remove dkms_test/1.0 << EOF
+Error! dkms_test/1.0 is broken!
+Missing the source directory or the symbolic link pointing to it.
+Manual intervention is required!
+EOF
+
+echo 'Re-adding the test module'
+run_with_expected_output dkms add dkms_test/1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+EOF
+
+echo ' Removing source tree /usr/src/dkms_test-1.0/'
+rm -rf /usr/src/dkms_test-1.0/
+
+echo 'Checking broken status'
+run_with_expected_output dkms status << EOF
+dkms_multiver_test/1.0: added
+dkms_test/1.0: broken
+Error! dkms_test/1.0: Missing the module source directory or the symbolic link pointing to it.
+Manual intervention is required!
+EOF
+
+echo 'Removing dkms_multiver_test'
+dkms remove dkms_multiver_test/1.0 -k "${KERNEL_VER}" > /dev/null
+
+echo 'Removing dkms_test'
+rm -rf /var/lib/dkms/dkms_test/
+
+echo 'Adding and building the test module by directory'
+set_signing_message "dkms_test" "1.0"
+run_with_expected_output dkms build test/dkms_test-1.0 -k "${KERNEL_VER}" << EOF
+Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+
+Building module:
+Cleaning build area...
+Building module(s)...
+${SIGNING_MESSAGE}Cleaning build area...
+EOF
+
+echo 'Adding and building the multiver test module 1.0 by directory'
+set_signing_message "dkms_multiver_test" "1.0"
+run_with_expected_output dkms build test/dkms_multiver_test/1.0 -k "${KERNEL_VER}" << EOF
+Creating symlink /var/lib/dkms/dkms_multiver_test/1.0/source -> /usr/src/dkms_multiver_test-1.0
+
+Building module:
+Cleaning build area...
+Building module(s)...
+${SIGNING_MESSAGE}Cleaning build area...
+EOF
+
+echo ' Removing symlink /var/lib/dkms/dkms_multiver_test/1.0/source'
+rm /var/lib/dkms/dkms_multiver_test/1.0/source
+
+echo 'Adding and building the multiver test module 2.0 by directory'
+set_signing_message "dkms_multiver_test" "2.0"
+run_with_expected_output dkms build test/dkms_multiver_test/2.0 -k "${KERNEL_VER}" << EOF
+Creating symlink /var/lib/dkms/dkms_multiver_test/2.0/source -> /usr/src/dkms_multiver_test-2.0
+
+Building module:
+Cleaning build area...
+Building module(s)...
+${SIGNING_MESSAGE}Cleaning build area...
+EOF
+
+echo 'Running dkms autoinstall'
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+Error! dkms_multiver_test/1.0 is broken! Missing the source directory or the symbolic link pointing to it.
+Manual intervention is required!
+
+dkms_test.ko${mod_compression_ext}:
+Running module version sanity check.
+ - Original module
+   - No original module exists within this kernel
+ - Installation
+   - Installing to /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+depmod...
+dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} succeeded for dkms_test
+EOF
+run_with_expected_output dkms status << EOF
+dkms_multiver_test/1.0: broken
+Error! dkms_multiver_test/1.0: Missing the module source directory or the symbolic link pointing to it.
+Manual intervention is required!
+dkms_multiver_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Removing all modules'
+echo ' Removing the test module'
+run_with_expected_output dkms remove dkms_test/1.0 -k "${KERNEL_VER}" << EOF
+Module dkms_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
+Before uninstall, this module version was ACTIVE on this kernel.
+
+dkms_test.ko${mod_compression_ext}:
+ - Uninstallation
+   - Deleting from: /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+ - Original module
+   - No original module was found for this module on this kernel.
+   - Use the dkms install command to reinstall any previous module version.
+Deleting module dkms_test-1.0 completely from the DKMS tree.
+EOF
+
+echo ' Removing the multi_ver_test 2.0 module'
+run_with_expected_output dkms remove -m dkms_multiver_test -v 2.0 -k "${KERNEL_VER}" << EOF
+Module dkms_multiver_test 2.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Deleting module dkms_multiver_test-2.0 completely from the DKMS tree.
+EOF
+
+echo ' Removing directories: /var/lib/dkms/dkms_test/ /var/lib/dkms/dkms_multiver_test /usr/src/dkms_test-1.0 /usr/src/dkms_multiver_test-?.0'
+rm -rf /var/lib/dkms/dkms_test/ /var/lib/dkms/dkms_multiver_test /usr/src/dkms_test-1.0 /usr/src/dkms_multiver_test-?.0
+
+echo 'Checking that the environment is clean again'
+check_no_dkms_test
+
+echo
+echo 'End of BROKEN tests'
+echo
+
 echo 'All tests successful :)'
