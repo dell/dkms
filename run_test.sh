@@ -242,7 +242,7 @@ case "${os_id}" in
     sles | suse | opensuse)
         expected_dest_loc=updates
         ;;
-    arch | debian | ubuntu)
+    arch | debian | ubuntu | linuxmint)
         expected_dest_loc=updates/dkms
         ;;
     alpine)
