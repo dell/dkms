@@ -1404,10 +1404,24 @@ list_each_installed_module()
     done
 }
 
+# Check if either the module source, or the symlink pointing to it is missing
+# A module can only be in this broken state, if the user or a faulty program
+# messed up. The module then is considered volatile, because there is no reliable
+# way to tell if files in the source tree are still in a valid state.
+# Therefor any action (except 'add', if only the symlink is missing)
+# to operate on the module has to be refused.
+# Manual intervention by the user is required to return to a sane state.
+is_module_broken() {
+    [[ $1 && $2 ]] || return 1
+    [[ -d $dkms_tree/$1/$2 ]] || return 2
+    [[ -L $dkms_tree/$1/$2/source && ! -d $dkms_tree/$1/$2/source ]] && return
+    [[ ! -L $dkms_tree/$1/$2/source && -d $source_tree/$1-$2/ ]] && return
+}
+
 is_module_added() {
     [[ $1 && $2 ]] || return 1
     [[ -d $dkms_tree/$1/$2 ]] || return 2
-    [[ -L $dkms_tree/$1/$2/source || -d $dkms_tree/$1/$2/source ]];
+    [[ -L $dkms_tree/$1/$2/source && -d $dkms_tree/$1/$2/source ]] || return 2
 }
 
 is_module_built() {
@@ -1605,6 +1619,12 @@ do_uninstall()
         echo $"same-named modules and this directory is now where these are located."
     fi
     [[ $(find $dkms_tree/$module/original_module/* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module"
+}
+
+module_is_broken_and_die() {
+    is_module_broken "$module" "$module_version" && die 4 $"$module/$module_version is broken!"\
+        $"Missing the source directory or the symbolic link pointing to it."\
+        $"Manual intervention is required!"
 }
 
 module_is_added_or_die()
@@ -1808,6 +1828,7 @@ module_status() {
         mv="${directory#$dkms_tree/}"
         m="${mv%/*}"
         v="${mv#*/}"
+        is_module_broken "$m" "$v" && { echo "broken $m/$v"; continue; }
         is_module_added "$m" "$v" || continue
         ret=0
         module_status_built "$m" "$v" "$3" "$4" || echo "added $m/$v"
@@ -1828,6 +1849,11 @@ do_status() {
     while read status mvka; do
         IFS=/ read m v k a <<< "$mvka"
         case $status in
+            broken)
+                echo "$m/$v: $status"
+                error $"$m/$v: Missing the module source directory or the symbolic link pointing to it."\
+                    $"Manual intervention is required!"
+                ;;
             added)
                 echo "$m/$v: $status"
                 ;;
@@ -2104,6 +2130,13 @@ run_match()
         echo $"Module:  $template_module"
         echo $"Version: $template_version"
 
+    # Continue if the status is broken, as there is nothing we can do
+    if is_module_broken "$template_module" "$template_version"; then
+        error $"$template_module/$template_version is broken!"\
+            $"Missing the source directory or the symbolic link pointing to it."\
+            $"Manual intervention is required!"
+        continue
+    fi
         maybe_build_module "$template_module" "$template_version" "$kernelver" "$arch"
         maybe_install_module "$template_module" "$template_version" "$kernelver" "$arch"
     done < <(echo "$template_kernel_status")
@@ -2232,6 +2265,12 @@ autoinstall() {
     # a list of modules and their latest version.
     while read status mvka; do
         IFS='/' read m v k a <<< "$mvka"
+    # If the module status is broken there is nothing that can be done
+    if [[ $status = broken ]]; then
+        error $"$m/$v is broken! Missing the source directory or the symbolic link pointing to it."\
+            $"Manual intervention is required!"
+        continue
+    fi
         if [[ -z "${latest["$m"]}" ]]; then
             known_modules[${#known_modules[@]}]="$m"
             latest["$m"]="$v"
@@ -2586,12 +2625,14 @@ setup_kernels_arches "$action"
 case "$action" in
 remove | unbuild | uninstall)
     check_module_args $action
+    module_is_broken_and_die
     module_is_added_or_die
     [[ $action = uninstall ]] && check_root || check_rw_dkms_tree
     ${action}_module
     ;;
 add | build | install)
     check_all_is_banned $action # TODO: fix/enable --all
+    [[ $action != add ]] && module_is_broken_and_die
     [[ $action = install ]] && check_root || check_rw_dkms_tree
     ${action}_module
     ;;
@@ -2603,6 +2644,7 @@ match)
     ;;
 mktarball)
     check_module_args mktarball
+    module_is_broken_and_die
     module_is_added_or_die
     make_tarball
     ;;
