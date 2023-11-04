@@ -1076,6 +1076,14 @@ actual_build()
     local -r base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
     local -r build_dir="$dkms_tree/$module/$module_version/build"
     local -r build_log="$build_dir/make.log"
+    local -r make_subst='{
+        for (i=1; i<=NF; i++)
+            if ($i == "make") {
+                $i = $i" -j"jobs" KERNELRELEASE="ver
+                    print
+                    exit
+            }
+        }'
 
     echo $""
     echo $"Building module:"
@@ -1083,7 +1091,7 @@ actual_build()
     invoke_command "$clean" "Cleaning build area" background
     echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$build_log"
     date >> "$build_log"
-    local the_make_command="${make_command/#make/make -j$parallel_jobs KERNELRELEASE=$kernelver}"
+    local the_make_command=$(echo $make_command | awk -v jobs=$parallel_jobs -v ver=$kernelver "$make_subst")
 
     invoke_command "{ $the_make_command; } >> $build_log 2>&1" "$the_make_command" background || \
         report_build_problem 10 $"Bad return status for module build on kernel: $kernelver ($arch)" \
