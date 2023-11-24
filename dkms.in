@@ -138,6 +138,16 @@ die() {
     [[ $die_is_fatal = yes ]] && exit $ret || return $ret
 }
 
+# Print a warning message and die with the passed error code.
+diewarn() {
+    # $1 = error code to return with
+    # rest = strings to print before we exit.
+    ret=$1
+    shift
+    warn "$@"
+    [[ $die_is_fatal = yes ]] && exit $ret || return $ret
+}
+
 mktemp_or_die() {
     local t
     t=$(mktemp "$@") && echo "$t" && return
@@ -1014,8 +1024,10 @@ prepare_build()
     read_conf_or_die "$kernelver" "$arch"
 
     # Error out if build_exclude is set
-    [[ $build_exclude ]] && die 77 \
-        $"The $base_dir/dkms.conf for module $module includes a BUILD_EXCLUSIVE directive which does not match this kernel/arch/config."\
+    [[ $build_exclude ]] && diewarn 77 \
+        $"The $base_dir/dkms.conf"\
+        $"for module $module includes a BUILD_EXCLUSIVE directive"\
+        $"which does not match this kernel/arch/config."\
         $"This indicates that it should not be built."
 
     # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
