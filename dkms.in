@@ -1124,7 +1124,7 @@ actual_build()
         elif [ "$module_compressed_suffix" = ".xz" ]; then
             xz -f "$built_module" || compressed_module=""
         elif [ "$module_compressed_suffix" = ".zst" ]; then
-            zstd -q -f -T0 -20 --ultra "$built_module" || compressed_module=""
+            zstd -q -f -T0 -15 "$built_module" || compressed_module=""
         fi
         if [ -n "$compressed_module" ]; then
             cp -f "$compressed_module" "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
