@@ -334,6 +334,13 @@ do_depmod()
     else
         depmod -a "$1"
     fi
+    if [ -f /lib/modules/$1/modules.dep ] && [ ! -s /lib/modules/$1/modules.dep ]; then
+        # if modules.dep is empty, we just removed the last kernel module from
+        # no longer installed kernel $1, so do not leave stale depmod files around
+        rm -fv /lib/modules/$1/modules.{alias,dep,devname,softdep,symbols,*.bin}
+        rmdir --ignore-fail-on-non-empty /lib/modules/$1
+        test -d /lib/modules/$1 || echo $"Removed /lib/modules/$1"
+    fi
 }
 
 # Grab distro information from os-release.
