@@ -109,6 +109,8 @@ Ubuntu `update-secureboot-policy` set the configuration file as follows:
 mok_signing_key="/var/lib/shim-signed/mok/MOK.priv"
 mok_certificate="/var/lib/shim-signed/mok/MOK.der"
 ```
+NOTE: If any of the files specified by `mok_signing_key` and
+`mok_certificate` are non-existant, dkms will re-create both files.
 
 The paths specified in `mok_signing_key`, `mok_certificate` and `sign_file` can
 use the variable `${kernelver}` to represent the target kernel version.
