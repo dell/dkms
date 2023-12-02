@@ -2325,7 +2325,7 @@ unset CC CXX CFLAGS CXXFLAGS LDFLAGS
 # Set important variables
 current_kernel=$(uname -r)
 current_os=$(uname -s)
-running_distribution=$(distro_version)
+running_distribution=$(distro_version) || exit
 dkms_tree="/var/lib/dkms"
 source_tree="/usr/src"
 install_tree="/lib/modules"
