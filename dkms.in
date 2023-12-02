@@ -329,18 +329,23 @@ do_depmod()
 # Grab distro information from os-release.
 distro_version()
 {
-    [[ -r /etc/os-release ]] || die 4 $"System is missing /etc/os-release file."
-    (
-        . /etc/os-release
-        if [[ "$ID" = "ubuntu" ]]; then
-            # ID_LIKE=debian in ubuntu
-            echo $ID
-        elif [[ ${#ID_LIKE[@]} != 0 ]]; then
-            echo ${ID_LIKE[0]}
-        else
-            echo $ID
+    for f in /etc/os-release /usr/lib/os-release; do
+        if [[ -r $f ]]; then
+            (
+                . "$f"
+                if [[ "$ID" = "ubuntu" ]]; then
+                    # ID_LIKE=debian in ubuntu
+                    echo $ID
+                elif [[ ${#ID_LIKE[@]} != 0 ]]; then
+                    echo ${ID_LIKE[0]}
+                else
+                    echo $ID
+                fi
+            )
+            return
         fi
-    )
+    done
+    die 4 $"System is missing os-release file."
 }
 
 override_dest_module_location()

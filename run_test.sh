@@ -1541,6 +1541,77 @@ EOF
 echo 'Removing /usr/src/dkms_build_exclusive_test-1.0'
 rm -r /usr/src/dkms_build_exclusive_test-1.0
 
+############################################################################
+### Testing os-release detection                                         ###
+############################################################################
+echo "Backing up /etc/os-release and /usr/bin/os-release"
+osrelease_cleanup() {
+    rm -f _os-release
+    mv _etc-os-release /etc/os-release &>/dev/null || :
+    mv _usrlib-os-release /usr/lib/os-release &>/dev/null || :
+}
+trap osrelease_cleanup EXIT
+for f in /etc/os-release /usr/lib/os-release; do
+    if [ -f "$f" ]; then
+        cp -f "$f" _os-release
+        break
+    fi
+done
+[ -f _os-release ] || { echo >&2 "Error: file os-release not found"; exit 1; }
+mv /etc/os-release _etc-os-release &>/dev/null || :
+mv /usr/lib/os-release _usrlib-os-release &>/dev/null || :
+
+echo "Adding the dkms_test-1.0 module with no os-release files (expected error)"
+run_with_expected_error 4 dkms add test/dkms_test-1.0 << EOF
+Error! System is missing os-release file.
+EOF
+
+echo "Creating /etc/os-release"
+cp -f _os-release /etc/os-release
+echo "Adding the dkms_test-1.0 module with file /etc/os-release"
+run_with_expected_output dkms add test/dkms_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+
+echo 'Removing dkms_test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+Module dkms_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_test 1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Deleting module dkms_test-1.0 completely from the DKMS tree.
+EOF
+echo "Removing /usr/src/dkms_test-1.0"
+rm -r /usr/src/dkms_test-1.0
+echo "Deleting /etc/os-release"
+rm -f /etc/os-release
+
+echo "Creating /usr/lib/os-release"
+cp -f _os-release /etc/os-release
+echo "Adding the dkms_test-1.0 module with file /usr/lib/os-release"
+run_with_expected_output dkms add test/dkms_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+
+echo 'Removing dkms_test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+Module dkms_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_test 1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Deleting module dkms_test-1.0 completely from the DKMS tree.
+EOF
+echo "Removing /usr/src/dkms_test-1.0"
+rm -r /usr/src/dkms_test-1.0
+echo "Deleting /usr/lib/os-release"
+rm -f /usr/lib/os-release
+
+echo "Restoring /etc/os-release and /usr/bin/os-release"
+osrelease_cleanup
+trap - EXIT
+
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
