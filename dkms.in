@@ -1763,7 +1763,7 @@ do_status_weak()
 # interested in, but that the DKMS internals do not usually care about.
 module_status_built_extra() (
     set_module_suffix "$3"
-    read_conf_or_die "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf" 2>/dev/null
+    read_conf "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf" 2>/dev/null
     [[ -d $dkms_tree/$1/original_module/$3/$4 ]] && echo -n " (original_module exists)"
     for ((count=0; count < ${#dest_module_name[@]}; count++)); do
         tree_mod=$(compressed_or_uncompressed "$dkms_tree/$1/$2/$3/$4/module" "${dest_module_name[$count]}")
