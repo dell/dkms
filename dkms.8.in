@@ -321,7 +321,7 @@ This option can be used in conjunction with
 .B build, install 
 and 
 .B ldtarball
-to force copying over of extant files.
+to force copying over existing files.
 .TP
 .B \-\-force\-version\-override
 This option skips the checks whether the version of the module, which is
