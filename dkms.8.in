@@ -323,6 +323,10 @@ and
 .B ldtarball
 to force copying over of extant files.
 .TP
+.B \-\-force\-version\-override
+This option skips the checks whether the version of the module, which is
+going to be installed, is newer than the already installed version.
+.TP
 .B \-\-binaries\-only
 This option can be used in conjunction with
 .B mktarball
