@@ -20,6 +20,7 @@ export parallel_jobs=1
 # Temporary files, directories, and modules created during tests
 TEST_MODULES=(
     "dkms_test"
+    "dkms_noautoinstall_test"
     "dkms_failing_test"
     "dkms_dependencies_test"
     "dkms_multiver_test"
@@ -31,8 +32,9 @@ TEST_MODULES=(
     "dkms_build_exclusive_dependencies_test"
 )
 TEST_TMPDIRS=(
-    "/usr/src/dkms_test-1.0/"
-    "/usr/src/dkms_failing_test-1.0/"
+    "/usr/src/dkms_test-1.0"
+    "/usr/src/dkms_noautoinstall_test-1.0"
+    "/usr/src/dkms_failing_test-1.0"
     "/usr/src/dkms_dependencies_test-1.0"
     "/usr/src/dkms_multiver_test-1.0"
     "/usr/src/dkms_multiver_test-2.0"
@@ -713,6 +715,104 @@ rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
 echo 'Removing /usr/src/dkms_test-1.0'
 rm -r /usr/src/dkms_test-1.0
+
+echo 'Checking that the environment is clean again'
+check_no_dkms_test
+
+############################################################################
+### Testing dkms on a regular module with AUTOINSTALL=""                 ###
+############################################################################
+
+echo 'Adding the noautoinstall test module by directory'
+run_with_expected_output dkms add test/dkms_noautoinstall_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_noautoinstall_test/1.0/source -> /usr/src/dkms_noautoinstall_test-1.0
+EOF
+run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
+dkms_noautoinstall_test/1.0: added
+EOF
+if ! [[ -d /usr/src/dkms_noautoinstall_test-1.0 ]] ; then
+    echo >&2 'Error: directory /usr/src/dkms_noautoinstall_test-1.0 was not created'
+    exit 1
+fi
+
+echo "Running dkms autoinstall"
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+EOF
+run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
+dkms_noautoinstall_test/1.0: added
+EOF
+
+echo 'Building the noautoinstall test module'
+set_signing_message "dkms_noautoinstall_test" "1.0"
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_noautoinstall_test -v 1.0 << EOF
+
+Building module:
+Cleaning build area...
+make -j1 KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_noautoinstall_test/1.0/build...
+${SIGNING_MESSAGE}Cleaning build area...
+EOF
+run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
+dkms_noautoinstall_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+EOF
+
+echo 'Installing the noautoinstall test module'
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_noautoinstall_test -v 1.0 << EOF
+
+dkms_noautoinstall_test.ko${mod_compression_ext}:
+Running module version sanity check.
+ - Original module
+   - No original module exists within this kernel
+ - Installation
+   - Installing to /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+depmod...
+EOF
+run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
+dkms_noautoinstall_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Uninstalling the noautoinstall test module'
+run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_noautoinstall_test -v 1.0 << EOF
+Module dkms_noautoinstall_test-1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
+Before uninstall, this module version was ACTIVE on this kernel.
+
+dkms_noautoinstall_test.ko${mod_compression_ext}:
+ - Uninstallation
+   - Deleting from: /lib/modules/${KERNEL_VER}/${expected_dest_loc}/
+ - Original module
+   - No original module was found for this module on this kernel.
+   - Use the dkms install command to reinstall any previous module version.
+EOF
+run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
+dkms_noautoinstall_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+EOF
+if [[ -e "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_noautoinstall_test.ko${mod_compression_ext}" ]] ; then
+    echo >&2 "Error: module not removed in /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_noautoinstall_test.ko${mod_compression_ext}"
+    exit 1
+fi
+
+echo 'Unbuilding the noautoinstall test module'
+run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_noautoinstall_test -v 1.0 << EOF
+Module dkms_noautoinstall_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+EOF
+run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
+dkms_noautoinstall_test/1.0: added
+EOF
+
+echo 'Removing the noautoinstall test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_noautoinstall_test -v 1.0 << EOF
+Module dkms_noautoinstall_test 1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_noautoinstall_test 1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Deleting module dkms_noautoinstall_test-1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
+EOF
+if ! [[ -d /usr/src/dkms_noautoinstall_test-1.0 ]] ; then
+    echo >&2 'Error: directory /usr/src/dkms_noautoinstall_test-1.0 was removed'
+    exit 1
+fi
+
+echo 'Removing /usr/src/dkms_noautoinstall_test-1.0'
+rm -r /usr/src/dkms_noautoinstall_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
