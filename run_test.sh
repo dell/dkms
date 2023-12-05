@@ -676,6 +676,9 @@ Running module version sanity check.
 depmod...
 dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} succeeded for dkms_test
 EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
 
 echo "Running dkms autoinstall for a kernel without headers installed (expected error)"
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}-noheaders" << EOF
@@ -757,9 +760,14 @@ dkms.conf: Warning! Zero modules specified.
 dkms.conf: Warning! Zero modules specified.
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
 EOF
+run_status_with_expected_output 'dkms_conf_test' << EOF
+dkms_conf_test/1.0: added
+EOF
 
 run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
 Deleting module dkms_conf_test-1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_conf_test' << EOF
 EOF
 
 echo 'Testing add/build/install of a test module building zero kernel modules'
@@ -972,6 +980,9 @@ EOF
 
 echo 'Removing /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0'
 rm -r /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0
+
+echo 'Checking that the environment is clean again'
+check_no_dkms_test
 
 ############################################################################
 ### Testing dkms operations ...
@@ -1552,6 +1563,9 @@ run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
 EOF
 echo 'Removing /usr/src/dkms_build_exclusive_test-1.0'
 rm -r /usr/src/dkms_build_exclusive_test-1.0
+
+echo 'Checking that the environment is clean again'
+check_no_dkms_test
 
 ############################################################################
 ### Testing os-release detection                                         ###
