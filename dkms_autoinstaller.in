@@ -71,9 +71,11 @@ case "$1" in
 		elif ! _check_kernel_dir $kernel; then
 			log_action_msg "$prog: autoinstall for kernel $kernel was skipped since the kernel headers for this kernel do not seem to be installed"
 		else
-			log_daemon_msg "$prog: running auto installation service for kernel $kernel"
+			log_action_msg "$prog: running auto installation service for kernel $kernel"
 			dkms autoinstall --kernelver $kernel
-			log_end_msg $?
+			res=$?
+			log_daemon_msg "$prog: autoinstall for kernel" "$kernel"
+			log_end_msg $res
 		fi
 		;;
 	stop|restart|force-reload|status|reload)
