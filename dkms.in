@@ -158,13 +158,14 @@ mktemp_or_die() {
 show_usage()
 {
     echo $"Usage: $0 [action] [options]"
-    echo $"  [action]  = { add | remove | build | install | uninstall | match | autoinstall |"
-    echo $"                mktarball | ldtarball | status }"
+    echo $"  [action]  = { add | remove | build | unbuild | install | uninstall | match |"
+    echo $"               autoinstall | mktarball | ldtarball | status }"
     echo $"  [options] = [-m module] [-v module-version] [-k kernel-version] [-a arch]"
     echo $"              [-c dkms.conf-location] [-q] [--force] [--force-version-override] [--all]"
     echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
     echo $"              [--config=kernel-.config-location] [--archive=tarball-location]"
-    echo $"              [--kernelsourcedir=source-location]"
+    echo $"              [--kernelsourcedir=source-location] [--rpm_safe_upgrade]"
+    echo $"              [--dkmstree path] [--sourcetree path] [--installtree path]"
     echo $"              [--binaries-only] [--source-only] [--verbose]"
     echo $"              [--no-depmod] [--modprobe-on-install] [-j number] [--version]"
 }
