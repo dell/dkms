@@ -1692,16 +1692,23 @@ osrelease_cleanup() {
     mv _etc-os-release /etc/os-release &>/dev/null || :
     mv _usrlib-os-release /usr/lib/os-release &>/dev/null || :
 }
-trap osrelease_cleanup EXIT
+
 for f in /etc/os-release /usr/lib/os-release; do
-    if [ -f "$f" ]; then
+    if [ -e "$f" ]; then
         cp -f "$f" _os-release
         break
     fi
 done
 [ -f _os-release ] || { echo >&2 "Error: file os-release not found"; exit 1; }
-mv /etc/os-release _etc-os-release &>/dev/null || :
-mv /usr/lib/os-release _usrlib-os-release &>/dev/null || :
+trap osrelease_cleanup EXIT
+
+mv_osrelease() {
+    if [ -f "$1" ]; then
+       mv "$1" "$2" || { echo >&2 "Error: could not move os-release $1"; exit 1; }
+    fi
+}
+mv_osrelease "/etc/os-release" "_etc-os-release"
+mv_osrelease "/usr/lib/os-release" "_usrlib-os-release"
 
 echo "Adding the dkms_test-1.0 module with no os-release files (expected error)"
 run_with_expected_error 4 dkms add test/dkms_test-1.0 << EOF
