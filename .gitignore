@@ -1,4 +1,7 @@
-dist/*
-*.o
+/dist
 dkms
 dkms.8
+dkms_autoinstaller
+dkms.service
+kernel_install.d_dkms
+kernel_postinst.d_dkms
