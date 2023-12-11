@@ -82,6 +82,12 @@ invoke_command()
     # $2 = Description of command to run
     # $3 = 'background' if you want to run the command asynchronously.
     local exitval=0
+    local c="$1"
+    if ! [[ $verbose ]]; then
+        # Clean reported command string. Only works if string is as expected
+        [[ $c = *\>* ]] && c="${c%%>*}" # Remove redirection
+        [[ $c = \{*\;*([[:blank:]])\}*([[:blank:]]) ]] && c="${c#\{@([[:blank:]])}" && c="${c%\;*}"
+    fi
     [[ $verbose ]] && echo -e "$1" || echo -en "$2..."
     if [[ $3 = background && ! $verbose ]]; then
         local pid progresspid
@@ -105,8 +111,13 @@ invoke_command()
     else
         eval "$1"; exitval=$?
     fi
-    (($exitval > 0)) && echo -en "(bad exit status: $exitval)"
-    echo -en "\n"
+    if (($exitval > 0)); then
+        echo -en "(bad exit status: $exitval)"
+        [[ ! $verbose ]] && echo -en "\nFailed command:\n$c\n"
+    else
+        [[ ! $verbose ]] && echo -en "\n"
+    fi
+    [[ $verbose ]] && echo -en "\n"
     return $exitval
 }
 
@@ -1110,7 +1121,7 @@ actual_build()
     date >> "$build_log"
     local the_make_command="${make_command/#make/make -j$parallel_jobs KERNELRELEASE=$kernelver}"
 
-    invoke_command "{ $the_make_command; } >> $build_log 2>&1" "$the_make_command" background || \
+    invoke_command "{ $the_make_command; } >> $build_log 2>&1" "Building module(s)" background || \
         report_build_problem 10 $"Bad return status for module build on kernel: $kernelver ($arch)" \
         $"Consult $build_log for more information."
 
