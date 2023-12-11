@@ -406,6 +406,9 @@ jobs in parallel; see the -j option of
 Defaults to the number of CPUs in the system, detected by
 .I nproc(1).
 Specify 0 to impose no limit on the number of parallel jobs.
+.TP
+.B \-\-verbose
+Enable verbose output of external commands executed in DKMS.
 .SH ORIGINAL MODULES
 During the first install of a module for a <kernelversion>,
 .B dkms
@@ -771,7 +774,7 @@ Additionally to /etc/dkms/framework.conf,
 Control which folders DKMS uses for components and artifacts.
 .TP
 .B $verbose
-Can be set to anything but a null value to enable verbose output in DKMS.
+Can be set to anything but a null value to enable verbose output of external commands executed in DKMS.
 .TP
 .B $symlink_modules
 Controls whether binary modules are copied to /lib/modules or if only symlinks are created there. Note that these variables can also
