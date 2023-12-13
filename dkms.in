@@ -80,12 +80,15 @@ invoke_command()
 {
     # $1 = command to be executed using eval.
     # $2 = Description of command to run
-    # $3 = 'background' if you want to run the command asynchronously.
+    # $3 = Redirect command output to this file
+    # $4 = 'background' if you want to run the command asynchronously.
     local exitval=0
-    [[ $verbose ]] && echo -e "$1" || echo -en "$2..."
-    if [[ $3 = background && ! $verbose ]]; then
+    local -r cmd=$([[ $3 ]] && echo "{ $1; } >> $3 2>&1" || echo "$1")
+
+    [[ $verbose ]] && echo -e "$cmd" || echo -en "$2..."
+    if [[ $4 = background && ! $verbose ]]; then
         local pid progresspid
-        (eval "$1" >/dev/null 2>&1) & pid=$!
+        (eval "$cmd" >/dev/null 2>&1) & pid=$!
         {
             on_exit() {
                 kill $(jobs -p) 2>/dev/null
@@ -103,7 +106,7 @@ invoke_command()
         kill $progresspid 2>/dev/null
         wait $progresspid 2>/dev/null
     else
-        eval "$1"; exitval=$?
+        eval "$cmd"; exitval=$?
     fi
     (($exitval > 0)) && echo -en "(bad exit status: $exitval)"
     echo -en "\n"
@@ -1105,12 +1108,12 @@ actual_build()
     echo $""
     echo $"Building module:"
 
-    invoke_command "$clean" "Cleaning build area" background
+    invoke_command "$clean" "Cleaning build area" '' background
     echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$build_log"
     date >> "$build_log"
     local the_make_command="${make_command/#make/make -j$parallel_jobs KERNELRELEASE=$kernelver}"
 
-    invoke_command "{ $the_make_command; } >> $build_log 2>&1" "Building module(s)" background || \
+    invoke_command "$the_make_command" "Building module(s)" "$build_log" background || \
         report_build_problem 10 $"Bad return status for module build on kernel: $kernelver ($arch)" \
         $"Consult $build_log for more information."
 
@@ -1167,7 +1170,7 @@ clean_build()
 {
     # Run the clean commands
     cd "$dkms_tree/$module/$module_version/build"
-    invoke_command "$clean" "Cleaning build area" background
+    invoke_command "$clean" "Cleaning build area" '' background
     cd - >/dev/null
 
     # Clean the build directory
@@ -1362,7 +1365,7 @@ do_install()
     # Run the post_install script
     run_build_script post_install "$post_install"
 
-    invoke_command "do_depmod $kernelver" "depmod" background || {
+    invoke_command "do_depmod $kernelver" "depmod" '' background || {
         do_uninstall "$kernelver" "$arch"
         die 6 $"Problems with depmod detected. Automatically uninstalling this module." \
             $"Install Failed (depmod problems). Module rolled back to built state."
@@ -1583,7 +1586,7 @@ do_uninstall()
     run_build_script post_remove "$post_remove"
 
     # Run depmod because we changed /lib/modules
-    invoke_command "do_depmod $1" "depmod" background
+    invoke_command "do_depmod $1" "depmod" '' background
 
     # Delete the original_module if nothing for this kernel is installed anymore
     if [[ $was_active && -d $dkms_tree/$module/original_module/$1/$2 && ! -d $dkms_tree/$module/original_module/$1/$2/collisions ]]; then
