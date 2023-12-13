@@ -108,7 +108,11 @@ invoke_command()
     else
         eval "$cmd"; exitval=$?
     fi
-    (($exitval > 0)) && echo -en "(bad exit status: $exitval)"
+    if (($exitval > 0)); then
+        echo -en "(bad exit status: $exitval)"
+        # Print the failing command without the clunky redirection
+        [[ ! $verbose ]] && echo -en "\nFailed command:\n$1"
+    fi
     echo -en "\n"
     return $exitval
 }

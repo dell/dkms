@@ -1402,6 +1402,8 @@ run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
 Building module:
 Cleaning build area...
 Building module(s)...(bad exit status: 2)
+Failed command:
+make -j1 KERNELRELEASE=${KERNEL_VER} all
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
 dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} failed for dkms_failing_test(10)
@@ -1419,6 +1421,8 @@ run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
 Building module:
 Cleaning build area...
 Building module(s)...(bad exit status: 2)
+Failed command:
+make -j1 KERNELRELEASE=${KERNEL_VER} all
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
 dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} failed for dkms_failing_test(10)
@@ -1566,6 +1570,8 @@ This indicates that it should not be built.
 Building module:
 Cleaning build area...
 Building module(s)...(bad exit status: 2)
+Failed command:
+make -j1 KERNELRELEASE=${KERNEL_VER} all
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
 
