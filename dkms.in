@@ -1110,7 +1110,7 @@ actual_build()
     date >> "$build_log"
     local the_make_command="${make_command/#make/make -j$parallel_jobs KERNELRELEASE=$kernelver}"
 
-    invoke_command "{ $the_make_command; } >> $build_log 2>&1" "$the_make_command" background || \
+    invoke_command "{ $the_make_command; } >> $build_log 2>&1" "Building module(s)" background || \
         report_build_problem 10 $"Bad return status for module build on kernel: $kernelver ($arch)" \
         $"Consult $build_log for more information."
 
