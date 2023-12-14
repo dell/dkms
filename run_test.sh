@@ -148,18 +148,12 @@ run_status_with_expected_output() {
     local module=$1
 
     cat > test_cmd_expected_output.log
-    if dkms_status_grep_dkms_module "${module}" > test_cmd_output.log 2>&1 ; then
-        if ! diff -U3 test_cmd_expected_output.log test_cmd_output.log ; then
-            echo >&2 "Error: unexpected output from: dkms_status_grep_dkms_module for ${module}"
-            return 1
-        fi
-        rm test_cmd_expected_output.log test_cmd_output.log
-    else
-        echo "Error: dkms status for ${module} returned status $?"
-        cat test_cmd_output.log
-        rm test_cmd_expected_output.log test_cmd_output.log
+    dkms_status_grep_dkms_module "${module}" > test_cmd_output.log 2>&1
+    if ! diff -U3 test_cmd_expected_output.log test_cmd_output.log ; then
+        echo >&2 "Error: unexpected output from: dkms_status_grep_dkms_module for ${module}"
         return 1
     fi
+    rm test_cmd_expected_output.log test_cmd_output.log
 }
 
 genericize_expected_output() {
