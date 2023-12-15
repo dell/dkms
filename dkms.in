@@ -95,7 +95,7 @@ invoke_command()
                 wait $(jobs -p) 2>/dev/null
             }
             trap on_exit EXIT
-            while [ -d /proc/$pid ]; do
+            while [[ -d /proc/$pid ]]; do
                 sleep 3 &
                 wait $!
                 echo -en "."
@@ -198,7 +198,7 @@ VER()
 get_num_cpus()
 {
     # use nproc(1) from coreutils 8.1-1+ if available, otherwise single job
-    if [ -x /usr/bin/nproc ]; then
+    if [[ -x /usr/bin/nproc ]]; then
         nproc
     else
         echo "1"
@@ -334,7 +334,7 @@ do_depmod()
         return
     fi
     # $1 = kernel version
-    if [ "${current_os}" != "Linux" ] ; then
+    if [[ ${current_os} != Linux ]] ; then
         return
     fi
     if [[ -f /boot/System.map-$1 ]]; then
@@ -342,12 +342,12 @@ do_depmod()
     else
         depmod -a "$1"
     fi
-    if [ -f /lib/modules/$1/modules.dep ] && [ ! -s /lib/modules/$1/modules.dep ]; then
+    if [[ -f /lib/modules/$1/modules.dep && ! -s /lib/modules/$1/modules.dep ]]; then
         # if modules.dep is empty, we just removed the last kernel module from
         # no longer installed kernel $1, so do not leave stale depmod files around
         rm -fv /lib/modules/$1/modules.{alias,dep,devname,softdep,symbols,*.bin}
         rmdir --ignore-fail-on-non-empty /lib/modules/$1
-        test -d /lib/modules/$1 || echo $"Removed /lib/modules/$1"
+        [[ -d /lib/modules/$1 ]] || echo $"Removed /lib/modules/$1"
     fi
 }
 
@@ -378,7 +378,7 @@ override_dest_module_location()
     local orig_location="$1"
     [[ ${addon_modules_dir} ]] && echo "/${addon_modules_dir}" && return
 
-    if [ "$current_os" = "GNU/kFreeBSD" ] ; then
+    if [[ $current_os = GNU/kFreeBSD ]] ; then
         # Does not support subdirs, regardless of distribution
         echo "" && return
     fi
@@ -481,7 +481,7 @@ read_conf()
     for _conf_file in "$read_conf_file" "/etc/dkms/$module.conf" \
         "/etc/dkms/$module-$module_version.conf" "/etc/dkms/$module-$module_version-$1.conf" \
         "/etc/dkms/$module-$module_version-$1-$2.conf"; do
-        [ -e "$_conf_file" ] && safe_source "$_conf_file" $dkms_conf_variables
+        [[ -e $_conf_file ]] && safe_source "$_conf_file" $dkms_conf_variables
     done
 
     # Source in the directive_array
@@ -735,7 +735,7 @@ check_version_sanity()
     local lib_tree="$install_tree/$1" res=
     echo $"Running module version sanity check."
     local i=0
-    if [ -n "$3" ]; then
+    if [[ -n $3 ]]; then
         # Magic split into array syntax saves trivial awk and cut calls.
         local -a obs=(${3//-/ })
         local -a my=(${1//-/ })
@@ -770,7 +770,7 @@ check_version_sanity()
     fi
     set_module_suffix "$1"
     read -a kernels_module < <(find_module "$lib_tree" "${4}")
-    [ -z $kernels_module ] && return 0
+    [[ -z $kernels_module ]] && return 0
 
     if [[ "$force_version_override" == "true" ]]; then
         # Skip the following version checking code.
@@ -921,7 +921,7 @@ prepare_signing()
 {
     do_signing=0
 
-    if [[ ! -f "${kernel_config}" ]]; then
+    if [[ ! -f ${kernel_config} ]]; then
         echo "Kernel config ${kernel_config} not found, modules won't be signed"
         return
     fi
@@ -936,7 +936,7 @@ prepare_signing()
     # Lazy source in signing related configuration
     read_framework_conf $dkms_framework_signing_variables
 
-    if [ ! "${sign_file}" ]; then
+    if [[ ! ${sign_file} ]]; then
         case "$running_distribution" in
             debian* )
                 sign_file="/usr/lib/linux-kbuild-${kernelver%.*}/scripts/sign-file"
@@ -948,13 +948,13 @@ prepare_signing()
                 fi
                 ;;
         esac
-        if [[ ! -f "${sign_file}" ]]; then
+        if [[ ! -f ${sign_file} ]]; then
             sign_file="/lib/modules/$kernelver/build/scripts/sign-file"
         fi
     fi
     echo "Sign command: $sign_file"
 
-    if [[ ! -f "${sign_file}" ]] || [[ ! -x "${sign_file}" ]]; then
+    if [[ ! -f ${sign_file} || ! -x ${sign_file} ]]; then
         echo "Binary ${sign_file} not found, modules won't be signed"
         return
     fi
@@ -967,13 +967,13 @@ prepare_signing()
                 mok_signing_key="/var/lib/shim-signed/mok/MOK.priv"
                 mok_certificate="/var/lib/shim-signed/mok/MOK.der"
 
-                if [[ ! -f "${mok_signing_key}" ]] || [[ ! -f "${mok_certificate}" ]]; then
+                if [[ ! -f ${mok_signing_key} || ! -f ${mok_certificate} ]]; then
                     if [[ ! -x "$(command -v update-secureboot-policy)" ]]; then
                         echo "Binary update-secureboot-policy not found, modules won't be signed"
                         return
                     fi
                     # update-secureboot-policy won't create new key if $mok_certificate exists
-                    if [[ -f "${mok_certificate}" ]]; then
+                    if [[ -f ${mok_certificate} ]]; then
                         rm -f "${mok_certificate}"
                     fi
                     echo "Certificate or key are missing, generating them using update-secureboot-policy..."
@@ -985,18 +985,18 @@ prepare_signing()
         esac
     fi
 
-    if [ ! "${mok_signing_key}" ]; then
+    if [[ ! ${mok_signing_key} ]]; then
         mok_signing_key="/var/lib/dkms/mok.key"
     fi
     echo "Signing key: $mok_signing_key"
 
-    if [ ! "${mok_certificate}" ]; then
+    if [[ ! ${mok_certificate} ]]; then
         mok_certificate="/var/lib/dkms/mok.pub"
     fi
     echo "Public certificate (MOK): $mok_certificate"
 
     # scripts/sign-file.c in kernel source also supports using "pkcs11:..." as private key
-    if [[ "$mok_signing_key" != "pkcs11:"* ]] && ( [ ! -f "$mok_signing_key" ] || [ ! -f "$mok_certificate" ] ); then
+    if [[ $mok_signing_key != "pkcs11:"* ]] && ( [[ ! -f $mok_signing_key || ! -f $mok_certificate ]] ); then
         echo "Certificate or key are missing, generating self signed certificate for MOK..."
         if ! command -v openssl >/dev/null; then
             echo "openssl not found, can't generate key and certificate."
@@ -1005,13 +1005,13 @@ prepare_signing()
         openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS module signing key" \
             -newkey rsa:2048 -keyout "$mok_signing_key" \
             -outform DER -out "$mok_certificate" > /dev/null 2>&1
-        if [ ! -f "${mok_signing_key}" ]; then
+        if [[ ! -f ${mok_signing_key} ]]; then
             echo "Key file ${mok_signing_key} not found and can't be generated, modules won't be signed"
             return
         fi
     fi
 
-    if [ ! -f "${mok_certificate}" ]; then
+    if [[ ! -f ${mok_certificate} ]]; then
         echo "Certificate file ${mok_certificate} not found and can't be generated, modules won't be signed"
         return
     fi
@@ -1067,7 +1067,7 @@ prepare_build()
             $"Check $build_dir for more information."
     done
 
-    if [ -f "$kernel_source_dir/.kernelvariables" ]; then
+    if [[ -f $kernel_source_dir/.kernelvariables ]]; then
         export CC=$(echo -e "show-%:\n\t@echo \$(\$*)\ninclude $kernel_source_dir/.kernelvariables" | make -f - show-CC)
     else
         unset CC
@@ -1151,14 +1151,14 @@ actual_build()
             "$sign_file" "$sign_hash" "$mok_signing_key" "$mok_certificate" "$built_module"
         fi
 
-        if [ "$module_compressed_suffix" = ".gz" ]; then
+        if [[ $module_compressed_suffix = .gz ]]; then
             gzip -9f "$built_module" || compressed_module=""
-        elif [ "$module_compressed_suffix" = ".xz" ]; then
+        elif [[ $module_compressed_suffix = .xz ]]; then
             xz -f "$built_module" || compressed_module=""
-        elif [ "$module_compressed_suffix" = ".zst" ]; then
+        elif [[ $module_compressed_suffix = .zst ]]; then
             zstd -q -f -T0 -20 --ultra "$built_module" || compressed_module=""
         fi
-        if [ -n "$compressed_module" ]; then
+        if [[ -n $compressed_module ]]; then
             cp -f "$compressed_module" "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
         else
             cp -f "$built_module" "$base_dir/module/${dest_module_name[$count]}$module_uncompressed_suffix" >/dev/null
@@ -1197,18 +1197,18 @@ force_installation()
 {
     forced_modules_dir="/usr/share/dkms/modules_to_force_install"
     to_force=""
-    if [ -d $forced_modules_dir ]; then
+    if [[ -d $forced_modules_dir ]]; then
         for elem in $forced_modules_dir/*; do
-            if [ -e $elem ]; then
+            if [[ -e $elem ]]; then
                 to_force="$to_force $(cat $elem)"
             fi
         done
 
         for elem in $to_force; do
-            if [ "${1}" = "${elem}" ]; then
+            if [[ ${1} = ${elem} ]]; then
                 echo "force"
                 return 0
-            elif [ "${1}_version-override" = "${elem}" ]; then
+            elif [[ ${1}_version-override = ${elem} ]]; then
                 echo "version-override"
                 return 0
             fi
@@ -1359,7 +1359,7 @@ do_install()
     ln -s "$module_version/$kernelver/$arch" "$dkms_tree/$module/kernel-$kernelver-$arch" 2>/dev/null
 
     # Add to kabi-tracking
-    if [ -z "$NO_WEAK_MODULES" ]; then
+    if [[ -z $NO_WEAK_MODULES ]]; then
         if [[ ${weak_modules} ]]; then
             echo $"Adding any weak-modules"
             list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} ${weak_modules_no_initrd} --add-modules
@@ -1379,7 +1379,7 @@ do_install()
     if [[ $modprobe_on_install ]]; then
         # Make the newly installed modules available immediately
         find /sys/devices -name modalias -print0 | xargs -0 cat | sort -u | xargs modprobe -a -b -q
-        if [ -f /lib/systemd/system/systemd-modules-load.service ]; then
+        if [[ -f /lib/systemd/system/systemd-modules-load.service ]]; then
             systemctl restart systemd-modules-load.service
         fi
     fi
@@ -1540,7 +1540,7 @@ do_uninstall()
         was_active="true"
         echo $"Before uninstall, this module version was ACTIVE on this kernel."
         # remove kabi-tracking if last instance removed
-        if [ -z "$NO_WEAK_MODULES" ]; then
+        if [[ -z $NO_WEAK_MODULES ]]; then
             if [[ ${weak_modules} ]] && (module_status_built $module $module_version |grep -q "installed"); then
                 echo $"Removing any linked weak-modules"
                 list_each_installed_module "$module" "$1" "$2" | ${weak_modules} ${weak_modules_no_initrd} --remove-modules
@@ -1552,11 +1552,11 @@ do_uninstall()
             echo $""
             echo $"${dest_module_name[$count]}$module_suffix:"
             echo $" - Uninstallation"
-            if [[ "${real_dest_module_location}" ]]; then
+            if [[ ${real_dest_module_location} ]]; then
                 echo $"   - Deleting from: $install_tree/$1${real_dest_module_location}/"
                 rm -f "$install_tree/$1${real_dest_module_location}/${dest_module_name[$count]}$module_uncompressed_suffix"*
                 dir_to_remove="${real_dest_module_location#/}"
-                while [ "${dir_to_remove}" != "${dir_to_remove#/}" ]; do
+                while [[ ${dir_to_remove} != ${dir_to_remove#/} ]]; do
                     dir_to_remove="${dir_to_remove#/}"
                 done
                 (if cd "$install_tree/$1"; then rpm -qf "${dir_to_remove}" >/dev/null 2>&1 || rmdir -p --ignore-fail-on-non-empty "${dir_to_remove}"; fi || true)
@@ -1565,7 +1565,7 @@ do_uninstall()
             fi
             echo $" - Original module"
             local origmod=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$1/$2" "${dest_module_name[$count]}")
-            if [[ -n "$origmod" ]]; then
+            if [[ -n $origmod ]]; then
                 case "$running_distribution" in
                     debian* | ubuntu* )
                         ;;
@@ -1723,7 +1723,7 @@ find_module_from_ko()
 module_status_weak() {
     # $1 = module, $2 = module version, $3 = kernel version weak installed to,
     # $4 = kernel arch, $5 = kernel version built for
-    [ -z "$NO_WEAK_MODULES" ] || return 1
+    [[ -z $NO_WEAK_MODULES ]] || return 1
     [[ $weak_modules ]] || return 1
     local m v k a kern weak_ko mod installed_ko f ret=1 oifs=$IFS
     local -A already_found
@@ -2112,7 +2112,7 @@ run_match()
 report_build_problem()
 {
     # If apport is on the system, files a build problem
-    if [ -x /usr/share/apport/apport ] && which python3 >/dev/null; then
+    if [[ -x /usr/share/apport/apport ]] && which python3 >/dev/null; then
         python3 /usr/share/apport/package-hooks/dkms_packages.py -m $module -v $module_version -k ${kernelver[0]}
     fi
     die "$@"
@@ -2232,9 +2232,9 @@ autoinstall() {
     # a list of modules and their latest version.
     while read status mvka; do
         IFS='/' read m v k a <<< "$mvka"
-        if [[ -z "${latest["$m"]}" ]]; then
+        if [[ -z ${latest[$m]} ]]; then
             known_modules[${#known_modules[@]}]="$m"
-            latest["$m"]="$v"
+            latest[$m]="$v"
         elif [[ ("$(VER "$v")" > "$(VER "${latest["$m"]}")") ]]; then
             latest["$m"]="$v"
         fi
@@ -2284,13 +2284,13 @@ autoinstall() {
         # Step 2: Install modules that have an empty dependency list.
         for mv in "${to_install[@]}"; do
             IFS=/ read m v <<< "$mv"
-            if [[ -z "${build_depends[$m]}" ]]; then
+            if [[ -z ${build_depends[$m]} ]]; then
                 (module="$m" module_version="$v" kernelver="$kernelver" arch="$arch" install_module)
                 status=$?
-                if [ "$status" = 0 ]; then
+                if (( status == 0 )); then
                     installed_modules[${#installed_modules[@]}]="$m"
                     progress=$(($progress +1))
-                elif [ "$status" = 77 ]; then
+                elif (( status == 77 )); then
                     skipped_modules[${#skipped_modules[@]}]="$m"
                     progress=$(($progress +1))
                 else
@@ -2309,19 +2309,19 @@ autoinstall() {
 
         # Step 4: Keep going if at least one module was installed during
         # this iteration.
-        [[ "$progress" -gt 0 ]] || break;
+        (( progress > 0 )) || break;
 
     done
 
-    if [[ "${#installed_modules[@]}" -gt 0 ]]; then
+    if (( ${#installed_modules[@]} > 0 )); then
         echo "dkms autoinstall on $kernelver/$arch succeeded for ${installed_modules[@]}"
     fi
 
-    if [[ "${#skipped_modules[@]}" -gt 0 ]]; then
+    if (( ${#skipped_modules[@]} > 0 )); then
         echo "dkms autoinstall on $kernelver/$arch was skipped for ${skipped_modules[@]}"
     fi
 
-    if [[ "${#failed_modules[@]}" -gt 0 ]]; then
+    if (( ${#failed_modules[@]} > 0 )); then
         echo "dkms autoinstall on $kernelver/$arch failed for ${failed_modules[@]}"
     fi
 
@@ -2330,7 +2330,7 @@ autoinstall() {
         echo "$m/$v autoinstall failed due to missing dependencies: ${build_depends[$m]}"
     done
 
-    if [[ "${#failed_modules[@]}" -gt 0 || "${#to_install[@]}" -gt 0 ]]; then
+    if (( ${#failed_modules[@]} > 0 || ${#to_install[@]} > 0 )); then
         die 11 $"One or more modules failed to install during autoinstall." \
             $"Refer to previous errors for more information."
     fi
@@ -2363,7 +2363,7 @@ symlink_modules=""
 # Check that we can write temporary files
 tmpfile=$(mktemp_or_die)
 echo "Hello, DKMS!" > "$tmpfile"
-if [ "$(cat "$tmpfile")" != "Hello, DKMS!" ]; then
+if [[ "$(cat "$tmpfile")" != "Hello, DKMS!" ]]; then
     warn $"dkms will not function properly without some free space in \$TMPDIR ($tmp_location)."
 fi
 rm -f "$tmpfile"
@@ -2542,7 +2542,7 @@ done
 
 # The <(cmd) idiom does not work if /proc is not mounted
 read line < <(echo "Hello, DKMS!")
-if [ "$line" != "Hello, DKMS!" ]; then
+if [[ $line != "Hello, DKMS!" ]]; then
     warn $"dkms will not function properly if /proc is not mounted."
 fi
 
