@@ -233,9 +233,22 @@ kmod_broken_hashalgo() {
     (( kmod_ver < 26 ))
 }
 
+mod_compression_ext=
+kernel_config="/lib/modules/${KERNEL_VER}/build/.config"
+if [ -f "${kernel_config}" ]; then
+    if grep -q "^CONFIG_MODULE_COMPRESS_NONE=y" "${kernel_config}" ; then
+        mod_compression_ext=
+    elif grep -q "^CONFIG_MODULE_COMPRESS_GZIP=y" "${kernel_config}" ; then
+        mod_compression_ext=.gz
+    elif grep -q "^CONFIG_MODULE_COMPRESS_XZ=y" "${kernel_config}" ; then
+        mod_compression_ext=.xz
+    elif grep -q "^CONFIG_MODULE_COMPRESS_ZSTD=y" "${kernel_config}" ; then
+        mod_compression_ext=.zst
+    fi
+fi
+
 # Compute the expected destination module location
 os_id="$(sed -n 's/^ID\s*=\s*\(.*\)$/\1/p' /etc/os-release | tr -d '"')"
-mod_compression_ext=
 case "${os_id}" in
     centos | fedora | rhel | ovm | almalinux)
         expected_dest_loc=extra
@@ -244,12 +257,15 @@ case "${os_id}" in
     sles | suse | opensuse)
         expected_dest_loc=updates
         ;;
-    arch | debian | ubuntu | linuxmint)
+    arch)
+        expected_dest_loc=updates/dkms
+        mod_compression_ext=
+        ;;
+    debian | ubuntu | linuxmint)
         expected_dest_loc=updates/dkms
         ;;
     alpine)
         expected_dest_loc=kernel/extra
-        mod_compression_ext=.gz
         ;;
     gentoo)
         expected_dest_loc=kernel/extra
