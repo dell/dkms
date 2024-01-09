@@ -348,7 +348,7 @@ do_depmod()
 distro_version()
 {
     for f in /etc/os-release /usr/lib/os-release; do
-        if [[ -r $f ]]; then
+        if [[ -e $f ]]; then
             (
                 . "$f"
                 if [[ "$ID" = "ubuntu" ]]; then
