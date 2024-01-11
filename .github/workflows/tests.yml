@@ -27,6 +27,7 @@ jobs:
           - {name: "centos/centos", tag: "stream9", url: "quay.io/"}
           - {name: "centos/centos", tag: "stream8", url: "quay.io/"}
           - {name: "centos", tag: "7"}
+          - {name: "debian", tag: "testing"}
           - {name: "debian", tag: "12"}
           - {name: "debian", tag: "11"}
           - {name: "debian", tag: "10"}
