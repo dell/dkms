@@ -26,23 +26,30 @@ clean:
 	-rm -rf kernel_install.d_dkms
 	-rm -rf kernel_postinst.d_dkms
 
+SED_PROCESS = \
+	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' \
+		-e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' \
+		-e 's,@SBINDIR@,$(SBIN),g' \
+		-e 's,@KCONFDIR@,$(KCONF),g' \
+		-e 's,@LIBDIR@,$(LIBDIR),g' $^ > $@
+
 dkms: dkms.in
-	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' $^ > $@
+	$(SED_PROCESS)
 
 dkms.8: dkms.8.in
-	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' -e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' $^ > $@
+	$(SED_PROCESS)
 
 dkms_autoinstaller: dkms_autoinstaller.in
-	sed -e 's,@SBINDIR@,$(SBIN),g' $^ > $@
+	$(SED_PROCESS)
 
 dkms.service: dkms.service.in
-	sed -e 's,@SBINDIR@,$(SBIN),g' $^ > $@
+	$(SED_PROCESS)
 
 kernel_install.d_dkms: kernel_install.d_dkms.in
-	sed -e 's,@KCONFDIR@,$(KCONF),g' $^ > $@
+	$(SED_PROCESS)
 
 kernel_postinst.d_dkms: kernel_postinst.d_dkms.in
-	sed -e 's,@LIBDIR@,$(LIBDIR),g' $^ > $@
+	$(SED_PROCESS)
 
 install: all
 	$(if $(strip $(VAR)),$(error Setting VAR is not supported))
