@@ -374,7 +374,7 @@ This option executes modprobe on the modules upon successful installation.
 Using this option you can specify the location of your kernel source
 directory. Most likely you will not need to set this if your kernel
 source is accessible via
-.I /lib/modules/$kernel_version/build.
+.I @MODDIR@/$kernel_version/build.
 .TP
 .B \-\-directive <"cli\-directive=cli\-value">
 Using this option, you can specify additional directives from the command
@@ -421,13 +421,13 @@ Enable verbose output of external commands executed in DKMS.
 During the first install of a module for a <kernelversion>,
 .B dkms
 will search
-.I /lib/modules/<kernelversion>
+.I @MODDIR@/<kernelversion>
 for a pre-existing module of the same name. If one is found, it will automatically
 be saved as an "original_module" so that if the newer module is later removed,
 .B dkms
 will put the original module back in its place. Currently, DKMS searches
 for these original modules with first preference going to modules located in
-.I /lib/modules/<kernelversion>/updates/
+.I @MODDIR@/<kernelversion>/updates/
 followed by
 .B $DEST_MODULE_LOCATION
 (as specified in
@@ -526,7 +526,7 @@ This directive specifies the destination where a module should be installed to, 
 is used for finding original_modules. This is a
 .B required
 directive, except as noted below. This directive must start with the text "/kernel" which is in reference to
-/lib/modules/<kernelversion>/kernel.
+@MODDIR@/<kernelversion>/kernel.
 Note that for each module within a dkms package, the numeric value of
 .B #
 must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and
@@ -744,12 +744,12 @@ values.
 This variable can be used within a directive definition and during use, the actual kernel
 version in question will be substituted in its place. This is especially useful in MAKE
 commands when specifying which INCLUDE statements should be used when compiling your
-module (eg. MAKE="make all INCLUDEDIR=/lib/modules/${kernelver}/build/include").
+module (eg. MAKE="make all INCLUDEDIR=@MODDIR@/${kernelver}/build/include").
 .TP
 .B $kernel_source_dir
 This variable holds the value of the location of your kernel source directory. Usually, this
 will be
-.IR /lib/modules/$kernelver/build ,
+.IR @MODDIR@/$kernelver/build ,
 unless otherwise specified with the
 .B \-\-kernelsourcedir
 option.
@@ -785,7 +785,7 @@ Control which folders DKMS uses for components and artifacts.
 Can be set to anything but a null value to enable verbose output of external commands executed in DKMS.
 .TP
 .B $symlink_modules
-Controls whether binary modules are copied to /lib/modules or if only symlinks are created there. Note that these variables can also
+Controls whether binary modules are copied to @MODDIR@ or if only symlinks are created there. Note that these variables can also
 be manipulated on the command line with \-\-dkmstree, \-\-sourcetree, \-\-installtree
 and \-\-symlink-modules options.
 .TP

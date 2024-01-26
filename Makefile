@@ -9,28 +9,44 @@ SHELL=bash
 
 SBIN = /usr/sbin
 LIBDIR = /usr/lib/dkms
+MODDIR = /lib/modules
 KCONF = /etc/kernel
 SYSTEMD = /usr/lib/systemd/system
 
 #Define the top-level build directory
 BUILDDIR := $(shell pwd)
 
-all: dkms dkms.8 dkms_autoinstaller dkms.service kernel_install.d_dkms kernel_postinst.d_dkms
+all: \
+	dkms \
+	dkms.8 \
+	dkms_autoinstaller \
+	dkms.bash-completion \
+	dkms_common.postinst \
+	dkms_framework.conf \
+	dkms.service \
+	kernel_install.d_dkms \
+	kernel_postinst.d_dkms \
+	kernel_prerm.d_dkms
 
 clean:
 	-rm -rf dist/
 	-rm -rf dkms
 	-rm -rf dkms.8
 	-rm -rf dkms_autoinstaller
+	-rm -rf dkms.bash-completion
+	-rm -rf dkms_common.postinst
+	-rm -rf dkms_framework.conf
 	-rm -rf dkms.service
 	-rm -rf kernel_install.d_dkms
 	-rm -rf kernel_postinst.d_dkms
+	-rm -rf kernel_prerm.d_dkms
 
 SED_PROCESS = \
 	sed -e 's,@RELEASE_STRING@,$(RELEASE_STRING),g' \
 		-e 's,@RELEASE_DATE@,$(RELEASE_DATE),g' \
 		-e 's,@SBINDIR@,$(SBIN),g' \
 		-e 's,@KCONFDIR@,$(KCONF),g' \
+		-e 's,@MODDIR@,$(MODDIR),g' \
 		-e 's,@LIBDIR@,$(LIBDIR),g' $^ > $@
 
 dkms: dkms.in
@@ -42,6 +58,15 @@ dkms.8: dkms.8.in
 dkms_autoinstaller: dkms_autoinstaller.in
 	$(SED_PROCESS)
 
+dkms.bash-completion: dkms.bash-completion.in
+	$(SED_PROCESS)
+
+dkms_common.postinst: dkms_common.postinst.in
+	$(SED_PROCESS)
+
+dkms_framework.conf: dkms_framework.conf.in
+	$(SED_PROCESS)
+
 dkms.service: dkms.service.in
 	$(SED_PROCESS)
 
@@ -49,6 +74,9 @@ kernel_install.d_dkms: kernel_install.d_dkms.in
 	$(SED_PROCESS)
 
 kernel_postinst.d_dkms: kernel_postinst.d_dkms.in
+	$(SED_PROCESS)
+
+kernel_prerm.d_dkms: kernel_prerm.d_dkms.in
 	$(SED_PROCESS)
 
 install: all
