@@ -7,8 +7,8 @@
 # DKMS Tree Location (default: /var/lib/dkms):
 # dkms_tree="/var/lib/dkms"
 
-# Install Tree Location (default: /lib/modules):
-# install_tree="/lib/modules"
+# Install Tree Location (default: @MODDIR@):
+# install_tree="@MODDIR@"
 
 # Temporary folder Location (default: /tmp):
 # tmp_location="/tmp"

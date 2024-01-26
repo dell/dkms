@@ -7,7 +7,7 @@
 #
 _kernels()
 {
-	COMPREPLY=( $( cd /lib/modules && compgen -d -- "$cur" ) )
+	COMPREPLY=( $( cd @MODDIR@ && compgen -d -- "$cur" ) )
 }
 
 # complete on full directory names under $1

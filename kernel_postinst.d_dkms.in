@@ -8,7 +8,7 @@ uname_s=$(uname -s)
 _get_kernel_dir() {
     KVER=$1
     case ${uname_s} in
-       Linux)          DIR="/lib/modules/$KVER/build" ;;
+       Linux)          DIR="@MODDIR@/$KVER/build" ;;
        GNU/kFreeBSD)   DIR="/usr/src/kfreebsd-headers-$KVER/sys" ;;
     esac
     echo "$DIR"
