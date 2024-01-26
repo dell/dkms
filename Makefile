@@ -27,8 +27,8 @@ clean:
 	-rm -rf kernel_postinst.d_dkms
 
 SED_PROCESS = \
-	sed -e 's/#RELEASE_STRING#/$(RELEASE_STRING)/' \
-		-e 's/#RELEASE_DATE#/$(RELEASE_DATE)/' \
+	sed -e 's,@RELEASE_STRING@,$(RELEASE_STRING),g' \
+		-e 's,@RELEASE_DATE@,$(RELEASE_DATE),g' \
 		-e 's,@SBINDIR@,$(SBIN),g' \
 		-e 's,@KCONFDIR@,$(KCONF),g' \
 		-e 's,@LIBDIR@,$(LIBDIR),g' $^ > $@
