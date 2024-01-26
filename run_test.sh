@@ -1695,7 +1695,7 @@ osrelease_cleanup() {
 
 for f in /etc/os-release /usr/lib/os-release; do
     if [ -e "$f" ]; then
-        cp --archive -f "$f" _os-release
+        cp --preserve=all -f "$f" _os-release
         break
     fi
 done
