@@ -2472,7 +2472,7 @@ while (($# > 0)); do
             exec >/dev/null 2>&1
             ;;
         --version|-V)
-            echo $"#RELEASE_STRING#"
+            echo $"@RELEASE_STRING@"
             exit 0
             ;;
         --no-initrd)
