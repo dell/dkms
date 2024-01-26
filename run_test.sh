@@ -1686,7 +1686,7 @@ check_no_dkms_test
 ############################################################################
 ### Testing os-release detection                                         ###
 ############################################################################
-echo "Backing up /etc/os-release and /usr/bin/os-release"
+echo "Backing up /etc/os-release and /usr/lib/os-release"
 osrelease_cleanup() {
     rm -f _os-release
     mv _etc-os-release /etc/os-release &>/dev/null || :
