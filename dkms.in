@@ -1154,9 +1154,9 @@ actual_build()
         if [[ $module_compressed_suffix = .gz ]]; then
             gzip -9f "$built_module" || compressed_module=""
         elif [[ $module_compressed_suffix = .xz ]]; then
-            xz -f "$built_module" || compressed_module=""
+            xz --check=crc32 --lzma2=dict=1MiB -f "$built_module" || compressed_module=""
         elif [[ $module_compressed_suffix = .zst ]]; then
-            zstd -q -f -T0 -20 --ultra "$built_module" || compressed_module=""
+            zstd -q -f -T0 -19 "$built_module" || compressed_module=""
         fi
         if [[ -n $compressed_module ]]; then
             cp -f "$compressed_module" "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
