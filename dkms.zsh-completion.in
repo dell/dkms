@@ -1,6 +1,5 @@
 #compdef dkms
-# Copied from the zsh-users/zsh repository
-
+# Based on the completion from the zsh-users/zsh repository.
 
 local curcontext="$curcontext" ign cmds opts ret=1
 local -a state line expl args subcmds dirs
@@ -13,29 +12,22 @@ subcmds=(
   'unbuild:undoes the build of a module'
   "install:install a build module for it's corresponding kernel"
   'uninstall:uninstall a module for a kernel'
+  'autoinstall:try to install the latest revision of all modules that have been installed for other kernel revisions'
   'match:install every module that is installed for a template kernel for another kernel'
-  'mkdriverdisk:create a floppy driver disk image for use when updated drivers are needed to install an OS'
   'mktarball:tar up files in the DKMS tree for a specific module'
   'ldtarball:extract a tarball created with mktarball into the DKMS tree'
-  'mkrpm:create an RPM package for a module'
-  'mkdeb:create a debian binary package for a module'
-  'mkdsc:create a debian source package for a module'
-  'mkbmdeb:create a debian package containing just binary modules'
-  'mkkmp:create a Kernel Module Package source RPM for a module'
   'status:display the current status of modules, versions and kernels within the tree'
-  'autoinstall:try to install the latest revision of all modules that have been installed for other kernel revisions'
 )
 
 args=(
+  '(--all)*'{-a,--arch}'[specify system architecture]:architecture:->architectures'
   '(1)-m[specify module]:module:->modules'
   '(1)-v[specify module version]:version'
-  '(-q --quiet)'{-q,--quiet}'[suppress output]'
-  '(--all)*'{-a,--arch}'[specify system architecture]:architecture:->architectures'
+  {-q,--quiet}'[suppress output]'
   '*--directive=:directive'
   '--dkmstree=:path:_directories'
   '--installtree=:path:_directories'
   '--sourcetree=:path:_directories'
-  '--dkmsframework=:path:_directories'
   '--force-version-override'
   '1: : _describe -t commands command subcmds'
 )
@@ -44,21 +36,18 @@ cmd=${${${subcmds%%:*}:*words}[1]}
 if [[ -n $cmd ]]; then
   curcontext="${curcontext%:*}-$cmd:"
 else
-  # exclude sub-commands based on any options specified so far
+  # Exclude sub-commands based on any options specified so far.
   for cmds opts in \
-    '(remove|build|install|uninstall|match|status|mk(^kmp))' 'k' \
-    '(add|remove)' '-rpm_safe_upgrade' \
-    'mk(driverdisk|kmp)' '-spec' \
-    'mk(deb|dsc|bmdeb|rpm)' '-legacy-postinst' \
-    'mk(tarball|rpm|deb|dsc)' '-(source|binary)-only' \
-    '(match|build|mkkmp)' '(k|-no-(prepare|clean)-kernel|-kernelsourcedir)' \
+    '(remove|build|install|uninstall|match|status|mktarball)' 'k' \
+    '(add|remove)' '-_safe_upgrade' \
+    'mktarball' '-(source|binary)-only' \
+    '(match|build)' '(k|-no-(prepare|clean)-kernel|-kernelsourcedir)' \
     '(|un)install' '-no-(depmod|initrd)' \
-    'mkdriverdisk' '([dr]|-distro|-release|-size|-media)' \
     '(add|build|install|ldtarball)' '-force' \
     'match' '-templatekernel' \
-    '*tarball' '-archive' \
-    '(match|build|mkkmp)' '(j*|-no-(prepare|clean)-kernel|-kernelsourcedir)' \
-    '(remove|build|install|status|mk(^kmp))' '-all' \
+    '(mktarball|ldtarball)' '-archive' \
+    '(match|build)' '(j*|-no-(prepare|clean)-kernel|-kernelsourcedir)' \
+    '(remove|build|install|status|mktarball)' '-all' \
     'build' '-config'
   do
     [[ -n ${(M)words:#-${~opts}*} ]] &&
@@ -69,25 +58,19 @@ else
 fi
 
 case $cmd in
-  remove|build|install|uninstall|mk*|status)
+  remove|build|install|uninstall|mktarball|status)
     args+=( ': :->modules' )
   ;|
-  |remove|(un|)build|install|uninstall|match|status|mk(^kmp))
+  |remove|(un|)build|install|uninstall|match|status|mktarball)
     args+=( '(--all)*-k[specify kernel version]:kernel:->kernels' )
   ;|
   |add|remove) args+=( "${ign}--rpm_safe_upgrade" ) ;|
-  |mk(driverdisk|kmp))
-    args+=( "${ign}--spec=:spec file:_files -g '*.spec(-.)'" )
-  ;|
   |(mk|ld)tarball)
     args+=( "${ign}--archive=:tarball:_files -g '*.tar(-.)'" )
   ;|
-  |mk(deb|dsc|bmdeb|rpm))
-    args+=( "${ign}--legacy-postinst=:value [1]:(0 1)" )
-  ;|
-  |mk(tarball|rpm|deb|dsc)) args+=( "${ign}(--source-only --binaries-only)--"{source,binaries}-only ) ;|
-  |match|build|mkkmp)
-    args+=( #TODO: check ignore needed in absence of parameters
+  |mktarball) args+=( "${ign}(--source-only --binaries-only)--"{source,binaries}-only ) ;|
+  |match|build)
+    args+=( # TODO: check ignore needed in absence of parameters
       "${ign}--no-prepare-kernel"
       "${ign}--no-clean-kernel"
       '--kernelsourcedir=:directory:_directories'
@@ -105,7 +88,7 @@ case $cmd in
       '-c[specify location of dkms.conf file]:location:_files'
     )
   ;|
-  |remove|(un|)build|install|status|mk(^kmp))
+  |remove|(un|)build|install|status)
     args+=( '(-a --arch -k)--all[specify all relevant kernels/arches]' )
   ;|
   |build)
@@ -116,14 +99,6 @@ case $cmd in
   ;|
   |match)
     args+=( "${ign}--templatekernel=:kernel:->kernels" )
-  ;|
-  |mkdriverdisk)
-    args+=(
-      "${ign}(-d --distro)"{-d,--distro=}':distribution:(redhat'{,1,2,3}' suse unitedlinux)'
-      "${ign}(-r --release)"{-r,--release=}':release'
-      "${ign}--size=:size (kb) [1440]"
-      "${ign}--media=:media type [floppy]:(floppy iso tar)"
-    )
   ;|
   add)
     args+=(
