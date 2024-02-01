@@ -1,10 +1,8 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2207
-# bash completion for dkms
-# Copied from the Mandriva dkms package
+# Copied from the Mandriva dkms package.
 
-# This function complete on available kernels
-#
+# This function completes available kernels
 _kernels()
 {
 	COMPREPLY=( $( cd /lib/modules && compgen -d -- "$cur" ) )
@@ -31,11 +29,10 @@ _dkms()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
-		COMPREPLY=( $( compgen -W "add autoinstall remove build unbuild install uninstall \
+		COMPREPLY=( $( compgen -W "add remove build unbuild install uninstall autoinstall \
 			match mktarball ldtarball \
 			status" -- $cur ) )
 	else
-
 		prev=${COMP_WORDS[COMP_CWORD-1]}
 		command=${COMP_WORDS[1]}
 		case $prev in
@@ -93,18 +90,30 @@ _dkms()
 				build)
 					options='--config --force'
 					;;
+				unbuild)
+					options=''
+					;;
 				install)
 					options='--force'
 					;;
-				ldtarball)
-					options='--archive --force'
+				uninstall)
+					options=''
 					;;
-				mktarball)
-					options='--source-only --binaries-only'
+				autoinstall)
+					options=''
 					;;
 				match)
 					options='--templatekernel'
 					;;
+				mktarball)
+					options='--source-only --binaries-only'
+					;;
+				ldtarball)
+					options='--archive --force'
+					;;
+				status)
+					options=''
+				;;
 			esac
 
 			options="$options -m -v -k -a --arch -q --quiet -V \
