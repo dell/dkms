@@ -69,6 +69,7 @@ endif
 	install -d -m 0755 $(DESTDIR)/etc/dkms/framework.conf.d
 	$(if $(strip $(BASHDIR)),$(error Setting BASHDIR is not supported))
 	install -D -m 0644 dkms.bash-completion $(DESTDIR)/usr/share/bash-completion/completions/dkms
+	install -D -m 0644 dkms.zsh-completion $(DESTDIR)/usr/share/zsh/site-functions/_dkms
 	install -D -m 0644 dkms.8 $(DESTDIR)/usr/share/man/man8/dkms.8
 	install -D -m 0755 kernel_install.d_dkms $(DESTDIR)$(KCONF)/install.d/40-dkms.install
 	install -D -m 0755 kernel_postinst.d_dkms $(DESTDIR)$(KCONF)/postinst.d/dkms
