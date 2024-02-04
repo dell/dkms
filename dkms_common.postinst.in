@@ -13,7 +13,7 @@ uname_s=$(uname -s)
 _get_kernel_dir() {
     KVER=$1
     case ${uname_s} in
-	Linux)		DIR="/lib/modules/$KVER/build" ;;
+	Linux)		DIR="@MODDIR@/$KVER/build" ;;
 	GNU/kFreeBSD)	DIR="/usr/src/kfreebsd-headers-$KVER/sys" ;;
     esac
     echo $DIR
@@ -31,7 +31,7 @@ _check_kernel_dir() {
 
 # Check the existence of a kernel named as $1
 _is_kernel_name_correct() {
-    if [ -e "/lib/modules/$1" ]; then
+    if [ -e "@MODDIR@/$1" ]; then
         echo yes
     else
         echo no
@@ -127,7 +127,7 @@ if [ -r /etc/dkms/framework.conf ]; then
     . /etc/dkms/framework.conf
 fi
 
-KERNELS=$(ls -dv /lib/modules/*/build 2>/dev/null | cut -d/ -f4 || true)
+KERNELS=$(ls -dv @MODDIR@/*/build 2>/dev/null | cut -d/ -f4 || true)
 CURRENT_KERNEL=$(uname -r)
 
 #We never want to keep an older version side by side to prevent conflicts
@@ -156,14 +156,14 @@ elif [ -d "/usr/src/$NAME-$VERSION" ]; then
 fi
 
 # On 1st installation, let us look for a directory
-# in /lib/modules which matches $(uname -r). If none
+# in @MODDIR@ which matches $(uname -r). If none
 # is found it is possible that buildd is being used
 # and that uname -r is giving us the name of the
 # kernel used by the buildd machine.
 #
 # If this is the case we try to build the kernel
 # module for each kernel which has a directory in
-# /lib/modules. Furthermore we will have to tell
+# @MODDIR@. Furthermore we will have to tell
 # DKMS which architecture it should build the module
 # for (e.g. if the buildd machine is using a
 # 2.6.24-23-xen 64bit kernel).
