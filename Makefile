@@ -16,6 +16,18 @@ SYSTEMD = /usr/lib/systemd/system
 #Define the top-level build directory
 BUILDDIR := $(shell pwd)
 
+SED			?= sed
+SED_SUBSTITUTIONS	 = \
+	-e 's,@RELEASE_STRING@,$(RELEASE_STRING),g' \
+	-e 's,@RELEASE_DATE@,$(RELEASE_DATE),g' \
+	-e 's,@SBINDIR@,$(SBIN),g' \
+	-e 's,@KCONFDIR@,$(KCONF),g' \
+	-e 's,@MODDIR@,$(MODDIR),g' \
+	-e 's,@LIBDIR@,$(LIBDIR),g'
+
+%: %.in
+	$(SED) $(SED_SUBSTITUTIONS) $< > $@
+
 all: \
 	dkms \
 	dkms.8 \
@@ -40,44 +52,6 @@ clean:
 	-rm -rf kernel_install.d_dkms
 	-rm -rf kernel_postinst.d_dkms
 	-rm -rf kernel_prerm.d_dkms
-
-SED_PROCESS = \
-	sed -e 's,@RELEASE_STRING@,$(RELEASE_STRING),g' \
-		-e 's,@RELEASE_DATE@,$(RELEASE_DATE),g' \
-		-e 's,@SBINDIR@,$(SBIN),g' \
-		-e 's,@KCONFDIR@,$(KCONF),g' \
-		-e 's,@MODDIR@,$(MODDIR),g' \
-		-e 's,@LIBDIR@,$(LIBDIR),g' $^ > $@
-
-dkms: dkms.in
-	$(SED_PROCESS)
-
-dkms.8: dkms.8.in
-	$(SED_PROCESS)
-
-dkms_autoinstaller: dkms_autoinstaller.in
-	$(SED_PROCESS)
-
-dkms.bash-completion: dkms.bash-completion.in
-	$(SED_PROCESS)
-
-dkms_common.postinst: dkms_common.postinst.in
-	$(SED_PROCESS)
-
-dkms_framework.conf: dkms_framework.conf.in
-	$(SED_PROCESS)
-
-dkms.service: dkms.service.in
-	$(SED_PROCESS)
-
-kernel_install.d_dkms: kernel_install.d_dkms.in
-	$(SED_PROCESS)
-
-kernel_postinst.d_dkms: kernel_postinst.d_dkms.in
-	$(SED_PROCESS)
-
-kernel_prerm.d_dkms: kernel_prerm.d_dkms.in
-	$(SED_PROCESS)
 
 install: all
 	$(if $(strip $(VAR)),$(error Setting VAR is not supported))
