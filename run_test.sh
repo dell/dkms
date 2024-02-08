@@ -253,7 +253,6 @@ case "${os_id}" in
         ;;
     arch)
         expected_dest_loc=updates/dkms
-        mod_compression_ext=
         ;;
     debian | ubuntu | linuxmint)
         expected_dest_loc=updates/dkms

@@ -60,7 +60,7 @@ jobs:
     - name: Install Arch Linux dependencies
       if: matrix.distro.name == 'archlinux'
       run: |
-        pacman -Syu --noconfirm diffutils gcc make linux${{ matrix.distro.variant }}-headers openssl
+        pacman -Syu --noconfirm diffutils gcc make linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-headers openssl
 
     - name: Install CentOS dependencies
       if: contains(matrix.distro.name, 'centos')
