@@ -270,9 +270,10 @@ case "${os_id}" in
         ;;
 esac
 
-grep "^CONFIG_MODULE_COMPRESS" "${kernel_config}" || true
-find  "/lib/modules/${KERNEL_VER}" -name \*.ko\* 2>/dev/null | head -n1
-echo "Expected module compression extension: ${mod_compression_ext:-(none)}"
+echo "Checking module compression ..."
+echo "config: $(grep "^CONFIG_MODULE_COMPRESS" "${kernel_config}" || true)"
+echo "files: $(find  "/lib/modules/${KERNEL_VER}" -name \*.ko\* 2>/dev/null | head -n1)"
+echo "Expected extension: ${mod_compression_ext:-(none)}"
 
 
 echo 'Preparing a clean test environment'
