@@ -34,6 +34,7 @@ jobs:
           - {name: "fedora/fedora", tag: "39", url: "quay.io/"}
           - {name: "fedora/fedora", tag: "38", url: "quay.io/"}
           - {name: "gentoo/stage3", tag: "latest"}
+          - {name: "ubuntu", tag: "23.10"}
           - {name: "ubuntu", tag: "22.04"}
           - {name: "ubuntu", tag: "20.04"}
           - {name: "ubuntu", tag: "18.04"}
