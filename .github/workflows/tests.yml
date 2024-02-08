@@ -42,7 +42,7 @@ jobs:
       image: ${{ matrix.distro.url }}${{ matrix.distro.name }}:${{ matrix.distro.tag }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install AlmaLinux dependencies
       if: matrix.distro.name == 'almalinux'
@@ -135,7 +135,7 @@ jobs:
     runs-on: ubuntu-${{ matrix.version }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install dependencies
       run: |
