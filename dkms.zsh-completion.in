@@ -150,10 +150,10 @@ case $state in
   kernels)
     if compset -P 1 '*/'; then
       _description architectures expl architecture
-      compadd "$expl[@]" /lib/modules/$IPREFIX/build/arch/*(/:t) && ret=0
+      compadd "$expl[@]" @MODDIR@/$IPREFIX/build/arch/*(/:t) && ret=0
     else
       compset -S '/*'
-      dirs=( /lib/modules/*(/:t) )
+      dirs=( @MODDIR@/*(/:t) )
       _description -V kernels expl kernel
       compadd "$expl[@]" -r "/ \t\n\-" ${(on)dirs} && ret=0
     fi
