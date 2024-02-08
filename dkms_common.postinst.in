@@ -155,6 +155,13 @@ elif [ -d "/usr/src/$NAME-$VERSION" ]; then
     dkms add -m $NAME -v $VERSION > /dev/null
 fi
 
+dkms_conf="/var/lib/dkms/$NAME/$VERSION/source/dkms.conf"
+autoinstall=$(bash -c 'AUTOINSTALL=; . "'"$dkms_conf"'" >/dev/null 2>&1; echo $AUTOINSTALL')
+if [ -z "$autoinstall" ]; then
+    echo "Not building the $NAME module which does not have AUTOINSTALL enabled."
+    exit 0
+fi
+
 # On 1st installation, let us look for a directory
 # in @MODDIR@ which matches $(uname -r). If none
 # is found it is possible that buildd is being used
