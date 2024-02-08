@@ -33,6 +33,7 @@ all: \
 	dkms.8 \
 	dkms_autoinstaller \
 	dkms.bash-completion \
+	dkms.zsh-completion \
 	dkms_common.postinst \
 	dkms_framework.conf \
 	dkms.service \
@@ -46,6 +47,7 @@ clean:
 	-rm -rf dkms.8
 	-rm -rf dkms_autoinstaller
 	-rm -rf dkms.bash-completion
+	-rm -rf dkms.zsh-completion
 	-rm -rf dkms_common.postinst
 	-rm -rf dkms_framework.conf
 	-rm -rf dkms.service
