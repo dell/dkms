@@ -238,9 +238,9 @@ set_module_suffix()
     # $1 = the kernel to base the module_suffix on
     kernel_test="${1:-$(uname -r)}"
     module_uncompressed_suffix=".ko"
-    grep -q '\.gz:' $install_tree/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".gz"
-    grep -q '\.xz:' $install_tree/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".xz"
-    grep -q '\.zst:' $install_tree/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".zst"
+    grep -q '^CONFIG_MODULE_COMPRESS_GZIP=y' $kernel_config 2>/dev/null && module_compressed_suffix=".gz"
+    grep -q '^CONFIG_MODULE_COMPRESS_XZ=y' $kernel_config 2>/dev/null && module_compressed_suffix=".xz"
+    grep -q '^CONFIG_MODULE_COMPRESS_ZSTD=y' $kernel_config 2>/dev/null && module_compressed_suffix=".zst"
     module_suffix="$module_uncompressed_suffix$module_compressed_suffix"
 }
 
@@ -1041,8 +1041,8 @@ prepare_build()
         $"Directory $base_dir already exists. Use the dkms remove function before trying to build again."
 
     # Read the conf file
-    set_module_suffix "$kernelver"
     read_conf_or_die "$kernelver" "$arch"
+    set_module_suffix "$kernelver"
 
     # Error out if build_exclude is set
     [[ $build_exclude ]] && diewarn 77 \
@@ -1788,8 +1788,8 @@ do_status_weak()
 # Spit out all the extra status information that people running DKMS are
 # interested in, but that the DKMS internals do not usually care about.
 module_status_built_extra() (
-    set_module_suffix "$3"
     read_conf "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf" 2>/dev/null
+    set_module_suffix "$3"
     [[ -d $dkms_tree/$1/original_module/$3/$4 ]] && echo -n " (original_module exists)"
     for ((count=0; count < ${#dest_module_name[@]}; count++)); do
         tree_mod=$(compressed_or_uncompressed "$dkms_tree/$1/$2/$3/$4/module" "${dest_module_name[$count]}")
