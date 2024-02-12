@@ -95,7 +95,7 @@ invoke_command()
                 wait $(jobs -p) 2>/dev/null
             }
             trap on_exit EXIT
-            while [[ -d /proc/$pid ]]; do
+            while kill -0 $pid > /dev/null 2>&1; do
                 sleep 3 &
                 wait $!
                 echo -en "."
