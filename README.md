@@ -142,7 +142,7 @@ SecureBoot enabled
 With the appropriate key material on the system, enroll the public key:
 
 ```
-# mokutil --import /var/lib/dkms/mok.pub"
+# mokutil --import /var/lib/dkms/mok.pub
 ```
 
 You'll be prompted to create a password. Enter it twice, it can also be blank.
