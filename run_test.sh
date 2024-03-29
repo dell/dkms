@@ -228,16 +228,23 @@ kmod_broken_hashalgo() {
 }
 
 mod_compression_ext=
+set_mod_compression_ext() {
+    # Do the same check as the set_module_suffix() in dkms
+    if grep -Fq "$1:" "/lib/modules/${KERNEL_VER}/modules.dep" 2>/dev/null; then
+        mod_compression_ext="$1"
+    fi
+}
+
 kernel_config="/lib/modules/${KERNEL_VER}/build/.config"
 if [ -f "${kernel_config}" ]; then
     if grep -q "^CONFIG_MODULE_COMPRESS_NONE=y" "${kernel_config}" ; then
         mod_compression_ext=
     elif grep -q "^CONFIG_MODULE_COMPRESS_GZIP=y" "${kernel_config}" ; then
-        mod_compression_ext=.gz
+        set_mod_compression_ext .gz
     elif grep -q "^CONFIG_MODULE_COMPRESS_XZ=y" "${kernel_config}" ; then
-        mod_compression_ext=.xz
+        set_mod_compression_ext .xz
     elif grep -q "^CONFIG_MODULE_COMPRESS_ZSTD=y" "${kernel_config}" ; then
-        mod_compression_ext=.zst
+        set_mod_compression_ext .zst
     fi
 fi
 
