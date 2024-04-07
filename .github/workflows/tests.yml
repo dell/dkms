@@ -149,7 +149,10 @@ jobs:
     strategy:
       matrix:
         version:
-          - 22.04
+        # The Canonical team has chosen to disable module compression by
+        # patching the kernel Makefile.modinst. For more context see:
+        # https://github.com/dell/dkms/issues/405
+        # - 22.04
           - 20.04
     runs-on: ubuntu-${{ matrix.version }}
 
