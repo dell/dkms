@@ -351,7 +351,7 @@ do_depmod()
     if [[ -f $install_tree/$1/modules.dep && ! -s $install_tree/$1/modules.dep ]]; then
         # if modules.dep is empty, we just removed the last kernel module from
         # no longer installed kernel $1, so do not leave stale depmod files around
-        rm -fv $install_tree/$1/modules.{alias,dep,devname,softdep,symbols,*.bin}
+        rm -fv $install_tree/$1/modules.{alias,dep,devname,softdep,symbols,weakdep,*.bin}
         rmdir --ignore-fail-on-non-empty $install_tree/$1
         [[ -d $install_tree/$1 ]] || echo $"removed directory $install_tree/$1"
     fi
