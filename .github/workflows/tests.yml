@@ -15,14 +15,14 @@ jobs:
         distro:
           - {name: "almalinux", tag: "9"}
           - {name: "almalinux", tag: "8"}
+          - {name: "alpine", tag: "3.20", variant: "-lts"}
+          - {name: "alpine", tag: "3.20", variant: "-virt"}
           - {name: "alpine", tag: "3.19", variant: "-lts"}
           - {name: "alpine", tag: "3.19", variant: "-virt"}
           - {name: "alpine", tag: "3.18", variant: "-lts"}
           - {name: "alpine", tag: "3.18", variant: "-virt"}
           - {name: "alpine", tag: "3.17", variant: "-lts"}
           - {name: "alpine", tag: "3.17", variant: "-virt"}
-          - {name: "alpine", tag: "3.16", variant: "-lts"}
-          - {name: "alpine", tag: "3.16", variant: "-virt"}
           - {name: "archlinux", tag: "latest"}
           - {name: "archlinux", tag: "latest", variant: "-lts"}
           - {name: "archlinux", tag: "latest", variant: "-zen"}
@@ -134,7 +134,7 @@ jobs:
         done
 
         if [ "${{ matrix.distro.name }}" = alpine ] && [ "${{ matrix.distro.variant }}" = "-lts" ]; then
-            if [ "${{ matrix.distro.tag}}" = "3.16" ] || [ "${{ matrix.distro.tag }}" = "3.17" ]; then
+            if [ "${{ matrix.distro.tag }}" = "3.17" ]; then
                 ./run_test.sh --no-signing-tool
             else
                 ./run_test.sh
