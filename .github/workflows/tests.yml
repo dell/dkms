@@ -32,8 +32,8 @@ jobs:
           - {name: "debian", tag: "12"}
           - {name: "debian", tag: "11"}
           - {name: "debian", tag: "10"}
+          - {name: "fedora/fedora", tag: "40", url: "quay.io/"}
           - {name: "fedora/fedora", tag: "39", url: "quay.io/"}
-          - {name: "fedora/fedora", tag: "38", url: "quay.io/"}
           - {name: "gentoo/stage3", tag: "latest"}
           - {name: "opensuse/tumbleweed", tag: "latest", variant: "-default", url: "registry.opensuse.org/"}
           - {name: "opensuse/leap", tag: "15.5", variant: "-default", url: "registry.opensuse.org/"}
