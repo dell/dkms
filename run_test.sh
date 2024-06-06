@@ -195,6 +195,9 @@ generalize_expected_output() {
     # Apport related error that can occur in the CI. Drop from the output to be more generic
     sed -i "/^python3: can't open file '\/usr\/share\/apport\/package-hooks\/dkms_packages.py'\: \[Errno 2\] No such file or directory$/d" ${output_log}
     sed -i "/^ERROR (dkms apport): /d" ${output_log}
+
+    # Swap any CC/LD/... flags (if set) with a placeholder message
+    sed -i "s|\(make -j1 KERNELRELEASE=${KERNEL_VER} all\).*|\1 <omitting possibly set CC/LD/... flags>|" ${output_log}
 }
 
 run_with_expected_output() {
@@ -1425,7 +1428,7 @@ Building module:
 Cleaning build area...
 Building module(s)...(bad exit status: 2)
 Failed command:
-make -j1 KERNELRELEASE=${KERNEL_VER} all
+make -j1 KERNELRELEASE=${KERNEL_VER} all <omitting possibly set CC/LD/... flags>
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
 dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} failed for dkms_failing_test(10)
@@ -1444,7 +1447,7 @@ Building module:
 Cleaning build area...
 Building module(s)...(bad exit status: 2)
 Failed command:
-make -j1 KERNELRELEASE=${KERNEL_VER} all
+make -j1 KERNELRELEASE=${KERNEL_VER} all <omitting possibly set CC/LD/... flags>
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
 dkms autoinstall on ${KERNEL_VER}/${KERNEL_ARCH} failed for dkms_failing_test(10)
@@ -1593,7 +1596,7 @@ Building module:
 Cleaning build area...
 Building module(s)...(bad exit status: 2)
 Failed command:
-make -j1 KERNELRELEASE=${KERNEL_VER} all
+make -j1 KERNELRELEASE=${KERNEL_VER} all <omitting possibly set CC/LD/... flags>
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
 
