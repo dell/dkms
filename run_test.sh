@@ -59,6 +59,12 @@ TEST_TMPFILES=(
     "test_cmd_expected_output.log"
 )
 
+# Reportedly in some cases the entries in the modinfo output are ordered
+# differently. Fetch whatever we need and sort them.
+modinfo_quad() {
+    modinfo $1 | grep -E "^description:|^filename:|^license:|^version:" | sort
+}
+
 SIGNING_MESSAGE=""
 declare -i NO_SIGNING_TOOL
 if [ "$#" = 1 ] && [ "$1" = "--no-signing-tool" ]; then
@@ -494,11 +500,11 @@ dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 echo 'Checking modinfo'
-run_with_expected_output sh -c "modinfo /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext} | head -n 4" << EOF
-filename:       /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
-version:        1.0
+run_with_expected_output sh -c "$(declare -f modinfo_quad); modinfo_quad /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" << EOF
 description:    A Simple dkms test module
+filename:       /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 license:        GPL
+version:        1.0
 EOF
 
 if (( NO_SIGNING_TOOL == 0 )); then
@@ -619,11 +625,11 @@ if ! [[ -f "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_co
 fi
 
 echo 'Checking modinfo'
-run_with_expected_output sh -c "modinfo /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext} | head -n 4" << EOF
-filename:       /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
-version:        1.0
+run_with_expected_output sh -c "$(declare -f modinfo_quad); modinfo_quad /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" << EOF
 description:    A Simple dkms test module
+filename:       /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 license:        GPL
+version:        1.0
 EOF
 
 if (( NO_SIGNING_TOOL == 0 )); then
