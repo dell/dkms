@@ -657,17 +657,11 @@ read_conf()
     # Check if clang was used to compile or lld was used to link the kernel.
     if [[ -e $kernel_source_dir/vmlinux ]]; then
       if  readelf -p .comment $kernel_source_dir/vmlinux | grep -q clang; then
-        make_command="${make_command} CC=clang"
-      fi
-      if  readelf -p .comment $kernel_source_dir/vmlinux | grep -q LLD; then
-        make_command="${make_command} LD=ld.lld"
+        make_command="${make_command} LLVM=1"
       fi
     elif [[ -e "${kernel_config}" ]]; then
       if grep -q CONFIG_CC_IS_CLANG=y "${kernel_config}"; then
-        make_command="${make_command} CC=clang"
-      fi
-      if grep -q CONFIG_LD_IS_LLD=y "${kernel_config}"; then
-        make_command="${make_command} LD=ld.lld"
+        make_command="${make_command} LLVM=1"
       fi
     fi
 
@@ -1206,7 +1200,11 @@ actual_build()
         built_module="$the_module$module_uncompressed_suffix"
         compressed_module="$the_module$module_suffix"
 
-        [[ ${strip[$count]} != no ]] && strip -g "$built_module"
+        if [[ ${strip[$count]} != no ]] && [[ ${CC} == "clang" ]]; then
+            llvm-strip -g "$built_module"
+        elif [[ ${strip[$count]} != no ]]; then
+            strip -g "$built_module"
+        fi
 
         if (( do_signing )); then
             echo "Signing module $built_module"
