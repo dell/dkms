@@ -162,7 +162,7 @@ run_status_with_expected_output() {
     rm test_cmd_expected_output.log test_cmd_output.log
 }
 
-genericize_expected_output() {
+generalize_expected_output() {
     local output_log=$1
 
     # "depmod..." lines can have multiple points. Replace them, to be able to compare
@@ -217,7 +217,7 @@ run_with_expected_error() {
         rm ${expected_output_log} ${output_log}
         return 1
     fi
-    genericize_expected_output ${output_log} ${dkms_command}
+    generalize_expected_output ${output_log} ${dkms_command}
     if ! diff -U3 ${expected_output_log} ${output_log} ; then
         echo >&2 "Error: unexpected output from: $*"
         rm ${expected_output_log} ${output_log}
