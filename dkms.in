@@ -113,7 +113,7 @@ invoke_command()
         # Print the failing command without the clunky redirection
         [[ ! $verbose ]] && echo -en "\nFailed command:\n$1"
     fi
-    echo -en "\n"
+    echo " done."
     return $exitval
 }
 
