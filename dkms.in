@@ -1118,7 +1118,6 @@ actual_build()
     local -r build_log="$build_dir/make.log"
 
     echo $""
-    echo $"Building module:"
 
     invoke_command "$clean" "Cleaning build area" '' background
     echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$build_log"
