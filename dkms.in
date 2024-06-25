@@ -166,7 +166,7 @@ show_usage()
 {
     echo $"Usage: $0 [action] [options]"
     echo $"  [action]  = { add | remove | build | unbuild | install | uninstall | match |"
-    echo $"               autoinstall | mktarball | ldtarball | status }"
+    echo $"               autoinstall | mktarball | ldtarball | status | generate_mok }"
     echo $"  [options] = [-m module] [-v module-version] [-k kernel-version] [-a arch]"
     echo $"              [-c dkms.conf-location] [-q] [--force] [--force-version-override] [--all]"
     echo $"              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
@@ -923,48 +923,8 @@ prepare_kernel()
     }
 }
 
-prepare_signing()
+prepare_mok()
 {
-    do_signing=0
-
-    if [[ ! -f ${kernel_config} ]]; then
-        echo "Kernel config ${kernel_config} not found, modules won't be signed"
-        return
-    fi
-
-    if ! grep -q "^CONFIG_MODULE_SIG_HASH=" "${kernel_config}"; then
-        echo "The kernel is built without module signing facility, modules won't be signed"
-        return
-    fi
-
-    sign_hash=$(grep "^CONFIG_MODULE_SIG_HASH=" "${kernel_config}" | cut -f2 -d= | sed 's/"//g')
-
-    # Lazy source in signing related configuration
-    read_framework_conf $dkms_framework_signing_variables
-
-    if [[ ! ${sign_file} ]]; then
-        case "$running_distribution" in
-            debian* )
-                sign_file="/usr/lib/linux-kbuild-${kernelver%.*}/scripts/sign-file"
-                ;;
-            ubuntu* )
-                sign_file="$(command -v kmodsign)"
-                if [[ ! -x "${sign_file}" ]]; then
-                    sign_file="/usr/src/linux-headers-$kernelver/scripts/sign-file"
-                fi
-                ;;
-        esac
-        if [[ ! -f ${sign_file} ]]; then
-            sign_file="$install_tree/$kernelver/build/scripts/sign-file"
-        fi
-    fi
-    echo "Sign command: $sign_file"
-
-    if [[ ! -f ${sign_file} || ! -x ${sign_file} ]]; then
-        echo "Binary ${sign_file} not found, modules won't be signed"
-        return
-    fi
-
     if [[ -z "${mok_signing_key}" ]]; then
         # No custom key specified, use the default key created by update-secureboot-policy for Ubuntu
         # Debian's update-secureboot-policy has no --new-key option
@@ -1021,6 +981,48 @@ prepare_signing()
         echo "Certificate file ${mok_certificate} not found and can't be generated, modules won't be signed"
         return
     fi
+}
+
+prepare_signing()
+{
+    do_signing=0
+
+    if [[ ! -f ${kernel_config} ]]; then
+        echo "Kernel config ${kernel_config} not found, modules won't be signed"
+        return
+    fi
+
+    if ! grep -q "^CONFIG_MODULE_SIG_HASH=" "${kernel_config}"; then
+        echo "The kernel is built without module signing facility, modules won't be signed"
+        return
+    fi
+
+    sign_hash=$(grep "^CONFIG_MODULE_SIG_HASH=" "${kernel_config}" | cut -f2 -d= | sed 's/"//g')
+
+    if [[ ! ${sign_file} ]]; then
+        case "$running_distribution" in
+            debian* )
+                sign_file="/usr/lib/linux-kbuild-${kernelver%.*}/scripts/sign-file"
+                ;;
+            ubuntu* )
+                sign_file="$(command -v kmodsign)"
+                if [[ ! -x "${sign_file}" ]]; then
+                    sign_file="/usr/src/linux-headers-$kernelver/scripts/sign-file"
+                fi
+                ;;
+        esac
+        if [[ ! -f ${sign_file} ]]; then
+            sign_file="$install_tree/$kernelver/build/scripts/sign-file"
+        fi
+    fi
+    echo "Sign command: $sign_file"
+
+    if [[ ! -f ${sign_file} || ! -x ${sign_file} ]]; then
+        echo "Binary ${sign_file} not found, modules won't be signed"
+        return
+    fi
+
+    prepare_mok
 
     do_signing=1
 }
@@ -1191,6 +1193,8 @@ do_build()
 {
     set_kernel_source_dir_and_kconfig "$kernelver"
     prepare_kernel "$kernelver" "$arch"
+    # Lazy source in signing related configuration
+    read_framework_conf $dkms_framework_signing_variables
     prepare_signing
     prepare_build
     actual_build
@@ -2452,7 +2456,7 @@ die_is_fatal="yes"
 [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 no_depmod=""
 
-action_re='^(remove|(auto|un)?install|match|mktarball|(un)?build|add|status|ldtarball)$'
+action_re='^(remove|(auto|un)?install|match|mktarball|(un)?build|add|status|ldtarball|generate_mok)$'
 
 # Parse command line arguments
 while (($# > 0)); do
@@ -2662,6 +2666,10 @@ ldtarball) # Make sure they're root if we're using --force
         die 1 $"You must be root to use this command with the --force option."
     fi
     load_tarball && add_module
+    ;;
+generate_mok)
+    read_framework_conf $dkms_framework_signing_variables
+    prepare_mok
     ;;
 *)
     error $"Unknown action specified: \"$action\""
