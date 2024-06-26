@@ -1,7 +1,11 @@
 /dist
 dkms
 dkms.8
-dkms_autoinstaller
 dkms.service
 kernel_install.d_dkms
 kernel_postinst.d_dkms
+dkms.bash-completion
+dkms.zsh-completion
+dkms_common.postinst
+dkms_framework.conf
+kernel_prerm.d_dkms
