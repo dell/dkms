@@ -243,7 +243,6 @@ action may be used to re-add the module/version combination to dkms.
 .YS
 .IP "" 4
 Attempt to install the latest revision of all modules that have been installed for other kernel revisions.
-dkms_autoinstaller is a stub that uses this action to perform its work.
 .SH OPTIONS
 .TP
 .B \-m <module>/<module\-version>
@@ -643,12 +642,7 @@ to be applied to before building that module.
 .B AUTOINSTALL=
 If this directive is set to
 .B yes
-then the service
-.I /etc/rc.d/init.d/dkms_autoinstaller
-will automatically try to install this module on any kernel you boot into. See the section
-on
-.B dkms_autoinstaller
-for more information.
+then the service will automatically try to install this module on any kernel you boot into.
 .TP
 .B BUILD_DEPENDS[#]=
 This optional directive is an array that allows you to specify other modules as
@@ -813,14 +807,6 @@ can also be a "pkcs11:..." string for PKCS#11 engine, as long as the sign_file p
 .TP
 .B $modprobe_on_install
 Automatically load the built modules upon successful installation.
-.SH dkms_autoinstaller
-This boot\-time service automatically installs any module which has
-.B AUTOINSTALL="yes"
-set in its
-.B dkms.conf
-file. The service works quite simply and if multiple versions of a module are in
-your system's DKMS tree, it will not do anything and instead explain that manual
-intervention is required.
 .SH AUTHOR
 Gary Lerhaupt, Emil Velikov, Simone Caronni, Xu Zhen
 .SH WEBPAGE

@@ -31,7 +31,6 @@ SED_SUBSTITUTIONS	 = \
 all: \
 	dkms \
 	dkms.8 \
-	dkms_autoinstaller \
 	dkms.bash-completion \
 	dkms.zsh-completion \
 	dkms_common.postinst \
@@ -45,7 +44,6 @@ clean:
 	-rm -rf dist/
 	-rm -rf dkms
 	-rm -rf dkms.8
-	-rm -rf dkms_autoinstaller
 	-rm -rf dkms.bash-completion
 	-rm -rf dkms.zsh-completion
 	-rm -rf dkms_common.postinst
@@ -65,7 +63,6 @@ ifneq (,$(DESTDIR))
 endif
 	install -D -m 0755 dkms $(DESTDIR)$(SBIN)/dkms
 	install -D -m 0755 dkms_common.postinst $(DESTDIR)$(LIBDIR)/common.postinst
-	install -D -m 0755 dkms_autoinstaller $(DESTDIR)$(LIBDIR)/dkms_autoinstaller
 	$(if $(strip $(ETC)),$(error Setting ETC is not supported))
 	install -D -m 0644 dkms_framework.conf $(DESTDIR)/etc/dkms/framework.conf
 	install -d -m 0755 $(DESTDIR)/etc/dkms/framework.conf.d

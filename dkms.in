@@ -2251,10 +2251,6 @@ add_source_tree() {
     cp -fr "$from"/* "$source_tree/$module-$module_version"
 }
 
-# This code used to be in dkms_autoinstaller.
-# Moving it into the main dkms script gets rid of a fair amount of duplicate
-# functionality, and makes it much easier to reinstall DKMS kernel modules
-# by hand if dkms_autoinstaller is not used.
 autoinstall() {
     local status mv mvka m v k a
     local progress next_depends
