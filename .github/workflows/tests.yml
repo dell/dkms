@@ -27,7 +27,6 @@ jobs:
           - {name: "archlinux", tag: "latest", variant: "-lts"}
           - {name: "archlinux", tag: "latest", variant: "-zen"}
           - {name: "centos/centos", tag: "stream9", url: "quay.io/"}
-          - {name: "centos", tag: "7"}
           - {name: "debian", tag: "testing"}
           - {name: "debian", tag: "12"}
           - {name: "debian", tag: "11"}
@@ -41,7 +40,6 @@ jobs:
           - {name: "ubuntu", tag: "23.10"}
           - {name: "ubuntu", tag: "22.04"}
           - {name: "ubuntu", tag: "20.04"}
-          - {name: "ubuntu", tag: "18.04"}
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.distro.url }}${{ matrix.distro.name }}:${{ matrix.distro.tag }}
