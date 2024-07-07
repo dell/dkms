@@ -102,7 +102,9 @@ jobs:
         apt-get install -qy gcc make linux-headers-generic linux-image-generic openssl shim-signed
 
     - name: Install dkms
-      run: make install
+      run: |
+        sed -i -e '/echo -en "."/d' dkms.in
+        make install
 
     - name: Run tests
       run: |
@@ -163,7 +165,9 @@ jobs:
         sudo apt-get install -qqy make
 
     - name: Install dkms
-      run: sudo make install
+      run: |
+        sed -i -e '/echo -en "."/d' dkms.in
+        sudo make install
 
     - name: Run tests
       run: sudo ./run_test.sh

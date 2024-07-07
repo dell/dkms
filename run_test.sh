@@ -165,8 +165,6 @@ run_status_with_expected_output() {
 generalize_expected_output() {
     local output_log=$1
 
-    # "depmod..." lines can have multiple points. Replace them, to be able to compare
-    sed -i 's/\([^.]\)\.\.\.\.*$/\1.../' ${output_log}
     # On CentOS, weak-modules is executed. Drop it from the output, to be more generic
     sed -i '/^Adding any weak-modules$/d' ${output_log}
     sed -i '/^Removing any linked weak-modules$/d' ${output_log}
