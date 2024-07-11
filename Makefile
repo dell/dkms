@@ -11,6 +11,7 @@ SBIN = /usr/sbin
 LIBDIR = /usr/lib/dkms
 MODDIR = /lib/modules
 KCONF = /etc/kernel
+KINSTALL = /usr/lib/kernel/install.d
 SYSTEMD = /usr/lib/systemd/system
 
 #Define the top-level build directory
@@ -73,7 +74,7 @@ endif
 	install -D -m 0644 dkms.bash-completion $(DESTDIR)/usr/share/bash-completion/completions/dkms
 	install -D -m 0644 dkms.zsh-completion $(DESTDIR)/usr/share/zsh/site-functions/_dkms
 	install -D -m 0644 dkms.8 $(DESTDIR)/usr/share/man/man8/dkms.8
-	install -D -m 0755 kernel_install.d_dkms $(DESTDIR)$(KCONF)/install.d/40-dkms.install
+	install -D -m 0755 kernel_install.d_dkms $(DESTDIR)$(KINSTALL)/40-dkms.install
 	install -D -m 0755 kernel_postinst.d_dkms $(DESTDIR)$(KCONF)/postinst.d/dkms
 	install -D -m 0755 kernel_prerm.d_dkms $(DESTDIR)$(KCONF)/prerm.d/dkms
 
