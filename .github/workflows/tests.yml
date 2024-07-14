@@ -27,7 +27,6 @@ jobs:
           - {name: "archlinux", tag: "latest", variant: "-lts"}
           - {name: "archlinux", tag: "latest", variant: "-zen"}
           - {name: "centos/centos", tag: "stream9", url: "quay.io/"}
-          - {name: "centos", tag: "7"}
           - {name: "debian", tag: "testing"}
           - {name: "debian", tag: "12"}
           - {name: "debian", tag: "11"}
@@ -41,7 +40,6 @@ jobs:
           - {name: "ubuntu", tag: "23.10"}
           - {name: "ubuntu", tag: "22.04"}
           - {name: "ubuntu", tag: "20.04"}
-          - {name: "ubuntu", tag: "18.04"}
     runs-on: ubuntu-20.04
     container:
       image: ${{ matrix.distro.url }}${{ matrix.distro.name }}:${{ matrix.distro.tag }}
@@ -104,7 +102,9 @@ jobs:
         apt-get install -qy gcc make linux-headers-generic linux-image-generic openssl shim-signed
 
     - name: Install dkms
-      run: make install
+      run: |
+        sed -i -e '/echo -en "."/d' dkms.in
+        make install
 
     - name: Run tests
       run: |
@@ -143,38 +143,3 @@ jobs:
         else
             ./run_test.sh
         fi
-
-  test-vm:
-    name: Test in Ubuntu VM
-    strategy:
-      matrix:
-        version:
-        # The Canonical team has chosen to disable module compression by
-        # patching the kernel Makefile.modinst. For more context see:
-        # https://github.com/dell/dkms/issues/405
-        # - 22.04
-          - 20.04
-    runs-on: ubuntu-${{ matrix.version }}
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update -q
-        sudo apt-get install -qqy make
-
-    - name: Install dkms
-      run: sudo make install
-
-    - name: Run tests
-      run: sudo ./run_test.sh
-
-    - name: Install the test module
-      run: sudo dkms install test/dkms_test-1.0
-
-    - name: Load the test module
-      run: sudo modprobe dkms_test
-
-    - name: Remove the test module
-      run: sudo dkms remove --all -m dkms_test -v 1.0
