@@ -17,6 +17,7 @@ subcmds=(
   'mktarball:tar up files in the DKMS tree for a specific module'
   'ldtarball:extract a tarball created with mktarball into the DKMS tree'
   'status:display the current status of modules, versions and kernels within the tree'
+  'generate_mok:generate the MOK keys outside of the first build'
 )
 
 args=(
@@ -110,6 +111,9 @@ case $cmd in
     args+=(
       '3:rpm file:_files -g "*.rpm(-.)"'
     )
+  ;;
+  generate_mok)
+    args=()
   ;;
 esac
 

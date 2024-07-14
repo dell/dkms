@@ -244,6 +244,13 @@ action may be used to re-add the module/version combination to dkms.
 .IP "" 4
 Attempt to install the latest revision of all modules that have been installed for other kernel revisions.
 dkms_autoinstaller is a stub that uses this action to perform its work.
+.SY generate_mok
+.YS
+.IP "" 4
+Command to be issued standalone to generate Secure Boot keys. Required only if prior manipulation of the keys is needed,
+otherwise the keys are automatically generated on the first build attempt of a DKMS module.
+
+No additional arguments are parsed.
 .SH OPTIONS
 .TP
 .B \-m <module>/<module\-version>

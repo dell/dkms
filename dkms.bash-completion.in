@@ -30,7 +30,7 @@ _dkms()
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "add remove build unbuild install uninstall autoinstall \
-			match mktarball ldtarball \
+			match mktarball ldtarball generate_mok \
 			status" -- $cur ) )
 	else
 		prev=${COMP_WORDS[COMP_CWORD-1]}
@@ -113,7 +113,10 @@ _dkms()
 					;;
 				status)
 					options=''
-				;;
+				    ;;
+				generate_mok)
+					options=''
+				    ;;
 			esac
 
 			options="$options -m -v -k -a --arch -q --quiet -V \
