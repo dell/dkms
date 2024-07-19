@@ -43,7 +43,7 @@ readonly dkms_conf_variables="CLEAN PACKAGE_NAME
 # All of the variables not related to signing we will accept from framework.conf.
 readonly dkms_framework_nonsigning_variables="source_tree dkms_tree install_tree tmp_location
    verbose symlink_modules autoinstall_all_kernels
-   modprobe_on_install"
+   modprobe_on_install parallel_jobs"
 # All of the signing related variables we will accept from framework.conf.
 readonly dkms_framework_signing_variables="sign_file mok_signing_key mok_certificate"
 

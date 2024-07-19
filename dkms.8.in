@@ -813,6 +813,9 @@ can also be a "pkcs11:..." string for PKCS#11 engine, as long as the sign_file p
 .TP
 .B $modprobe_on_install
 Automatically load the built modules upon successful installation.
+.TP
+.B $parallel_jobs
+Run no more than this number of jobs in parallel.
 .SH dkms_autoinstaller
 This boot\-time service automatically installs any module which has
 .B AUTOINSTALL="yes"
