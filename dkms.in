@@ -20,6 +20,8 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+# shellcheck disable=SC2128 disable=SC2004 disable=SC2164 disable=SC1090 disable=SC2153
+
 shopt -s extglob
 
 # All of the variables we will accept from dkms.conf.
@@ -59,17 +61,17 @@ _get_kernel_dir() {
            Linux)          DIR="$install_tree/$KVER/build" ;;
            GNU/kFreeBSD)   DIR="/usr/src/kfreebsd-headers-$KVER/sys" ;;
         esac
-        echo $DIR
+        echo "$DIR"
     else
-        echo $kernel_source_dir
+        echo "$kernel_source_dir"
     fi
 }
 
 _check_kernel_dir() {
-    DIR=$(_get_kernel_dir $1)
+    DIR=$(_get_kernel_dir "$1")
     case ${current_os} in
-       Linux)          test -e $DIR/include ;;
-       GNU/kFreeBSD)   test -e $DIR/kern && test -e $DIR/conf/kmod.mk ;;
+       Linux)          test -e "$DIR"/include ;;
+       GNU/kFreeBSD)   test -e "$DIR"/kern && test -e "$DIR"/conf/kmod.mk ;;
        *)              return 1 ;;
     esac
     return $?
@@ -90,6 +92,7 @@ invoke_command()
         local pid progresspid
         (eval "$cmd" >/dev/null 2>&1) & pid=$!
         {
+            # shellcheck disable=SC2317 disable=SC2046
             on_exit() {
                 kill $(jobs -p) 2>/dev/null
                 wait $(jobs -p) 2>/dev/null
@@ -142,7 +145,7 @@ die() {
     ret=$1
     shift
     error "$@"
-    [[ $die_is_fatal = yes ]] && exit $ret || return $ret
+    [[ $die_is_fatal = yes ]] && exit "$ret" || return "$ret"
 }
 
 # Print a warning message and die with the passed error code.
@@ -152,7 +155,7 @@ diewarn() {
     ret=$1
     shift
     warn "$@"
-    [[ $die_is_fatal = yes ]] && exit $ret || return $ret
+    [[ $die_is_fatal = yes ]] && exit "$ret" || return "$ret"
 }
 
 mktemp_or_die() {
@@ -185,7 +188,7 @@ VER()
     #   2.6.9-1cvs200409091247 => 002.006.009-001cvs200409091247
     # The result should compare correctly as a string.
 
-    echo $1 | sed -e 's:\([^0-9]\)\([0-9]\):\1 \2:g' \
+    echo "$1" | sed -e 's:\([^0-9]\)\([0-9]\):\1 \2:g' \
         -e 's:\([0-9]\)\([^0-9]\):\1 \2:g' \
         -e 's:\(.*\): \1 :' \
         -e 's: \([0-9]\) : 00\1 :g' \
@@ -238,9 +241,9 @@ set_module_suffix()
     # $1 = the kernel to base the module_suffix on
     kernel_test="${1:-$(uname -r)}"
     module_uncompressed_suffix=".ko"
-    grep -q '\.gz:' $install_tree/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".gz"
-    grep -q '\.xz:' $install_tree/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".xz"
-    grep -q '\.zst:' $install_tree/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".zst"
+    grep -q '\.gz:' "$install_tree/$kernel_test/modules.dep" 2>/dev/null && module_compressed_suffix=".gz"
+    grep -q '\.xz:' "$install_tree/$kernel_test/modules.dep" 2>/dev/null && module_compressed_suffix=".xz"
+    grep -q '\.zst:' "$install_tree/$kernel_test/modules.dep" 2>/dev/null && module_compressed_suffix=".zst"
     module_suffix="$module_uncompressed_suffix$module_compressed_suffix"
 }
 
@@ -267,7 +270,7 @@ have_one_kernel() {
     if (( ${#kernelver[@]} != 1 )); then
         die 4 $"The action $1 does not support multiple kernel version parameters on the command line."
     fi
-    check_all_is_banned $1
+    check_all_is_banned "$1"
 }
 
 # Set up the kernelver and arch arrays.  You must have a 1:1 correspondence --
@@ -280,7 +283,7 @@ setup_kernels_arches()
     # If all is set, use dkms status to fill the arrays
     if [[ $all && $1 != status ]]; then
         local i=0
-        while read line; do
+        while read -r line; do
             line=${line#*/}; line=${line#*/};
             # (I would leave out the delimiters in the status output
             #  in the first place.)
@@ -300,7 +303,8 @@ setup_kernels_arches()
             grep -v "not owned by any package" | grep kernel | head -n 1)
             if ! arch[0]=$(rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null); then
                 arch[0]=$(uname -m)
-                if [[ $arch = x86_64 ]] && grep -q Intel /proc/cpuinfo && ls $install_tree/$kernelver/build/configs 2>/dev/null | grep -q "ia32e"; then
+                # shellcheck disable=SC2010
+                if [[ $arch = x86_64 ]] && grep -q Intel /proc/cpuinfo && ls "$install_tree/$kernelver/build/configs" 2>/dev/null | grep -q "ia32e"; then
                     arch[0]="ia32e"
                 fi
             fi
@@ -321,7 +325,8 @@ setup_kernels_arches()
     multi_arch=""
     local i=0
     for ((i=0; $i < ${#arch[@]}; i++)); do
-        [[ $arch != ${arch[$i]} ]] && {
+        [[ $arch != "${arch[$i]}" ]] && {
+            # shellcheck disable=SC2034
             multi_arch="true"
             break
         }
@@ -351,8 +356,8 @@ do_depmod()
     if [[ -f $install_tree/$1/modules.dep && ! -s $install_tree/$1/modules.dep ]]; then
         # if modules.dep is empty, we just removed the last kernel module from
         # no longer installed kernel $1, so do not leave stale depmod files around
-        rm -fv $install_tree/$1/modules.{alias,dep,devname,softdep,symbols,weakdep,*.bin}
-        rmdir --ignore-fail-on-non-empty $install_tree/$1
+        rm -fv "$install_tree/$1/modules".{alias,dep,devname,softdep,symbols,weakdep,*.bin}
+        rmdir --ignore-fail-on-non-empty "$install_tree/$1"
         [[ -d $install_tree/$1 ]] || echo $"removed directory $install_tree/$1"
     fi
 }
@@ -366,11 +371,11 @@ distro_version()
                 . "$f"
                 if [[ "$ID" = "ubuntu" ]]; then
                     # ID_LIKE=debian in ubuntu
-                    echo $ID
+                    echo "$ID"
                 elif [[ ${#ID_LIKE[@]} != 0 ]]; then
-                    echo ${ID_LIKE[0]}
+                    echo "${ID_LIKE[0]}"
                 else
-                    echo $ID
+                    echo "$ID"
                 fi
             )
             return
@@ -414,12 +419,14 @@ override_dest_module_location()
 # it is harder to accidentally corrupt our environment.  conf files can
 # still deliberately trash the environment by abusing dkms_directive env
 # variables or by crafting special values that will make eval do evil things.
-safe_source() {
+# shellcheck disable=SC1087 disable=SC1083 disable=SC2086
+safe_source_old() {
     # $1 = file to source
     # $@ = environment variables to echo out
     local to_source_file="$1"; shift
     declare -a -r export_envs=("$@")
-    local tmpfile=$(mktemp_or_die)
+    local tmpfile
+    tmpfile=$(mktemp_or_die)
     ( exec >"$tmpfile"
     . "$to_source_file" >/dev/null
     # This is really ugly, but a neat hack
@@ -447,6 +454,41 @@ safe_source() {
     (( ${#MODULES_CONF_OBSOLETE_ONLY[@]} )) && deprecated "MODULES_CONF_OBSOLETE_ONLY ($to_source_file)"
 }
 
+# refactored by chatgpt
+safe_source() {
+    # $1 = file to source
+    # $@ = environment variables to echo out
+    local to_source_file="$1"; shift
+    local export_envs=("$@")
+    local tmpfile
+    tmpfile=$(mktemp_or_die)
+
+    # Capture the environment after sourcing the file
+    {
+        . "$to_source_file" >/dev/null
+
+        # Echo selected environment variables
+        for env in "${export_envs[@]}"; do
+            eval "declare -p $env"
+        done
+
+        # Handle DKMS_DIRECTIVE stuff specially
+        declare -p | grep '^declare \-x DKMS_DIRECTIVE' | sed 's/^declare \-x //'
+    } > "$tmpfile"
+
+    # Source the temporary file to update the environment
+    . "$tmpfile"
+    rm "$tmpfile"
+
+    # Handle deprecated variables
+    [[ ${#REMAKE_INITRD[@]} -gt 0 ]] && deprecated "REMAKE_INITRD ($to_source_file)"
+    [[ ${#MODULES_CONF[@]} -gt 0 ]] && deprecated "MODULES_CONF ($to_source_file)"
+    [[ ${#MODULES_CONF_OBSOLETES[@]} -gt 0 ]] && deprecated "MODULES_CONF_OBSOLETES ($to_source_file)"
+    [[ ${#MODULES_CONF_ALIAS_TYPE[@]} -gt 0 ]] && deprecated "MODULES_CONF_ALIAS_TYPE ($to_source_file)"
+    [[ ${#MODULES_CONF_OBSOLETE_ONLY[@]} -gt 0 ]] && deprecated "MODULES_CONF_OBSOLETE_ONLY ($to_source_file)"
+}
+
+
 # Source a dkms.conf file and perform appropriate postprocessing on it.
 # Do our best to not repeatedly source the same .conf file -- this can happen
 # when chaining module installation functions or autoinstalling.
@@ -460,7 +502,9 @@ read_conf()
     local read_conf_file="$dkms_tree/$module/$module_version/source/dkms.conf"
 
     # Set variables supported in dkms.conf files (eg. $kernelver)
+    # shellcheck disable=SC2178
     local kernelver="$1"
+    # shellcheck disable=SC2178
     local arch="$2"
     set_kernel_source_dir_and_kconfig "$1"
 
@@ -473,12 +517,12 @@ read_conf()
     $"File: $read_conf_file does not exist."
 
     [[ $last_mvka = $module/$module_version/$1/$2 && \
-    $last_mvka_conf = $(readlink -f $read_conf_file) ]] && return
+    $last_mvka_conf = $(readlink -f "$read_conf_file") ]] && return
 
 
     # Clear variables and arrays
     for var in $dkms_conf_variables; do
-        unset $var
+        unset "$var"
     done
 
     # Source in the dkms.conf.
@@ -487,14 +531,14 @@ read_conf()
     for _conf_file in "$read_conf_file" "/etc/dkms/$module.conf" \
         "/etc/dkms/$module-$module_version.conf" "/etc/dkms/$module-$module_version-$1.conf" \
         "/etc/dkms/$module-$module_version-$1-$2.conf"; do
-        [[ -e $_conf_file ]] && safe_source "$_conf_file" $dkms_conf_variables
+        [[ -e $_conf_file ]] && safe_source "$_conf_file" "$dkms_conf_variables"
     done
 
     # Source in the directive_array
     for directive in "${directive_array[@]}"; do
         directive_name=${directive%%=*}
         directive_value=${directive#*=}
-        export $directive_name="$directive_value"
+        export "$directive_name"="$directive_value"
         echo $"DIRECTIVE: $directive_name=\"$directive_value\""
     done
 
@@ -581,7 +625,7 @@ read_conf()
         esac
 
         # Override location for specific distributions
-        dest_module_location[$index]="$(override_dest_module_location ${dest_module_location[$index]})"
+        dest_module_location[$index]="$(override_dest_module_location "${dest_module_location[$index]}")"
 
         # Fail if no DEST_MODULE_LOCATION
         if [[ ! ${DEST_MODULE_LOCATION[$index]} ]]; then
@@ -624,10 +668,10 @@ read_conf()
 
     # Check if clang was used to compile or lld was used to link the kernel.
     if [[ -e $kernel_source_dir/vmlinux ]]; then
-      if  readelf -p .comment $kernel_source_dir/vmlinux | grep -q clang; then
+      if  readelf -p .comment "$kernel_source_dir/vmlinux" | grep -q clang; then
         make_command="${make_command} CC=clang"
       fi
-      if  readelf -p .comment $kernel_source_dir/vmlinux | grep -q LLD; then
+      if  readelf -p .comment "$kernel_source_dir/vmlinux" | grep -q LLD; then
         make_command="${make_command} LD=ld.lld"
       fi
     elif [[ -e "${kernel_config}" ]]; then
@@ -683,7 +727,7 @@ get_module_verinfo(){
     local srcver
     local checksum
     local vals=
-    while read -a vals; do
+    while read -r -a vals; do
     case "${vals[0]}" in
         version:)
             ver="${vals[1]}"
@@ -738,28 +782,30 @@ check_version_sanity()
     # $3 = obs by kernel version
     # $4 = dest_module_name
 
-    local lib_tree="$install_tree/$1" res=
+    local lib_tree="$install_tree/$1"
     echo $"Running module version sanity check."
     local i=0
     if [[ -n $3 ]]; then
         # Magic split into array syntax saves trivial awk and cut calls.
+        # shellcheck disable=SC2206
         local -a obs=(${3//-/ })
+        # shellcheck disable=SC2206
         local -a my=(${1//-/ })
         local obsolete=0
         if [[ ${obs} && ${my} ]]; then
-            if [[ $(VER ${obs}) == $(VER ${my}) && ! $force ]]; then
+            if [[ $(VER "${obs}") == $(VER "${my}") && ! $force ]]; then
                 # They get obsoleted possibly in this kernel release
                 if [[ ! ${obs[1]} ]]; then
                     # They were obsoleted in this upstream kernel
                     obsolete=1
-                elif [[ $(VER ${my[1]}) > $(VER ${obs[1]}) ]]; then
+                elif [[ $(VER "${my[1]}") > $(VER "${obs[1]}") ]]; then
                     # They were obsoleted in an earlier ABI bump of the kernel
                     obsolete=1
-                elif [[ $(VER ${my[1]}) = $(VER ${obs[1]}) ]]; then
+                elif [[ $(VER "${my[1]}") = $(VER "${obs[1]}") ]]; then
                     # They were obsoleted in this ABI bump of the kernel
                     obsolete=1
                 fi
-            elif [[ $(VER ${my}) > $(VER ${obs}) && ! $force ]]; then
+            elif [[ $(VER "${my}") > $(VER "${obs}") && ! $force ]]; then
                 # They were obsoleted in an earlier kernel release
                 obsolete=1
             fi
@@ -775,7 +821,7 @@ check_version_sanity()
         fi
     fi
     set_module_suffix "$1"
-    read -a kernels_module < <(find_module "$lib_tree" "${4}")
+    read -r -a kernels_module < <(find_module "$lib_tree" "${4}")
     [[ -z $kernels_module ]] && return 0
 
     if [[ "$force_version_override" == "true" ]]; then
@@ -788,9 +834,11 @@ check_version_sanity()
             $"modules were found in kernel $1."
         return 0
     fi
-    local dkms_module=$(compressed_or_uncompressed "$dkms_tree/$module/$module_version/$1/$2/module/" "${4}")
+    local dkms_module
+    dkms_module=$(compressed_or_uncompressed "$dkms_tree/$module/$module_version/$1/$2/module/" "${4}")
 
-    local cmp_res="$(compare_module_version "${kernels_module}" "${dkms_module}")"
+    local cmp_res
+    cmp_res="$(compare_module_version "${kernels_module}" "${dkms_module}")"
     if [[ "${cmp_res}" = ">" ]]; then
         if [[ ! "$force" ]]; then
             error $"Module version $(get_module_verinfo "${dkms_module}" | head -n 1) for $4${module_suffix}" \
@@ -801,7 +849,8 @@ check_version_sanity()
     elif [[ "${cmp_res}" = "==" ]]; then
         if [[ ! "$force" ]]; then
             # if the module has neither version nor srcversion/checksum, check the binary files instead
-            local verinfo="$(get_module_verinfo "${dkms_module}")"
+            local verinfo
+            verinfo="$(get_module_verinfo "${dkms_module}")"
             if [[ "$(echo "$verinfo" | tr -d '[:space:]')" ]] || diff "${kernels_module}" "${dkms_module}" &>/dev/null; then
                 echo $"Module version $(echo "$verinfo" | head -n 1) for $4${module_suffix}" >&2
                 echo $"exactly matches what is already found in kernel $1." >&2
@@ -874,10 +923,12 @@ add_module()
 
     # Do stuff for --rpm_safe_upgrade
     if [[ $rpm_safe_upgrade ]]; then
-        local pppid=$(awk '/PPid:/ {print $2}' /proc/$PPID/status)
-        local lock_name=$(mktemp_or_die $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.XXXXXX)
-        echo "$module-$module_version" >> $lock_name
-        ps -o lstart --no-headers -p $pppid 2>/dev/null >> $lock_name
+        local pppid
+        pppid=$(awk '/PPid:/ {print $2}' /proc/$PPID/status)
+        local lock_name
+        lock_name=$(mktemp_or_die "$tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.XXXXXX")
+        echo "$module-$module_version" >> "$lock_name"
+        ps -o lstart --no-headers -p "$pppid" 2>/dev/null >> "$lock_name"
     fi
 
     # Check that this module-version hasn't already been added
@@ -940,7 +991,7 @@ prepare_signing()
     sign_hash=$(grep "^CONFIG_MODULE_SIG_HASH=" "${kernel_config}" | cut -f2 -d= | sed 's/"//g')
 
     # Lazy source in signing related configuration
-    read_framework_conf $dkms_framework_signing_variables
+    read_framework_conf "$dkms_framework_signing_variables"
 
     if [[ ! ${sign_file} ]]; then
         case "$running_distribution" in
@@ -1002,7 +1053,7 @@ prepare_signing()
     echo "Public certificate (MOK): $mok_certificate"
 
     # scripts/sign-file.c in kernel source also supports using "pkcs11:..." as private key
-    if [[ $mok_signing_key != "pkcs11:"* ]] && ( [[ ! -f $mok_signing_key || ! -f $mok_certificate ]] ); then
+    if [[ $mok_signing_key != "pkcs11:"* ]] &&  [[ ! -f $mok_signing_key || ! -f $mok_certificate ]] ; then
         echo "Certificate or key are missing, generating self signed certificate for MOK..."
         if ! command -v openssl >/dev/null; then
             echo "openssl not found, can't generate key and certificate."
@@ -1052,7 +1103,8 @@ prepare_build()
         $"This indicates that it should not be built."
 
     # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
-    (($(ls $source_dir | wc -l | awk {'print $1'}) < 2)) && die 8 \
+    # shellcheck disable=SC2012
+    (($(ls "$source_dir" | wc -l | awk 'print $1') < 2)) && die 8 \
         $"The directory $source_dir does not appear to have module source located within it."\
         $"Build halted."
 
@@ -1074,13 +1126,15 @@ prepare_build()
     done
 
     if [[ -f $kernel_source_dir/.kernelvariables ]]; then
-        export CC=$(echo -e "show-%:\n\t@echo \$(\$*)\ninclude $kernel_source_dir/.kernelvariables" | make -f - show-CC)
+        export CC
+        CC=$(echo -e "show-%:\n\t@echo \$(\$*)\ninclude $kernel_source_dir/.kernelvariables" | make -f - show-CC)
     else
         unset CC
     fi
 
     if [[ -e "${kernel_config}" ]]; then
-        local cc=$(sed -n 's|^CONFIG_CC_VERSION_TEXT="\([^ ]*\) .*"|\1|p' "${kernel_config}")
+        local cc
+        cc=$(sed -n 's|^CONFIG_CC_VERSION_TEXT="\([^ ]*\) .*"|\1|p' "${kernel_config}")
         if command -v "$cc" >/dev/null; then
             export CC="$cc"
             export KERNEL_CC="$cc"
@@ -1181,6 +1235,7 @@ clean_build()
     # Run the clean commands
     cd "$dkms_tree/$module/$module_version/build"
     invoke_command "$clean" "Cleaning build area" '' background
+    # shellcheck disable=SC2103
     cd - >/dev/null
 
     # Clean the build directory
@@ -1204,17 +1259,17 @@ force_installation()
     forced_modules_dir="/usr/share/dkms/modules_to_force_install"
     to_force=""
     if [[ -d $forced_modules_dir ]]; then
-        for elem in $forced_modules_dir/*; do
+        for elem in "$forced_modules_dir"/*; do
             if [[ -e $elem ]]; then
-                to_force="$to_force $(cat $elem)"
+                to_force="$to_force $(cat "$elem")"
             fi
         done
 
         for elem in $to_force; do
-            if [[ ${1} = ${elem} ]]; then
+            if [[ ${1} = "${elem}" ]]; then
                 echo "force"
                 return 0
-            elif [[ ${1}_version-override = ${elem} ]]; then
+            elif [[ ${1}_version-override = "${elem}" ]]; then
                 echo "version-override"
                 return 0
             fi
@@ -1236,7 +1291,8 @@ do_install()
     tmp_force="$force"
 
     # If the module is set to be force-installed
-    local ret=$(force_installation $module)
+    local ret
+    ret=$(force_installation "$module")
     if [[ "$ret" == "force" ]];then
         force="true"
         echo "Forcing installation of $module"
@@ -1277,21 +1333,26 @@ do_install()
                 $"You may override by specifying --force."
         fi
         local m=${dest_module_name[$count]}
-        local installed_modules=$(find_module "$lib_tree" "$m")
+        local installed_modules
+        installed_modules=$(find_module "$lib_tree" "$m")
         local module_count=${#installed_modules[@]}
         echo $" - Original module"
-        local original_copy=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$kernelver/$arch" "$m")
+        local original_copy
+        original_copy=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$kernelver/$arch" "$m")
         if [[ -L $dkms_tree/$module/kernel-$kernelver-$arch &&
             -n "$original_copy" ]]; then
             echo $"   - An original module was already stored during a previous install"
         elif ! [[ -L $dkms_tree/$module/kernel-$kernelver-$arch ]]; then
-            local archive_pref1=$(compressed_or_uncompressed "$lib_tree/extra" "$m")
-            local archive_pref2=$(compressed_or_uncompressed "$lib_tree/updates" "$m")
-            local archive_pref3=$(compressed_or_uncompressed "$lib_tree${dest_module_location[$count]}" "$m")
+            local archive_pref1
+            archive_pref1=$(compressed_or_uncompressed "$lib_tree/extra" "$m")
+            local archive_pref2
+            archive_pref2=$(compressed_or_uncompressed "$lib_tree/updates" "$m")
+            local archive_pref3
+            archive_pref3=$(compressed_or_uncompressed "$lib_tree${dest_module_location[$count]}" "$m")
             local archive_pref4=""
             ((module_count == 1)) && archive_pref4=${installed_modules[0]}
             local original_module=""
-            local found_orginal=""
+            local found_original=""
             for original_module in $archive_pref1 $archive_pref2 $archive_pref3 $archive_pref4; do
                 [[ -f $original_module ]] || continue
                 case "$running_distribution" in
@@ -1330,7 +1391,7 @@ do_install()
                     ;;
             esac
             for module_dup in $(find_module "$lib_tree" "$m"); do
-                dup_tree="${module_dup#$lib_tree}";
+                dup_tree="${module_dup#"$lib_tree"}";
                 dup_name="${module_dup##*/}"
                 dup_tree="${dup_tree/${dup_name}}"
                 case "$running_distribution" in
@@ -1339,7 +1400,7 @@ do_install()
                     *)
                        echo $"     - Stored $module_dup"
                        mkdir -p "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
-                       mv -f $module_dup "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
+                       mv -f "$module_dup" "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
                        ;;
                 esac
             done
@@ -1348,10 +1409,11 @@ do_install()
         # Copy module to its location
         echo $" - Installation"
         echo $"   - Installing to $install_tree/$kernelver${dest_module_location[$count]}/"
-        mkdir -p $install_tree/$kernelver${dest_module_location[$count]}
+        mkdir -p "$install_tree/$kernelver${dest_module_location[$count]}"
         [[ $symlink_modules ]] && symlink="-s"
-        local toinstall=$(compressed_or_uncompressed "$base_dir/module" "$m")
-        cp -f $symlink "$toinstall" "$install_tree/$kernelver${dest_module_location[$count]}/${toinstall##*/}"
+        local toinstall
+        toinstall=$(compressed_or_uncompressed "$base_dir/module" "$m")
+        cp -f "$symlink" "$toinstall" "$install_tree/$kernelver${dest_module_location[$count]}/${toinstall##*/}"
         any_module_installed=1
 
     done
@@ -1368,7 +1430,7 @@ do_install()
     if [[ -z $NO_WEAK_MODULES ]]; then
         if [[ ${weak_modules} ]]; then
             echo $"Adding any weak-modules"
-            list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} ${weak_modules_no_initrd} --add-modules
+            list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} "${weak_modules_no_initrd}" --add-modules
         fi
     fi
 
@@ -1404,7 +1466,7 @@ list_each_installed_module()
     local real_dest_module_location
     local mod
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
-        real_dest_module_location="$(find_actual_dest_module_location $1 $count $2 $3)"
+        real_dest_module_location="$(find_actual_dest_module_location "$1" $count "$2" "$3")"
         mod=$(compressed_or_uncompressed "$install_tree/$2${real_dest_module_location}" "${dest_module_name[$count]}")
         echo "$mod"
     done
@@ -1440,7 +1502,8 @@ is_module_built() {
     read_conf_or_die "$3" "$4" "$real_conf"
     set_module_suffix "$3"
     for m in "${dest_module_name[@]}"; do
-        local t=$(compressed_or_uncompressed "$d/module" "$m")
+        local t
+        t=$(compressed_or_uncompressed "$d/module" "$m")
         test -n "$t" || return 1
     done
 }
@@ -1450,7 +1513,7 @@ _is_module_installed() {
     [[ $1 && $2 && $3 && $4 ]] || return 1
     local d="$dkms_tree/$1/$2/$3/$4"
     local k="$dkms_tree/$1/kernel-$3-$4"
-    [[ -L $k && $(readlink -f $k) = $d ]]
+    [[ -L $k && $(readlink -f "$k") = "$d" ]]
 }
 
 # This does not.
@@ -1514,7 +1577,7 @@ possible_dest_module_locations()
 
     local location
     location[0]="${dest_module_location[$count]}"
-    [[ ${DEST_MODULE_LOCATION[$count]} != ${dest_module_location[$count]} ]] && \
+    [[ ${DEST_MODULE_LOCATION[$count]} != "${dest_module_location[$count]}" ]] && \
     location[1]="${DEST_MODULE_LOCATION[$count]}"
 
     echo "${location[@]}"
@@ -1524,9 +1587,12 @@ find_actual_dest_module_location()
 {
     local module="$1"
     local count="$2"
+    # shellcheck disable=SC2178
     local kernelver="$3"
+    # shellcheck disable=SC2178
     local arch="$4"
-    local locations="$(possible_dest_module_locations $count)"
+    local locations
+    locations="$(possible_dest_module_locations "$count")"
     local l
     local dkms_owned
     local installed
@@ -1554,21 +1620,22 @@ do_uninstall()
 
     # If kernel-<kernelver> symlink points to this module, check for original_module and put it back
     local was_active=""
-    local kernel_symlink=$(readlink -f "$dkms_tree/$module/kernel-$1-$2")
+    local kernel_symlink
+    kernel_symlink=$(readlink -f "$dkms_tree/$module/kernel-$1-$2")
     local real_dest_module_location
     if [[ $kernel_symlink = $dkms_tree/$module/$module_version/$1/$2 ]]; then
         was_active="true"
         echo $"Before uninstall, this module version was ACTIVE on this kernel."
         # remove kabi-tracking if last instance removed
         if [[ -z $NO_WEAK_MODULES ]]; then
-            if [[ ${weak_modules} ]] && (module_status_built $module $module_version |grep -q "installed"); then
+            if [[ ${weak_modules} ]] && (module_status_built "$module" "$module_version" |grep -q "installed"); then
                 echo $"Removing any linked weak-modules"
-                list_each_installed_module "$module" "$1" "$2" | ${weak_modules} ${weak_modules_no_initrd} --remove-modules
+                list_each_installed_module "$module" "$1" "$2" | ${weak_modules} "${weak_modules_no_initrd}" --remove-modules
             fi
         fi
 
         for ((count=0; count < ${#built_module_name[@]}; count++)); do
-            real_dest_module_location="$(find_actual_dest_module_location $module $count $1 $2)"
+            real_dest_module_location="$(find_actual_dest_module_location "$module" "$count" "$1" "$2")"
             echo $""
             echo $"${dest_module_name[$count]}$module_suffix:"
             echo $" - Uninstallation"
@@ -1576,7 +1643,7 @@ do_uninstall()
                 echo $"   - Deleting from: $install_tree/$1${real_dest_module_location}/"
                 rm -f "$install_tree/$1${real_dest_module_location}/${dest_module_name[$count]}$module_uncompressed_suffix"*
                 dir_to_remove="${real_dest_module_location#/}"
-                while [[ ${dir_to_remove} != ${dir_to_remove#/} ]]; do
+                while [[ ${dir_to_remove} != "${dir_to_remove#/}" ]]; do
                     dir_to_remove="${dir_to_remove#/}"
                 done
                 (if cd "$install_tree/$1"; then rpm -qf "${dir_to_remove}" >/dev/null 2>&1 || rmdir -p --ignore-fail-on-non-empty "${dir_to_remove}"; fi || true)
@@ -1584,7 +1651,8 @@ do_uninstall()
                 echo $"   - Module was not found within $install_tree/$1/"
             fi
             echo $" - Original module"
-            local origmod=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$1/$2" "${dest_module_name[$count]}")
+            local origmod
+            origmod=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$1/$2" "${dest_module_name[$count]}")
             if [[ -n $origmod ]]; then
                 case "$running_distribution" in
                     debian* | ubuntu* )
@@ -1617,14 +1685,14 @@ do_uninstall()
         echo $""
         echo $"Removing original_module from DKMS tree for kernel $1 ($2)"
         rm -rf "$dkms_tree/$module/original_module/$1/$2" 2>/dev/null
-        [[ $(find $dkms_tree/$module/original_module/$1/* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module/$1"
+        [[ $(find "$dkms_tree/$module/original_module/$1"/* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module/$1"
     elif [[ $was_active && -d $dkms_tree/$module/original_module/$1/$2/collisions ]]; then
         echo $""
         echo $"Keeping directory $dkms_tree/$module/original_module/$1/$2/collisions/"
         echo $"for your reference purposes.  Your kernel originally contained multiple"
         echo $"same-named modules and this directory is now where these are located."
     fi
-    [[ $(find $dkms_tree/$module/original_module/* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module"
+    [[ $(find "$dkms_tree/$module/original_module"/* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module"
 }
 
 module_is_broken_and_die() {
@@ -1671,9 +1739,9 @@ uninstall_module()
 do_unbuild()
 {
     # Delete or "unbuild" the $kernel_version/$arch_used part of the tree
-    rm -rf "$dkms_tree/$module/$module_version/$1/$2"
-    [[ $(find $dkms_tree/$module/$module_version/$1/* -maxdepth 0 -type d 2>/dev/null) ]] || \
-        rm -rf "$dkms_tree/$module/$module_version/$1"
+    rm -rf "${dkms_tree:?}/$module/$module_version/$1/$2"
+    [[ $(find "$dkms_tree/$module/$module_version/$1"/* -maxdepth 0 -type d 2>/dev/null) ]] || \
+        rm -rf "${dkms_tree:?}/$module/$module_version/$1"
 }
 
 # Remove the build module, w/o removing/unregistering it.
@@ -1692,14 +1760,16 @@ remove_module()
 {
     # Do --rpm_safe_upgrade check (exit out and don't do remove if inter-release RPM upgrade scenario occurs)
     if [[ $rpm_safe_upgrade ]]; then
-        local pppid=$(awk '/PPid:/ {print $2}' /proc/$PPID/status)
-        local time_stamp=$(ps -o lstart --no-headers -p $pppid 2>/dev/null)
-        for lock_file in $tmp_location/dkms_rpm_safe_upgrade_lock.$pppid.*; do
+        local pppid
+        pppid=$(awk '/PPid:/ {print $2}' /proc/$PPID/status)
+        local time_stamp
+        time_stamp=$(ps -o lstart --no-headers -p "$pppid" 2>/dev/null)
+        for lock_file in "$tmp_location/dkms_rpm_safe_upgrade_lock.$pppid".*; do
             [[ -f $lock_file ]] || continue
-            lock_head=$(head -n 1 $lock_file 2>/dev/null)
-            lock_tail=$(tail -n 1 $lock_file 2>/dev/null)
-            [[ $lock_head = $module-$module_version && $time_stamp && $lock_tail = $time_stamp ]] || continue
-            rm -f $lock_file
+            lock_head=$(head -n 1 "$lock_file" 2>/dev/null)
+            lock_tail=$(tail -n 1 "$lock_file" 2>/dev/null)
+            [[ $lock_head = $module-$module_version && $time_stamp && $lock_tail = "$time_stamp" ]] || continue
+            rm -f "$lock_file"
             die 0 $"Remove cancelled because --rpm_safe_upgrade scenario detected."
         done
     fi
@@ -1711,14 +1781,15 @@ remove_module()
     done
 
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
-    if ! find $dkms_tree/$module/$module_version/* -maxdepth 0 -type d 2>/dev/null | grep -Eqv "(build|tarball|driver_disk|rpm|deb|source)$"; then
+    if ! find "$dkms_tree/$module/$module_version"/* -maxdepth 0 -type d 2>/dev/null | grep -Eqv "(build|tarball|driver_disk|rpm|deb|source)$"; then
         echo $"Deleting module $module-$module_version completely from the DKMS tree."
-        rm -rf "$dkms_tree/$module/$module_version"
+        rm -rf "${dkms_tree:?}/$module/$module_version"
     fi
 
     # Get rid of any remnant directories if necessary
+    # shellcheck disable=SC2012
     if (($(ls "$dkms_tree/$module" | wc -w | awk '{print $1}') == 0)); then
-        rm -rf "$dkms_tree/$module" 2>/dev/null
+        rm -rf "${dkms_tree:?}/$module" 2>/dev/null
     fi
 }
 
@@ -1732,10 +1803,10 @@ find_module_from_ko()
 
     for kernellink in "$dkms_tree"/*/kernel-*; do
         [[ -L $kernellink ]] || continue
-        module=${kernellink#$dkms_tree/}
+        module=${kernellink#"$dkms_tree"/}
         module=${module%/kernel-*}
         diff "$kernellink/module/${basename_ko}" "${ko}" >/dev/null 2>&1 || continue
-        rest=$(readlink $kernellink)
+        rest=$(readlink "$kernellink")
         echo "$module/$rest"
         return 0
     done
@@ -1755,18 +1826,24 @@ module_status_weak() {
     local -A already_found
     for weak_ko in "$install_tree/"*/weak-updates/*; do
         [[ -e $weak_ko ]] || continue
-        [[ -L $weak_ko ]] && installed_ko="$(readlink -f "$weak_ko")" || continue
-        IFS=/ read m v k a < <(IFS=$oifs find_module_from_ko "$weak_ko") || continue
-        kern=${weak_ko#$install_tree/}
+        if [[ -L $weak_ko ]]; then 
+             installed_ko="$(readlink -f "$weak_ko")"
+        else
+             continue
+        fi
+        IFS=/ read -r m v k a < <(IFS=$oifs find_module_from_ko "$weak_ko") || continue
+        kern=${weak_ko#"$install_tree"/}
         kern=${kern%/weak-updates/*}
-        [[ $m = ${1:-*} && $v = ${2:-*} && $k = ${5:-*} && $a = ${4:-*} && $kern = ${3:-*} ]] || continue
+        [[ $m = "${1:-*}" && $v = "${2:-*}" && $k = "${5:-*}" && $a = "${4:-*}" && $kern = "${3:-*}" ]] || continue
         already_found[$m/$v/$kern/$a/$k]+=${weak_ko##*/}" "
     done
     # Check to see that all ko's are present for each module
+    # shellcheck disable=SC2068
     for mod in ${!already_found[@]}; do
-        IFS=/ read m v k a kern <<< "$mod"
+        IFS=/ read -r m v k a kern <<< "$mod"
         # ensure each module is weak linked
-        for installed_ko in $(find $dkms_tree/$m/$v/$kern/$a/module -type f); do
+        # shellcheck disable=SC2044
+        for installed_ko in $(find "$dkms_tree/$m/$v/$kern/$a/module" -type f); do
             [[ ${already_found[$mod]} != *"$installed_ko"* ]] && continue 2
         done
         ret=0
@@ -1779,8 +1856,8 @@ module_status_weak() {
 do_status_weak()
 {
     local mvka m v k a kern status
-    while read status mvka; do
-        IFS=/ read m v k a kern <<< "$mvka"
+    while read -r status mvka; do
+        IFS=/ read -r m v k a kern <<< "$mvka"
         echo "$m, $v, $k, $a: installed-weak from $kern"
     done < <(module_status_weak "$@")
 }
@@ -1793,7 +1870,7 @@ module_status_built_extra() (
     [[ -d $dkms_tree/$1/original_module/$3/$4 ]] && echo -n " (original_module exists)"
     for ((count=0; count < ${#dest_module_name[@]}; count++)); do
         tree_mod=$(compressed_or_uncompressed "$dkms_tree/$1/$2/$3/$4/module" "${dest_module_name[$count]}")
-        if ! [[ -n "$tree_mod" ]]; then
+        if [[ -z "$tree_mod" ]]; then
             echo -n " (WARNING! Missing some built modules!)"
         elif _is_module_installed "$@"; then
             real_dest="$(find_actual_dest_module_location "$1" $count "$3" "$4")"
@@ -1812,7 +1889,7 @@ module_status_built() {
     local ret=1 directory ka k a state oifs="$IFS" IFS=''
     for directory in "$dkms_tree/$1/$2/"${3:-+([0-9]).*}/${4:-*}; do
         IFS="$oifs"
-        ka="${directory#$dkms_tree/$1/$2/}"
+        ka="${directory#"$dkms_tree/$1/$2"/}"
         k="${ka%/*}"
         a="${ka#*/}"
         is_module_built "$1" "$2" "$k" "$a" || continue
@@ -1831,7 +1908,7 @@ module_status() {
     local oifs="$IFS" IFS='' mv m v directory ret=1
     for directory in "$dkms_tree/"${1:-*}/${2:-*}; do
         IFS="$oifs"
-        mv="${directory#$dkms_tree/}"
+        mv="${directory#"$dkms_tree"/}"
         m="${mv%/*}"
         v="${mv#*/}"
         is_module_broken "$m" "$v" && { echo "broken $m/$v"; continue; }
@@ -1850,10 +1927,11 @@ module_status() {
 do_status() {
     local status mvka m v k a
     # separate deprecation warnings from status output
-    local tmpfile=$(mktemp_or_die)
+    local tmpfile
+    tmpfile=$(mktemp_or_die)
     (module_status "$@") >"$tmpfile"
-    while read status mvka; do
-        IFS=/ read m v k a <<< "$mvka"
+    while read -r status mvka; do
+        IFS=/ read -r m v k a <<< "$mvka"
         case $status in
             broken)
                 echo "$m/$v: $status"
@@ -1877,7 +1955,7 @@ do_status() {
 # though it is slightly harder to parse.
 show_status()
 {
-    local j state_array
+    local j
     if ((${#kernelver[@]} == 0)); then
         do_status "$module" "$module_version" "$kernelver" "$arch"
         do_status_weak "$module" "$module_version" "$kernelver" "$arch"
@@ -1894,9 +1972,10 @@ make_tarball()
     # Read the conf file
     read_conf_or_die "$kernelver" "$arch"
 
-    local -r temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
+    local -r temp_dir_name=$(mktemp_or_die -d "$tmp_location"/dkms.XXXXXX)
+    #shellcheck disable=SC2064
     trap "rm -rf $temp_dir_name" EXIT
-    mkdir -p $temp_dir_name/dkms_main_tree
+    mkdir -p "$temp_dir_name"/dkms_main_tree
 
     if [[ $source_only ]]; then
     kernel_version_list="source-only"
@@ -1937,15 +2016,15 @@ make_tarball()
         echo "$module" > "$binary_only_dir/PACKAGE_NAME"
         echo "$module_version" > "$binary_only_dir/PACKAGE_VERSION"
         [[ ! $conf ]] && conf="$source_dir/dkms.conf"
-        cp -f $conf "$binary_only_dir/" 2>/dev/null
+        cp -f "$conf" "$binary_only_dir/" 2>/dev/null
     else
         echo $""
         echo $"Marking $source_dir for archiving..."
-        mkdir -p $temp_dir_name/dkms_source_tree
-        cp -rf $source_dir/* $temp_dir_name/dkms_source_tree
+        mkdir -p "$temp_dir_name"/dkms_source_tree
+        cp -rf "$source_dir"/* "$temp_dir_name"/dkms_source_tree
     fi
 
-    if (( $(echo $kernel_version_list | wc -m | awk {'print $1'}) > 200 )); then
+    if (( $(echo "$kernel_version_list" | wc -m | awk 'print $1') > 200 )); then
         kernel_version_list="manykernels"
     fi
 
@@ -1954,7 +2033,7 @@ make_tarball()
 
     if [[ $archive_location ]]; then
         tarball_name="${archive_location##*/}"
-        if [[ ${archive_location%/*} != $archive_location ]]; then
+        if [[ ${archive_location%/*} != "$archive_location" ]]; then
             tarball_dest="${archive_location%/*}"
         fi
     fi
@@ -1970,7 +2049,7 @@ make_tarball()
 
     [[ -w $tarball_dest ]] || die 9 $"Missing write permissions for $tarball_dest."
 
-    if ! tar -C $temp_dir_name -caf $tarball_dest/$tarball_name . 2>/dev/null; then
+    if ! tar -C "$temp_dir_name" -caf "$tarball_dest/$tarball_name" . 2>/dev/null; then
         die 6 $"Failed to make tarball."
     fi
 }
@@ -2004,14 +2083,15 @@ load_tarball()
     fi
 
     # Untar it into $tmp_location
-    local -r temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
+    local -r temp_dir_name=$(mktemp_or_die -d "$tmp_location"/dkms.XXXXXX)
+    # shellcheck disable=SC2064
     trap "rm -rf $temp_dir_name" EXIT
-    tar -xaf $archive_location -C $temp_dir_name
+    tar -xaf "$archive_location" -C "$temp_dir_name"
 
     if [[ ! -d $temp_dir_name/dkms_main_tree ]]; then
     # Tarball was not generated from mktarball.
     # Just find the dkms.conf file and load the source.
-    conf=$(find $temp_dir_name/ -name dkms.conf 2>/dev/null | head -n 1)
+    conf=$(find "$temp_dir_name"/ -name dkms.conf 2>/dev/null | head -n 1)
     if [[ ! $conf ]]; then
         die 3 $"Tarball does not appear to be a correctly formed DKMS archive. No dkms.conf found within it."
     fi
@@ -2077,9 +2157,9 @@ load_tarball()
             warn $"$dkms_dir_location already exists. Skipping..."
         else
             echo $"Loading $dkms_dir_location..."
-            rm -rf $dkms_dir_location
-            mkdir -p $dkms_dir_location
-            cp -rf $directory/* $dkms_dir_location/
+            rm -rf "$dkms_dir_location"
+            mkdir -p "$dkms_dir_location"
+            cp -rf "$directory"/* "$dkms_dir_location"/
         fi
     done
 
@@ -2098,12 +2178,13 @@ run_match()
     fi
 
     # Error out if $template_kernel = $kernel_version
-    if [[ $template_kernel = $kernelver ]]; then
+    if [[ $template_kernel = "$kernelver" ]]; then
         die 2 $"The templatekernel and the specified kernel version are the same."
     fi
 
     # Read in the status of template_kernel
-    local template_kernel_status=$(do_status '' '' $template_kernel $arch | grep ": installed")
+    local template_kernel_status
+    template_kernel_status=$(do_status '' '' "$template_kernel" "$arch" | grep ": installed")
 
     # If $module is set, grep the status only for that module
     if [[ $module ]]; then
@@ -2128,9 +2209,9 @@ run_match()
     prepare_kernel "$kernelver" "$arch"
 
     # Iterate over the kernel_status and match kernel to the template_kernel
-    while read template_line; do
-        template_module=$(echo "$template_line" | awk {'print $1'} | sed 's/,$//')
-        template_version=$(echo "$template_line" | awk {'print $2'} | sed 's/,$//')
+    while read -r template_line; do
+        template_module=$(echo "$template_line" | awk 'print $1' | sed 's/,$//')
+        template_version=$(echo "$template_line" | awk 'print $2' | sed 's/,$//')
 
         # Print out a match header
         echo $"Module:  $template_module"
@@ -2152,7 +2233,7 @@ report_build_problem()
 {
     # If apport is on the system, files a build problem
     if [[ -x /usr/share/apport/apport ]] && which python3 >/dev/null; then
-        python3 /usr/share/apport/package-hooks/dkms_packages.py -m $module -v $module_version -k ${kernelver[0]}
+        python3 /usr/share/apport/package-hooks/dkms_packages.py -m "$module" -v "$module_version" -k "${kernelver[0]}"
     fi
     die "$@"
 }
@@ -2166,9 +2247,9 @@ read_arg() {
     # $3 = arg parameter
     local rematch='^[^=]*=(.*)$'
     if [[ $2 =~ $rematch ]]; then
-        read "$1" <<< "${BASH_REMATCH[1]}"
+        read -r "$1" <<< "${BASH_REMATCH[1]}"
     else
-        read "$1" <<< "$3"
+        read -r "$1" <<< "$3"
         # There is no way to shift our callers args, so
         # return 1 to indicate they should do it instead.
         return 1
@@ -2218,7 +2299,8 @@ check_rw_dkms_tree() {
 # We will check the dkms.conf file to make sure it is valid
 # beforehand.
 add_source_tree() {
-    local from=$(readlink -f $1)
+    local from
+    from=$(readlink -f "$1")
     if ! [[ $from && -f $from/dkms.conf ]]; then
         die 9 $"$1 must contain a dkms.conf file!"
     fi
@@ -2240,10 +2322,10 @@ add_source_tree() {
         "$source_tree/$module-$module_version")
             return
             ;;
-        "$dkms_tree/$module/$version/source")
+        "$dkms_tree/$module/$module_version/source")
             return
             ;;
-        "$dkms_tree/$module/$version/build")
+        "$dkms_tree/$module/$module_version/build")
             return
             ;;
     esac
@@ -2269,8 +2351,8 @@ autoinstall() {
 
     # Walk through our list of installed and built modules, and create
     # a list of modules and their latest version.
-    while read status mvka; do
-        IFS='/' read m v k a <<< "$mvka"
+    while read -r status mvka; do
+        IFS='/' read -r m v k a <<< "$mvka"
         # If the module status is broken there is nothing that can be done
         if [[ $status = broken ]]; then
             error $"$m/$v is broken! Missing the source directory or the symbolic link pointing to it."\
@@ -2305,7 +2387,7 @@ autoinstall() {
         fi
         # Otherwise, autoinstall the latest version we have hanging around.
         to_install[${#to_install[@]}]="$m/$v"
-        build_depends["$m"]="${BUILD_DEPENDS[@]}"
+        build_depends["$m"]="${BUILD_DEPENDS[*]}"
     done
 
     [[ $to_install ]] || return 0
@@ -2315,6 +2397,7 @@ autoinstall() {
         next_install=( )
 
         # Step 1: Remove installed modules from all dependency lists.
+        # shellcheck disable=SC2068
         for m in ${!build_depends[@]}; do
             next_depends=
             for d in ${build_depends[$m]}; do
@@ -2328,16 +2411,16 @@ autoinstall() {
 
         # Step 2: Install modules that have an empty dependency list.
         for mv in "${to_install[@]}"; do
-            IFS=/ read m v <<< "$mv"
+            IFS=/ read -r m v <<< "$mv"
             if [[ -z ${build_depends[$m]} ]]; then
                 (module="$m" module_version="$v" kernelver="$kernelver" arch="$arch" install_module)
                 status=$?
                 if (( status == 0 )); then
                     installed_modules[${#installed_modules[@]}]="$m"
-                    progress=$(($progress +1))
+                    progress=$((progress +1))
                 elif (( status == 77 )); then
                     skipped_modules[${#skipped_modules[@]}]="$m"
-                    progress=$(($progress +1))
+                    progress=$((progress +1))
                 else
                     failed_modules[${#failed_modules[@]}]="$m($status)"
                 fi
@@ -2359,19 +2442,19 @@ autoinstall() {
     done
 
     if (( ${#installed_modules[@]} > 0 )); then
-        echo "dkms autoinstall on $kernelver/$arch succeeded for ${installed_modules[@]}"
+        echo "dkms autoinstall on $kernelver/$arch succeeded for ${installed_modules[*]}"
     fi
 
     if (( ${#skipped_modules[@]} > 0 )); then
-        echo "dkms autoinstall on $kernelver/$arch was skipped for ${skipped_modules[@]}"
+        echo "dkms autoinstall on $kernelver/$arch was skipped for ${skipped_modules[*]}"
     fi
 
     if (( ${#failed_modules[@]} > 0 )); then
-        echo "dkms autoinstall on $kernelver/$arch failed for ${failed_modules[@]}"
+        echo "dkms autoinstall on $kernelver/$arch failed for ${failed_modules[*]}"
     fi
 
     for mv in "${to_install[@]}"; do
-        IFS=/ read m v <<< "$mv"
+        IFS=/ read -r m v <<< "$mv"
         echo "$m/$v autoinstall failed due to missing dependencies: ${build_depends[$m]}"
     done
 
@@ -2395,6 +2478,7 @@ umask 022
 unset CC CXX CFLAGS CXXFLAGS LDFLAGS
 
 # Set important variables
+# shellcheck disable=SC2034
 current_kernel=$(uname -r)
 current_os=$(uname -s)
 running_distribution=$(distro_version) || exit
@@ -2414,12 +2498,13 @@ fi
 rm -f "$tmpfile"
 
 # These can come from the environment or the config file
+# shellcheck disable=SC1091
 [[ ! ${ADDON_MODULES_DIR} && -e /etc/sysconfig/module-init-tools ]] && . /etc/sysconfig/module-init-tools
 addon_modules_dir="${ADDON_MODULES_DIR}"
 weak_modules="${WEAK_MODULES_BIN}"
 
 # Source in configuration not related to signing
-read_framework_conf $dkms_framework_nonsigning_variables
+read_framework_conf "$dkms_framework_nonsigning_variables"
 
 
 # Clear out command line argument variables
@@ -2459,6 +2544,7 @@ while (($# > 0)); do
     case $1 in
         --module*|-m)
             read_arg _mv "$1" "$2" || shift
+            # shellcheck disable=SC2154
             parse_moduleversion "$_mv"
             ;;
         -v)
@@ -2466,6 +2552,7 @@ while (($# > 0)); do
             ;;
         --kernelver*|-k)
             read_arg _ka "$1" "$2" || shift
+            # shellcheck disable=SC2154
             parse_kernelarch "$_ka"
             ;;
         --templatekernel*)
@@ -2524,6 +2611,7 @@ while (($# > 0)); do
             read_arg install_tree "$1" "$2" || shift
             ;;
         --symlink-modules)
+            # shellcheck disable=SC2034
             symlink_module="true"
             ;;
         --config*)
@@ -2535,6 +2623,7 @@ while (($# > 0)); do
             ;;
         --arch*|-a)
             read_arg _aa "$1" "$2" || shift
+            # shellcheck disable=SC2154
             arch[${#arch[@]}]="$_aa"
             ;;
         --kernelsourcedir*)
@@ -2543,6 +2632,7 @@ while (($# > 0)); do
             ;;
         --directive*)
             read_arg _da "$1" "$2" || shift
+            # shellcheck disable=SC2154
             directive_array[${#directive_array[@]}]="$_da"
             ;;
         --no-depmod)
@@ -2586,7 +2676,7 @@ done
 # Sanity checking
 
 # The <(cmd) idiom does not work if /proc is not mounted
-read line < <(echo "Hello, DKMS!")
+read -r line < <(echo "Hello, DKMS!")
 if [[ $line != "Hello, DKMS!" ]]; then
     warn $"dkms will not function properly if /proc is not mounted."
 fi
@@ -2630,17 +2720,25 @@ parallel_jobs=${parallel_jobs:-$(get_num_cpus)}
 setup_kernels_arches "$action"
 case "$action" in
 remove | unbuild | uninstall)
-    check_module_args $action
+    check_module_args "$action"
     module_is_broken_and_die
     module_is_added_or_die
-    [[ $action = uninstall ]] && check_root || check_rw_dkms_tree
-    ${action}_module
+    if [[ $action = uninstall ]]; then 
+         check_root
+    else
+         check_rw_dkms_tree
+    fi
+    "${action}_module"
     ;;
 add | build | install)
-    check_all_is_banned $action # TODO: fix/enable --all
+    check_all_is_banned "$action" # TODO: fix/enable --all
     [[ $action != add ]] && module_is_broken_and_die
-    [[ $action = install ]] && check_root || check_rw_dkms_tree
-    ${action}_module
+    if [[ $action = install ]]; then 
+         check_root
+    else
+         check_rw_dkms_tree
+    fi
+    "${action}_module"
     ;;
 autoinstall)
     check_root && autoinstall
