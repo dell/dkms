@@ -420,7 +420,7 @@ override_dest_module_location()
 # still deliberately trash the environment by abusing dkms_directive env
 # variables or by crafting special values that will make eval do evil things.
 # shellcheck disable=SC1087 disable=SC1083 disable=SC2086
-safe_source_old() {
+safe_source() {
     # $1 = file to source
     # $@ = environment variables to echo out
     local to_source_file="$1"; shift
@@ -453,41 +453,6 @@ safe_source_old() {
     (( ${#MODULES_CONF_ALIAS_TYPE[@]} )) && deprecated "MODULES_CONF_ALIAS_TYPE ($to_source_file)"
     (( ${#MODULES_CONF_OBSOLETE_ONLY[@]} )) && deprecated "MODULES_CONF_OBSOLETE_ONLY ($to_source_file)"
 }
-
-# refactored by chatgpt
-safe_source() {
-    # $1 = file to source
-    # $@ = environment variables to echo out
-    local to_source_file="$1"; shift
-    local export_envs=("$@")
-    local tmpfile
-    tmpfile=$(mktemp_or_die)
-
-    # Capture the environment after sourcing the file
-    {
-        . "$to_source_file" >/dev/null
-
-        # Echo selected environment variables
-        for env in "${export_envs[@]}"; do
-            eval "declare -p $env"
-        done
-
-        # Handle DKMS_DIRECTIVE stuff specially
-        declare -p | grep '^declare \-x DKMS_DIRECTIVE' | sed 's/^declare \-x //'
-    } > "$tmpfile"
-
-    # Source the temporary file to update the environment
-    . "$tmpfile"
-    rm "$tmpfile"
-
-    # Handle deprecated variables
-    [[ ${#REMAKE_INITRD[@]} -gt 0 ]] && deprecated "REMAKE_INITRD ($to_source_file)"
-    [[ ${#MODULES_CONF[@]} -gt 0 ]] && deprecated "MODULES_CONF ($to_source_file)"
-    [[ ${#MODULES_CONF_OBSOLETES[@]} -gt 0 ]] && deprecated "MODULES_CONF_OBSOLETES ($to_source_file)"
-    [[ ${#MODULES_CONF_ALIAS_TYPE[@]} -gt 0 ]] && deprecated "MODULES_CONF_ALIAS_TYPE ($to_source_file)"
-    [[ ${#MODULES_CONF_OBSOLETE_ONLY[@]} -gt 0 ]] && deprecated "MODULES_CONF_OBSOLETE_ONLY ($to_source_file)"
-}
-
 
 # Source a dkms.conf file and perform appropriate postprocessing on it.
 # Do our best to not repeatedly source the same .conf file -- this can happen
