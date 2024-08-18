@@ -496,7 +496,7 @@ read_conf()
     for _conf_file in "$read_conf_file" "/etc/dkms/$module.conf" \
         "/etc/dkms/$module-$module_version.conf" "/etc/dkms/$module-$module_version-$1.conf" \
         "/etc/dkms/$module-$module_version-$1-$2.conf"; do
-        [[ -e $_conf_file ]] && safe_source "$_conf_file" "$dkms_conf_variables"
+        [[ -e $_conf_file ]] && safe_source "$_conf_file" $dkms_conf_variables
     done
 
     # Source in the directive_array
@@ -956,7 +956,7 @@ prepare_signing()
     sign_hash=$(grep "^CONFIG_MODULE_SIG_HASH=" "${kernel_config}" | cut -f2 -d= | sed 's/"//g')
 
     # Lazy source in signing related configuration
-    read_framework_conf "$dkms_framework_signing_variables"
+    read_framework_conf $dkms_framework_signing_variables
 
     if [[ ! ${sign_file} ]]; then
         case "$running_distribution" in
@@ -1069,7 +1069,7 @@ prepare_build()
 
     # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
     # shellcheck disable=SC2012
-    (($(ls "$source_dir" | wc -l | awk 'print $1') < 2)) && die 8 \
+    (($(ls "$source_dir" | wc -l | awk {'print $1'}) < 2)) && die 8 \
         $"The directory $source_dir does not appear to have module source located within it."\
         $"Build halted."
 
@@ -1753,7 +1753,7 @@ remove_module()
 
     # Get rid of any remnant directories if necessary
     # shellcheck disable=SC2012
-    if (($(ls "$dkms_tree/$module" | wc -w | awk '{print $1}') == 0)); then
+    if (($(ls "$dkms_tree/$module" | wc -w | awk {'{print $1}'}) == 0)); then
         rm -rf "${dkms_tree:?}/$module" 2>/dev/null
     fi
 }
@@ -1989,7 +1989,7 @@ make_tarball()
         cp -rf "$source_dir"/* "$temp_dir_name"/dkms_source_tree
     fi
 
-    if (( $(echo "$kernel_version_list" | wc -m | awk 'print $1') > 200 )); then
+    if (( $(echo "$kernel_version_list" | wc -m | awk {'print $1'}) > 200 )); then
         kernel_version_list="manykernels"
     fi
 
@@ -2175,8 +2175,8 @@ run_match()
 
     # Iterate over the kernel_status and match kernel to the template_kernel
     while read -r template_line; do
-        template_module=$(echo "$template_line" | awk 'print $1' | sed 's/,$//')
-        template_version=$(echo "$template_line" | awk 'print $2' | sed 's/,$//')
+        template_module=$(echo "$template_line" | awk {'print $1'} | sed 's/,$//')
+        template_version=$(echo "$template_line" | awk {'print $2'} | sed 's/,$//')
 
         # Print out a match header
         echo $"Module:  $template_module"
@@ -2469,7 +2469,7 @@ addon_modules_dir="${ADDON_MODULES_DIR}"
 weak_modules="${WEAK_MODULES_BIN}"
 
 # Source in configuration not related to signing
-read_framework_conf "$dkms_framework_nonsigning_variables"
+read_framework_conf $dkms_framework_nonsigning_variables
 
 
 # Clear out command line argument variables
@@ -2688,21 +2688,13 @@ remove | unbuild | uninstall)
     check_module_args "$action"
     module_is_broken_and_die
     module_is_added_or_die
-    if [[ $action = uninstall ]]; then 
-         check_root
-    else
-         check_rw_dkms_tree
-    fi
+    [[ $action = uninstall ]] && check_root ||  check_rw_dkms_tree
     "${action}_module"
     ;;
 add | build | install)
     check_all_is_banned "$action" # TODO: fix/enable --all
     [[ $action != add ]] && module_is_broken_and_die
-    if [[ $action = install ]]; then 
-         check_root
-    else
-         check_rw_dkms_tree
-    fi
+    [[ $action = install ]] && check_root || check_rw_dkms_tree 
     "${action}_module"
     ;;
 autoinstall)
