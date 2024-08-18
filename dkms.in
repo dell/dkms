@@ -1248,6 +1248,7 @@ force_installation()
 # Install a previously built module
 # There are huge swaths of code here that special-case for various distros.
 # They should be split into their own functions.
+# shellcheck disable=SC2155
 do_install()
 {
   # If the module has not been built, try to build it first.
@@ -1259,7 +1260,7 @@ do_install()
 
     # If the module is set to be force-installed
     local ret
-    ret=$(force_installation $module)
+    ret=$(force_installation "$module")
     if [[ "$ret" == "force" ]];then
         force="true"
         echo "Forcing installation of $module"
@@ -1314,7 +1315,6 @@ do_install()
             local archive_pref4=""
             ((module_count == 1)) && archive_pref4=${installed_modules[0]}
             local original_module=""
-            local found_orginal=""
             for original_module in $archive_pref1 $archive_pref2 $archive_pref3 $archive_pref4; do
                 [[ -f $original_module ]] || continue
                 case "$running_distribution" in
@@ -1353,7 +1353,7 @@ do_install()
                     ;;
             esac
             for module_dup in $(find_module "$lib_tree" "$m"); do
-                dup_tree="${module_dup#$lib_tree}";
+                dup_tree="${module_dup#"$lib_tree"}";
                 dup_name="${module_dup##*/}"
                 dup_tree="${dup_tree/${dup_name}}"
                 case "$running_distribution" in
@@ -1362,7 +1362,7 @@ do_install()
                     *)
                        echo $"     - Stored $module_dup"
                        mkdir -p "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
-                       mv -f $module_dup "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
+                       mv -f "$module_dup" "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
                        ;;
                 esac
             done
@@ -1371,9 +1371,10 @@ do_install()
         # Copy module to its location
         echo $" - Installation"
         echo $"   - Installing to $install_tree/$kernelver${dest_module_location[$count]}/"
-        mkdir -p $install_tree/$kernelver${dest_module_location[$count]}
+        mkdir -p $install_tree/"$kernelver${dest_module_location[$count]}"
         [[ $symlink_modules ]] && symlink="-s"
         local toinstall=$(compressed_or_uncompressed "$base_dir/module" "$m")
+        # shellcheck disable=SC2086
         cp -f $symlink "$toinstall" "$install_tree/$kernelver${dest_module_location[$count]}/${toinstall##*/}"
         any_module_installed=1
 
@@ -1391,7 +1392,7 @@ do_install()
     if [[ -z $NO_WEAK_MODULES ]]; then
         if [[ ${weak_modules} ]]; then
             echo $"Adding any weak-modules"
-            list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} ${weak_modules_no_initrd} --add-modules
+            list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} "${weak_modules_no_initrd}" --add-modules
         fi
     fi
 
@@ -2468,6 +2469,7 @@ addon_modules_dir="${ADDON_MODULES_DIR}"
 weak_modules="${WEAK_MODULES_BIN}"
 
 # Source in configuration not related to signing
+# shellcheck disable=SC2086
 read_framework_conf $dkms_framework_nonsigning_variables
 
 
@@ -2687,13 +2689,21 @@ remove | unbuild | uninstall)
     check_module_args "$action"
     module_is_broken_and_die
     module_is_added_or_die
-    [[ $action = uninstall ]] && check_root ||  check_rw_dkms_tree
+    if [[ $action = uninstall ]]; then 
+      check_root
+    else
+      check_rw_dkms_tree
+    fi
     "${action}_module"
     ;;
 add | build | install)
     check_all_is_banned "$action" # TODO: fix/enable --all
     [[ $action != add ]] && module_is_broken_and_die
-    [[ $action = install ]] && check_root || check_rw_dkms_tree 
+    if [[ $action = install ]]; then 
+        check_root
+    else
+        check_rw_dkms_tree
+    fi 
     "${action}_module"
     ;;
 autoinstall)
