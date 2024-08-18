@@ -496,6 +496,7 @@ read_conf()
     for _conf_file in "$read_conf_file" "/etc/dkms/$module.conf" \
         "/etc/dkms/$module-$module_version.conf" "/etc/dkms/$module-$module_version-$1.conf" \
         "/etc/dkms/$module-$module_version-$1-$2.conf"; do
+        # shellcheck disable=SC2086
         [[ -e $_conf_file ]] && safe_source "$_conf_file" $dkms_conf_variables
     done
 
@@ -956,6 +957,7 @@ prepare_signing()
     sign_hash=$(grep "^CONFIG_MODULE_SIG_HASH=" "${kernel_config}" | cut -f2 -d= | sed 's/"//g')
 
     # Lazy source in signing related configuration
+    # shellcheck disable=SC2086
     read_framework_conf $dkms_framework_signing_variables
 
     if [[ ! ${sign_file} ]]; then
@@ -1068,7 +1070,7 @@ prepare_build()
         $"This indicates that it should not be built."
 
     # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
-    # shellcheck disable=SC2012
+    # shellcheck disable=SC2012 disable=SC1083
     (($(ls "$source_dir" | wc -l | awk {'print $1'}) < 2)) && die 8 \
         $"The directory $source_dir does not appear to have module source located within it."\
         $"Build halted."
@@ -1248,7 +1250,7 @@ force_installation()
 # They should be split into their own functions.
 do_install()
 {
-    # If the module has not been built, try to build it first.
+  # If the module has not been built, try to build it first.
     is_module_built "$module" "$module_version" "$kernelver" "$arch" || do_build
     local base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
 
@@ -1257,7 +1259,7 @@ do_install()
 
     # If the module is set to be force-installed
     local ret
-    ret=$(force_installation "$module")
+    ret=$(force_installation $module)
     if [[ "$ret" == "force" ]];then
         force="true"
         echo "Forcing installation of $module"
@@ -1298,26 +1300,21 @@ do_install()
                 $"You may override by specifying --force."
         fi
         local m=${dest_module_name[$count]}
-        local installed_modules
-        installed_modules=$(find_module "$lib_tree" "$m")
+        local installed_modules=$(find_module "$lib_tree" "$m")
         local module_count=${#installed_modules[@]}
         echo $" - Original module"
-        local original_copy
-        original_copy=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$kernelver/$arch" "$m")
+        local original_copy=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$kernelver/$arch" "$m")
         if [[ -L $dkms_tree/$module/kernel-$kernelver-$arch &&
             -n "$original_copy" ]]; then
             echo $"   - An original module was already stored during a previous install"
         elif ! [[ -L $dkms_tree/$module/kernel-$kernelver-$arch ]]; then
-            local archive_pref1
-            archive_pref1=$(compressed_or_uncompressed "$lib_tree/extra" "$m")
-            local archive_pref2
-            archive_pref2=$(compressed_or_uncompressed "$lib_tree/updates" "$m")
-            local archive_pref3
-            archive_pref3=$(compressed_or_uncompressed "$lib_tree${dest_module_location[$count]}" "$m")
+            local archive_pref1=$(compressed_or_uncompressed "$lib_tree/extra" "$m")
+            local archive_pref2=$(compressed_or_uncompressed "$lib_tree/updates" "$m")
+            local archive_pref3=$(compressed_or_uncompressed "$lib_tree${dest_module_location[$count]}" "$m")
             local archive_pref4=""
             ((module_count == 1)) && archive_pref4=${installed_modules[0]}
             local original_module=""
-            local found_original=""
+            local found_orginal=""
             for original_module in $archive_pref1 $archive_pref2 $archive_pref3 $archive_pref4; do
                 [[ -f $original_module ]] || continue
                 case "$running_distribution" in
@@ -1356,7 +1353,7 @@ do_install()
                     ;;
             esac
             for module_dup in $(find_module "$lib_tree" "$m"); do
-                dup_tree="${module_dup#"$lib_tree"}";
+                dup_tree="${module_dup#$lib_tree}";
                 dup_name="${module_dup##*/}"
                 dup_tree="${dup_tree/${dup_name}}"
                 case "$running_distribution" in
@@ -1365,7 +1362,7 @@ do_install()
                     *)
                        echo $"     - Stored $module_dup"
                        mkdir -p "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
-                       mv -f "$module_dup" "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
+                       mv -f $module_dup "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
                        ;;
                 esac
             done
@@ -1374,11 +1371,10 @@ do_install()
         # Copy module to its location
         echo $" - Installation"
         echo $"   - Installing to $install_tree/$kernelver${dest_module_location[$count]}/"
-        mkdir -p "$install_tree/$kernelver${dest_module_location[$count]}"
+        mkdir -p $install_tree/$kernelver${dest_module_location[$count]}
         [[ $symlink_modules ]] && symlink="-s"
-        local toinstall
-        toinstall=$(compressed_or_uncompressed "$base_dir/module" "$m")
-        cp -f "$symlink" "$toinstall" "$install_tree/$kernelver${dest_module_location[$count]}/${toinstall##*/}"
+        local toinstall=$(compressed_or_uncompressed "$base_dir/module" "$m")
+        cp -f $symlink "$toinstall" "$install_tree/$kernelver${dest_module_location[$count]}/${toinstall##*/}"
         any_module_installed=1
 
     done
@@ -1395,7 +1391,7 @@ do_install()
     if [[ -z $NO_WEAK_MODULES ]]; then
         if [[ ${weak_modules} ]]; then
             echo $"Adding any weak-modules"
-            list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} "${weak_modules_no_initrd}" --add-modules
+            list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules} ${weak_modules_no_initrd} --add-modules
         fi
     fi
 
@@ -1752,7 +1748,7 @@ remove_module()
     fi
 
     # Get rid of any remnant directories if necessary
-    # shellcheck disable=SC2012
+    # shellcheck disable=SC2012 disable=SC1083
     if (($(ls "$dkms_tree/$module" | wc -w | awk {'{print $1}'}) == 0)); then
         rm -rf "${dkms_tree:?}/$module" 2>/dev/null
     fi
@@ -1989,6 +1985,7 @@ make_tarball()
         cp -rf "$source_dir"/* "$temp_dir_name"/dkms_source_tree
     fi
 
+    # shellcheck disable=SC1083
     if (( $(echo "$kernel_version_list" | wc -m | awk {'print $1'}) > 200 )); then
         kernel_version_list="manykernels"
     fi
@@ -2175,7 +2172,9 @@ run_match()
 
     # Iterate over the kernel_status and match kernel to the template_kernel
     while read -r template_line; do
+        # shellcheck disable=SC1083
         template_module=$(echo "$template_line" | awk {'print $1'} | sed 's/,$//')
+        # shellcheck disable=SC1083
         template_version=$(echo "$template_line" | awk {'print $2'} | sed 's/,$//')
 
         # Print out a match header
