@@ -2689,21 +2689,15 @@ remove | unbuild | uninstall)
     check_module_args "$action"
     module_is_broken_and_die
     module_is_added_or_die
-    if [[ $action = uninstall ]]; then 
-      check_root
-    else
-      check_rw_dkms_tree
-    fi
+    # shellcheck disable=SC2015
+    [[ $action = uninstall ]] && check_root || check_rw_dkms_tree
     "${action}_module"
     ;;
 add | build | install)
     check_all_is_banned "$action" # TODO: fix/enable --all
     [[ $action != add ]] && module_is_broken_and_die
-    if [[ $action = install ]]; then 
-        check_root
-    else
-        check_rw_dkms_tree
-    fi 
+    # shellcheck disable=SC2015
+    [[ $action = install ]] && check_root || check_rw_dkms_tree 
     "${action}_module"
     ;;
 autoinstall)
