@@ -20,7 +20,7 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-# shellcheck disable=SC2128 disable=SC1090 disable=SC2153
+# shellcheck  disable=SC2128 disable=SC1090 disable=SC2153
 
 shopt -s extglob
 
@@ -295,10 +295,10 @@ setup_kernels_arches()
 
     # Set default kernel version and arch, if none set (but only --all isn't set)
     if [[ $1 != status ]]; then
-        if [[ ! $kernelver && ! $all ]]; then
+        if [[ -z "$kernelver" &&  -z "$all" ]]; then
             kernelver[0]=$(uname -r)
         fi
-        if [[ ! $arch ]]; then
+        if [[ -z "$arch" ]]; then
             kernelver_rpm=$(rpm -qf "$install_tree/$kernelver" 2>/dev/null | \
             grep -v "not owned by any package" | grep kernel | head -n 1)
             if ! arch[0]=$(rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null); then
