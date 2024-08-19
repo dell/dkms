@@ -20,7 +20,7 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-# shellcheck disable=SC2128 disable=SC2004 disable=SC2164 disable=SC1090 disable=SC2153
+# shellcheck disable=SC2128 disable=SC2164 disable=SC1090 disable=SC2153
 
 shopt -s extglob
 
@@ -111,7 +111,7 @@ invoke_command()
     else
         eval "$cmd"; exitval=$?
     fi
-    if (($exitval > 0)); then
+    if (( exitval > 0)); then
         echo -en "(bad exit status: $exitval)"
         # Print the failing command without the clunky redirection
         [[ ! $verbose ]] && echo -en "\nFailed command:\n$1"
@@ -287,9 +287,9 @@ setup_kernels_arches()
             line=${line#*/}; line=${line#*/};
             # (I would leave out the delimiters in the status output
             #  in the first place.)
-            kernelver[$i]=${line%/*}
-            arch[$i]=${line#*/}
-            i=$(($i + 1))
+            kernelver[i]=${line%/*}
+            arch[i]=${line#*/}
+            i=$((i + 1))
         done < <(module_status_built "$module" "$module_version" | sort -V)
     fi
 
@@ -324,7 +324,7 @@ setup_kernels_arches()
     # Set global multi_arch
     multi_arch=""
     local i=0
-    for ((i=0; $i < ${#arch[@]}; i++)); do
+    for ((i=0; i < ${#arch[@]}; i++)); do
         [[ $arch != "${arch[$i]}" ]] && {
             # shellcheck disable=SC2034
             multi_arch="true"
@@ -542,31 +542,31 @@ read_conf()
     done
     for ((index=0; index < array_size; index++)); do
         # Set values
-        built_module_name[$index]=${BUILT_MODULE_NAME[$index]}
-        built_module_location[$index]=${BUILT_MODULE_LOCATION[$index]}
-        dest_module_name[$index]=${DEST_MODULE_NAME[$index]}
-        dest_module_location[$index]=${DEST_MODULE_LOCATION[$index]}
+        built_module_name[index]=${BUILT_MODULE_NAME[$index]}
+        built_module_location[index]=${BUILT_MODULE_LOCATION[$index]}
+        dest_module_name[index]=${DEST_MODULE_NAME[$index]}
+        dest_module_location[index]=${DEST_MODULE_LOCATION[$index]}
         case ${STRIP[$index]} in
             [nN]*)
-                strip[$index]="no"
+                strip[index]="no"
                 ;;
             [yY]*)
-                strip[$index]="yes"
+                strip[index]="yes"
                 ;;
             '')
-                strip[$index]=${strip[0]:-yes}
+                strip[index]=${strip[0]:-yes}
                 ;;
         esac
 
         # If unset, set by defaults
         [[ ! ${built_module_name[$index]} ]] && \
             ((array_size == 1)) && \
-            built_module_name[$index]=$PACKAGE_NAME
-        [[ ! ${dest_module_name[$index]} ]] && \
-            dest_module_name[$index]=${built_module_name[$index]}
-        [[ ${built_module_location[$index]} && \
-            ${built_module_location[$index]:(-1)} != / ]] && \
-            built_module_location[$index]="${built_module_location[$index]}/"
+            built_module_name[index]=$PACKAGE_NAME
+        [[ ! ${dest_module_name[index]} ]] && \
+            dest_module_name[index]=${built_module_name[$index]}
+        [[ ${built_module_location[index]} && \
+            ${built_module_location[index]:(-1)} != / ]] && \
+            built_module_location[index]="${built_module_location[$index]}/"
 
         # FAIL if no built_module_name
         if [[ ! ${built_module_name[$index]} ]]; then
@@ -591,7 +591,7 @@ read_conf()
         esac
 
         # Override location for specific distributions
-        dest_module_location[$index]="$(override_dest_module_location "${dest_module_location[$index]}")"
+        dest_module_location[index]="$(override_dest_module_location "${dest_module_location[$index]}")"
 
         # Fail if no DEST_MODULE_LOCATION
         if [[ ! ${DEST_MODULE_LOCATION[$index]} ]]; then
@@ -653,8 +653,8 @@ read_conf()
     count=0
     for ((index=0; index < ${#PATCH[@]}; index++)); do
     if [[ ${PATCH[$index]} && (! ${PATCH_MATCH[$index]} || $1 =~ ${PATCH_MATCH[$index]}) ]]; then
-        patch_array[$count]="${PATCH[$index]}"
-        count=$(($count+1))
+        patch_array[count]="${PATCH[$index]}"
+        count=$((count+1))
     fi
     done
 
