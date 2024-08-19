@@ -20,7 +20,7 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-# shellcheck disable=SC2128 disable=SC2164 disable=SC1090 disable=SC2153
+# shellcheck disable=SC2128 disable=SC1090 disable=SC2153
 
 shopt -s extglob
 
@@ -861,7 +861,7 @@ run_build_script() {
         echo $""
         echo $"Running the $1 script:"
         (
-            cd "$dkms_tree/$module/$module_version/$script_type/"
+            cd "$dkms_tree/$module/$module_version/$script_type/" || return 1
             exec $run
         )
     else
@@ -1079,7 +1079,7 @@ prepare_build()
     rm -rf "$build_dir"
     cp -a "$source_dir/" "$build_dir"
 
-    cd "$build_dir"
+    cd "$build_dir" || return 1
 
     # Apply any patches
     for p in "${patch_array[@]}"; do
@@ -1157,7 +1157,7 @@ actual_build()
             $"build directory, or consult make.log in the build directory" \
             $"$build_dir for more information."
     done
-    cd - >/dev/null
+    cd - >/dev/null || return 1
 
     # Build success, so create DKMS structure for a built module
     mkdir -p "$base_dir/log"
@@ -1200,10 +1200,10 @@ actual_build()
 clean_build()
 {
     # Run the clean commands
-    cd "$dkms_tree/$module/$module_version/build"
+    cd "$dkms_tree/$module/$module_version/build" || return 1
     invoke_command "$clean" "Cleaning build area" '' background
     # shellcheck disable=SC2103
-    cd - >/dev/null
+    cd - >/dev/null || return 1
 
     # Clean the build directory
     rm -rf "$dkms_tree/$module/$module_version/build"

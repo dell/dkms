@@ -1,0 +1,20 @@
+Warning: The /var/lib/dkms/dkms_build_exclusive_test/1.0/6.9.12-200.fc40.x86_64/x86_64/dkms.conf
+for module dkms_build_exclusive_test includes a BUILD_EXCLUSIVE directive
+which does not match this kernel/arch/config.
+This indicates that it should not be built.
+
+Building module:
+Cleaning build area...
+Building module(s)...
+Signing module /var/lib/dkms/dkms_test/1.0/build/dkms_test.ko
+Cleaning build area...
+
+dkms_test.ko.xz:
+Running module version sanity check.
+ - Original module
+   - No original module exists within this kernel
+ - Installation
+   - Installing to /lib/modules/6.9.12-200.fc40.x86_64/extra/
+depmod...
+dkms autoinstall on 6.9.12-200.fc40.x86_64/x86_64 succeeded for dkms_test
+dkms autoinstall on 6.9.12-200.fc40.x86_64/x86_64 was skipped for dkms_build_exclusive_test
