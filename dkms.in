@@ -324,7 +324,7 @@ setup_kernels_arches()
     # Set global multi_arch
     multi_arch=""
     local i=0
-    for ((i=0; i < ${#arch[@]}; i++)); do
+    for ((i=1; i < ${#arch[@]}; i++)); do
         [[ $arch != "${arch[$i]}" ]] && {
             # shellcheck disable=SC2034
             multi_arch="true"
