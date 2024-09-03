@@ -43,3 +43,6 @@
 
 # Automatically modprobe the built modules upon successful installation:
 # modprobe_on_install="true"
+
+# Limit the number of jobs run in parallel (default is the number of CPUs)
+# parallel_jobs=2
