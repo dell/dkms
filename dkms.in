@@ -120,7 +120,7 @@ invoke_command()
 
 error() (
     exec >&2
-    echo $""
+    echo ""
     echo -n $"Error! "
     for s in "$@"; do echo "$s"; done
 )
@@ -767,7 +767,7 @@ check_version_sanity()
         fi
 
         if ((obsolete == 1)); then
-            echo $"" >&2
+            echo "" >&2
             echo $"Module has been obsoleted due to being included" >&2
             echo $"in kernel $3.  We will avoid installing" >&2
             echo $"for future kernels above $3." >&2
@@ -840,14 +840,14 @@ run_build_script() {
     esac
     run="$dkms_tree/$module/$module_version/$script_type/$2"
     if [[ -x ${run%% *} ]]; then
-        echo $""
+        echo ""
         echo $"Running the $1 script:"
         (
             cd "$dkms_tree/$module/$module_version/$script_type/"
             exec $run
         )
     else
-        echo $""
+        echo ""
         warn $"The $1 script is not executable."
     fi
 }
@@ -1012,6 +1012,7 @@ prepare_signing()
             sign_file="$install_tree/$kernelver/build/scripts/sign-file"
         fi
     fi
+    echo ""
     echo "Sign command: $sign_file"
 
     if [[ ! -f ${sign_file} || ! -x ${sign_file} ]]; then
@@ -1114,7 +1115,7 @@ actual_build()
     local -r build_dir="$dkms_tree/$module/$module_version/build"
     local -r build_log="$build_dir/make.log"
 
-    echo $""
+    echo ""
 
     invoke_command "$clean" "Cleaning build area" '' background
     echo $"DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$build_log"
@@ -1267,7 +1268,7 @@ do_install()
     local any_module_installed
     local count
 
-    echo $""
+    echo ""
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
         # Check this version against what is already in the kernel
         check_version_sanity "$kernelver" "$arch" "$obsolete_by" "${dest_module_name[$count]}" || continue
@@ -1325,8 +1326,6 @@ do_install()
         any_module_installed=1
 
     done
-
-    echo $""
 
     if ((${#built_module_name[@]} > 0)) && [[ ! "${any_module_installed}" ]]; then
         die 6 $"Installation aborted."
@@ -1520,7 +1519,8 @@ do_uninstall()
     # $1 = kernel version
     # $2 = arch
 
-    echo $"Module $module-$module_version for kernel $1 ($2)."
+    echo ""
+    echo $"Module $module-$module_version for kernel $1 ($2):"
 
     set_module_suffix "$1"
 
@@ -1539,7 +1539,6 @@ do_uninstall()
             fi
         fi
 
-        echo $""
         for ((count=0; count < ${#built_module_name[@]}; count++)); do
             real_dest_module_location="$(find_actual_dest_module_location $module $count $1 $2)"
 
@@ -1562,8 +1561,6 @@ do_uninstall()
             fi
         done
         rm -f "$dkms_tree/$module/kernel-$1-$2"
-
-        echo $""
     else
         echo $"This module version was INACTIVE for this kernel."
     fi
@@ -1576,12 +1573,12 @@ do_uninstall()
 
     # Delete the original_module if nothing for this kernel is installed anymore
     if [[ $was_active && -d $dkms_tree/$module/original_module/$1/$2 && ! -d $dkms_tree/$module/original_module/$1/$2/collisions ]]; then
-        echo $""
+        echo ""
         echo $"Removing original_module from DKMS tree for kernel $1 ($2)"
         rm -rf "$dkms_tree/$module/original_module/$1/$2" 2>/dev/null
         [[ $(find $dkms_tree/$module/original_module/$1/* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module/$1"
     elif [[ $was_active && -d $dkms_tree/$module/original_module/$1/$2/collisions ]]; then
-        echo $""
+        echo ""
         echo $"Keeping directory $dkms_tree/$module/original_module/$1/$2/collisions/"
         echo $"for your reference purposes.  Your kernel originally contained multiple"
         echo $"same-named modules and this directory is now where these are located."
@@ -1674,6 +1671,7 @@ remove_module()
 
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
     if ! find $dkms_tree/$module/$module_version/* -maxdepth 0 -type d 2>/dev/null | grep -Eqv "(build|tarball|driver_disk|rpm|deb|source)$"; then
+        echo ""
         echo $"Deleting module $module-$module_version completely from the DKMS tree."
         rm -rf "$dkms_tree/$module/$module_version"
     fi
@@ -1892,7 +1890,7 @@ make_tarball()
     if [[ $binaries_only ]]; then
         local -r binary_only_dir="$temp_dir_name/dkms_binaries_only"
 
-        echo $""
+        echo ""
         echo $"Creating tarball structure to specifically accomodate binaries."
 
         mkdir "$binary_only_dir"
@@ -1901,7 +1899,7 @@ make_tarball()
         [[ ! $conf ]] && conf="$source_dir/dkms.conf"
         cp -f $conf "$binary_only_dir/" 2>/dev/null
     else
-        echo $""
+        echo ""
         echo $"Marking $source_dir for archiving..."
         mkdir -p $temp_dir_name/dkms_source_tree
         cp -rf $source_dir/* $temp_dir_name/dkms_source_tree
@@ -1921,7 +1919,7 @@ make_tarball()
         fi
     fi
 
-    echo $""
+    echo ""
     echo $"Tarball location: $tarball_dest/$tarball_name"
 
     if [[ ! -d $tarball_dest ]]; then
@@ -2005,7 +2003,7 @@ load_tarball()
     done
 
     module="$PACKAGE_NAME"; module_version="$PACKAGE_VERSION"
-    echo $""
+    echo ""
     echo $"Loading tarball for $module-$module_version"
     case $loc in
         dkms_source_tree)
@@ -2076,13 +2074,13 @@ run_match()
         template_kernel_status=$(echo "$template_kernel_status" | grep "^$module,")
     fi
 
-    echo $""
+    echo ""
     echo $"Matching modules in kernel: $kernelver ($arch)"
     echo $"to the configuration of kernel: $template_kernel ($arch)"
 
     # Prepare the kernel just once but only if there is actual work to do
     if [[ ! $template_kernel_status ]]; then
-        echo $""
+        echo ""
         echo $"There is nothing to be done for this match."
         return 0
     fi
@@ -2321,20 +2319,20 @@ autoinstall() {
     done
 
     if (( ${#installed_modules[@]} > 0 )); then
-        echo "dkms autoinstall on $kernelver/$arch succeeded for ${installed_modules[@]}"
+        echo "Autoinstall on $kernelver succeeded for module(s) ${installed_modules[@]}."
     fi
 
     if (( ${#skipped_modules[@]} > 0 )); then
-        echo "dkms autoinstall on $kernelver/$arch was skipped for ${skipped_modules[@]}"
+        echo "Autoinstall on $kernelver was skipped for module(s) ${skipped_modules[@]}."
     fi
 
     if (( ${#failed_modules[@]} > 0 )); then
-        echo "dkms autoinstall on $kernelver/$arch failed for ${failed_modules[@]}"
+        echo "Autoinstall on $kernelver failed for module(s) ${failed_modules[@]}."
     fi
 
     for mv in "${to_install[@]}"; do
         IFS=/ read m v <<< "$mv"
-        echo "$m/$v autoinstall failed due to missing dependencies: ${build_depends[$m]}"
+        echo "$m/$v autoinstall failed due to missing dependencies: ${build_depends[$m]}."
     done
 
     if (( ${#failed_modules[@]} > 0 || ${#to_install[@]} > 0 )); then
