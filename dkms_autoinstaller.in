@@ -23,14 +23,6 @@ elif [ -f /etc/rc.d/init.d/functions ]; then
     . /etc/rc.d/init.d/functions
 fi
 
-# We only have these functions on Debian/Ubuntu
-# so on other distros just stub them out
-if [ ! -f /etc/debian_version ]; then
-    alias log_daemon_msg='/bin/echo -n'
-    log_end_msg() { if [ "$1" = "0" ]; then echo " Done. "; else echo " Failed. "; fi; }
-    alias log_action_msg=/bin/echo
-fi
-
 exec="@SBINDIR@/dkms"
 prog=${exec##*/}
 
@@ -67,15 +59,12 @@ case "$1" in
 			kernel=$(uname -r)
 		fi
 		if [ -f /etc/dkms/no-autoinstall ]; then
-			log_action_msg "$prog: autoinstall for dkms modules has been disabled"
+			log_action_msg "Automatic installation of modules has been disabled."
 		elif ! _check_kernel_dir $kernel; then
-			log_action_msg "$prog: autoinstall for kernel $kernel was skipped since the kernel headers for this kernel do not seem to be installed"
+			log_action_msg "Automatic installation of modules for kernel $kernel was skipped since the kernel headers for this kernel do not seem to be installed."
 		else
-			log_action_msg "$prog: running auto installation service for kernel $kernel"
 			dkms autoinstall --kernelver $kernel
 			res=$?
-			log_daemon_msg "$prog: autoinstall for kernel" "$kernel"
-			log_end_msg $res
 		fi
 		;;
 	stop|restart|force-reload|status|reload)
