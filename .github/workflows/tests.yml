@@ -30,12 +30,13 @@ jobs:
           - {name: "debian", tag: "testing"}
           - {name: "debian", tag: "12"}
           - {name: "debian", tag: "11"}
-          - {name: "debian", tag: "10"}
+          - {name: "fedora/fedora", tag: "rawhide", url: "quay.io/"}
           - {name: "fedora/fedora", tag: "40", url: "quay.io/"}
           - {name: "fedora/fedora", tag: "39", url: "quay.io/"}
           - {name: "gentoo/stage3", tag: "latest"}
           - {name: "opensuse/tumbleweed", tag: "latest", variant: "-default", url: "registry.opensuse.org/"}
           - {name: "opensuse/leap", tag: "15.5", variant: "-default", url: "registry.opensuse.org/"}
+          - {name: "opensuse/leap", tag: "15.6", variant: "-default", url: "registry.opensuse.org/"}
           - {name: "ubuntu", tag: "24.04"}
           - {name: "ubuntu", tag: "23.10"}
           - {name: "ubuntu", tag: "22.04"}
@@ -52,8 +53,8 @@ jobs:
 
     - uses: actions/checkout@v3
 
-    - name: Install AlmaLinux dependencies
-      if: matrix.distro.name == 'almalinux'
+    - name: Install dependencies for Red Hat based distributions
+      if: matrix.distro.name == 'almalinux' || contains(matrix.distro.name, 'centos') || contains(matrix.distro.name, 'fedora')
       run: |
         yum install -y diffutils elfutils-libelf gcc kernel kernel-devel make openssl
 
@@ -67,21 +68,11 @@ jobs:
       run: |
         pacman -Syu --noconfirm diffutils gcc make linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-headers openssl
 
-    - name: Install CentOS dependencies
-      if: contains(matrix.distro.name, 'centos')
-      run: |
-        yum install -y diffutils elfutils-libelf gcc kernel kernel-devel make openssl
-
     - name: Install Debian dependencies
       if: matrix.distro.name == 'debian'
       run: |
         apt-get update -q
         apt-get install -qy make linux-headers-amd64 linux-image-amd64 openssl xz-utils
-
-    - name: Install Fedora dependencies
-      if: contains(matrix.distro.name, 'fedora')
-      run: |
-        yum install -y diffutils elfutils-libelf gcc kernel kernel-devel make openssl
 
     - name: Install Gentoo Linux dependencies
       if: matrix.distro.name == 'gentoo/stage3'
