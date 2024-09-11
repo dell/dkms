@@ -228,7 +228,7 @@ find_module()
 {
     # tree = $1
     # module = $2
-    find "$1" -name "$2$module_uncompressed_suffix" -o -name "$2$module_suffix" -type f
+    find "$1" -name "$2$module_uncompressed_suffix" -type f -o -name "$2$module_suffix" -type f
     return $?
 }
 
