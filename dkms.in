@@ -75,47 +75,65 @@ _check_kernel_dir() {
     return $?
 }
 
+on_exit()
+{
+    local exitcode_on_exit=$?
+
+    kill $(jobs -p >/dev/null) 2>/dev/null
+
+    [[ $make_tarball_rm_temp_dir_name ]] && eval "$make_tarball_rm_temp_dir_name"
+    [[ $load_tarball_rm_temp_dir_name ]] && eval "$load_tarball_rm_temp_dir_name"
+
+    exit $exitcode_on_exit
+}
+
+trap on_exit EXIT
+
 # Run a command that we may or may not want to be detailed about.
 invoke_command()
 {
     # $1 = command to be executed using eval.
     # $2 = Description of command to run
-    # $3 = Redirect command output to this file
-    # $4 = 'background' if you want to run the command asynchronously.
+    # $3 = Redirect command output (including stderr) to this file
+    # $4 = background, if you want print . each 3 seconds while command runs
+    local cmd="$1"
+    local cmd_description="$2"
+    local cmd_output="$3"
+    local cmd_mode="$4"
     local exitval=0
-    local -r cmd=$([[ $3 ]] && echo "{ $1; } >> $3 2>&1" || echo "$1")
+    local progresspid
+    
+    [[ $cmd_output ]] && cmd="{ $cmd; } >> $cmd_output 2>&1"
 
-    [[ $verbose ]] && echo -e "$cmd" || echo -en "$2..."
-    if [[ $4 = background && ! $verbose ]]; then
-        local pid progresspid
-        (eval "$cmd" >/dev/null 2>&1) & pid=$!
-        {
-            on_exit() {
-                kill $(jobs -p) 2>/dev/null
-                wait $(jobs -p) 2>/dev/null
-            }
-            trap on_exit EXIT
-            while /bin/kill --signal 0 $pid > /dev/null 2>&1; do
-                sleep 3 &
-                wait $!
-                echo -en "."
-            done
-        } & progresspid=$!
-        wait $pid 2>/dev/null
-        exitval=$?
-        kill $progresspid 2>/dev/null
-        wait $progresspid 2>/dev/null
-    else
-        eval "$cmd"; exitval=$?
+    [[ $verbose ]] && echo -e "$cmd" ||  echo -en "$cmd_description..."
+
+    if [[ $cmd_mode == background && ! $verbose ]]; then
+
+        if [[ $package_name != dkms*_test ]]; then  
+
+            while true ; do sleep 3; printf "."; done &
+            progresspid=$!
+        
+        fi
+        
+        [[ -z "$cmd_output" ]] && cmd="$cmd >/dev/null 2>&1"
+        
     fi
-    if (($exitval > 0)); then
+
+    ( eval "$cmd" )
+    exitval=$?
+
+    [ -n "$progresspid" ] && kill "$progresspid" >/dev/null 2>&1
+    
+    if (( exitval > 0)); then
         echo -en "(bad exit status: $exitval)"
         # Print the failing command without the clunky redirection
         [[ ! $verbose ]] && echo -en "\nFailed command:\n$1"
     else
         echo " done."
     fi
-    return $exitval
+    
+    return "$exitval"
 }
 
 error() (
@@ -1854,7 +1872,7 @@ make_tarball()
     read_conf_or_die "$kernelver" "$arch"
 
     local -r temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    trap "rm -rf $temp_dir_name" EXIT
+    make_tarball_rm_temp_dir_name="rm -rf $temp_dir_name"
     mkdir -p $temp_dir_name/dkms_main_tree
 
     if [[ $source_only ]]; then
@@ -1932,6 +1950,9 @@ make_tarball()
     if ! tar -C $temp_dir_name -caf $tarball_dest/$tarball_name . 2>/dev/null; then
         die 6 "Failed to make tarball."
     fi
+
+    eval "$make_tarball_rm_temp_dir_name" 
+    unset make_tarball_rm_temp_dir_name
 }
 
 # A tiny helper function to make sure dkms.conf describes a valid package.
@@ -1964,7 +1985,7 @@ load_tarball()
 
     # Untar it into $tmp_location
     local -r temp_dir_name=$(mktemp_or_die -d $tmp_location/dkms.XXXXXX)
-    trap "rm -rf $temp_dir_name" EXIT
+    load_tarball_rm_temp_dir_name="rm -rf $temp_dir_name"
     tar -xaf $archive_location -C $temp_dir_name
 
     if [[ ! -d $temp_dir_name/dkms_main_tree ]]; then
@@ -2041,6 +2062,9 @@ load_tarball()
             cp -rf $directory/* $dkms_dir_location/
         fi
     done
+
+    eval "$load_tarball_rm_temp_dir_name"
+    unset load_tarball_rm_temp_dir_name
 
     [[ $loc != dkms_binaries_only ]] || [[ -d $source_tree/$module-$module_version ]]
 }
