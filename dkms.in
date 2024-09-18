@@ -80,7 +80,6 @@ on_exit()
     local exitcode_on_exit=$?
     local j="$(jobs -p)"
 
-
     [[ -n "$j" ]] && kill $j 2>/dev/null
 
     [[ $make_tarball_rm_temp_dir_name ]] && eval "$make_tarball_rm_temp_dir_name"
