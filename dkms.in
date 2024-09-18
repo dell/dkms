@@ -78,8 +78,10 @@ _check_kernel_dir() {
 on_exit()
 {
     local exitcode_on_exit=$?
+    local j="$(jobs -p)"
 
-    kill $(jobs -p >/dev/null) 2>/dev/null
+
+    [[ -n "$j" ]] && kill $j 2>/dev/null
 
     [[ $make_tarball_rm_temp_dir_name ]] && eval "$make_tarball_rm_temp_dir_name"
     [[ $load_tarball_rm_temp_dir_name ]] && eval "$load_tarball_rm_temp_dir_name"
