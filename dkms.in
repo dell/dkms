@@ -109,7 +109,7 @@ invoke_command()
     if [[ $cmd_mode == background && ! $verbose && $package_name != dkms*_test ]]; then
             while true ; do 
                 sleep 3
-                echo "."
+                echo  -n "."
             done &
             progresspid=$!
     fi
