@@ -99,30 +99,40 @@ invoke_command()
     # $4 = background, if you want print . each 3 seconds while command runs
     local cmd="$1"
     local cmd_description="$2"
-    local cmd_output="$3"
+    local cmd_output_file="$3"
     local cmd_mode="$4"
     local exitval=0
     local progresspid
     
-    [[ $cmd_output ]] && cmd="{ $cmd; } >> $cmd_output 2>&1"
-
     [[ $verbose ]] && echo -e "$cmd" ||  echo -en "$cmd_description..."
 
-    if [[ $cmd_mode == background && ! $verbose ]]; then
+    if [[ $cmd_mode == background && ! $verbose && $package_name != dkms*_test ]]; then
 
-        if [[ $package_name != dkms*_test ]]; then  
-
-            while true ; do sleep 3; printf "."; done &
+            while true ; do 
+                sleep 3
+                echo "."
+            done &
+            
             progresspid=$!
-        
-        fi
-        
-        [[ -z "$cmd_output" ]] && cmd="$cmd >/dev/null 2>&1"
         
     fi
 
-    ( eval "$cmd" )
-    exitval=$?
+    if [[ -n "$cmd_output_file" ]]; then 
+        
+        ( eval "$cmd" ) >> "$cmd_output_file" 2>&1 
+        exitval=$?
+    
+    elif [[ -z "$cmd_output_file" && $cmd_mode == background && ! $verbose ]]; then
+    
+        ( eval "$cmd" ) >/dev/null 2>&1
+        exitval=$?
+    
+    else
+    
+       ( eval "$cmd" )
+       exitval=$?
+    
+    fi
 
     [ -n "$progresspid" ] && kill "$progresspid" >/dev/null 2>&1
     
