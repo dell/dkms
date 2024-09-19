@@ -107,31 +107,22 @@ invoke_command()
     [[ $verbose ]] && echo -e "$cmd" ||  echo -en "$cmd_description..."
 
     if [[ $cmd_mode == background && ! $verbose && $package_name != dkms*_test ]]; then
-
             while true ; do 
                 sleep 3
                 echo "."
             done &
-            
             progresspid=$!
-        
     fi
 
     if [[ -n "$cmd_output_file" ]]; then 
-        
         ( eval "$cmd" ) >> "$cmd_output_file" 2>&1 
         exitval=$?
-    
     elif [[ -z "$cmd_output_file" && $cmd_mode == background && ! $verbose ]]; then
-    
         ( eval "$cmd" ) >/dev/null 2>&1
         exitval=$?
-    
     else
-    
        ( eval "$cmd" )
        exitval=$?
-    
     fi
 
     [ -n "$progresspid" ] && kill "$progresspid" >/dev/null 2>&1
