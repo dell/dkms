@@ -55,10 +55,7 @@ readonly mv_re='^([^/]*)/(.*)$'
 _get_kernel_dir() {
     if [[ -z $ksourcedir_fromcli ]]; then
         KVER=$1
-        case ${current_os} in
-           Linux)          DIR="$install_tree/$KVER/build" ;;
-           GNU/kFreeBSD)   DIR="/usr/src/kfreebsd-headers-$KVER/sys" ;;
-        esac
+        DIR="$install_tree/$KVER/build"
         echo $DIR
     else
         echo $kernel_source_dir
@@ -67,11 +64,7 @@ _get_kernel_dir() {
 
 _check_kernel_dir() {
     DIR=$(_get_kernel_dir $1)
-    case ${current_os} in
-       Linux)          test -e $DIR/include ;;
-       GNU/kFreeBSD)   test -e $DIR/kern && test -e $DIR/conf/kmod.mk ;;
-       *)              return 1 ;;
-    esac
+    test -e $DIR/include
     return $?
 }
 
@@ -405,11 +398,6 @@ override_dest_module_location()
 {
     local orig_location="$1"
     [[ ${addon_modules_dir} ]] && echo "/${addon_modules_dir}" && return
-
-    if [[ $current_os = GNU/kFreeBSD ]] ; then
-        # Does not support subdirs, regardless of distribution
-        echo "" && return
-    fi
 
     case "$running_distribution" in
     fedora* | rhel* | ovm*)
