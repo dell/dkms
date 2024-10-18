@@ -114,9 +114,11 @@ if [ -f /etc/dkms/no-autoinstall ]; then
 fi
 
 # read framework configuration options
-if [ -r /etc/dkms/framework.conf ]; then
-    . /etc/dkms/framework.conf
-fi
+for fwcf in /etc/dkms/framework.conf /etc/dkms/framework.conf.d/*.conf ; do
+    if [ -f "$fwcf" ] && [ -r "$fwcf" ]; then
+        . "$fwcf"
+    fi
+done
 
 KERNELS=$(ls -dv @MODDIR@/*/build 2>/dev/null | cut -d/ -f4 || true)
 CURRENT_KERNEL=$(uname -r)
