@@ -200,7 +200,7 @@ show_usage()
     echo "              [--kernelsourcedir=source-location] [--rpm_safe_upgrade]"
     echo "              [--dkmstree path] [--sourcetree path] [--installtree path]"
     echo "              [--binaries-only] [--source-only] [--verbose]"
-    echo "              [--no-depmod] [--modprobe-on-install] [-j number] [--version]"
+    echo "              [--no-depmod] [--modprobe-on-install] [-j number] [--version] [--help]"
 }
 
 VER()
@@ -2678,6 +2678,10 @@ while (($# > 0)); do
             ;;
         -j)
             read_arg parallel_jobs "$1" "$2" || shift
+            ;;
+        --help|-h)
+            show_usage
+            exit 0
             ;;
         -*)
             error " Unknown option: $1"
