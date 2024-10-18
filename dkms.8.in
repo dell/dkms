@@ -292,6 +292,9 @@ Quiet.
 .B \-V, \-\-version
 Prints the currently installed version of dkms and exits.
 .TP
+.B \-h, \-\-help
+Prints a short usage message and exits.
+.TP
 .B \-c <dkms.conf\-location>
 The location of the
 .I dkms.conf
