@@ -344,6 +344,15 @@ run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
+echo 'Building the test module for more than one kernel version (same version twice for this test)'
+run_with_expected_output dkms build -k "${KERNEL_VER}" -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+Module dkms_test/1.0 already built for kernel ${KERNEL_VER} (${KERNEL_ARCH}), skip. You may override by specifying --force.
+Module dkms_test/1.0 already built for kernel ${KERNEL_VER} (${KERNEL_ARCH}), skip. You may override by specifying --force.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+EOF
+
 if (( NO_SIGNING_TOOL == 0 )); then
     echo 'Building the test module with bad sign_file path in framework file'
     cp test/framework/bad_sign_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf

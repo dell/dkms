@@ -1999,8 +1999,8 @@ make_tarball()
     else
     local i
     for ((i=0; i<${#kernelver[@]}; i++)); do
-        local -r intree_module_dir="$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}"
-        local -r temp_module_dir="$temp_dir_name/dkms_main_tree/${kernelver[$i]}"
+        local intree_module_dir="$dkms_tree/$module/$module_version/${kernelver[$i]}/${arch[$i]}"
+        local temp_module_dir="$temp_dir_name/dkms_main_tree/${kernelver[$i]}"
 
         if ! [[ -d "$intree_module_dir" ]]; then
             die 6  "No modules built for ${kernelver[$i]} (${arch[$i]})." \
