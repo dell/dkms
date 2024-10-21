@@ -29,19 +29,18 @@ jobs:
           - {name: "centos/centos", tag: "stream9", url: "quay.io/"}
           - {name: "debian", tag: "testing"}
           - {name: "debian", tag: "12"}
-          - {name: "debian", tag: "11"}
           - {name: "fedora/fedora", tag: "rawhide", url: "quay.io/"}
+          - {name: "fedora/fedora", tag: "41", url: "quay.io/"}
           - {name: "fedora/fedora", tag: "40", url: "quay.io/"}
           - {name: "fedora/fedora", tag: "39", url: "quay.io/"}
-          - {name: "gentoo/stage3", tag: "latest"}
           - {name: "opensuse/tumbleweed", tag: "latest", variant: "-default", url: "registry.opensuse.org/"}
           - {name: "opensuse/leap", tag: "15.5", variant: "-default", url: "registry.opensuse.org/"}
           - {name: "opensuse/leap", tag: "15.6", variant: "-default", url: "registry.opensuse.org/"}
+          - {name: "ubuntu", tag: "24.10"}
           - {name: "ubuntu", tag: "24.04"}
-          - {name: "ubuntu", tag: "23.10"}
           - {name: "ubuntu", tag: "22.04"}
           - {name: "ubuntu", tag: "20.04"}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     container:
       image: ${{ matrix.distro.url }}${{ matrix.distro.name }}:${{ matrix.distro.tag }}
 
@@ -73,13 +72,6 @@ jobs:
       run: |
         apt-get update -q
         apt-get install -qy make linux-headers-amd64 linux-image-amd64 openssl xz-utils
-
-    - name: Install Gentoo Linux dependencies
-      if: matrix.distro.name == 'gentoo/stage3'
-      run: |
-        echo -e "ACCEPT_KEYWORDS=\"~amd64\"\nACCEPT_LICENSE=\"*\"" >> /etc/portage/make.conf
-        emerge --sync
-        FEATURES="getbinpkg binpkg-ignore-signature" USE="generic-uki" emerge --noreplace -j$(nproc) -l$(nproc) --autounmask-continue '>=sys-kernel/gentoo-kernel-bin-6.6.0'
 
     - name: Install openSUSE leap dependencies
       if: contains(matrix.distro.name, 'opensuse')
