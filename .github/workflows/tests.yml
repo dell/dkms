@@ -51,7 +51,7 @@ jobs:
       run: |
         zypper --non-interactive install git
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install dependencies for Red Hat based distributions
       if: matrix.distro.name == 'almalinux' || contains(matrix.distro.name, 'centos') || contains(matrix.distro.name, 'fedora')
