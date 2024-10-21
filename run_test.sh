@@ -191,8 +191,6 @@ generalize_expected_output() {
     sed -i "/^ERROR (dkms apport): /d" ${output_log}
     # Drop empty lines
     sed -i "/^$/d" ${output_log}
-    # Gentoo complains there is not a .comment section in the built modules
-    sed -i "/^readelf\: Warning: Section '.comment' was not dumped because it does not exist$/d" ${output_log}
     # Swap any CC/LD/... flags (if set) with a placeholder message
     sed -i "s|\(make -j1 KERNELRELEASE=${KERNEL_VER} all\).*|\1 <omitting possibly set CC/LD/... flags>|" ${output_log}
 }
