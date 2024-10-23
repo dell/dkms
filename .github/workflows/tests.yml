@@ -33,6 +33,7 @@ jobs:
           - {name: "fedora/fedora", tag: "41", url: "quay.io/"}
           - {name: "fedora/fedora", tag: "40", url: "quay.io/"}
           - {name: "fedora/fedora", tag: "39", url: "quay.io/"}
+          - {name: "gentoo/stage3", tag: "latest"}
           - {name: "opensuse/tumbleweed", tag: "latest", variant: "-default", url: "registry.opensuse.org/"}
           - {name: "opensuse/leap", tag: "15.5", variant: "-default", url: "registry.opensuse.org/"}
           - {name: "opensuse/leap", tag: "15.6", variant: "-default", url: "registry.opensuse.org/"}
@@ -72,6 +73,13 @@ jobs:
       run: |
         apt-get update -q
         apt-get install -qy make linux-headers-amd64 linux-image-amd64 openssl xz-utils
+
+    - name: Install Gentoo Linux dependencies
+      if: matrix.distro.name == 'gentoo/stage3'
+      run: |
+        echo -e "MAKEOPTS=\"-j$(nproc) -l$(nproc)\"\nACCEPT_LICENSE=\"*\"" >> /etc/portage/make.conf
+        wget --progress=dot:mega -O - https://github.com/gentoo-mirror/gentoo/archive/master.tar.gz | tar -xz && mv gentoo-master /var/db/repos/gentoo
+        FEATURES="getbinpkg binpkg-ignore-signature parallel-fetch parallel-install pkgdir-index-trusted" USE="-initramfs" emerge --quiet --noreplace -j$(nproc) -l$(nproc) --autounmask-continue --with-bdeps=n '>=sys-kernel/gentoo-kernel-bin-6.6.0'
 
     - name: Install openSUSE leap dependencies
       if: contains(matrix.distro.name, 'opensuse')
