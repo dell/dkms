@@ -656,7 +656,7 @@ read_conf()
 
     # Check if clang was used to compile or lld was used to link the kernel.
     if [[ -e $kernel_source_dir/vmlinux ]]; then
-      if  readelf -p .comment $kernel_source_dir/vmlinux | grep -q clang; then
+      if  readelf -p .comment $kernel_source_dir/vmlinux 2>&1 | grep -q clang; then
         make_command="${make_command} LLVM=1"
       fi
     elif [[ -e "${kernel_config}" ]]; then
