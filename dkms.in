@@ -839,7 +839,12 @@ check_version_sanity()
             local verinfo
             verinfo="$(get_module_verinfo "${dkms_module}")"
             if [[ "$(echo "$verinfo" | tr -d '[:space:]')" ]] || diff "${kernels_module}" "${dkms_module}" &>/dev/null; then
-                echo "Module ${kernels_module} already installed at version $(echo "$verinfo" | head -n 1), override by specifying --force" >&2
+                verinfo=$(echo "$verinfo" | head -n 1)
+                if [[ $verinfo ]]; then
+                    echo "Module ${kernels_module} already installed at version ${verinfo}, override by specifying --force" >&2
+                else
+                    echo "Module ${kernels_module} already installed (unversioned module), override by specifying --force" >&2
+                fi
                 return 1
             fi
         fi
