@@ -945,7 +945,7 @@ run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_duplicate_test -
 Module dkms_duplicate_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext}
-Module was not found within /lib/modules/${KERNEL_VER}/
+Module dkms_duplicate_test.ko${mod_compression_ext} was not found within /lib/modules/${KERNEL_VER}/
 Running depmod... done.
 Deleting module dkms_duplicate_test/1.0 completely from the DKMS tree.
 EOF
