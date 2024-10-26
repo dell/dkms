@@ -1638,7 +1638,7 @@ do_uninstall()
                 done
                 (if cd "$install_tree/$1"; then rpm -qf "${dir_to_remove}" >/dev/null 2>&1 || rmdir -p --ignore-fail-on-non-empty "${dir_to_remove}"; fi || true)
             else
-                echo "Module was not found within $install_tree/$1/"
+                echo "Module ${dest_module_name[$count]}$module_suffix was not found within $install_tree/$1/"
             fi
             local origmod
             origmod=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$1/$2" "${dest_module_name[$count]}")
