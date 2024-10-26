@@ -933,7 +933,7 @@ Cleaning build area... done.
 Building module(s)... done.
 ${BUILD_MESSAGES}Cleaning build area... done.
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext}
-Module /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext} already installed at version , override by specifying --force
+Module /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext} already installed (unversioned module), override by specifying --force
 Running depmod... done.
 EOF
 run_status_with_expected_output 'dkms_duplicate_test' << EOF
@@ -1284,7 +1284,7 @@ else
     echo ' Installing the nover update test 3.0 modules (expected error)'
     set_signing_message "dkms_nover_update_test" "3.0"
     run_with_expected_error 6 dkms install -k "${KERNEL_VER}" -m dkms_nover_update_test -v 3.0 << EOF
-Module /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_nover_update_test.ko${mod_compression_ext} already installed at version , override by specifying --force
+Module /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_nover_update_test.ko${mod_compression_ext} already installed (unversioned module), override by specifying --force
 Error! Installation aborted.
 EOF
     run_status_with_expected_output 'dkms_nover_update_test' << EOF
