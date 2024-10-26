@@ -214,7 +214,6 @@ for KERNEL in $KERNELS; do
         continue
     fi
 
-
     #if the module isn't yet built, try to build it
     if [ $(echo $dkms_status | grep -c ": built") -eq 0 ]; then
         if [ ! -L /var/lib/dkms/$NAME/$VERSION/source ]; then

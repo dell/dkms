@@ -336,8 +336,8 @@ combinations on the other kernel.
 .TP
 .B \-\-force
 This option can be used in conjunction with
-.B build, install 
-and 
+.B build, install
+and
 .B ldtarball
 to force copying over existing files.
 .TP

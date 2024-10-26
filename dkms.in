@@ -104,19 +104,19 @@ invoke_command()
     cmd_output_file="$3"
     cmd_mode="$4"
     exitval=0
-    
-    [[ $verbose ]] && echo -e "$cmd" ||  echo -en "$cmd_description..."
+
+    [[ $verbose ]] && echo -e "$cmd" || echo -en "$cmd_description..."
 
     if [[ $cmd_mode == background && ! $verbose && $package_name != dkms*_test ]]; then
         while true ; do
             sleep 3
-            echo  -n "."
+            echo -n "."
         done &
         progresspid=$!
     fi
 
-    if [[ -n "$cmd_output_file" ]]; then 
-        ( eval "$cmd" ) >> "$cmd_output_file" 2>&1 
+    if [[ -n "$cmd_output_file" ]]; then
+        ( eval "$cmd" ) >> "$cmd_output_file" 2>&1
         exitval=$?
     elif [[ -z "$cmd_output_file" && $cmd_mode == background && ! $verbose ]]; then
         ( eval "$cmd" ) >/dev/null 2>&1
@@ -130,7 +130,7 @@ invoke_command()
         kill "$progresspid" >/dev/null 2>&1
         wait "$progresspid" 2>/dev/null
     fi
-    
+
     if (( exitval > 0)); then
         echo -en "(bad exit status: $exitval)"
         # Print the failing command without the clunky redirection
@@ -138,7 +138,7 @@ invoke_command()
     else
         echo " done."
     fi
-    
+
     return "$exitval"
 }
 
@@ -658,7 +658,7 @@ read_conf()
 
     # Check if clang was used to compile or lld was used to link the kernel.
     if [[ -e $kernel_source_dir/vmlinux ]]; then
-      if  readelf -p .comment $kernel_source_dir/vmlinux 2>&1 | grep -q clang; then
+      if readelf -p .comment $kernel_source_dir/vmlinux 2>&1 | grep -q clang; then
         make_command="${make_command} LLVM=1"
       fi
     elif [[ -e "${kernel_config}" ]]; then
@@ -2003,7 +2003,7 @@ make_tarball()
         local temp_module_dir="$temp_dir_name/dkms_main_tree/${kernelver[$i]}"
 
         if ! [[ -d "$intree_module_dir" ]]; then
-            die 6  "No modules built for ${kernelver[$i]} (${arch[$i]})." \
+            die 6 "No modules built for ${kernelver[$i]} (${arch[$i]})." \
                 "Modules must already be in the built state before using mktarball."
         fi
 
@@ -2072,7 +2072,7 @@ make_tarball()
         die 6 "Failed to make tarball."
     fi
 
-    eval "$make_tarball_rm_temp_dir_name" 
+    eval "$make_tarball_rm_temp_dir_name"
     unset make_tarball_rm_temp_dir_name
 }
 
@@ -2137,7 +2137,7 @@ load_tarball()
         fi
         if is_module_added "$PACKAGE_NAME" "$PACKAGE_VERSION" && \
             [[ ! $force ]]; then
-            die 8  "$PACKAGE_NAME-$PACKAGE_VERSION is already added!" \
+            die 8 "$PACKAGE_NAME-$PACKAGE_VERSION is already added!" \
             "Aborting."
         fi
         # Success!
