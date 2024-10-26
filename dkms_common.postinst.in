@@ -213,9 +213,9 @@ if [ -n "$ARCH" ]; then
 fi
 
 for KERNEL in $KERNELS; do
+    echo ""
     dkms_status=$(dkms status -m $NAME -v $VERSION -k $KERNEL $ARCH)
     if [ $(echo $KERNEL | grep -c "BOOT") -gt 0 ]; then
-        echo ""
         echo "Module build and install for $KERNEL was skipped as "
         echo "it is a BOOT variant"
         continue
