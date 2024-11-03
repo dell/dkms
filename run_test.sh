@@ -929,9 +929,12 @@ else
 BUILD_MESSAGES="${SIGNING_MESSAGE}${SIGNING_MESSAGE}"
 fi
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_duplicate_test -v 1.0 << EOF
-Cleaning build area... done.
-Building module(s)... done.
-${BUILD_MESSAGES}Cleaning build area... done.
+Cleaning build area...(bad exit status: 1)
+Failed command:
+echo oops >&2 && falseBuilding module(s)... done.
+${BUILD_MESSAGES}Cleaning build area...(bad exit status: 1)
+Failed command:
+echo oops >&2 && false
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext}
 Module /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext} already installed (unversioned module), override by specifying --force
 Running depmod... done.
