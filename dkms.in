@@ -918,7 +918,7 @@ add_module()
 
     # Check that this module-version hasn't already been added
     if is_module_added "$module" "$module_version"; then
-        die 3 "DKMS tree already contains: $module-$module_version" \
+        die 3 "DKMS tree already contains: $module/$module_version" \
             "You cannot add the same module/version combo more than once."
     fi
 
@@ -1086,7 +1086,7 @@ prepare_build()
     # Error out if build_exclude is set
     [[ $build_exclude ]] && diewarn 77 \
         "The $base_dir/dkms.conf"\
-        "for module $module includes a BUILD_EXCLUSIVE directive"\
+        "for module $module/$module_version includes a BUILD_EXCLUSIVE directive"\
         "which does not match this kernel/arch/config."\
         "This indicates that it should not be built."
 
@@ -1167,7 +1167,7 @@ actual_build()
     echo ""
 
     invoke_command "$clean" "Cleaning build area" '' background
-    echo "DKMS make.log for $module-$module_version for kernel $kernelver ($arch)" >> "$build_log"
+    echo "DKMS make.log for $module/$module_version for kernel $kernelver ($arch)" >> "$build_log"
     date >> "$build_log"
     local the_make_command
     the_make_command="${make_command/#make/make -j$parallel_jobs KERNELRELEASE=$kernelver}"
@@ -1605,7 +1605,7 @@ do_uninstall()
     # $2 = arch
 
     echo ""
-    echo "Module $module-$module_version for kernel $1 ($2):"
+    echo "Module $module/$module_version for kernel $1 ($2):"
 
     set_module_suffix "$1"
 
@@ -1683,13 +1683,13 @@ module_is_broken_and_die() {
 module_is_added_or_die()
 {
     is_module_added "$module" "$module_version" || die 3 \
-        "The module/version combo: $module-$module_version is not located in the DKMS tree."
+        "The module/version combo: $module/$module_version is not located in the DKMS tree."
 }
 
 maybe_unbuild_module()
 {
     is_module_built "$module" "$module_version" "$1" "$2" || {
-        echo "Module $module $module_version is not built for kernel $1 ($2)."\
+        echo "Module $module/$module_version is not built for kernel $1 ($2)."\
             "Skipping..."
         return 0
     }
@@ -1700,7 +1700,7 @@ maybe_unbuild_module()
 maybe_uninstall_module()
 {
     is_module_installed "$module" "$module_version" "$1" "$2" || {
-        echo "Module $module $module_version is not installed for kernel $1 ($2)."\
+        echo "Module $module/$module_version is not installed for kernel $1 ($2)."\
             "Skipping..."
         return 0
     }
@@ -1762,7 +1762,7 @@ remove_module()
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
     if ! find $dkms_tree/$module/$module_version/* -maxdepth 0 -type d 2>/dev/null | grep -Eqv "(build|tarball|driver_disk|rpm|deb|source)$"; then
         echo ""
-        echo "Deleting module $module-$module_version completely from the DKMS tree."
+        echo "Deleting module $module/$module_version completely from the DKMS tree."
         rm -rf "$dkms_tree/$module/$module_version"
     fi
 
@@ -2137,7 +2137,7 @@ load_tarball()
         fi
         if is_module_added "$PACKAGE_NAME" "$PACKAGE_VERSION" && \
             [[ ! $force ]]; then
-            die 8 "$PACKAGE_NAME-$PACKAGE_VERSION is already added!" \
+            die 8 "$PACKAGE_NAME/$PACKAGE_VERSION is already added!" \
             "Aborting."
         fi
         # Success!
@@ -2146,7 +2146,7 @@ load_tarball()
 
     module="$PACKAGE_NAME"; module_version="$PACKAGE_VERSION"
     echo ""
-    echo "Loading tarball for $module-$module_version"
+    echo "Loading tarball for $module/$module_version"
     case $loc in
         dkms_source_tree)
             add_source_tree "$temp_dir_name/dkms_source_tree"
@@ -2339,7 +2339,7 @@ add_source_tree() {
     module_version="$PACKAGE_VERSION"
     if [[ $force && -d $source_tree/$module-$module_version ]]; then
         echo >&2
-        echo "Forcing install of $module-$module_version"
+        echo "Forcing install of $module/$module_version"
         rm -rf "$source_tree/$module-$module_version"
     fi
 
