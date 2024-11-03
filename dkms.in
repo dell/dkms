@@ -2563,6 +2563,7 @@ autoinstall() {
         for modv in "${to_install[@]}"; do
             IFS=/ read m v <<< "$modv"
             if [[ -z ${build_depends[$m]} ]]; then
+                echo "Autoinstall of module $m/$v for kernel $kernelver ($arch)"
                 (module="$m" module_version="$v" kernelver="$kernelver" arch="$arch" install_module)
                 status=$?
                 if (( status == 0 )); then
