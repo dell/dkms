@@ -767,6 +767,7 @@ EOF
 
 echo "Running dkms autoinstall (module already built)"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
@@ -800,6 +801,7 @@ rm -f /etc/dkms/no-autoinstall
 
 echo "Running dkms autoinstall"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
@@ -822,6 +824,7 @@ EOF
 
 echo "Running dkms autoinstall for a kernel without headers installed (expected error)"
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}-noheaders" << EOF
+Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER}-noheaders (${KERNEL_ARCH})
 
 Error! Your kernel headers for kernel ${KERNEL_VER}-noheaders cannot be found at /lib/modules/${KERNEL_VER}-noheaders/build or /lib/modules/${KERNEL_VER}-noheaders/source.
 Please install the linux-headers-${KERNEL_VER}-noheaders package or use the --kernelsourcedir option to tell DKMS where it's located.
@@ -891,6 +894,7 @@ EOF
 
 echo "Running dkms kernel_postinst"
 run_with_expected_output dkms kernel_postinst -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
@@ -957,6 +961,7 @@ EOF
 
 echo 'Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
@@ -986,6 +991,7 @@ EOF
 
 echo 'Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
@@ -1035,6 +1041,7 @@ EOF
 
 echo 'Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
@@ -1042,6 +1049,7 @@ ${SIGNING_MESSAGE}Cleaning build area... done.
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
+Autoinstall of module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
@@ -1360,6 +1368,7 @@ EOF
 
 echo 'Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_replace_test/2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
@@ -1624,6 +1633,7 @@ EOF
 
 echo "Running dkms autoinstall with multiple modules"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}applying patch patch2.patch...patching file Makefile
 patching file dkms_noisy_test.c
  done.
@@ -1671,6 +1681,7 @@ post_install: line 3
 post_install: line 4/stderr
 post_install: line 5
 Running depmod... done.
+Autoinstall of module dkms_patches_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}applying patch patch1.patch...patching file Makefile
 patching file dkms_patches_test.c
  done.
@@ -1684,6 +1695,7 @@ ${SIGNING_MESSAGE_patches}Cleaning build area... done.
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_patches_test.ko${mod_compression_ext}
 Running depmod... done.
+Autoinstall of module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Running the pre_build script:
 
@@ -2542,6 +2554,7 @@ EOF
 check_module_source_tree_created /usr/src/dkms_failing_test-1.0
 echo 'Running autoinstall with failing test module (expected error)'
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_failing_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)...(bad exit status: 2)
@@ -2563,6 +2576,7 @@ EOF
 check_module_source_tree_created /usr/src/dkms_failing_dependencies_test-1.0
 echo 'Running autoinstall with failing test module and test module with dependencies on the failing module (expected error)'
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_failing_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)...(bad exit status: 2)
@@ -2638,6 +2652,7 @@ EOF
 
 echo "Running dkms autoinstall (1 x skip)"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_build_exclusive_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}Warning: The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf
 for module dkms_build_exclusive_test/1.0 includes a BUILD_EXCLUSIVE directive
 which does not match this kernel/arch/config.
@@ -2659,10 +2674,12 @@ EOF
 
 echo "Running dkms autoinstall (1 x skip, 1 x pass)"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_build_exclusive_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}Warning: The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf
 for module dkms_build_exclusive_test/1.0 includes a BUILD_EXCLUSIVE directive
 which does not match this kernel/arch/config.
 This indicates that it should not be built.
+Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
@@ -2700,10 +2717,12 @@ check_module_source_tree_created /usr/src/dkms_failing_test-1.0
 
 echo "Running dkms autoinstall (1 x skip, 1 x fail, 1 x pass) (expected error)"
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_build_exclusive_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}Warning: The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf
 for module dkms_build_exclusive_test/1.0 includes a BUILD_EXCLUSIVE directive
 which does not match this kernel/arch/config.
 This indicates that it should not be built.
+Autoinstall of module dkms_failing_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)...(bad exit status: 2)
@@ -2712,6 +2731,7 @@ make -j1 KERNELRELEASE=${KERNEL_VER} all <omitting possibly set CC/LD/... flags>
 
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
+Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
@@ -2763,10 +2783,12 @@ EOF
 
 echo "Running dkms autoinstall (2 x skip, with dependency)"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+Autoinstall of module dkms_build_exclusive_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}Warning: The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf
 for module dkms_build_exclusive_test/1.0 includes a BUILD_EXCLUSIVE directive
 which does not match this kernel/arch/config.
 This indicates that it should not be built.
+Autoinstall of module dkms_build_exclusive_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}Warning: The /var/lib/dkms/dkms_build_exclusive_dependencies_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf
 for module dkms_build_exclusive_dependencies_test/1.0 includes a BUILD_EXCLUSIVE directive
 which does not match this kernel/arch/config.
@@ -3036,6 +3058,7 @@ run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 
 Error! dkms_multiver_test/1.0 is broken! Missing the source directory or the symbolic link pointing to it.
 Manual intervention is required!
+Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
