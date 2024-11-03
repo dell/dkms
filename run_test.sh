@@ -86,7 +86,10 @@ clean_dkms_env() {
     for module in ${TEST_MODULES[@]}; do
         found_module="$(dkms_status_grep_dkms_module ${module})"
         if [[ -n "$found_module" ]] ; then
-            dkms remove ${module}/1.0 >/dev/null
+            local version
+            for version in 1.0 2.0 3.0; do
+                test ! -d "/var/lib/dkms/${module}/${version}" || dkms remove ${module}/${version} >/dev/null || true
+            done
         fi
         rm -rf "/var/lib/dkms/${module}/"
         rm -f "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/${module}.ko${mod_compression_ext}"
