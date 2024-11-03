@@ -125,7 +125,7 @@ CURRENT_KERNEL=$(uname -r)
 
 #We never want to keep an older version side by side to prevent conflicts
 if [ -e "/var/lib/dkms/$NAME/$VERSION" ]; then
-    echo "Removing old $NAME-$VERSION DKMS files..."
+    echo "Removing old $NAME/$VERSION DKMS files..."
     dkms remove -m $NAME -v $VERSION --all
 fi
 
@@ -144,7 +144,7 @@ if [ -f "$TARBALL_ROOT/$NAME-$VERSION.dkms.tar.gz" ]; then
         exit 2
     fi
 elif [ -d "/usr/src/$NAME-$VERSION" ]; then
-    echo "Loading new $NAME-$VERSION DKMS files..."
+    echo "Loading new $NAME/$VERSION DKMS files..."
     dkms add -m $NAME -v $VERSION > /dev/null
 fi
 
@@ -223,7 +223,7 @@ for KERNEL in $KERNELS; do
             continue
         fi
         if _check_kernel_dir $KERNEL; then
-            echo "Building initial module for $KERNEL"
+            echo "Building initial module $NAME/$VERSION for $KERNEL"
             set +e
             dkms build -m $NAME -v $VERSION -k $KERNEL $ARCH > /dev/null
             case $? in
