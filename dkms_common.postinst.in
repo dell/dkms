@@ -173,7 +173,7 @@ fi
 
 # Here we look for the most recent kernel so that we can
 # build the module for it (in addition to doing it for the
-# current kernel.
+# current kernel).
 NEWEST_KERNEL=$(get_newest_kernel)
 
 if [ -z "$autoinstall_all_kernels" ]; then
