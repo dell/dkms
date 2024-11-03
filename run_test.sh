@@ -898,7 +898,7 @@ run_status_with_expected_output 'dkms_multiver_test' << EOF
 dkms_multiver_test/1.0: added
 dkms_multiver_test/2.0: added
 EOF
-if ! [[ -d /usr/src/dkms_multiver_test-1.0 ]] ; then
+if ! [[ -d /usr/src/dkms_multiver_test-2.0 ]] ; then
     echo >&2 'Error: directory /usr/src/dkms_multiver_test-2.0 was not created'
     exit 1
 fi
@@ -1628,28 +1628,28 @@ EOF
 echo ' Removing symlink /var/lib/dkms/dkms_test/1.0/source'
 rm /var/lib/dkms/dkms_test/1.0/source
 
-echo 'Building broken test module (expected erorr)'
+echo 'Building broken test module (expected error)'
 run_with_expected_error 4 dkms build dkms_test/1.0 << EOF
 Error! dkms_test/1.0 is broken!
 Missing the source directory or the symbolic link pointing to it.
 Manual intervention is required!
 EOF
 
-echo 'Installing broken test module (expected erorr)'
+echo 'Installing broken test module (expected error)'
 run_with_expected_error 4 dkms install dkms_test/1.0 << EOF
 Error! dkms_test/1.0 is broken!
 Missing the source directory or the symbolic link pointing to it.
 Manual intervention is required!
 EOF
 
-echo 'Unbuild broken test module (expected erorr)'
+echo 'Unbuild broken test module (expected error)'
 run_with_expected_error 4 dkms unbuild dkms_test/1.0 << EOF
 Error! dkms_test/1.0 is broken!
 Missing the source directory or the symbolic link pointing to it.
 Manual intervention is required!
 EOF
 
-echo 'Uninstall broken test module (expected erorr)'
+echo 'Uninstall broken test module (expected error)'
 run_with_expected_error 4 dkms uninstall dkms_test/1.0 << EOF
 Error! dkms_test/1.0 is broken!
 Missing the source directory or the symbolic link pointing to it.
@@ -1669,7 +1669,7 @@ Error! dkms_test/1.0: Missing the module source directory or the symbolic link p
 Manual intervention is required!
 EOF
 
-echo 'Remove broken test module (expected erorr)'
+echo 'Remove broken test module (expected error)'
 run_with_expected_error 4 dkms remove dkms_test/1.0 << EOF
 Error! dkms_test/1.0 is broken!
 Missing the source directory or the symbolic link pointing to it.
