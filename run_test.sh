@@ -238,6 +238,21 @@ check_module_source_tree_created() {
     fi
 }
 
+remove_module_source_tree() {
+    for p in "$@" ; do
+        case "$p" in
+            /usr/src/*)
+                ;;
+            *)
+                echo "Unsuported module source tree location '$p'"
+                exit 1
+                ;;
+        esac
+    done
+    echo "Removing source tree $@"
+    rm -r "$@"
+}
+
 # sig_hashalgo itself may show bogus value if kmod version < 26
 kmod_broken_hashalgo() {
     local -ri kmod_ver=$(kmod --version | grep version | cut -f 3 -d ' ')
@@ -640,8 +655,7 @@ if [[ -e "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_comp
     exit 1
 fi
 
-echo 'Removing /usr/src/dkms_test-1.0'
-rm -r /usr/src/dkms_test-1.0
+remove_module_source_tree /usr/src/dkms_test-1.0
 
 echo 'Building the test module by config file (combining add, build)'
 run_with_expected_output dkms build -k "${KERNEL_VER}" test/dkms_test-1.0/dkms.conf << EOF
@@ -690,8 +704,7 @@ if (( NO_SIGNING_TOOL == 0 )); then
 fi
 rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
-echo 'Removing /usr/src/dkms_test-1.0'
-rm -r /usr/src/dkms_test-1.0
+remove_module_source_tree /usr/src/dkms_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
@@ -772,8 +785,7 @@ if ! [[ -d /usr/src/dkms_noautoinstall_test-1.0 ]] ; then
     exit 1
 fi
 
-echo 'Removing /usr/src/dkms_noautoinstall_test-1.0'
-rm -r /usr/src/dkms_noautoinstall_test-1.0
+remove_module_source_tree /usr/src/dkms_noautoinstall_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
@@ -855,8 +867,7 @@ Running depmod... done.
 Deleting module dkms_conf_test/1.0 completely from the DKMS tree.
 EOF
 
-echo 'Removing /usr/src/dkms_conf_test-1.0'
-rm -r /usr/src/dkms_conf_test-1.0
+remove_module_source_tree /usr/src/dkms_conf_test-1.0
 
 echo 'Testing dkms.conf with defaulted BUILT_MODULE_NAME'
 run_with_expected_output dkms add test/dkms_conf_test_defaulted_BUILT_MODULE_NAME << EOF
@@ -880,8 +891,7 @@ run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
 Deleting module dkms_conf_test/1.0 completely from the DKMS tree.
 EOF
 
-echo 'Removing /usr/src/dkms_conf_test-1.0'
-rm -r /usr/src/dkms_conf_test-1.0
+remove_module_source_tree /usr/src/dkms_conf_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
@@ -1013,8 +1023,7 @@ EOF
 run_status_with_expected_output 'dkms_multiver_test' << EOF
 EOF
 
-echo 'Removing /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0'
-rm -r /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0
+remove_module_source_tree /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver_test-2.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
@@ -1133,8 +1142,7 @@ EOF
 run_status_with_expected_output 'dkms_emptyver_test' << EOF
 EOF
 
-echo 'Removing /usr/src/dkms_nover_test-1.0 /usr/src/dkms_emptyver_test-1.0'
-rm -r /usr/src/dkms_nover_test-1.0 /usr/src/dkms_emptyver_test-1.0
+remove_module_source_tree /usr/src/dkms_nover_test-1.0 /usr/src/dkms_emptyver_test-1.0
 
 echo 'Adding the nover update test modules 1.0 by directory'
 run_with_expected_output dkms add test/dkms_nover_update_test/1.0 << EOF
@@ -1244,8 +1252,7 @@ EOF
 run_status_with_expected_output 'dkms_nover_update_test' << EOF
 EOF
 
-echo 'Removing /usr/src/dkms_nover_update_test-{1,2,3}.0'
-rm -r /usr/src/dkms_nover_update_test-{1,2,3}.0
+remove_module_source_tree /usr/src/dkms_nover_update_test-{1,2,3}.0
 
 echo 'Checking that the environment is clean'
 check_no_dkms_test
@@ -1299,8 +1306,8 @@ Module dkms_failing_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL
 Module dkms_failing_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_failing_test/1.0 completely from the DKMS tree.
 EOF
-echo 'Removing /usr/src/dkms_failing_test-1.0'
-rm -r /usr/src/dkms_failing_test-1.0
+
+remove_module_source_tree /usr/src/dkms_failing_test-1.0
 
 echo 'Running autoinstall with test module with missing dependencies (expected error)'
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
@@ -1315,8 +1322,8 @@ Module dkms_dependencies_test/1.0 is not installed for kernel ${KERNEL_VER} (${K
 Module dkms_dependencies_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_dependencies_test/1.0 completely from the DKMS tree.
 EOF
-echo 'Removing /usr/src/dkms_dependencies_test-1.0'
-rm -r /usr/src/dkms_dependencies_test-1.0
+
+remove_module_source_tree /usr/src/dkms_dependencies_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
@@ -1438,8 +1445,8 @@ Module dkms_failing_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL
 Module dkms_failing_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_failing_test/1.0 completely from the DKMS tree.
 EOF
-echo 'Removing /usr/src/dkms_failing_test-1.0'
-rm -r /usr/src/dkms_failing_test-1.0
+
+remove_module_source_tree /usr/src/dkms_failing_test-1.0
 
 echo 'Removing the test module'
 run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
@@ -1451,8 +1458,8 @@ Deleting module dkms_test/1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
 EOF
-echo 'Removing /usr/src/dkms_test-1.0'
-rm -r /usr/src/dkms_test-1.0
+
+remove_module_source_tree /usr/src/dkms_test-1.0
 
 echo 'Adding the build-exclusive dependencies test module by directory'
 run_with_expected_output dkms add test/dkms_build_exclusive_dependencies_test-1.0 << EOF
@@ -1488,8 +1495,8 @@ Deleting module dkms_build_exclusive_dependencies_test/1.0 completely from the D
 EOF
 run_status_with_expected_output 'dkms_build_exclusive_dependencies_test' << EOF
 EOF
-echo 'Removing /usr/src/dkms_build_exclusive_dependencies_test-1.0'
-rm -r /usr/src/dkms_build_exclusive_dependencies_test-1.0
+
+remove_module_source_tree /usr/src/dkms_build_exclusive_dependencies_test-1.0
 
 echo 'Removing the build-exclusive test module'
 run_with_expected_output dkms remove --all -m dkms_build_exclusive_test -v 1.0 << EOF
@@ -1497,8 +1504,8 @@ Deleting module dkms_build_exclusive_test/1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
 EOF
-echo 'Removing /usr/src/dkms_build_exclusive_test-1.0'
-rm -r /usr/src/dkms_build_exclusive_test-1.0
+
+remove_module_source_tree /usr/src/dkms_build_exclusive_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
@@ -1552,8 +1559,9 @@ Module dkms_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
 Module dkms_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_test/1.0 completely from the DKMS tree.
 EOF
-echo "Removing /usr/src/dkms_test-1.0"
-rm -r /usr/src/dkms_test-1.0
+
+remove_module_source_tree /usr/src/dkms_test-1.0
+
 echo "Deleting /etc/os-release"
 rm -f /etc/os-release
 
@@ -1574,8 +1582,9 @@ Module dkms_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}).
 Module dkms_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Deleting module dkms_test/1.0 completely from the DKMS tree.
 EOF
-echo "Removing /usr/src/dkms_test-1.0"
-rm -r /usr/src/dkms_test-1.0
+
+remove_module_source_tree /usr/src/dkms_test-1.0
+
 echo "Deleting /usr/lib/os-release"
 rm -f /usr/lib/os-release
 
@@ -1672,8 +1681,7 @@ run_with_expected_output dkms add dkms_test/1.0 << EOF
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 EOF
 
-echo ' Removing source tree /usr/src/dkms_test-1.0/'
-rm -rf /usr/src/dkms_test-1.0/
+remove_module_source_tree /usr/src/dkms_test-1.0/
 
 echo 'Checking broken status'
 run_with_expected_output dkms status << EOF
@@ -1751,8 +1759,9 @@ Module dkms_multiver_test/2.0 is not installed for kernel ${KERNEL_VER} (${KERNE
 Deleting module dkms_multiver_test/2.0 completely from the DKMS tree.
 EOF
 
-echo ' Removing directories: /var/lib/dkms/dkms_test/ /var/lib/dkms/dkms_multiver_test /usr/src/dkms_test-1.0 /usr/src/dkms_multiver_test-?.0'
-rm -rf /var/lib/dkms/dkms_test/ /var/lib/dkms/dkms_multiver_test /usr/src/dkms_test-1.0 /usr/src/dkms_multiver_test-?.0
+remove_module_source_tree /usr/src/dkms_test-1.0 /usr/src/dkms_multiver_test-?.0
+echo ' Removing directories: /var/lib/dkms/dkms_test/ /var/lib/dkms/dkms_multiver_test'
+rm -rf /var/lib/dkms/dkms_test/ /var/lib/dkms/dkms_multiver_test
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
