@@ -290,7 +290,10 @@ case "${os_id}" in
     arch)
         expected_dest_loc=updates/dkms
         ;;
-    debian* | ubuntu | linuxmint)
+    debian* | linuxmint)
+        expected_dest_loc=updates/dkms
+        ;;
+    ubuntu)
         expected_dest_loc=updates/dkms
         ;;
     alpine)
@@ -304,6 +307,13 @@ case "${os_id}" in
         echo >&2 "Error: unknown Linux distribution ID ${os_id}"
         exit 1
         ;;
+esac
+
+mod_compressor=
+case "${mod_compression_ext}" in
+    .gz)    mod_compressor=gzip ;;
+    .xz)    mod_compressor=xz ;;
+    .zst)   mod_compressor=zst ;;
 esac
 
 echo "Checking module compression ..."
@@ -906,13 +916,18 @@ EOF
 
 echo ' Building and installing the test module'
 set_signing_message "dkms_duplicate_test" "1.0"
+if [[ ${mod_compression_ext} ]]; then
+BUILD_MESSAGES="${SIGNING_MESSAGE}strip: '/var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko': No such file
+${SIGNING_MESSAGE}${mod_compressor}: /var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko: No such file or directory
+cp: cannot stat '/var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko': No such file or directory
+"
+else
+BUILD_MESSAGES="${SIGNING_MESSAGE}${SIGNING_MESSAGE}"
+fi
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_duplicate_test -v 1.0 << EOF
 Cleaning build area... done.
 Building module(s)... done.
-${SIGNING_MESSAGE}strip: '/var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko': No such file
-${SIGNING_MESSAGE}xz: /var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko: No such file or directory
-cp: cannot stat '/var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko': No such file or directory
-Cleaning build area... done.
+${BUILD_MESSAGES}Cleaning build area... done.
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext}
 Module /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext} already installed at version , override by specifying --force
 Running depmod... done.
