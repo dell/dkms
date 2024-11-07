@@ -31,6 +31,7 @@ TEST_MODULES=(
     "dkms_duplicate_test"
     "dkms_patches_test"
     "dkms_scripts_test"
+    "dkms_noisy_test"
     "dkms_build_exclusive_test"
     "dkms_build_exclusive_dependencies_test"
 )
@@ -50,6 +51,7 @@ TEST_TMPDIRS=(
     "/usr/src/dkms_duplicate_test-1.0"
     "/usr/src/dkms_patches_test-1.0"
     "/usr/src/dkms_scripts_test-1.0"
+    "/usr/src/dkms_noisy_test-1.0"
     "/usr/src/dkms_build_exclusive_test-1.0"
     "/usr/src/dkms_build_exclusive_dependencies_test-1.0"
     "/tmp/dkms_test_dir_${KERNEL_VER}/"
@@ -808,6 +810,90 @@ run_status_with_expected_output 'dkms_scripts_test' << EOF
 dkms_scripts_test/1.0: added
 EOF
 
+echo ' Adding noisy test module'
+run_with_expected_output dkms add test/dkms_noisy_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_noisy_test/1.0/source -> /usr/src/dkms_noisy_test-1.0
+Running the post_add script:
+/var/lib/dkms/dkms_noisy_test/1.0/source/script.sh post_add
+post_add: line 1
+post_add: line 2/stderr
+post_add: line 3
+post_add: line 4/stderr
+post_add: line 5
+EOF
+check_module_source_tree_created /usr/src/dkms_noisy_test-1.0
+run_status_with_expected_output 'dkms_noisy_test' << EOF
+dkms_noisy_test/1.0: added
+EOF
+
+echo ' Building and installing the noisy test module'
+set_signing_message "dkms_noisy_test" "1.0"
+SIGNING_MESSAGE_noisy="$SIGNING_MESSAGE"
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_noisy_test -v 1.0 << EOF
+applying patch patch2.patch...patching file Makefile
+patching file dkms_noisy_test.c
+ done.
+applying patch patch1.patch...patching file Makefile
+Hunk #1 succeeded at 3 (offset 2 lines).
+patching file dkms_noisy_test.c
+Hunk #1 succeeded at 18 (offset 2 lines).
+ done.
+Running the pre_build script:
+/var/lib/dkms/dkms_noisy_test/1.0/build/script.sh pre_build
+pre_build: line 1
+pre_build: line 2/stderr
+pre_build: line 3
+pre_build: line 4/stderr
+pre_build: line 5
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE_noisy}Running the post_build script:
+/var/lib/dkms/dkms_noisy_test/1.0/build/script.sh post_build
+post_build: line 1
+post_build: line 2/stderr
+post_build: line 3
+post_build: line 4/stderr
+post_build: line 5
+Cleaning build area... done.
+Running the pre_install script:
+/var/lib/dkms/dkms_noisy_test/1.0/source/script.sh pre_install
+pre_install: line 1
+pre_install: line 2/stderr
+pre_install: line 3
+pre_install: line 4/stderr
+pre_install: line 5
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_noisy_test.ko${mod_compression_ext}
+Running the post_install script:
+/var/lib/dkms/dkms_noisy_test/1.0/source/script.sh post_install
+post_install: line 1
+post_install: line 2/stderr
+post_install: line 3
+post_install: line 4/stderr
+post_install: line 5
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_noisy_test' << EOF
+dkms_noisy_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo ' Unbuilding the noisy test module'
+run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_noisy_test -v 1.0 << EOF
+Module dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_noisy_test.ko${mod_compression_ext}
+Running the post_remove script:
+/var/lib/dkms/dkms_noisy_test/1.0/source/script.sh post_remove
+post_remove: line 1
+post_remove: line 2/stderr
+post_remove: line 3
+post_remove: line 4/stderr
+post_remove: line 5
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_noisy_test' << EOF
+dkms_noisy_test/1.0: added
+EOF
+
 echo ' Removing the test module with patches'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_patches_test -v 1.0 << EOF
 Module dkms_patches_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
@@ -826,7 +912,16 @@ EOF
 run_status_with_expected_output 'dkms_scripts_test' << EOF
 EOF
 
-remove_module_source_tree /usr/src/dkms_patches_test-1.0 /usr/src/dkms_scripts_test-1.0
+echo ' Removing the noisy test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_noisy_test -v 1.0 << EOF
+Module dkms_noisy_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_noisy_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Deleting module dkms_noisy_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_noisy_test' << EOF
+EOF
+
+remove_module_source_tree /usr/src/dkms_patches_test-1.0 /usr/src/dkms_scripts_test-1.0 /usr/src/dkms_noisy_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
