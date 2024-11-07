@@ -43,7 +43,8 @@ readonly dkms_conf_variables="CLEAN PACKAGE_NAME
 # All of the variables not related to signing we will accept from framework.conf.
 readonly dkms_framework_nonsigning_variables="source_tree dkms_tree install_tree tmp_location
    verbose symlink_modules autoinstall_all_kernels
-   modprobe_on_install parallel_jobs"
+   modprobe_on_install parallel_jobs
+   compress_gzip_opts compress_xz_opts compress_zstd_opts"
 # All of the signing related variables we will accept from framework.conf.
 readonly dkms_framework_signing_variables="sign_file mok_signing_key mok_certificate"
 
@@ -1212,11 +1213,11 @@ actual_build()
         fi
 
         if [[ $module_compressed_suffix = .gz ]]; then
-            gzip -9f "$built_module" || compressed_module=""
+            gzip $compress_gzip_opts -f "$built_module" || compressed_module=""
         elif [[ $module_compressed_suffix = .xz ]]; then
-            xz --check=crc32 --lzma2=dict=1MiB -f "$built_module" || compressed_module=""
+            xz $compress_xz_opts -f "$built_module" || compressed_module=""
         elif [[ $module_compressed_suffix = .zst ]]; then
-            zstd -q -f -T0 -19 "$built_module" || compressed_module=""
+            zstd $compress_zstd_opts -f "$built_module" || compressed_module=""
         fi
         if [[ -n $compressed_module ]]; then
             cp -f "$compressed_module" "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
@@ -2517,6 +2518,11 @@ install_tree="@MODDIR@"
 tmp_location=${TMPDIR:-/tmp}
 verbose=""
 symlink_modules=""
+
+# Set compression defaults
+compress_gzip_opts="-9"
+compress_xz_opts="--check=crc32 --lzma2=dict=1MiB"
+compress_zstd_opts="-q -T0 -19"
 
 # Check that we can write temporary files
 tmpfile=$(mktemp_or_die)
