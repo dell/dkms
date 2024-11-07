@@ -30,6 +30,7 @@ TEST_MODULES=(
     "dkms_conf_test"
     "dkms_duplicate_test"
     "dkms_patches_test"
+    "dkms_scripts_test"
     "dkms_build_exclusive_test"
     "dkms_build_exclusive_dependencies_test"
 )
@@ -48,6 +49,7 @@ TEST_TMPDIRS=(
     "/usr/src/dkms_conf_test-1.0"
     "/usr/src/dkms_duplicate_test-1.0"
     "/usr/src/dkms_patches_test-1.0"
+    "/usr/src/dkms_scripts_test-1.0"
     "/usr/src/dkms_build_exclusive_test-1.0"
     "/usr/src/dkms_build_exclusive_dependencies_test-1.0"
     "/tmp/dkms_test_dir_${KERNEL_VER}/"
@@ -766,6 +768,46 @@ run_status_with_expected_output 'dkms_patches_test' << EOF
 dkms_patches_test/1.0: added
 EOF
 
+echo ' Adding test module with pre/post scripts'
+run_with_expected_output dkms add test/dkms_scripts_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_scripts_test/1.0/source -> /usr/src/dkms_scripts_test-1.0
+Running the post_add script:
+EOF
+check_module_source_tree_created /usr/src/dkms_scripts_test-1.0
+run_status_with_expected_output 'dkms_scripts_test' << EOF
+dkms_scripts_test/1.0: added
+EOF
+
+echo ' Building and installing the test module with pre/post scripts'
+set_signing_message "dkms_scripts_test" "1.0"
+SIGNING_MESSAGE_scripts="$SIGNING_MESSAGE"
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_scripts_test -v 1.0 << EOF
+Running the pre_build script:
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE_scripts}Running the post_build script:
+Cleaning build area... done.
+Running the pre_install script:
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_scripts_test.ko${mod_compression_ext}
+Running the post_install script:
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_scripts_test' << EOF
+dkms_scripts_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo ' Unbuilding the test module with pre/post scripts'
+run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_scripts_test -v 1.0 << EOF
+Module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_scripts_test.ko${mod_compression_ext}
+Running the post_remove script:
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_scripts_test' << EOF
+dkms_scripts_test/1.0: added
+EOF
+
 echo ' Removing the test module with patches'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_patches_test -v 1.0 << EOF
 Module dkms_patches_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
@@ -775,7 +817,16 @@ EOF
 run_status_with_expected_output 'dkms_patches_test' << EOF
 EOF
 
-remove_module_source_tree /usr/src/dkms_patches_test-1.0
+echo ' Removing the test module with pre/post scripts'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_scripts_test -v 1.0 << EOF
+Module dkms_scripts_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_scripts_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Deleting module dkms_scripts_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_scripts_test' << EOF
+EOF
+
+remove_module_source_tree /usr/src/dkms_patches_test-1.0 /usr/src/dkms_scripts_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
