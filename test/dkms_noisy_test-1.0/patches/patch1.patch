@@ -1,0 +1,19 @@
+diff -ur 1/Makefile 2/Makefile
+--- 1/Makefile	2024-10-27 02:08:27.104704591 +0100
++++ 2/Makefile	2024-10-27 02:06:45.157263482 +0100
+@@ -1,4 +1,5 @@
+ all:
+ 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+ 
++clean:
+ 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+diff -ur 1/dkms_noisy_test.c 2/dkms_noisy_test.c
+--- 1/dkms_noisy_test.c	2024-10-27 02:08:16.528761716 +0100
++++ 2/dkms_noisy_test.c	2024-10-27 02:07:01.709171430 +0100
+@@ -16,4 +16,6 @@
+     printk(KERN_INFO "Cleaning up after dkms test module.\n");
+ }
+ 
++module_init(dkms_test_init);
++module_exit(dkms_test_cleanup);
+ MODULE_VERSION(DKMS_TEST_VER);
