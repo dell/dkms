@@ -56,23 +56,23 @@ jobs:
     - name: Install dependencies for Red Hat based distributions
       if: matrix.distro.name == 'almalinux' || contains(matrix.distro.name, 'centos') || contains(matrix.distro.name, 'fedora')
       run: |
-        yum install -y diffutils elfutils-libelf gcc kernel kernel-devel make openssl
+        yum install -y diffutils elfutils-libelf gcc kernel kernel-devel make openssl patch
 
     - name: Install Alpine dependencies
       if: matrix.distro.name == 'alpine'
       run: |
-        apk --no-cache --update add bash gcc linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-dev make openssl coreutils
+        apk --no-cache --update add bash gcc linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-dev make openssl coreutils patch
 
     - name: Install Arch Linux dependencies
       if: matrix.distro.name == 'archlinux'
       run: |
-        pacman -Syu --noconfirm diffutils gcc make linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-headers openssl
+        pacman -Syu --noconfirm diffutils gcc make linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-headers openssl patch
 
     - name: Install Debian dependencies
       if: matrix.distro.name == 'debian'
       run: |
         apt-get update -q
-        apt-get install -qy make linux-headers-amd64 linux-image-amd64 openssl xz-utils
+        apt-get install -qy make linux-headers-amd64 linux-image-amd64 openssl xz-utils patch
 
     - name: Install Gentoo Linux dependencies
       if: matrix.distro.name == 'gentoo/stage3'
@@ -84,13 +84,13 @@ jobs:
     - name: Install openSUSE leap dependencies
       if: contains(matrix.distro.name, 'opensuse')
       run: |
-        zypper --non-interactive install diffutils elfutils gcc kernel${{ matrix.distro.variant }} kernel${{ matrix.distro.variant }}-devel make openssl
+        zypper --non-interactive install diffutils elfutils gcc kernel${{ matrix.distro.variant }} kernel${{ matrix.distro.variant }}-devel make openssl patch
 
     - name: Install Ubuntu dependencies
       if: matrix.distro.name == 'ubuntu'
       run: |
         apt-get update -q
-        apt-get install -qy gcc make linux-headers-generic linux-image-generic openssl shim-signed
+        apt-get install -qy gcc make linux-headers-generic linux-image-generic openssl shim-signed patch
 
     - name: Install dkms
       run: |
