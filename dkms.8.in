@@ -823,6 +823,9 @@ Automatically load the built modules upon successful installation.
 .TP
 .B $parallel_jobs
 Run no more than this number of jobs in parallel.
+.TP
+.B $compress_gzip_opts, $compress_xz_opts, $compress_zstd_opts
+Control how modules are compressed. By default, the highest available level of compression is used.
 .SH dkms_autoinstaller
 This boot\-time service automatically installs any module which has
 .B AUTOINSTALL="yes"

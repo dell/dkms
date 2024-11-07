@@ -46,3 +46,9 @@
 
 # Limit the number of jobs run in parallel (default is the number of CPUs)
 # parallel_jobs=2
+
+# Compression settings DKMS uses when compressing modules. The defaults are
+# tuned for maximum compression at the expense of speed when compressing.
+# compress_gzip_opts="-9"
+# compress_xz_opts="--check=crc32 --lzma2=dict=1MiB"
+# compress_zstd_opts="-q -T0 -19"
