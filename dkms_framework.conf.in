@@ -1,5 +1,7 @@
 # This configuration file modifies the behavior of DKMS (Dynamic Kernel Module
 # Support) and is sourced in by DKMS every time it is run.
+# Additionally to /etc/dkms/framework.conf, any file matching the glob
+# /etc/dkms/framework.conf.d/*.conf will be loaded as well.
 
 # Source Tree Location (default: /usr/src):
 # source_tree="/usr/src"
