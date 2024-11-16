@@ -909,6 +909,30 @@ EOF
 
 remove_module_source_tree /usr/src/dkms_conf_test-1.0
 
+echo 'Testing dkms.conf with missing patch'
+run_with_expected_output dkms add test/dkms_conf_test_patch_missing << EOF
+Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_conf_test-1.0
+run_status_with_expected_output 'dkms_conf_test' << EOF
+dkms_conf_test/1.0: added
+EOF
+
+echo ' Building test module with missing patch (expected error)'
+run_with_expected_error 5 dkms build -k "${KERNEL_VER}" -m dkms_conf_test -v 1.0 << EOF
+Error! Patch missing.patch as specified in dkms.conf cannot be
+found in /var/lib/dkms/dkms_conf_test/1.0/build/patches/.
+EOF
+run_status_with_expected_output 'dkms_conf_test' << EOF
+dkms_conf_test/1.0: added
+EOF
+
+run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
+Deleting module dkms_conf_test/1.0 completely from the DKMS tree.
+EOF
+
+remove_module_source_tree /usr/src/dkms_conf_test-1.0
+
 echo 'Testing dkms.conf specifying a module twice'
 run_with_expected_output dkms add test/dkms_duplicate_test << EOF
 Creating symlink /var/lib/dkms/dkms_duplicate_test/1.0/source -> /usr/src/dkms_duplicate_test-1.0
