@@ -943,16 +943,8 @@ dkms_conf_test/1.0: added
 EOF
 
 echo ' Building test module with bad patch path (expected error)'
-run_with_expected_error 10 dkms build -k "${KERNEL_VER}" -m dkms_conf_test -v 1.0 << EOF
-applying patch ../badpath.patch... done.
-Cleaning build area...(bad exit status: 2)
-Failed command:
-make -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_conf_test/1.0/build clean
-Building module(s)...(bad exit status: 2)
-Failed command:
-make -j1 KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_conf_test/1.0/build
-Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
-Consult /var/lib/dkms/dkms_conf_test/1.0/build/make.log for more information.
+run_with_expected_error 5 dkms build -k "${KERNEL_VER}" -m dkms_conf_test -v 1.0 << EOF
+Error! Patch ../badpath.patch as specified in dkms.conf contains '..' path component.
 EOF
 run_status_with_expected_output 'dkms_conf_test' << EOF
 dkms_conf_test/1.0: added
@@ -974,16 +966,8 @@ dkms_conf_test/1.0: added
 EOF
 
 echo ' Building test module with bad patch path (expected error)'
-run_with_expected_error 10 dkms build -k "${KERNEL_VER}" -m dkms_conf_test -v 1.0 << EOF
-applying patch subdir/../badpath.patch... done.
-Cleaning build area...(bad exit status: 2)
-Failed command:
-make -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_conf_test/1.0/build clean
-Building module(s)...(bad exit status: 2)
-Failed command:
-make -j1 KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_conf_test/1.0/build
-Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
-Consult /var/lib/dkms/dkms_conf_test/1.0/build/make.log for more information.
+run_with_expected_error 5 dkms build -k "${KERNEL_VER}" -m dkms_conf_test -v 1.0 << EOF
+Error! Patch subdir/../badpath.patch as specified in dkms.conf contains '..' path component.
 EOF
 run_status_with_expected_output 'dkms_conf_test' << EOF
 dkms_conf_test/1.0: added
