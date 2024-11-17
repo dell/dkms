@@ -5,3 +5,5 @@ dkms_autoinstaller
 dkms.service
 kernel_install.d_dkms
 kernel_postinst.d_dkms
+test_cmd_expected_output.log
+test_cmd_output.log
