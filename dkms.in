@@ -1132,8 +1132,8 @@ prepare_signing()
     do_signing=1
 }
 
-# Get ready to build a module that has been registered with DKMS.
-prepare_build()
+# Build a module that has been registered with DKMS.
+prepare_and_actual_build()
 {
     # If the module has not been added, try to add it.
     if ! is_module_added "$module" "$module_version" ; then
@@ -1249,14 +1249,7 @@ prepare_build()
 
     # Run the pre_build script
     run_build_script pre_build "$pre_build"
-}
 
-# Build our previously prepared source tree.  prepare_build must be called
-# before calling this function.
-actual_build()
-{
-    local -r base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
-    local -r build_dir="$dkms_tree/$module/$module_version/build"
     local -r build_log="$build_dir/make.log"
 
     invoke_command "$clean" "Cleaning build area" '' background
@@ -1325,11 +1318,7 @@ actual_build()
 
     # Run the post_build script
     run_build_script post_build "$post_build"
-}
 
-# Clean up after a build.
-clean_build()
-{
     # Run the clean commands
     cd "$dkms_tree/$module/$module_version/build"
     invoke_command "$clean" "Cleaning build area" '' background
@@ -1353,9 +1342,7 @@ prepare_kernel_and_signing()
 do_build()
 {
     prepare_kernel_and_signing
-    prepare_build
-    actual_build
-    clean_build
+    prepare_and_actual_build
 }
 
 # Force the installation of a module if this is listed
