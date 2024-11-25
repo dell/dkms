@@ -22,7 +22,7 @@ TEST_MODULES=(
     "dkms_test"
     "dkms_noautoinstall_test"
     "dkms_failing_test"
-    "dkms_dependencies_test"
+    "dkms_failing_dependencies_test"
     "dkms_multiver_test"
     "dkms_nover_test"
     "dkms_emptyver_test"
@@ -39,7 +39,7 @@ TEST_TMPDIRS=(
     "/usr/src/dkms_test-1.0"
     "/usr/src/dkms_noautoinstall_test-1.0"
     "/usr/src/dkms_failing_test-1.0"
-    "/usr/src/dkms_dependencies_test-1.0"
+    "/usr/src/dkms_failing_dependencies_test-1.0"
     "/usr/src/dkms_multiver_test-1.0"
     "/usr/src/dkms_multiver_test-2.0"
     "/usr/src/dkms_nover_test-1.0"
@@ -1949,10 +1949,10 @@ Refer to previous errors for more information.
 EOF
 
 echo 'Adding test module with dependencies on failing test module by directory'
-run_with_expected_output dkms add test/dkms_dependencies_test-1.0 << EOF
-Creating symlink /var/lib/dkms/dkms_dependencies_test/1.0/source -> /usr/src/dkms_dependencies_test-1.0
+run_with_expected_output dkms add test/dkms_failing_dependencies_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_failing_dependencies_test/1.0/source -> /usr/src/dkms_failing_dependencies_test-1.0
 EOF
-check_module_source_tree_created /usr/src/dkms_dependencies_test-1.0
+check_module_source_tree_created /usr/src/dkms_failing_dependencies_test-1.0
 echo 'Running autoinstall with failing test module and test module with dependencies on the failing module (expected error)'
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
 ${SIGNING_PROLOGUE}
@@ -1964,7 +1964,7 @@ make -j1 KERNELRELEASE=${KERNEL_VER} all <omitting possibly set CC/LD/... flags>
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
 Autoinstall on ${KERNEL_VER} failed for module(s) dkms_failing_test(10).
-dkms_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_failing_test.
+dkms_failing_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_failing_test.
 
 Error! One or more modules failed to install during autoinstall.
 Refer to previous errors for more information.
@@ -1982,21 +1982,21 @@ remove_module_source_tree /usr/src/dkms_failing_test-1.0
 
 echo 'Running autoinstall with test module with missing dependencies (expected error)'
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
-dkms_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_failing_test.
+dkms_failing_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_failing_test.
 
 Error! One or more modules failed to install during autoinstall.
 Refer to previous errors for more information.
 EOF
 
 echo 'Removing test module with dependencies'
-run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
-Module dkms_dependencies_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
-Module dkms_dependencies_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_failing_dependencies_test -v 1.0 << EOF
+Module dkms_failing_dependencies_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_failing_dependencies_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 
-Deleting module dkms_dependencies_test/1.0 completely from the DKMS tree.
+Deleting module dkms_failing_dependencies_test/1.0 completely from the DKMS tree.
 EOF
 
-remove_module_source_tree /usr/src/dkms_dependencies_test-1.0
+remove_module_source_tree /usr/src/dkms_failing_dependencies_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
