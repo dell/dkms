@@ -1202,6 +1202,9 @@ actual_build()
 
     # Save a copy of the new module
     mkdir "$base_dir/module" >/dev/null
+    if [ -f "$build_dir/Module.symvers" ] ; then
+        cp -f "$build_dir/Module.symvers" "$base_dir/module/Module.symvers"
+    fi
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
         local the_module
         local built_module
