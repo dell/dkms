@@ -20,6 +20,7 @@ export parallel_jobs=1
 # Temporary files, directories, and modules created during tests
 TEST_MODULES=(
     "dkms_test"
+    "dkms_dependencies_test"
     "dkms_replace_test"
     "dkms_noautoinstall_test"
     "dkms_failing_test"
@@ -38,6 +39,7 @@ TEST_MODULES=(
 )
 TEST_TMPDIRS=(
     "/usr/src/dkms_test-1.0"
+    "/usr/src/dkms_dependencies_test-1.0"
     "/usr/src/dkms_replace_test-2.0"
     "/usr/src/dkms_noautoinstall_test-1.0"
     "/usr/src/dkms_failing_test-1.0"
@@ -834,6 +836,103 @@ fi
 rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
 remove_module_source_tree /usr/src/dkms_test-1.0
+
+echo 'Checking that the environment is clean again'
+check_no_dkms_test
+
+############################################################################
+echo '*** Testing dkms modules with dependencies'
+############################################################################
+
+set_signing_message "dkms_dependencies_test" "1.0"
+SIGNING_MESSAGE_dependencies="$SIGNING_MESSAGE"
+set_signing_message "dkms_test" "1.0"
+
+echo 'Adding test module with unsatisfied dependencies'
+run_with_expected_output dkms add test/dkms_dependencies_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_dependencies_test/1.0/source -> /usr/src/dkms_dependencies_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_dependencies_test-1.0
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+dkms_dependencies_test/1.0: added
+EOF
+
+echo 'Building the test module with unsatisfied dependencies'
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
+${SIGNING_PROLOGUE}
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE_dependencies}Cleaning build area... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+dkms_dependencies_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+EOF
+
+echo 'Installing the test module with unsatisfied dependencies'
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
+
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+dkms_dependencies_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo "Running dkms autoinstall"
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+dkms_dependencies_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Unbuilding the test module with unsatisfied dependencies'
+run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
+
+Module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+dkms_dependencies_test/1.0: added
+EOF
+
+echo "Running dkms autoinstall (expected error)"
+run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
+dkms_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_test.
+
+Error! One or more modules failed to install during autoinstall.
+Refer to previous errors for more information.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+dkms_dependencies_test/1.0: added
+EOF
+
+echo 'Removing the test module with unsatisfied dependencies'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
+Module dkms_dependencies_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_dependencies_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+
+Deleting module dkms_dependencies_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+EOF
+
+remove_module_source_tree /usr/src/dkms_dependencies_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
