@@ -258,17 +258,18 @@ find_module()
     return $?
 }
 
-
-# Figure out the correct module suffix for the kernel we are currently
-# dealing with, which may or may not be the currently installed kernel.
+# Figure out the correct module suffix for the kernel we are currently dealing
+# with, which may or may not be the currently installed kernel. Do not use modules.dep
+# as it might not be available (in Red Hat removal is triggered with kernel-core but modules.dep
+# is contained in kernel-modules-core).
 set_module_suffix()
 {
     # $1 = the kernel to base the module_suffix on
     kernel_test="${1:-$(uname -r)}"
     module_uncompressed_suffix=".ko"
-    grep -q '\.gz:' $install_tree/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".gz"
-    grep -q '\.xz:' $install_tree/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".xz"
-    grep -q '\.zst:' $install_tree/$kernel_test/modules.dep 2>/dev/null && module_compressed_suffix=".zst"
+    find $install_tree/$kernel_test/ -name "*.ko.gz" | grep -q . && module_compressed_suffix=".gz"
+    find $install_tree/$kernel_test/ -name "*.ko.xz" | grep -q . && module_compressed_suffix=".xz"
+    find $install_tree/$kernel_test/ -name "*.ko.zst" | grep -q . && module_compressed_suffix=".zst"
     module_suffix="$module_uncompressed_suffix$module_compressed_suffix"
 }
 

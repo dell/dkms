@@ -38,23 +38,25 @@ all: \
 	dkms_common.postinst \
 	dkms_framework.conf \
 	dkms.service \
-	kernel_install.d_dkms \
-	kernel_postinst.d_dkms \
-	kernel_prerm.d_dkms
+	debian_kernel_install.d \
+	debian_kernel_postinst.d \
+	debian_kernel_prerm.d \
+	redhat_kernel_install.d
 
 clean:
 	-rm -rf dist/
-	-rm -rf dkms
-	-rm -rf dkms.8
-	-rm -rf dkms_autoinstaller
-	-rm -rf dkms.bash-completion
-	-rm -rf dkms.zsh-completion
-	-rm -rf dkms_common.postinst
-	-rm -rf dkms_framework.conf
-	-rm -rf dkms.service
-	-rm -rf kernel_install.d_dkms
-	-rm -rf kernel_postinst.d_dkms
-	-rm -rf kernel_prerm.d_dkms
+	-rm -f dkms
+	-rm -f dkms.8
+	-rm -f dkms_autoinstaller
+	-rm -f dkms.bash-completion
+	-rm -f dkms.zsh-completion
+	-rm -f dkms_common.postinst
+	-rm -f dkms_framework.conf
+	-rm -f dkms.service
+	-rm -f debian_kernel_install.d
+	-rm -f debian_kernel_postinst.d
+	-rm -f debian_kernel_prerm.d
+	-rm -f redhat_kernel_install.d
 
 install: all
 	$(if $(strip $(VAR)),$(error Setting VAR is not supported))
@@ -65,8 +67,6 @@ ifneq (,$(DESTDIR))
 	$(if $(filter $(DESTDIR)%,$(KCONF)),$(error Using a DESTDIR as prefix for KCONF is no longer supported))
 endif
 	install -D -m 0755 dkms $(DESTDIR)$(SBIN)/dkms
-	install -D -m 0755 dkms_common.postinst $(DESTDIR)$(LIBDIR)/common.postinst
-	install -D -m 0755 dkms_autoinstaller $(DESTDIR)$(LIBDIR)/dkms_autoinstaller
 	$(if $(strip $(ETC)),$(error Setting ETC is not supported))
 	install -D -m 0644 dkms_framework.conf $(DESTDIR)/etc/dkms/framework.conf
 	install -d -m 0755 $(DESTDIR)/etc/dkms/framework.conf.d
@@ -74,20 +74,23 @@ endif
 	install -D -m 0644 dkms.bash-completion $(DESTDIR)/usr/share/bash-completion/completions/dkms
 	install -D -m 0644 dkms.zsh-completion $(DESTDIR)/usr/share/zsh/site-functions/_dkms
 	install -D -m 0644 dkms.8 $(DESTDIR)/usr/share/man/man8/dkms.8
-	install -D -m 0755 kernel_install.d_dkms $(DESTDIR)$(KINSTALL)/40-dkms.install
-	install -D -m 0755 kernel_postinst.d_dkms $(DESTDIR)$(KCONF)/postinst.d/dkms
-	install -D -m 0755 kernel_prerm.d_dkms $(DESTDIR)$(KCONF)/prerm.d/dkms
 
 install-redhat: install
 ifneq (,$(DESTDIR))
 	$(if $(filter $(DESTDIR)%,$(SYSTEMD)),$(error Using a DESTDIR as prefix for SYSTEMD is no longer supported))
 endif
 	install -D -m 0644 dkms.service $(DESTDIR)$(SYSTEMD)/dkms.service
+	install -D -m 0755 redhat_kernel_install.d $(DESTDIR)$(KINSTALL)/40-dkms.install
 
 install-debian: install
 	$(if $(strip $(SHAREDIR)),$(error Setting SHAREDIR is not supported))
+	install -D -m 0755 dkms_autoinstaller $(DESTDIR)$(LIBDIR)/dkms_autoinstaller
 	install -D -m 0755 dkms_apport.py $(DESTDIR)/usr/share/apport/package-hooks/dkms_packages.py
-	install -D -m 0755 kernel_postinst.d_dkms $(DESTDIR)$(KCONF)/header_postinst.d/dkms
+	install -D -m 0755 dkms_common.postinst $(DESTDIR)$(LIBDIR)/common.postinst
+	install -D -m 0755 debian_kernel_install.d $(DESTDIR)$(KINSTALL)/40-dkms.install
+	install -D -m 0755 debian_kernel_postinst.d $(DESTDIR)$(KCONF)/postinst.d/dkms
+	install -D -m 0755 debian_kernel_postinst.d $(DESTDIR)$(KCONF)/header_postinst.d/dkms
+	install -D -m 0755 debian_kernel_prerm.d $(DESTDIR)$(KCONF)/prerm.d/dkms
 
 install-doc:
 	$(if $(strip $(DOC)),$(error Setting DOCDIR is not supported))
