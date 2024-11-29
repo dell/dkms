@@ -1,0 +1,20 @@
+#!/bin/bash
+
+COMMAND=$1
+KERNEL_VERSION=$2
+
+case "$COMMAND" in
+    add)
+        if [ -f /etc/dkms/no-autoinstall ]; then
+            echo "Automatic installation of modules has been disabled."
+        else
+            dkms autoinstall --kernelver $kernel
+        fi
+        ;;
+    remove)
+        dkms status -k "$KERNEL_VERSION" 2>/dev/null | while IFS=",:/ " read -r name vers _ arch status; do
+            dkms unbuild -m "$name" -v "$vers" -k "$KERNEL_VERSION" -a "$arch"
+        done
+        find /usr/lib/modules/$KERNEL_VERSION -type d -empty -delete
+        ;;
+esac
