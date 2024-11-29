@@ -818,7 +818,7 @@ check_version_sanity()
     fi
 
     if [[ ${kernels_module[1]} ]]; then
-        warn "Warning! Cannot do version sanity checking because multiple ${4}$module_suffix modules were found in kernel $1."
+        warn "Cannot do version sanity checking because multiple ${4}$module_suffix modules were found in kernel $1."
         return 0
     fi
     local dkms_module
@@ -1870,16 +1870,18 @@ do_status_weak()
 module_status_built_extra() (
     set_module_suffix "$3"
     read_conf "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf" 2>/dev/null
-    [[ -d $dkms_tree/$1/original_module/$3/$4 ]] && echo -n " (original_module exists)"
+    [[ -d $dkms_tree/$1/original_module/$3/$4 ]] && echo -n " (Original modules exist)"
     for ((count=0; count < ${#dest_module_name[@]}; count++)); do
         tree_mod=$(compressed_or_uncompressed "$dkms_tree/$1/$2/$3/$4/module" "${dest_module_name[$count]}")
         if ! [[ -n "$tree_mod" ]]; then
-            echo -n " (WARNING! Missing some built modules!)"
+            echo -n " (Built modules are missing in the kernel modules folder)"
+            break
         elif _is_module_installed "$@"; then
             real_dest="$(find_actual_dest_module_location "$1" $count "$3" "$4")"
             real_dest_mod=$(compressed_or_uncompressed "$install_tree/$3${real_dest}" "${dest_module_name[$count]}")
             if ! diff -q "$tree_mod" "$real_dest_mod" >/dev/null 2>&1; then
-                echo -n " (WARNING! Diff between built and installed module!)"
+                echo -n " (Differences between built and installed modules)"
+                break
             fi
         fi
     done
