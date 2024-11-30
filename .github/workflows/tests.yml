@@ -21,8 +21,6 @@ jobs:
           - {name: "alpine", tag: "3.19", variant: "-virt"}
           - {name: "alpine", tag: "3.18", variant: "-lts"}
           - {name: "alpine", tag: "3.18", variant: "-virt"}
-          - {name: "alpine", tag: "3.17", variant: "-lts"}
-          - {name: "alpine", tag: "3.17", variant: "-virt"}
           - {name: "archlinux", tag: "latest"}
           - {name: "archlinux", tag: "latest", variant: "-lts"}
           - {name: "archlinux", tag: "latest", variant: "-zen"}
@@ -32,7 +30,6 @@ jobs:
           - {name: "fedora/fedora", tag: "rawhide", url: "quay.io/"}
           - {name: "fedora/fedora", tag: "41", url: "quay.io/"}
           - {name: "fedora/fedora", tag: "40", url: "quay.io/"}
-          - {name: "fedora/fedora", tag: "39", url: "quay.io/"}
           - {name: "gentoo/stage3", tag: "latest"}
           - {name: "opensuse/tumbleweed", tag: "latest", variant: "-default", url: "registry.opensuse.org/"}
           - {name: "opensuse/leap", tag: "15.5", variant: "-default", url: "registry.opensuse.org/"}
