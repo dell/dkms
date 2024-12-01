@@ -8,7 +8,7 @@ case "$COMMAND" in
         if [ -f /etc/dkms/no-autoinstall ]; then
             echo "Automatic installation of modules has been disabled."
         else
-            dkms autoinstall --kernelver $kernel
+            dkms autoinstall --kernelver $KERNEL_VERSION
         fi
         ;;
     remove)
