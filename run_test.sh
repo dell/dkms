@@ -20,6 +20,7 @@ export parallel_jobs=1
 # Temporary files, directories, and modules created during tests
 TEST_MODULES=(
     "dkms_test"
+    "dkms_replace_test"
     "dkms_noautoinstall_test"
     "dkms_failing_test"
     "dkms_failing_dependencies_test"
@@ -37,6 +38,7 @@ TEST_MODULES=(
 )
 TEST_TMPDIRS=(
     "/usr/src/dkms_test-1.0"
+    "/usr/src/dkms_replace_test-2.0"
     "/usr/src/dkms_noautoinstall_test-1.0"
     "/usr/src/dkms_failing_test-1.0"
     "/usr/src/dkms_failing_dependencies_test-1.0"
@@ -101,6 +103,7 @@ clean_dkms_env() {
         fi
         rm -rf "/var/lib/dkms/${module}/"
         rm -f "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/${module}.ko${mod_compression_ext}"
+        rm -f "/lib/modules/${KERNEL_VER}/kernel/extra/${module}.ko${mod_compression_ext}"
     done
     for dir in "${TEST_TMPDIRS[@]}"; do
         rm -rf "$dir"
@@ -831,6 +834,168 @@ fi
 rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
 remove_module_source_tree /usr/src/dkms_test-1.0
+
+echo 'Checking that the environment is clean again'
+check_no_dkms_test
+
+############################################################################
+echo '*** Testing replacement of a pre-existing module'
+############################################################################
+
+# This feature is intended to replace modules that are shipped with the
+# kernel image by a newer version, not for supporting different dkms
+# modules with conflicting module names.
+# Only for this test the to-be-replaced module is also a dkms module.
+
+echo 'Adding, building and installing the to-be-replaced test module'
+run_with_expected_output dkms add test/dkms_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_test-1.0
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+
+set_signing_message "dkms_test" "1.0"
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+${SIGNING_PROLOGUE}
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE}Cleaning build area... done.
+
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Adding, building and installing the replacement test module'
+run_with_expected_output dkms add test/dkms_replace_test-2.0 << EOF
+Creating symlink /var/lib/dkms/dkms_replace_test/2.0/source -> /usr/src/dkms_replace_test-2.0
+EOF
+check_module_source_tree_created /usr/src/dkms_replace_test-2.0
+run_status_with_expected_output 'dkms_replace_test' << EOF
+dkms_replace_test/2.0: added
+EOF
+
+set_signing_message "dkms_replace_test" "2.0" "dkms_test"
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_replace_test -v 2.0 << EOF
+${SIGNING_PROLOGUE}
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE}Cleaning build area... done.
+
+Found pre-existing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}, archiving for uninstallation
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_replace_test' << EOF
+dkms_replace_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed (Original modules exist)
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed (Differences between built and installed modules)
+EOF
+
+echo 'Unbuilding the replacement test module'
+run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_replace_test -v 2.0 << EOF
+
+Module dkms_replace_test/2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Restoring archived original module
+Running depmod... done.
+
+Removing original_module from DKMS tree for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+EOF
+if [ "${expected_dest_loc}" != "kernel/extra" ]; then
+    # A replaced module originating from a kernel image should get restored
+    # to its original location, but since we are testing with a dkms module
+    # (installed to a dynamic location), this may not happen.
+    echo 'Moving the restored module back to its correct location (testing artefact)'
+    mkdir -p /lib/modules/${KERNEL_VER}/${expected_dest_loc}
+    mv  /lib/modules/${KERNEL_VER}/kernel/extra/dkms_test.ko${mod_compression_ext} \
+        /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+    rmdir --ignore-fail-on-non-empty /lib/modules/${KERNEL_VER}/kernel/extra /lib/modules/${KERNEL_VER}/kernel
+fi
+run_status_with_expected_output 'dkms_replace_test' << EOF
+dkms_replace_test/2.0: added
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Running dkms autoinstall'
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+${SIGNING_PROLOGUE}
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE}Cleaning build area... done.
+
+Found pre-existing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}, archiving for uninstallation
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test dkms_replace_test.
+EOF
+run_status_with_expected_output 'dkms_replace_test' << EOF
+dkms_replace_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed (Original modules exist)
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed (Differences between built and installed modules)
+EOF
+
+echo 'Running dkms autoinstall again'
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+EOF
+run_status_with_expected_output 'dkms_replace_test' << EOF
+dkms_replace_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed (Original modules exist)
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed (Differences between built and installed modules)
+EOF
+
+echo 'Removing the replacement test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_replace_test -v 2.0 << EOF
+
+Module dkms_replace_test/2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Restoring archived original module
+Running depmod... done.
+
+Removing original_module from DKMS tree for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+
+Deleting module dkms_replace_test/2.0 completely from the DKMS tree.
+EOF
+if [ "${expected_dest_loc}" != "kernel/extra" ]; then
+    echo 'Moving the restored module back to its correct location (testing artefact)'
+    mkdir -p /lib/modules/${KERNEL_VER}/${expected_dest_loc}
+    mv  /lib/modules/${KERNEL_VER}/kernel/extra/dkms_test.ko${mod_compression_ext} \
+        /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+    rmdir --ignore-fail-on-non-empty /lib/modules/${KERNEL_VER}/kernel/extra /lib/modules/${KERNEL_VER}/kernel
+fi
+run_status_with_expected_output 'dkms_replace_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Removing the to-be-replaced test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+
+Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Deleting module dkms_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_replace_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+
+remove_module_source_tree /usr/src/dkms_test-1.0 /usr/src/dkms_replace_test-2.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
