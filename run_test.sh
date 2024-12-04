@@ -365,7 +365,7 @@ EOF
 rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
 ############################################################################
-### Testing dkms on a regular module                                     ###
+echo '*** Testing dkms on a regular module'
 ############################################################################
 
 echo 'Adding the test module by version (expected error)'
@@ -832,7 +832,12 @@ rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
 remove_module_source_tree /usr/src/dkms_test-1.0
 
-echo 'Testing more dkms features'
+echo 'Checking that the environment is clean again'
+check_no_dkms_test
+
+############################################################################
+echo '*** Testing multiple dkms modules and more dkms features'
+############################################################################
 
 echo ' Adding test module with patches'
 run_with_expected_output dkms add test/dkms_patches_test-1.0 << EOF
@@ -1202,7 +1207,7 @@ echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 ############################################################################
-### Testing dkms on a regular module with AUTOINSTALL=""                 ###
+echo '*** Testing dkms on a regular module with AUTOINSTALL=""'
 ############################################################################
 
 echo 'Adding the noautoinstall test module by directory'
@@ -1287,7 +1292,7 @@ echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 ############################################################################
-### Testing malformed/borderline dkms.conf                               ###
+echo '*** Testing malformed/borderline dkms.conf'
 ############################################################################
 
 abspwd=$(readlink -f $(pwd))
@@ -1532,7 +1537,7 @@ echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 ############################################################################
-### Testing dkms on a module with multiple versions                      ###
+echo '*** Testing dkms on a module with multiple versions'
 ############################################################################
 
 echo 'Adding the multiver test modules by directory'
@@ -1674,7 +1679,7 @@ echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 ############################################################################
-### Testing dkms operations ...
+echo '*** Testing dkms operations on modules with no or empty version'
 ############################################################################
 
 echo 'Adding the nover/emptyver test modules by directory'
@@ -1922,10 +1927,8 @@ echo 'Checking that the environment is clean'
 check_no_dkms_test
 
 ############################################################################
-### Testing dkms autoinstall                                             ###
+echo '*** Testing dkms autoinstall error handling'
 ############################################################################
-
-echo 'Running autoinstall error testing'
 
 echo 'Adding failing test module by directory'
 run_with_expected_output dkms add test/dkms_failing_test-1.0 << EOF
@@ -2002,10 +2005,9 @@ echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 ############################################################################
-### Testing BUILD_EXCLUSIVE_*                                            ###
+echo '*** Running tests with BUILD_EXCLUSIVE_* modules'
 ############################################################################
 
-echo 'Running tests with BUILD_EXCLUSIVE_* modules'
 set_signing_message "dkms_test" "1.0"
 
 echo 'Adding the build-exclusive test module by directory'
@@ -2197,8 +2199,9 @@ echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 ############################################################################
-### Testing os-release detection                                         ###
+echo '*** Testing os-release detection'
 ############################################################################
+
 echo "Backing up /etc/os-release and /usr/lib/os-release"
 osrelease_cleanup() {
     rm -f _os-release
@@ -2285,12 +2288,8 @@ echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 ############################################################################
-### Testing 'broken' status                                              ###
+echo '*** Testing '"'broken'"' status'
 ############################################################################
-
-echo
-echo 'Running BROKEN tests'
-echo
 
 echo 'Adding the test module by directory'
 run_with_expected_output dkms add test/dkms_test-1.0 << EOF
@@ -2472,8 +2471,4 @@ rm -rf /var/lib/dkms/dkms_test/ /var/lib/dkms/dkms_multiver_test
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
-echo
-echo 'End of BROKEN tests'
-echo
-
-echo 'All tests successful :)'
+echo '*** All tests successful :)'
