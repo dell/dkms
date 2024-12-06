@@ -21,6 +21,7 @@ export parallel_jobs=1
 TEST_MODULES=(
     "dkms_test"
     "dkms_dependencies_test"
+    "dkms_circular_dependencies_test"
     "dkms_replace_test"
     "dkms_noautoinstall_test"
     "dkms_failing_test"
@@ -40,6 +41,7 @@ TEST_MODULES=(
 TEST_TMPDIRS=(
     "/usr/src/dkms_test-1.0"
     "/usr/src/dkms_dependencies_test-1.0"
+    "/usr/src/dkms_circular_dependencies_test-1.0"
     "/usr/src/dkms_replace_test-2.0"
     "/usr/src/dkms_noautoinstall_test-1.0"
     "/usr/src/dkms_failing_test-1.0"
@@ -1089,6 +1091,63 @@ run_status_with_expected_output 'dkms_dependencies_test' << EOF
 EOF
 
 remove_module_source_tree /usr/src/dkms_dependencies_test-1.0
+
+echo 'Adding test module with circular dependencies'
+set_signing_message "dkms_circular_dependencies_test" "1.0"
+run_with_expected_output dkms add test/dkms_circular_dependencies_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_circular_dependencies_test/1.0/source -> /usr/src/dkms_circular_dependencies_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_circular_dependencies_test-1.0
+run_status_with_expected_output 'dkms_circular_dependencies_test' << EOF
+dkms_circular_dependencies_test/1.0: added
+EOF
+
+echo "Running dkms autoinstall (expected error)"
+run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
+dkms_circular_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_circular_dependencies_test.
+
+Error! One or more modules failed to install during autoinstall.
+Refer to previous errors for more information.
+EOF
+run_status_with_expected_output 'dkms_circular_dependencies_test' << EOF
+dkms_circular_dependencies_test/1.0: added
+EOF
+
+echo 'Building the test module with circular dependencies'
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_circular_dependencies_test -v 1.0 << EOF
+${SIGNING_PROLOGUE}
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE}Cleaning build area... done.
+EOF
+run_status_with_expected_output 'dkms_circular_dependencies_test' << EOF
+dkms_circular_dependencies_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+EOF
+
+echo 'Installing the test module with circular dependencies'
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_circular_dependencies_test -v 1.0 << EOF
+
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_circular_dependencies_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_circular_dependencies_test' << EOF
+dkms_circular_dependencies_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Removing the test module with circular dependencies'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_circular_dependencies_test -v 1.0 << EOF
+
+Module dkms_circular_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_circular_dependencies_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Deleting module dkms_circular_dependencies_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_circular_dependencies_test' << EOF
+EOF
+
+remove_module_source_tree /usr/src/dkms_circular_dependencies_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
