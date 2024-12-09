@@ -1019,7 +1019,8 @@ EOF
 
 echo 'Building the test module with unsatisfied dependencies'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
-${SIGNING_PROLOGUE}
+${SIGNING_PROLOGUE}Warning: Trying to build module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}) despite of missing BUILD_DEPENDS: dkms_test.
+
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_dependencies}Cleaning build area... done.
@@ -1115,7 +1116,8 @@ EOF
 
 echo 'Building the test module with circular dependencies'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_circular_dependencies_test -v 1.0 << EOF
-${SIGNING_PROLOGUE}
+${SIGNING_PROLOGUE}Warning: Trying to build module dkms_circular_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}) despite of missing BUILD_DEPENDS: dkms_circular_dependencies_test.
+
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.

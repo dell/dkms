@@ -1134,6 +1134,10 @@ prepare_build()
     local -r base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
     local -r build_dir="$dkms_tree/$module/$module_version/build"
     local -r source_dir="$dkms_tree/$module/$module_version/source"
+    local bd
+    local bd_missing
+    local status
+    local mvka
 
     # Check that the module has not already been built for this kernel
     [[ -d $base_dir ]] && die 3 \
@@ -1155,6 +1159,18 @@ prepare_build()
     (($(ls $source_dir | wc -l | awk {'print $1'}) < 2)) && die 8 \
         "The directory $source_dir does not appear to have module source located within it."\
         "Build halted."
+
+    # Check for missing BUILD_DEPENDS
+    bd_missing=
+    for bd in "${BUILD_DEPENDS[@]}"; do
+        while read status mvka; do
+            [[ $status = installed ]] && continue 2
+        done < <(module_status "$bd" "*" "$kernelver" "$arch")
+        bd_missing="$bd_missing $bd"
+    done
+    if [[ $bd_missing ]]; then
+            warn "Trying to build module $module/$module_version for kernel $kernelver ($arch) despite of missing BUILD_DEPENDS:$bd_missing."
+    fi
 
     # Set up temporary build directory for build
     rm -rf "$build_dir"
