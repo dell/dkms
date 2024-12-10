@@ -20,6 +20,61 @@
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+# Exit status values and error messages used by dkms:
+# (as parameters to die, diewarn, report_build_problem, exit)
+#
+# 0: global: SUCCESS
+# 0: remove_module(): Remove cancelled because --rpm_safe_upgrade scenario detected.
+# 1: ldtarball: You must be root to use this command with the --force option.
+# 1: check_root(): You must be root to use this command.
+# 1: check_rw_dkms_tree(): No write access to DKMS tree at ...
+# 1: mktemp_or_die(): Unable to make temporary file/directory.
+# 1: check_module_args(): Arguments <module> and <module-version> are not specified.
+# 1: prepare_kernel(): Your kernel headers for kernel ... cannot be found ...
+# 1: run_match(): Invalid number of parameters passed.
+# 1: global: If more than one arch is specified on the command line, then there "must be an equal number of kernel versions also specified (1:1 relationship).
+# 2: global: Unknown option: ...
+# 2: global: You cannot specify a kernel version and also specify --all on the command line.
+# 2: run_match(): The templatekernel and the specified kernel version are the same.
+# 2: add_module(): Could not find module source directory.
+# 2: load_tarball(): ... does not exist.
+# 3: global: You cannot specify an arch and also specify --all on the command line.
+# 3: load_tarball(): Tarball does not appear to be a correctly formed DKMS archive. No dkms.conf found within it.
+# 3: run_match(): The module: $module is not located in the DKMS tree.
+# 3: add_module(): You cannot add the same module/version combo more than once.
+# 3: prepare_build(): This module/version has already been built on: ...
+# 3: module_is_added_or_die(): The module/version combo: ... is not located in the DKMS tree.
+# 4: global: Cannot specify more than one action.
+# 4: distro_version(): System is missing os-release file.
+# 4: read_conf(): Could not locate dkms.conf file.
+# 4: have_one_kernel(): The action ... does not support multiple kernel version parameters on the command line.
+# 4: module_is_broken_and_die(): ... is broken!
+# 5: check_all_is_banned(): The action ... does not support the --all parameter.
+# 5: prepare_build(): Patch ... as specified in dkms.conf contains '..' path component.
+# 5: prepare_build(): Patch ... as specified in dkms.conf cannot be found in ...
+# 5: install: This module/version combo is already installed for kernel ...
+# 6: prepare_build(): Application of patch ... failed.
+# 6: install: You cannot install a module onto a non-existant kernel.
+# 6: install: Installation aborted.
+# 6: install: Install Failed (depmod problems). Module rolled back to built state.
+# 6: make_tarball(): Modules must already be in the built state before using mktarball.
+# 6: make_tarball(): Failed to make tarball.
+# 7: load_tarball(): No valid dkms.conf in dkms_source_tree or dkms_binaries_only.
+# 7: actual_build(): Build of ... failed for: ...
+# 8: load_tarball(): ... is already added!
+# 8: global: You have specified both --binaries-only and --source-only.
+# 8: read_conf_or_die(): Bad conf file.
+# 8: prepare_build(): The directory $source_dir does not appear to have module source located within it.
+# 9: add_source_tree(): ... must contain a dkms.conf file!
+# 9: make_tarball(): Missing write permissions for ...
+# 9: load_tarball(): Unable to install ... using rpm.
+# 10: add_source_tree(): Malformed dkms.conf file. Cannot load source tree.
+# 10: build: Bad return status for module build on kernel: ...
+# 11: autoinstall: One or more modules failed to install during autoinstall.
+# 12: setup_kernels_arches(): Could not determine architecture.
+# 77: skipped due to BUILD_EXCLUSIVE
+# 101: install: pre_install failed, aborting install.
+
 shopt -s extglob
 
 # All of the variables we will accept from dkms.conf.
@@ -184,7 +239,7 @@ diewarn() {
 mktemp_or_die() {
     local t
     t=$(mktemp "$@") && echo "$t" && return
-    [[ $* = *-d* ]] && die 1 "Unable to make temporary directory"
+    [[ $* = *-d* ]] && die 1 "Unable to make temporary directory."
     die 1 "Unable to make temporary file."
 }
 
@@ -2698,7 +2753,7 @@ while (($# > 0)); do
             exit 0
             ;;
         -*)
-            error " Unknown option: $1"
+            error "Unknown option: $1"
             show_usage
             exit 2
             ;;
@@ -2732,26 +2787,26 @@ fi
 
 # Error out if binaries-only is set and source-only is set
 if [[ $binaries_only && $source_only ]]; then
-    die 8 " You have specified both --binaries-only and --source-only." \
+    die 8 "You have specified both --binaries-only and --source-only." \
         "You cannot do this."
 fi
 
 # Error if # of arches doesn't match # of kernels
 if (( ${#kernelver[@]} != ${#arch[@]} && \
     ${#arch[@]} > 1 )); then
-    die 1 " If more than one arch is specified on the command line, then there" \
+    die 1 "If more than one arch is specified on the command line, then there" \
         "must be an equal number of kernel versions also specified (1:1 relationship)."
 fi
 
 # Check that kernel version and all aren't both set simultaneously
 if [[ $kernelver && $all ]]; then
-    die 2 " You cannot specify a kernel version and also specify" \
+    die 2 "You cannot specify a kernel version and also specify" \
         "--all on the command line."
 fi
 
 # Check that arch and all aren't both set simultaneously
 if [[ $arch && $all ]]; then
-    die 3 " You cannot specify an arch and also specify" \
+    die 3 "You cannot specify an arch and also specify" \
         "--all on the command line."
 fi
 
