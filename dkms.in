@@ -72,6 +72,7 @@
 # 10: build: Bad return status for module build on kernel: ...
 # 11: autoinstall: One or more modules failed to install during autoinstall.
 # 12: setup_kernels_arches(): Could not determine architecture.
+# 13: build: Aborting build of module ... for kernel ... due to missing BUILD_DEPENDS: ...
 # 77: skipped due to BUILD_EXCLUSIVE
 # 101: install: pre_install failed, aborting install.
 
@@ -1169,7 +1170,12 @@ prepare_build()
         bd_missing="$bd_missing $bd"
     done
     if [[ $bd_missing ]]; then
+        if [[ $force ]]; then
             warn "Trying to build module $module/$module_version for kernel $kernelver ($arch) despite of missing BUILD_DEPENDS:$bd_missing."
+        else
+            die 13 "Aborting build of module $module/$module_version for kernel $kernelver ($arch) due to missing BUILD_DEPENDS:$bd_missing."\
+                "You may override by specifying --force."
+        fi
     fi
 
     # Set up temporary build directory for build
