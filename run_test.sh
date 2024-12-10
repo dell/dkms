@@ -1017,8 +1017,20 @@ run_status_with_expected_output 'dkms_dependencies_test' << EOF
 dkms_dependencies_test/1.0: added
 EOF
 
-echo 'Building the test module with unsatisfied dependencies'
-run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
+echo 'Building the test module with unsatisfied dependencies (expected error)'
+run_with_expected_error 13 dkms build -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
+${SIGNING_PROLOGUE}
+Error! Aborting build of module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}) due to missing BUILD_DEPENDS: dkms_test.
+You may override by specifying --force.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+dkms_dependencies_test/1.0: added
+EOF
+
+echo 'Building the test module with unsatisfied dependencies by force'
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 --force << EOF
 ${SIGNING_PROLOGUE}Warning: Trying to build module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}) despite of missing BUILD_DEPENDS: dkms_test.
 
 Cleaning build area... done.
@@ -1114,8 +1126,18 @@ run_status_with_expected_output 'dkms_circular_dependencies_test' << EOF
 dkms_circular_dependencies_test/1.0: added
 EOF
 
-echo 'Building the test module with circular dependencies'
-run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_circular_dependencies_test -v 1.0 << EOF
+echo 'Building the test module with circular dependencies (expected error)'
+run_with_expected_error 13 dkms build -k "${KERNEL_VER}" -m dkms_circular_dependencies_test -v 1.0 << EOF
+${SIGNING_PROLOGUE}
+Error! Aborting build of module dkms_circular_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}) due to missing BUILD_DEPENDS: dkms_circular_dependencies_test.
+You may override by specifying --force.
+EOF
+run_status_with_expected_output 'dkms_circular_dependencies_test' << EOF
+dkms_circular_dependencies_test/1.0: added
+EOF
+
+echo 'Building the test module with circular dependencies by force'
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_circular_dependencies_test -v 1.0 --force << EOF
 ${SIGNING_PROLOGUE}Warning: Trying to build module dkms_circular_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}) despite of missing BUILD_DEPENDS: dkms_circular_dependencies_test.
 
 Cleaning build area... done.
