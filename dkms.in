@@ -1568,9 +1568,7 @@ is_module_added() {
 is_module_built() {
     [[ $1 && $2 && $3 && $4 ]] || return 1
     local d
-    local m
     d="$dkms_tree/$1/$2/$3/$4"
-    m=''
     [[ -d $d/module ]] || return 1
     local default_conf
     default_conf="$dkms_tree/$1/$2/source/dkms.conf"
@@ -1579,6 +1577,7 @@ is_module_built() {
     real_conf="${conf:-${default_conf}}"
     read_conf_or_die "$3" "$4" "$real_conf"
     set_module_suffix "$3"
+    local m
     for m in "${dest_module_name[@]}"; do
         local t
         t=$(compressed_or_uncompressed "$d/module" "$m")
@@ -1973,7 +1972,7 @@ module_status_built_extra() (
 )
 
 # Return a list of all the modules that are either built or installed.
-# This and module_status do some juggling of $IFS to ensure that
+# This and list_module_version_combos do some juggling of $IFS to ensure that
 # we do not get word splitting where it would be inconvenient.
 module_status_built() {
     local ret
@@ -2002,12 +2001,10 @@ module_status_built() {
     return $ret
 }
 
-# Return the status of all modules that have been added, built, or installed.
-module_status() {
+# Return a list of all module/version combos known to DKMS.
+list_module_version_combos() {
     local ret
     local modv
-    local m
-    local v
     local directory
     local oifs
     ret=1
@@ -2015,16 +2012,30 @@ module_status() {
     IFS=''
     for directory in "$dkms_tree/"${1:-*}/${2:-*}; do
         IFS="$oifs"
+        [[ -d $directory ]] || continue
         modv="${directory#$dkms_tree/}"
-        m="${modv%/*}"
-        v="${modv#*/}"
+        # skip <module>/kernel-<kver>-<karch> -> <modver>/<kver>/<karch> symlinks
+        [[ $modv != */kernel-*-* ]] || continue
+        echo "$modv"
+        ret=0
+        IFS=''
+    done
+    IFS="$oifs"
+    return $ret
+}
+
+# Return the status of all modules that have been added, built, or installed.
+module_status() {
+    local ret
+    local m
+    local v
+    ret=1
+    while IFS='/' read m v; do
         is_module_broken "$m" "$v" && { echo "broken $m/$v"; continue; }
         is_module_added "$m" "$v" || continue
         ret=0
         module_status_built "$m" "$v" "$3" "$4" || echo "added $m/$v"
-        IFS=''
-    done
-    IFS="$oifs"
+    done < <(list_module_version_combos "$1" "$2")
     return $ret
 }
 
