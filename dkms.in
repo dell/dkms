@@ -73,6 +73,7 @@
 # 11: autoinstall: One or more modules failed to install during autoinstall.
 # 12: setup_kernels_arches(): Could not determine architecture.
 # 13: build: Aborting build of module ... for kernel ... due to missing BUILD_DEPENDS: ...
+# 14: kernel_prerm: dkms kernel_prerm for kernel ... failed for module(s) ...
 # 77: skipped due to BUILD_EXCLUSIVE
 # 101: install: pre_install failed, aborting install.
 
@@ -248,7 +249,8 @@ show_usage()
 {
     echo "Usage: $0 [action] [options]"
     echo "  [action]  = { add | remove | build | unbuild | install | uninstall | match |"
-    echo "               autoinstall | mktarball | ldtarball | status | generate_mok }"
+    echo "               autoinstall | mktarball | ldtarball | status | generate_mok |"
+    echo "               kernel_prerm }"
     echo "  [options] = [-m module] [-v module-version] [-k kernel-version] [-a arch]"
     echo "              [-c dkms.conf-location] [-q] [--force] [--force-version-override] [--all]"
     echo "              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
@@ -354,6 +356,7 @@ check_all_is_banned()
 # A little test function for DKMS commands that only work on one kernel.
 have_one_kernel() {
     if (( ${#kernelver[@]} != 1 )); then
+        [[ $1 = kernel_prerm ]] && die 4 "The action $1 requires exactly one kernel version parameter on the command line."
         die 4 "The action $1 does not support multiple kernel version parameters on the command line."
     fi
     check_all_is_banned $1
@@ -2602,6 +2605,36 @@ autoinstall() {
     fi
 }
 
+# This is roughly the inverse action to 'autoinstall'. It is supposed to be
+# called upon removal of a kernel to also remove all modules (including
+# those with AUTOINSTALL="") that were built or installed for that kernel.
+#
+# Compromise on using 'unbuild' to remove the module when a kernel is being
+# removed. The 'remove' command is too destructive. The 'uninstall' command
+# leaves built files around that have no other trigger to 'unbuild' them.
+# (Triggering 'unbuild' on kernel header removal would not be a good idea
+# because that would also cause the module to be uninstalled for the kernel,
+# even though only the headers are being removed.)
+kernel_prerm()
+{
+    local m
+    local v
+    local failed
+
+    have_one_kernel kernel_prerm
+
+    while IFS='/' read m v; do
+        is_module_built "$m" "$v" "$kernelver" "$arch" || continue
+        echo "dkms: removing module $m/$v for kernel $kernelver ($arch)" >&2
+        (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
+    done < <(list_module_version_combos)
+
+    # clean leftover empty directories
+    [[ ! -d $install_tree/$kernelver ]] || find "$install_tree/$kernelver" -type d -empty -delete
+
+    [[ -z $failed ]] || die 14 "dkms kernel_prerm for kernel $kernelver ($arch) failed for module(s)$failed."
+}
+
 #############################
 ####                     ####
 #### Program Starts Here ####
@@ -2678,7 +2711,7 @@ die_is_fatal="yes"
 [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 no_depmod=""
 
-action_re='^(remove|(auto|un)?install|match|mktarball|(un)?build|add|status|ldtarball|generate_mok)$'
+action_re='^(remove|(auto|un)?install|match|mktarball|(un)?build|add|status|ldtarball|generate_mok|kernel_prerm)$'
 
 # Parse command line arguments
 while (($# > 0)); do
@@ -2858,6 +2891,9 @@ parallel_jobs=${parallel_jobs:-$(get_num_cpus)}
 # Make sure we're not passing -j0 to make; treat -j0 as just "-j"
 [[ "$parallel_jobs" = 0 ]] && parallel_jobs=""
 
+# Require explicit --kernelver argument
+[[ $action = kernel_prerm ]] && have_one_kernel "$action"
+
 setup_kernels_arches "$action"
 case "$action" in
 remove | unbuild | uninstall)
@@ -2897,6 +2933,9 @@ ldtarball) # Make sure they're root if we're using --force
 generate_mok)
     read_framework_conf $dkms_framework_signing_variables
     prepare_mok
+    ;;
+kernel_prerm)
+    check_root && have_one_kernel "$action" && "$action"
     ;;
 *)
     error "Unknown action specified: \"$action\""
