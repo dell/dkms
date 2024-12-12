@@ -81,6 +81,7 @@ ifneq (,$(DESTDIR))
 endif
 	install -D -m 0644 dkms.service $(DESTDIR)$(SYSTEMD)/dkms.service
 	install -D -m 0755 redhat_kernel_install.d $(DESTDIR)$(KINSTALL)/40-dkms.install
+	install -D -m 0755 dkms_common.postinst $(DESTDIR)$(LIBDIR)/common.postinst
 
 install-debian: install
 	$(if $(strip $(SHAREDIR)),$(error Setting SHAREDIR is not supported))
