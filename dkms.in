@@ -252,7 +252,7 @@ show_usage()
     echo "  [options] = [-m module] [-v module-version] [-k kernel-version] [-a arch]"
     echo "              [-c dkms.conf-location] [-q] [--force] [--force-version-override] [--all]"
     echo "              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
-    echo "              [--config=kernel-.config-location] [--archive=tarball-location]"
+    echo "              [--config=kernel-include/config/auto.conf-location] [--archive=tarball-location]"
     echo "              [--kernelsourcedir=source-location] [--rpm_safe_upgrade]"
     echo "              [--dkmstree path] [--sourcetree path] [--installtree path]"
     echo "              [--binaries-only] [--source-only] [--verbose]"
@@ -336,7 +336,11 @@ set_kernel_source_dir_and_kconfig()
         kernel_source_dir="$(_get_kernel_dir "$1")"
     fi
     if [[ -z "${kconfig_fromcli}" ]]; then
-        kernel_config="${kernel_source_dir}/.config"
+        if [[ -e "${kernel_source_dir}/include/config/auto.conf" ]]; then
+            kernel_config="${kernel_source_dir}/include/config/auto.conf"
+        else
+            kernel_config="${kernel_source_dir}/.config"
+        fi
     fi
 }
 

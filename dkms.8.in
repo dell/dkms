@@ -304,20 +304,21 @@ it is assumed to be located in
 See below for more information on the format of
 .I dkms.conf.
 .TP
-.B \-\-config <kernel\-.config\-location>
+.B \-\-config <kernel\-include/config/auto.conf\-location>
 During a
 .B build
-this option is used to specify an alternate location for the kernel .config
-file which was used to compile that kernel. Normally,
+this option is used to specify an alternate location for the kernel
+.I include/config/auto.conf
+configuration file which contains that kernel configuration. Normally,
 .B dkms
-uses the Red Hat standard location and config filenames located in
-.I /usr/src/linux\-<kernel>/configs/.
-If the config for the kernel that you
-are building a module for is not located here or does not have the expected
-name in this location, you will need to tell
+is able to derive the location of the configuration file from the filesystem, but if there is a problem
+in the detection, you will need to tell
 .B dkms
-where the necessary .config can be found so that your kernel can be properly
-prepared for the module build.
+where the necessary
+.I include/config/auto.conf file
+(or the legacy
+.I .config
+file) can be found so that your kernel can be properly prepared for the module build.
 .TP
 .B \-\-archive <tarball\-location>
 This option is used during a
