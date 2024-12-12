@@ -1752,7 +1752,11 @@ do_uninstall()
     run_build_script post_remove "$post_remove"
 
     # Run depmod because we changed $install_tree
-    invoke_command "do_depmod $1" "Running depmod" '' background
+    if [[ ! $delayed_depmod ]]; then
+        invoke_command "do_depmod $1" "Running depmod" '' background
+    else
+        touch $dkms_tree/depmod-pending-$1-$2
+    fi
 
     # Delete the original_module if nothing for this kernel is installed anymore
     if [[ $was_active && -d $dkms_tree/$module/original_module/$1/$2 && ! -d $dkms_tree/$module/original_module/$1/$2/collisions ]]; then
@@ -2623,11 +2627,20 @@ kernel_prerm()
 
     have_one_kernel kernel_prerm
 
+    # run depmod only once after uninstalling all dkms modules
+    delayed_depmod=1
+
     while IFS='/' read m v; do
         is_module_built "$m" "$v" "$kernelver" "$arch" || continue
         echo "dkms: removing module $m/$v for kernel $kernelver ($arch)" >&2
         (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
     done < <(list_module_version_combos)
+
+    if [[ -f $dkms_tree/depmod-pending-$kernelver-$arch ]]; then
+        rm -f $dkms_tree/depmod-pending-$kernelver-$arch
+        invoke_command "do_depmod $1" "Running depmod" '' background
+    fi
+    delayed_depmod=
 
     # clean leftover empty directories
     [[ ! -d $install_tree/$kernelver ]] || find "$install_tree/$kernelver" -type d -empty -delete
@@ -2710,6 +2723,7 @@ die_is_fatal="yes"
 [ -x /sbin/weak-modules ] && weak_modules='/sbin/weak-modules'
 [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 no_depmod=""
+delayed_depmod=""
 
 action_re='^(remove|(auto|un)?install|match|mktarball|(un)?build|add|status|ldtarball|generate_mok|kernel_prerm)$'
 

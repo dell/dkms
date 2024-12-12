@@ -983,7 +983,6 @@ dkms: removing module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KER
 Module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
-Running depmod... done.
 dkms: removing module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
@@ -1714,13 +1713,11 @@ post_remove: line 2/stderr
 post_remove: line 3
 post_remove: line 4/stderr
 post_remove: line 5
-Running depmod... done.
 dkms: removing module dkms_patches_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Module dkms_patches_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_patches_test.ko${mod_compression_ext}
-Running depmod... done.
 dkms: removing module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
