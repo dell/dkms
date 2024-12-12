@@ -1412,7 +1412,7 @@ check_no_dkms_test
 echo '*** Testing multiple dkms modules and more dkms features'
 ############################################################################
 
-echo ' Adding test module with patches'
+echo 'Adding test module with patches'
 run_with_expected_output dkms add test/dkms_patches_test-1.0 << EOF
 Creating symlink /var/lib/dkms/dkms_patches_test/1.0/source -> /usr/src/dkms_patches_test-1.0
 EOF
@@ -1421,7 +1421,7 @@ run_status_with_expected_output 'dkms_patches_test' << EOF
 dkms_patches_test/1.0: added
 EOF
 
-echo ' Building and installing the test module with patches'
+echo 'Building and installing the test module with patches'
 set_signing_message "dkms_patches_test" "1.0"
 SIGNING_MESSAGE_patches="$SIGNING_MESSAGE"
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_patches_test -v 1.0 << EOF
@@ -1443,7 +1443,7 @@ run_status_with_expected_output 'dkms_patches_test' << EOF
 dkms_patches_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
-echo ' Unbuilding the test module with patches'
+echo 'Unbuilding the test module with patches'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_patches_test -v 1.0 << EOF
 
 Module dkms_patches_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
@@ -1455,7 +1455,7 @@ run_status_with_expected_output 'dkms_patches_test' << EOF
 dkms_patches_test/1.0: added
 EOF
 
-echo ' Adding test module with pre/post scripts'
+echo 'Adding test module with pre/post scripts'
 run_with_expected_output dkms add test/dkms_scripts_test-1.0 << EOF
 Creating symlink /var/lib/dkms/dkms_scripts_test/1.0/source -> /usr/src/dkms_scripts_test-1.0
 
@@ -1466,7 +1466,7 @@ run_status_with_expected_output 'dkms_scripts_test' << EOF
 dkms_scripts_test/1.0: added
 EOF
 
-echo ' Building and installing the test module with pre/post scripts'
+echo 'Building and installing the test module with pre/post scripts'
 set_signing_message "dkms_scripts_test" "1.0"
 SIGNING_MESSAGE_scripts="$SIGNING_MESSAGE"
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_scripts_test -v 1.0 << EOF
@@ -1490,7 +1490,7 @@ run_status_with_expected_output 'dkms_scripts_test' << EOF
 dkms_scripts_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
-echo ' Unbuilding the test module with pre/post scripts'
+echo 'Unbuilding the test module with pre/post scripts'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_scripts_test -v 1.0 << EOF
 
 Module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
@@ -1504,7 +1504,7 @@ run_status_with_expected_output 'dkms_scripts_test' << EOF
 dkms_scripts_test/1.0: added
 EOF
 
-echo ' Adding noisy test module'
+echo 'Adding noisy test module'
 run_with_expected_output dkms add test/dkms_noisy_test-1.0 << EOF
 Creating symlink /var/lib/dkms/dkms_noisy_test/1.0/source -> /usr/src/dkms_noisy_test-1.0
 
@@ -1521,7 +1521,7 @@ run_status_with_expected_output 'dkms_noisy_test' << EOF
 dkms_noisy_test/1.0: added
 EOF
 
-echo ' Building and installing the noisy test module'
+echo 'Building and installing the noisy test module'
 set_signing_message "dkms_noisy_test" "1.0"
 SIGNING_MESSAGE_noisy="$SIGNING_MESSAGE"
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_noisy_test -v 1.0 << EOF
@@ -1577,7 +1577,7 @@ run_status_with_expected_output 'dkms_noisy_test' << EOF
 dkms_noisy_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
-echo ' Unbuilding the noisy test module'
+echo 'Unbuilding the noisy test module'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_noisy_test -v 1.0 << EOF
 
 Module dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
@@ -1597,7 +1597,7 @@ run_status_with_expected_output 'dkms_noisy_test' << EOF
 dkms_noisy_test/1.0: added
 EOF
 
-echo " Running dkms autoinstall with multiple modules"
+echo "Running dkms autoinstall with multiple modules"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 ${SIGNING_PROLOGUE}applying patch patch2.patch...patching file Makefile
 patching file dkms_noisy_test.c
@@ -1686,7 +1686,7 @@ run_status_with_expected_output 'dkms_noisy_test' << EOF
 dkms_noisy_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
-echo " Running dkms autoinstall again with multiple modules"
+echo "Running dkms autoinstall again with multiple modules"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 EOF
 run_status_with_expected_output 'dkms_patches_test' << EOF
@@ -1699,33 +1699,9 @@ run_status_with_expected_output 'dkms_noisy_test' << EOF
 dkms_noisy_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
-echo ' Unbuilding the test modules'
-
-run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_patches_test -v 1.0 << EOF
-
-Module dkms_patches_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
-Before uninstall, this module version was ACTIVE on this kernel.
-Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_patches_test.ko${mod_compression_ext}
-Running depmod... done.
-EOF
-run_status_with_expected_output 'dkms_patches_test' << EOF
-dkms_patches_test/1.0: added
-EOF
-
-run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_scripts_test -v 1.0 << EOF
-
-Module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
-Before uninstall, this module version was ACTIVE on this kernel.
-Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_scripts_test.ko${mod_compression_ext}
-
-Running the post_remove script:
-Running depmod... done.
-EOF
-run_status_with_expected_output 'dkms_scripts_test' << EOF
-dkms_scripts_test/1.0: added
-EOF
-
-run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_noisy_test -v 1.0 << EOF
+echo 'Running dkms kernel_prerm'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
+dkms: removing module dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Module dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
@@ -1739,12 +1715,45 @@ post_remove: line 3
 post_remove: line 4/stderr
 post_remove: line 5
 Running depmod... done.
+dkms: removing module dkms_patches_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+
+Module dkms_patches_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_patches_test.ko${mod_compression_ext}
+Running depmod... done.
+dkms: removing module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+
+Module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_scripts_test.ko${mod_compression_ext}
+
+Running the post_remove script:
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_patches_test' << EOF
+dkms_patches_test/1.0: added
+EOF
+run_status_with_expected_output 'dkms_scripts_test' << EOF
+dkms_scripts_test/1.0: added
 EOF
 run_status_with_expected_output 'dkms_noisy_test' << EOF
 dkms_noisy_test/1.0: added
 EOF
 
-echo ' Removing the test module with patches'
+echo 'Running dkms kernel_prerm again'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
+EOF
+run_status_with_expected_output 'dkms_patches_test' << EOF
+dkms_patches_test/1.0: added
+EOF
+run_status_with_expected_output 'dkms_scripts_test' << EOF
+dkms_scripts_test/1.0: added
+EOF
+run_status_with_expected_output 'dkms_noisy_test' << EOF
+dkms_noisy_test/1.0: added
+EOF
+
+echo 'Removing the test module with patches'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_patches_test -v 1.0 << EOF
 Module dkms_patches_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Module dkms_patches_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
@@ -1754,7 +1763,7 @@ EOF
 run_status_with_expected_output 'dkms_patches_test' << EOF
 EOF
 
-echo ' Removing the test module with pre/post scripts'
+echo 'Removing the test module with pre/post scripts'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_scripts_test -v 1.0 << EOF
 Module dkms_scripts_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Module dkms_scripts_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
@@ -1764,7 +1773,7 @@ EOF
 run_status_with_expected_output 'dkms_scripts_test' << EOF
 EOF
 
-echo ' Removing the noisy test module'
+echo 'Removing the noisy test module'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_noisy_test -v 1.0 << EOF
 Module dkms_noisy_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 Module dkms_noisy_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
