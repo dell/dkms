@@ -364,6 +364,10 @@ fi
 echo 'Preparing a clean test environment'
 clean_dkms_env
 
+echo 'Test that there are no dkms modules installed'
+run_with_expected_output dkms status -k "${KERNEL_VER}" << EOF
+EOF
+
 echo 'Test framework file hijacking'
 mkdir -p /etc/dkms/framework.conf.d/
 cp test/framework/hijacking.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
@@ -815,6 +819,70 @@ Autoinstall on ${KERNEL_VER}-noheaders failed for module(s) dkms_test(1).
 
 Error! One or more modules failed to install during autoinstall.
 Refer to previous errors for more information.
+EOF
+
+echo 'Running dkms kernel_prerm w/o kernel argument (expected error)'
+run_with_expected_error 4 dkms kernel_prerm << EOF
+
+Error! The action kernel_prerm requires exactly one kernel version parameter on the command line.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Running dkms kernel_prerm'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
+dkms: removing module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+
+Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+
+echo 'Running dkms kernel_prerm again'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+
+echo 'Building the test module'
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+${SIGNING_PROLOGUE}
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE}Cleaning build area... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+EOF
+
+echo 'Running dkms kernel_prerm'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
+dkms: removing module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Module dkms_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+
+echo "Running dkms autoinstall"
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+${SIGNING_PROLOGUE}
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE}Cleaning build area... done.
+
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 echo 'Removing the test module with --all'
