@@ -976,28 +976,30 @@ run_status_with_expected_output 'dkms_dependencies_test' << EOF
 dkms_dependencies_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
-echo 'Unbuilding the test module with dependencies'
-run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
+echo 'Running dkms kernel_prerm'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
+dkms: removing module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
 Running depmod... done.
-EOF
-run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
-EOF
-run_status_with_expected_output 'dkms_dependencies_test' << EOF
-dkms_dependencies_test/1.0: added
-EOF
-
-echo 'Unbuilding the prerequisite test module'
-run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+dkms: removing module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+dkms_dependencies_test/1.0: added
+EOF
+
+echo 'Running dkms kernel_prerm again'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0: added
