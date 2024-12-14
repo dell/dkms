@@ -5,11 +5,7 @@ KERNEL_VERSION=$2
 
 case "$COMMAND" in
     add)
-        if [ -f /etc/dkms/no-autoinstall ]; then
-            echo "Automatic installation of modules has been disabled."
-        else
             dkms autoinstall --kernelver $KERNEL_VERSION
-        fi
         ;;
     remove)
         dkms status -k "$KERNEL_VERSION" 2>/dev/null | while IFS=",:/ " read -r name vers _ arch status; do

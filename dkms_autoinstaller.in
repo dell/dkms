@@ -51,9 +51,7 @@ case "$1" in
 		else
 			kernel=$(uname -r)
 		fi
-		if [ -f /etc/dkms/no-autoinstall ]; then
-			echo "Automatic installation of modules has been disabled."
-		elif ! _check_kernel_dir $kernel; then
+		if ! _check_kernel_dir $kernel; then
 			echo "Automatic installation of modules for kernel $kernel was skipped since the kernel headers for this kernel do not seem to be installed."
 		else
 			dkms autoinstall --kernelver $kernel

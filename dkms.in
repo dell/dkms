@@ -2477,6 +2477,11 @@ add_source_tree() {
 # functionality, and makes it much easier to reinstall DKMS kernel modules
 # by hand if dkms_autoinstaller is not used.
 autoinstall() {
+    if [[ -f /etc/dkms/no-autoinstall ]]; then
+        echo "Automatic installation of modules has been disabled."
+        return
+    fi
+
     local status
     local mv
     local mvka
