@@ -3,27 +3,6 @@
 # We're passed the version of the kernel being installed
 inst_kern=$1
 
-uname_s=$(uname -s)
-
-_get_kernel_dir() {
-    KVER=$1
-    DIR="@MODDIR@/$KVER/build"
-    echo "$DIR"
-}
-
-_check_kernel_dir() {
-    DIR=$(_get_kernel_dir "$1")
-    test -e "$DIR/include"
-}
-
-header_pkg="linux-headers-$inst_kern"
-kernel="Linux"
-
 if [ -x @LIBDIR@/dkms_autoinstaller ]; then
     exec @LIBDIR@/dkms_autoinstaller start "$inst_kern"
-fi
-
-if ! _check_kernel_dir "$inst_kern" ; then
-    echo "dkms: WARNING: $kernel headers are missing, which may explain the above failures." >&2
-    echo "      please install the $header_pkg package to fix this." >&2
 fi
