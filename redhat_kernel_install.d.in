@@ -5,12 +5,9 @@ KERNEL_VERSION=$2
 
 case "$COMMAND" in
     add)
-            dkms autoinstall --kernelver $KERNEL_VERSION
+        dkms kernel_postinst --kernelver $KERNEL_VERSION
         ;;
     remove)
-        dkms status -k "$KERNEL_VERSION" 2>/dev/null | while IFS=",:/ " read -r name vers _ arch status; do
-            dkms unbuild -m "$name" -v "$vers" -k "$KERNEL_VERSION" -a "$arch"
-        done
-        find /usr/lib/modules/$KERNEL_VERSION -type d -empty -delete
+        dkms kernel_prerm --kernelver $KERNEL_VERSION
         ;;
 esac

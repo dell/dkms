@@ -5,14 +5,7 @@
 inst_kern=$1
 
 if command -v dkms > /dev/null; then
-	dkms status -k "$inst_kern" 2>/dev/null | while IFS=",:/ " read -r name vers _ arch status; do
-		[ "$status" = "installed" ] || [ "$status" = "built" ] || continue
-		dkms unbuild -m "$name" -v "$vers" -k "$inst_kern" -a "$arch"
-	done
+    dkms kernel_prerm -k "$inst_kern"
 fi
-
-rmdir --ignore-fail-on-non-empty \
-	"@MODDIR@/$inst_kern/updates/dkms" \
-	"@MODDIR@/$inst_kern/updates" 2>/dev/null
 
 exit 0
