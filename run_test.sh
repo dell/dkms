@@ -788,6 +788,16 @@ run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0: added
 EOF
 
+touch /etc/dkms/no-autoinstall
+echo "Running dkms autoinstall with /etc/dkms/no-autoinstall present"
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+Automatic installation of modules has been disabled.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+rm -f /etc/dkms/no-autoinstall
+
 echo "Running dkms autoinstall"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 ${SIGNING_PROLOGUE}
