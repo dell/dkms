@@ -1520,7 +1520,7 @@ do_install()
         exit 6
     }
 
-    if [[ $modprobe_on_install ]]; then
+    if [[ $modprobe_on_install ]] && [[ $kernelver = "$(uname -r)" ]]; then
         # Make the newly installed modules available immediately
         find /sys/devices -name modalias -print0 | xargs -0 cat | sort -u | xargs modprobe -a -b -q
         if [[ -f /lib/systemd/system/systemd-modules-load.service ]]; then
