@@ -870,8 +870,17 @@ run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0: added
 EOF
 
-echo "Running dkms autoinstall"
-run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+echo 'Running dkms kernel_postinst w/o kernel argument (expected error)'
+run_with_expected_error 4 dkms kernel_postinst << EOF
+
+Error! The action kernel_postinst requires exactly one kernel version parameter on the command line.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+
+echo "Running dkms kernel_postinst"
+run_with_expected_output dkms kernel_postinst -k "${KERNEL_VER}" << EOF
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
@@ -880,6 +889,13 @@ ${SIGNING_MESSAGE}Cleaning build area... done.
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo "Running dkms kernel_postinst again"
+run_with_expected_output dkms kernel_postinst -k "${KERNEL_VER}" << EOF
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed

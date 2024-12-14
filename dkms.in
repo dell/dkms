@@ -250,7 +250,7 @@ show_usage()
     echo "Usage: $0 [action] [options]"
     echo "  [action]  = { add | remove | build | unbuild | install | uninstall | match |"
     echo "               autoinstall | mktarball | ldtarball | status | generate_mok |"
-    echo "               kernel_prerm }"
+    echo "               kernel_postinst | kernel_prerm }"
     echo "  [options] = [-m module] [-v module-version] [-k kernel-version] [-a arch]"
     echo "              [-c dkms.conf-location] [-q] [--force] [--force-version-override] [--all]"
     echo "              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
@@ -356,7 +356,7 @@ check_all_is_banned()
 # A little test function for DKMS commands that only work on one kernel.
 have_one_kernel() {
     if (( ${#kernelver[@]} != 1 )); then
-        [[ $1 = kernel_prerm ]] && die 4 "The action $1 requires exactly one kernel version parameter on the command line."
+        [[ $1 =~ kernel_(postinst|prerm) ]] && die 4 "The action $1 requires exactly one kernel version parameter on the command line."
         die 4 "The action $1 does not support multiple kernel version parameters on the command line."
     fi
     check_all_is_banned $1
@@ -2609,6 +2609,18 @@ autoinstall() {
     fi
 }
 
+# A wrapper for 'autoinstall', to be used in combination with 'kernel_prerm'.
+kernel_postinst()
+{
+    local m
+    local v
+    local failed
+
+    have_one_kernel kernel_postinst
+
+    autoinstall
+}
+
 # This is roughly the inverse action to 'autoinstall'. It is supposed to be
 # called upon removal of a kernel to also remove all modules (including
 # those with AUTOINSTALL="") that were built or installed for that kernel.
@@ -2725,7 +2737,7 @@ die_is_fatal="yes"
 no_depmod=""
 delayed_depmod=""
 
-action_re='^(remove|(auto|un)?install|match|mktarball|(un)?build|add|status|ldtarball|generate_mok|kernel_prerm)$'
+action_re='^(remove|(auto|un)?install|match|mktarball|(un)?build|add|status|ldtarball|generate_mok|kernel_(postinst|prerm))$'
 
 # Parse command line arguments
 while (($# > 0)); do
@@ -2906,7 +2918,7 @@ parallel_jobs=${parallel_jobs:-$(get_num_cpus)}
 [[ "$parallel_jobs" = 0 ]] && parallel_jobs=""
 
 # Require explicit --kernelver argument
-[[ $action = kernel_prerm ]] && have_one_kernel "$action"
+[[ $action =~ kernel_(postinst|prerm) ]] && have_one_kernel "$action"
 
 setup_kernels_arches "$action"
 case "$action" in
@@ -2948,7 +2960,7 @@ generate_mok)
     read_framework_conf $dkms_framework_signing_variables
     prepare_mok
     ;;
-kernel_prerm)
+kernel_postinst | kernel_prerm)
     check_root && have_one_kernel "$action" && "$action"
     ;;
 *)
