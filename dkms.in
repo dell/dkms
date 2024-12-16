@@ -173,8 +173,11 @@ invoke_command()
     fi
 
     if [[ -n "$cmd_output_file" ]]; then
+        echo -e "$cmd_description" >> "$cmd_output_file"
+        echo -e "# command: $cmd" >> "$cmd_output_file"
         ( eval "$cmd" ) >> "$cmd_output_file" 2>&1
         exitval=$?
+        echo -e "\n# exit code: $exitval" >> "$cmd_output_file"
     elif [[ -z "$cmd_output_file" && $cmd_mode == background && ! $verbose ]]; then
         ( eval "$cmd" ) >/dev/null 2>&1
         exitval=$?
