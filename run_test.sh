@@ -238,6 +238,48 @@ run_with_expected_error() {
     rm ${expected_output_log} ${output_log}
 }
 
+generalize_make_log() {
+    local output_log="$1"
+
+    sed -r -i '
+# timestamp on line 2
+2s/.*/<timestamp>/
+
+# minimize and unify compilation output between distributions
+# we are not really interested in the compilation details
+/warning: the compiler differs from the one used to build the kernel/d
+/  The kernel was built by:/d
+/  You are using:/d
+/make(\[[0-9]+\])?: (Entering|Leaving) directory/d
+s/ \[M\] /     /
+/^  /s/\/var\/lib\/dkms\/.*\///
+/^  AR      built-in\.a$/d
+/^  Building modules, stage 2\.$/d
+/^  MODPOST Module\.symvers$/d
+/^  MODPOST [0-9]+ modules$/d
+/^  CC      \.module-common\.o$/d
+/^  BTF     dkms_(.*_)?test.ko$/d
+/Skipping BTF generation for (\/var\/lib\/dkms\/.*\/)?dkms_(.*_)?test.ko due to unavailability of vmlinux$/d
+/^  CLEAN   \.tmp_versions$/d
+' ${output_log}
+}
+
+check_make_log_content() {
+    local make_log="$1"
+    local output_log=test_cmd_output.log
+    local expected_output_log=test_cmd_expected_output.log
+
+    cat > ${expected_output_log}
+    cat "$make_log" > ${output_log}
+    generalize_make_log ${output_log}
+    if ! diff -U3 ${expected_output_log} ${output_log} ; then
+        echo >&2 "Error: unexpected make.log difference"
+        rm ${expected_output_log} ${output_log}
+        return 1
+    fi
+    rm ${expected_output_log} ${output_log}
+}
+
 check_module_source_tree_created() {
     if ! [[ -d "$1" ]] ; then
         echo >&2 "Error: directory '$1' was not created"
@@ -420,6 +462,15 @@ ${SIGNING_MESSAGE}Cleaning build area... done.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+EOF
+
+echo 'Checking make.log content'
+check_make_log_content /var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/log/make.log << EOF
+DKMS make.log for dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+<timestamp>
+  CC      dkms_test.o
+  CC      dkms_test.mod.o
+  LD      dkms_test.ko
 EOF
 
 echo 'Building the test module again'
@@ -1576,6 +1627,15 @@ Running depmod... done.
 EOF
 run_status_with_expected_output 'dkms_noisy_test' << EOF
 dkms_noisy_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Checking make.log content'
+check_make_log_content /var/lib/dkms/dkms_noisy_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/log/make.log << EOF
+DKMS make.log for dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+<timestamp>
+  CC      dkms_noisy_test.o
+  CC      dkms_noisy_test.mod.o
+  LD      dkms_noisy_test.ko
 EOF
 
 echo 'Unbuilding the noisy test module'
