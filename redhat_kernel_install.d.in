@@ -6,6 +6,7 @@ KERNEL_VERSION=$2
 case "$COMMAND" in
     add)
         dkms kernel_postinst --kernelver $KERNEL_VERSION
+        res=$?
         ;;
     remove)
         dkms kernel_prerm --kernelver $KERNEL_VERSION
