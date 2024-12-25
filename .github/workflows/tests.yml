@@ -25,6 +25,7 @@ jobs:
           - {name: "archlinux", tag: "latest", variant: "-lts"}
           - {name: "archlinux", tag: "latest", variant: "-zen"}
           - {name: "centos/centos", tag: "stream9", url: "quay.io/"}
+          - {name: "centos/centos", tag: "stream10", url: "quay.io/"}
           - {name: "debian", tag: "testing"}
           - {name: "debian", tag: "12"}
           - {name: "fedora/fedora", tag: "rawhide", url: "quay.io/"}

@@ -10,5 +10,6 @@ case "$COMMAND" in
         ;;
     remove)
         dkms kernel_prerm --kernelver $KERNEL_VERSION
+        res=$?
         ;;
 esac
