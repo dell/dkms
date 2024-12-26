@@ -1262,7 +1262,7 @@ prepare_and_actual_build()
     # Run the pre_build script
     run_build_script pre_build "$pre_build"
 
-    invoke_command "$clean" "Cleaning build area" '' background
+    invoke_command "$clean" "Cleaning build area" "$build_log" background
     local the_make_command
     the_make_command="${make_command/#make/make -j$parallel_jobs KERNELRELEASE=$kernelver}"
 
@@ -1327,7 +1327,7 @@ prepare_and_actual_build()
 
     # Run the clean commands
     cd "$dkms_tree/$module/$module_version/build"
-    invoke_command "$clean" "Cleaning build area" '' background
+    invoke_command "$clean" "Cleaning build area" "$build_log" background
 
     cd - >/dev/null
 

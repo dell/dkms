@@ -6,7 +6,8 @@ set -eu
 cd "$(dirname -- "$0")"
 
 # To use a specific kernel version, use the environment variable KERNEL_VER
-KERNEL_VER="${KERNEL_VER:-$(uname -r)}"
+UNAME_R="$(uname -r)"
+KERNEL_VER="${KERNEL_VER:-${UNAME_R}}"
 KERNEL_ARCH="$(uname -m)"
 echo "Using kernel ${KERNEL_VER}/${KERNEL_ARCH}"
 
@@ -471,11 +472,22 @@ echo 'Checking make.log content'
 check_make_log_content /var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/log/make.log << EOF
 DKMS (${DKMS_VERSION}) make.log for dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 <timestamp>
+Cleaning build area
+# command: make -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build clean
+
+# exit code: 0
+# elapsed time: <hh:mm:ss>
 Building module(s)
 # command: make -j1 KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build
   CC      dkms_test.o
   CC      dkms_test.mod.o
   LD      dkms_test.ko
+
+# exit code: 0
+# elapsed time: <hh:mm:ss>
+Cleaning build area
+# command: make -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build clean
+  CLEAN   Module.symvers
 
 # exit code: 0
 # elapsed time: <hh:mm:ss>
@@ -1641,6 +1653,14 @@ echo 'Checking make.log content'
 check_make_log_content /var/lib/dkms/dkms_noisy_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/log/make.log << EOF
 DKMS (${DKMS_VERSION}) make.log for dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 <timestamp>
+Cleaning build area
+# command: make clean
+make -C /lib/modules/${UNAME_R}/build M=/var/lib/dkms/dkms_noisy_test/1.0/build clean
+make[1]: *** /lib/modules/${UNAME_R}/build: No such file or directory.  Stop.
+make: *** [Makefile:7: clean] Error 2
+
+# exit code: 2
+# elapsed time: <hh:mm:ss>
 Building module(s)
 # command: make -j1 KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_noisy_test/1.0/build
   CC      dkms_noisy_test.o
@@ -1648,6 +1668,14 @@ Building module(s)
   LD      dkms_noisy_test.ko
 
 # exit code: 0
+# elapsed time: <hh:mm:ss>
+Cleaning build area
+# command: make clean
+make -C /lib/modules/${UNAME_R}/build M=/var/lib/dkms/dkms_noisy_test/1.0/build clean
+make[1]: *** /lib/modules/${UNAME_R}/build: No such file or directory.  Stop.
+make: *** [Makefile:7: clean] Error 2
+
+# exit code: 2
 # elapsed time: <hh:mm:ss>
 EOF
 
