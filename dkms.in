@@ -1214,9 +1214,9 @@ prepare_and_actual_build()
             report_build_problem 5 \
             "Patch $p as specified in dkms.conf cannot be" \
             "found in $build_dir/patches/."
-        invoke_command "patch -p1 < ./patches/$p" "applying patch $p" || \
+        invoke_command "patch -p1 < ./patches/$p" "Applying patch $p" "$build_log" background || \
             report_build_problem 6 "Application of patch $p failed." \
-            "Check $build_dir for more information."
+            "Consult $build_log for more information."
     done
 
     if [[ -f $kernel_source_dir/.kernelvariables ]]; then
