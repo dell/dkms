@@ -35,6 +35,7 @@ TEST_MODULES=(
     "dkms_patches_test"
     "dkms_scripts_test"
     "dkms_noisy_test"
+    "dkms_crlf_test"
     "dkms_build_exclusive_test"
     "dkms_build_exclusive_dependencies_test"
 )
@@ -58,6 +59,7 @@ TEST_TMPDIRS=(
     "/usr/src/dkms_patches_test-1.0"
     "/usr/src/dkms_scripts_test-1.0"
     "/usr/src/dkms_noisy_test-1.0"
+    "/usr/src/dkms_crlf_test-1.0"
     "/usr/src/dkms_build_exclusive_test-1.0"
     "/usr/src/dkms_build_exclusive_dependencies_test-1.0"
     "/tmp/dkms_test_dir_${KERNEL_VER}/"
@@ -2149,6 +2151,45 @@ run_status_with_expected_output 'dkms_duplicate_test' << EOF
 EOF
 
 remove_module_source_tree /usr/src/dkms_duplicate_test-1.0
+
+echo 'Testing dkms.conf with CR/LF line endings'
+run_with_expected_output dkms add test/dkms_crlf_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_crlf_test/1.0/source -> /usr/src/dkms_crlf_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_crlf_test-1.0
+run_status_with_expected_output 'dkms_crlf_test' << EOF
+dkms_crlf_test/1.0: added
+EOF
+
+echo ' Building and installing the test module'
+set_signing_message "dkms_crlf_test" "1.0" "dkms_dos_test"
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_crlf_test -v 1.0 << EOF
+${SIGNING_PROLOGUE}
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE}Cleaning build area... done.
+
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dos_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_crlf_test' << EOF
+dkms_crlf_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo ' Removing the test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_crlf_test -v 1.0 << EOF
+
+Module dkms_crlf_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dos_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Deleting module dkms_crlf_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_crlf_test' << EOF
+EOF
+
+remove_module_source_tree /usr/src/dkms_crlf_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
