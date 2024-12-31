@@ -509,6 +509,7 @@ safe_source() {
     local to_source_file
     to_source_file="$1"; shift
     declare -a -r export_envs=("$@")
+    local -r CR=$(echo -e '\r')
     local tmpfile
     tmpfile=$(mktemp_or_die)
     ( exec >"$tmpfile"
@@ -517,7 +518,7 @@ safe_source() {
     # Remember, in bash 2.0 and greater all variables are really arrays.
     for _export_env in "${export_envs[@]}"; do
         for _i in $(eval echo \${!$_export_env[@]}); do
-            eval echo '$_export_env[$_i]=\"${'$_export_env'[$_i]}\"'
+            eval echo '$_export_env[$_i]=\"${'$_export_env'[$_i]%$CR}\"'
         done
     done
 
