@@ -1340,11 +1340,16 @@ clean_build()
     rm -rf "$dkms_tree/$module/$module_version/build"
 }
 
-do_build()
+prepare_kernel_and_signing()
 {
     set_kernel_source_dir_and_kconfig "$kernelver"
     prepare_kernel "$kernelver"
     prepare_signing
+}
+
+do_build()
+{
+    prepare_kernel_and_signing
     prepare_build
     actual_build
     clean_build
