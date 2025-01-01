@@ -1018,9 +1018,6 @@ add_module()
 prepare_kernel()
 {
     # $1 = kernel version to prepare
-    # $2 = arch to prepare
-
-    set_kernel_source_dir_and_kconfig "$1"
 
     # Check that kernel-source exists
     _check_kernel_dir "$1" || {
@@ -1343,7 +1340,7 @@ clean_build()
 do_build()
 {
     set_kernel_source_dir_and_kconfig "$kernelver"
-    prepare_kernel "$kernelver" "$arch"
+    prepare_kernel "$kernelver"
     # Lazy source in signing related configuration
     read_framework_conf $dkms_framework_signing_variables
     prepare_signing
@@ -2345,7 +2342,7 @@ run_match()
         return 0
     fi
 
-    prepare_kernel "$kernelver" "$arch"
+    prepare_kernel "$kernelver"
 
     # Iterate over the kernel_status and match kernel to the template_kernel
     while read template_line; do
