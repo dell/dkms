@@ -1088,6 +1088,9 @@ prepare_mok()
 
 prepare_signing()
 {
+    # Lazy source in signing related configuration
+    read_framework_conf $dkms_framework_signing_variables
+
     do_signing=0
 
     if [[ ! -f ${kernel_config} ]]; then
@@ -1341,8 +1344,6 @@ do_build()
 {
     set_kernel_source_dir_and_kconfig "$kernelver"
     prepare_kernel "$kernelver"
-    # Lazy source in signing related configuration
-    read_framework_conf $dkms_framework_signing_variables
     prepare_signing
     prepare_build
     actual_build
