@@ -1341,9 +1341,12 @@ clean_build()
 
 prepare_kernel_and_signing()
 {
+    [[ $prepared_kernel = "$kernelver/$arch" ]] && return
+
     set_kernel_source_dir_and_kconfig "$kernelver"
     prepare_kernel "$kernelver"
     prepare_signing
+    prepared_kernel="$kernelver/$arch"
     echo ""
 }
 
@@ -2568,6 +2571,7 @@ autoinstall() {
         for modv in "${to_install[@]}"; do
             IFS=/ read m v <<< "$modv"
             if [[ -z ${build_depends[$m]} ]]; then
+                is_module_built "$m" "$v" "$kernelver" "$arch" || prepare_kernel_and_signing
                 echo "Autoinstall of module $m/$v for kernel $kernelver ($arch)"
                 (module="$m" module_version="$v" kernelver="$kernelver" arch="$arch" install_module)
                 status=$?
@@ -2749,6 +2753,7 @@ die_is_fatal="yes"
 [ -x /usr/lib/module-init-tools/weak-modules ] && weak_modules='/usr/lib/module-init-tools/weak-modules'
 no_depmod=""
 delayed_depmod=""
+prepared_kernel="none"
 
 action_re='^(remove|(auto|un)?install|match|mktarball|(un)?build|add|status|ldtarball|generate_mok|kernel_(postinst|prerm))$'
 
