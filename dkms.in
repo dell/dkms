@@ -1703,7 +1703,6 @@ do_uninstall()
     # $1 = kernel version
     # $2 = arch
 
-    echo ""
     echo "Module $module/$module_version for kernel $1 ($2):"
 
     set_module_suffix "$1"

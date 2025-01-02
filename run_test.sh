@@ -577,7 +577,6 @@ fi
 
 echo 'Installing the test module again by force'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
-
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -619,7 +618,6 @@ fi
 
 echo 'Uninstalling the test module'
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -736,7 +734,6 @@ fi
 
 echo 'Removing the test module with --all'
 run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
-
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -779,7 +776,6 @@ EOF
 
 echo 'Unbuilding the test module'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -847,7 +843,6 @@ EOF
 echo 'Running dkms kernel_prerm'
 run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
 dkms: removing module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
-
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -920,7 +915,6 @@ EOF
 
 echo 'Removing the test module with --all'
 run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
-
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -1014,13 +1008,11 @@ EOF
 echo 'Running dkms kernel_prerm'
 run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
 dkms: removing module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
-
 Module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
 
 dkms: removing module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
-
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -1083,7 +1075,6 @@ EOF
 
 echo 'Removing the test module with dependencies'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
-
 Module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
@@ -1099,7 +1090,6 @@ EOF
 
 echo 'Removing the prerequisite test module'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -1173,7 +1163,6 @@ EOF
 
 echo 'Unbuilding the test module with unsatisfied dependencies'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
-
 Module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
@@ -1266,7 +1255,6 @@ EOF
 
 echo 'Removing the test module with circular dependencies'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_circular_dependencies_test -v 1.0 << EOF
-
 Module dkms_circular_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_circular_dependencies_test.ko${mod_compression_ext}
@@ -1341,7 +1329,6 @@ EOF
 
 echo 'Unbuilding the replacement test module'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_replace_test -v 2.0 << EOF
-
 Module dkms_replace_test/2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -1399,7 +1386,6 @@ EOF
 
 echo 'Removing the replacement test module'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_replace_test -v 2.0 << EOF
-
 Module dkms_replace_test/2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -1425,7 +1411,6 @@ EOF
 
 echo 'Removing the to-be-replaced test module'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -1479,7 +1464,6 @@ EOF
 
 echo 'Unbuilding the test module with patches'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_patches_test -v 1.0 << EOF
-
 Module dkms_patches_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_patches_test.ko${mod_compression_ext}
@@ -1525,7 +1509,6 @@ EOF
 
 echo 'Unbuilding the test module with pre/post scripts'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_scripts_test -v 1.0 << EOF
-
 Module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_scripts_test.ko${mod_compression_ext}
@@ -1611,7 +1594,6 @@ EOF
 
 echo 'Unbuilding the noisy test module'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_noisy_test -v 1.0 << EOF
-
 Module dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_noisy_test.ko${mod_compression_ext}
@@ -1737,7 +1719,6 @@ EOF
 echo 'Running dkms kernel_prerm'
 run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
 dkms: removing module dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
-
 Module dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_noisy_test.ko${mod_compression_ext}
@@ -1751,13 +1732,11 @@ post_remove: line 4/stderr
 post_remove: line 5
 
 dkms: removing module dkms_patches_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
-
 Module dkms_patches_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_patches_test.ko${mod_compression_ext}
 
 dkms: removing module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
-
 Module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_scripts_test.ko${mod_compression_ext}
@@ -1867,7 +1846,6 @@ EOF
 
 echo 'Uninstalling the noautoinstall test module'
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_noautoinstall_test -v 1.0 << EOF
-
 Module dkms_noautoinstall_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_noautoinstall_test.ko${mod_compression_ext}
@@ -1984,7 +1962,6 @@ EOF
 run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
 dkms.conf: Warning! Zero modules specified.
 dkms.conf: Warning! Zero modules specified.
-
 Module dkms_conf_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Running depmod... done.
@@ -2134,7 +2111,6 @@ EOF
 
 echo ' Removing the test module'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_duplicate_test -v 1.0 << EOF
-
 Module dkms_duplicate_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext}
@@ -2173,7 +2149,6 @@ EOF
 
 echo ' Removing the test module'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_crlf_test -v 1.0 << EOF
-
 Module dkms_crlf_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dos_test.ko${mod_compression_ext}
@@ -2273,7 +2248,6 @@ dkms_multiver_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 dkms_multiver_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_multiver_test -v 2.0 << EOF
-
 Module dkms_multiver_test/2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_multiver_test.ko${mod_compression_ext}
@@ -2388,7 +2362,6 @@ EOF
 
 echo 'Uninstalling the nover/emptyver test modules'
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_nover_test -v 1.0 << EOF
-
 Module dkms_nover_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_nover_test.ko${mod_compression_ext}
@@ -2402,7 +2375,6 @@ if [[ -e "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_nover_test.ko${mo
     exit 1
 fi
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_emptyver_test -v 1.0 << EOF
-
 Module dkms_emptyver_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_emptyver_test.ko${mod_compression_ext}
@@ -2550,7 +2522,6 @@ Module dkms_nover_update_test/3.0 is not installed for kernel ${KERNEL_VER} (${K
 Deleting module dkms_nover_update_test/3.0 completely from the DKMS tree.
 EOF
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_nover_update_test -v 2.0 << EOF
-
 Module dkms_nover_update_test/2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_nover_update_test.ko${mod_compression_ext}
@@ -2731,7 +2702,6 @@ EOF
 
 echo 'Unbuilding the test module'
 run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -2793,7 +2763,6 @@ remove_module_source_tree /usr/src/dkms_failing_test-1.0
 
 echo 'Removing the test module'
 run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
-
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -3112,7 +3081,6 @@ EOF
 echo 'Removing all modules'
 echo ' Removing the test module'
 run_with_expected_output dkms remove dkms_test/1.0 -k "${KERNEL_VER}" << EOF
-
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
