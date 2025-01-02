@@ -947,7 +947,6 @@ run_build_script() {
     esac
     run="$dkms_tree/$module/$module_version/$script_type/$2"
     if [[ -x ${run%% *} ]]; then
-        echo ""
         echo "Running the $1 script:"
         (
             cd "$dkms_tree/$module/$module_version/$script_type/"
