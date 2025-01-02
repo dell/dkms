@@ -556,7 +556,6 @@ fi
 
 echo 'Installing the test module'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -696,7 +695,6 @@ ${SIGNING_PROLOGUE}Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/s
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -770,7 +768,6 @@ EOF
 echo "Running dkms autoinstall (module already built)"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 
@@ -809,7 +806,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 
@@ -906,7 +902,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 
@@ -974,7 +969,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 
@@ -1005,7 +999,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_dependencies}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
 Running depmod... done.
 
@@ -1058,7 +1051,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 
@@ -1067,7 +1059,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_dependencies}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
 Running depmod... done.
 
@@ -1162,7 +1153,6 @@ EOF
 
 echo 'Installing the test module with unsatisfied dependencies'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -1267,7 +1257,6 @@ EOF
 
 echo 'Installing the test module with circular dependencies'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_circular_dependencies_test -v 1.0 << EOF
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_circular_dependencies_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -1317,7 +1306,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -1340,7 +1328,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
-
 Found pre-existing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}, archiving for uninstallation
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
@@ -1387,7 +1374,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
-
 Found pre-existing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}, archiving for uninstallation
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
@@ -1484,7 +1470,6 @@ patching file dkms_patches_test.c
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_patches}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_patches_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -1527,7 +1512,6 @@ Building module(s)... done.
 ${SIGNING_MESSAGE_scripts}
 Running the post_build script:
 Cleaning build area... done.
-
 
 Running the pre_install script:
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_scripts_test.ko${mod_compression_ext}
@@ -1603,7 +1587,6 @@ post_build: line 4/stderr
 post_build: line 5
 Cleaning build area... done.
 
-
 Running the pre_install script:
 /var/lib/dkms/dkms_noisy_test/1.0/source/script.sh pre_install
 pre_install: line 1
@@ -1678,7 +1661,6 @@ post_build: line 4/stderr
 post_build: line 5
 Cleaning build area... done.
 
-
 Running the pre_install script:
 /var/lib/dkms/dkms_noisy_test/1.0/source/script.sh pre_install
 pre_install: line 1
@@ -1708,7 +1690,6 @@ patching file dkms_patches_test.c
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_patches}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_patches_test.ko${mod_compression_ext}
 Running depmod... done.
 
@@ -1721,7 +1702,6 @@ Building module(s)... done.
 ${SIGNING_MESSAGE_scripts}
 Running the post_build script:
 Cleaning build area... done.
-
 
 Running the pre_install script:
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_scripts_test.ko${mod_compression_ext}
@@ -1878,7 +1858,6 @@ EOF
 
 echo 'Installing the noautoinstall test module'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_noautoinstall_test -v 1.0 << EOF
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_noautoinstall_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -1995,7 +1974,6 @@ Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_t
 Cleaning build area... done.
 Building module(s)... done.
 Cleaning build area... done.
-
 Running depmod... done.
 EOF
 run_status_with_expected_output 'dkms_conf_test' << EOF
@@ -2146,7 +2124,6 @@ Building module(s)... done.
 ${BUILD_MESSAGES}Cleaning build area...(bad exit status: 1)
 Failed command:
 echo oops >&2 && false
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext}
 Module /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext} already installed (unversioned module), override by specifying --force
 Running depmod... done.
@@ -2187,7 +2164,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dos_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -2260,7 +2236,6 @@ EOF
 
 echo 'Installing the multiver test modules'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_multiver_test -v 1.0 << EOF
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_multiver_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -2269,7 +2244,6 @@ dkms_multiver_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 dkms_multiver_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_multiver_test -v 2.0 << EOF
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_multiver_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -2278,7 +2252,6 @@ dkms_multiver_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 dkms_multiver_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 run_with_expected_error 6 dkms install -k "${KERNEL_VER}" -m dkms_multiver_test -v 1.0 << EOF
-
 
 Error! Module version 1.0 for dkms_multiver_test.ko${mod_compression_ext}
 is not newer than what is already found in kernel ${KERNEL_VER} (2.0).
@@ -2399,7 +2372,6 @@ EOF
 
 echo 'Installing the nover/emptyver test modules'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_nover_test -v 1.0 << EOF
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_nover_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -2407,7 +2379,6 @@ run_status_with_expected_output 'dkms_nover_test' << EOF
 dkms_nover_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_emptyver_test -v 1.0 << EOF
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_emptyver_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -2495,7 +2466,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_nover_update_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -2520,7 +2490,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_nover_update_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
@@ -2563,7 +2532,6 @@ else
     echo ' Installing the nover update test 3.0 modules (expected error)'
     set_signing_message "dkms_nover_update_test" "3.0"
     run_with_expected_error 6 dkms install -k "${KERNEL_VER}" -m dkms_nover_update_test -v 3.0 << EOF
-
 Module /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_nover_update_test.ko${mod_compression_ext} already installed (unversioned module), override by specifying --force
 
 Error! Installation aborted.
@@ -2748,7 +2716,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 
@@ -2803,7 +2770,6 @@ ${SIGNING_PROLOGUE}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 
@@ -3129,7 +3095,6 @@ run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 Error! dkms_multiver_test/1.0 is broken! Missing the source directory or the symbolic link pointing to it.
 Manual intervention is required!
 Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
-
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 
