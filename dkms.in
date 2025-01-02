@@ -1814,6 +1814,7 @@ uninstall_module()
 {
     local i
     for ((i=0; i < ${#kernelver[@]}; i++)); do
+        [[ $i = 0 ]] || echo ""
         maybe_uninstall_module "${kernelver[$i]}" "${arch[$i]}"
     done
 }
@@ -1832,6 +1833,7 @@ unbuild_module()
 {
     local i
     for ((i=0; i < ${#kernelver[@]}; i++)); do
+        [[ $i = 0 ]] || echo ""
         maybe_uninstall_module "${kernelver[$i]}" "${arch[$i]}"
         maybe_unbuild_module "${kernelver[$i]}" "${arch[$i]}"
     done
@@ -2579,6 +2581,7 @@ autoinstall() {
                 else
                     failed_modules[${#failed_modules[@]}]="$m($status)"
                 fi
+                echo ""
             else
                 next_install[${#next_install[@]}]="$modv"
             fi
@@ -2656,6 +2659,7 @@ kernel_prerm()
         is_module_built "$m" "$v" "$kernelver" "$arch" || continue
         echo "dkms: removing module $m/$v for kernel $kernelver ($arch)" >&2
         (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
+        echo ""
     done < <(list_module_version_combos)
 
     if [[ -f $dkms_tree/depmod-pending-$kernelver-$arch ]]; then

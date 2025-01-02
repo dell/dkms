@@ -773,6 +773,7 @@ Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
+
 Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
@@ -811,6 +812,7 @@ ${SIGNING_MESSAGE}Cleaning build area... done.
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
+
 Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
@@ -830,6 +832,7 @@ Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER}-noheaders (${KERNEL
 
 Error! Your kernel headers for kernel ${KERNEL_VER}-noheaders cannot be found at /lib/modules/${KERNEL_VER}-noheaders/build or /lib/modules/${KERNEL_VER}-noheaders/source.
 Please install the linux-headers-${KERNEL_VER}-noheaders package or use the --kernelsourcedir option to tell DKMS where it's located.
+
 Autoinstall on ${KERNEL_VER}-noheaders failed for module(s) dkms_test(1).
 
 Error! One or more modules failed to install during autoinstall.
@@ -852,6 +855,7 @@ dkms: removing module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+
 Running depmod... done.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
@@ -880,6 +884,7 @@ echo 'Running dkms kernel_prerm'
 run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
 dkms: removing module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 Module dkms_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0: added
@@ -904,6 +909,7 @@ ${SIGNING_MESSAGE}Cleaning build area... done.
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
+
 Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
@@ -971,6 +977,7 @@ ${SIGNING_MESSAGE}Cleaning build area... done.
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
+
 Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
@@ -1001,6 +1008,7 @@ ${SIGNING_MESSAGE_dependencies}Cleaning build area... done.
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
 Running depmod... done.
+
 Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test dkms_dependencies_test.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
@@ -1017,11 +1025,13 @@ dkms: removing module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KER
 Module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
+
 dkms: removing module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+
 Running depmod... done.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
@@ -1051,6 +1061,7 @@ ${SIGNING_MESSAGE}Cleaning build area... done.
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
+
 Autoinstall of module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
@@ -1059,6 +1070,7 @@ ${SIGNING_MESSAGE_dependencies}Cleaning build area... done.
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
 Running depmod... done.
+
 Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test dkms_dependencies_test.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
@@ -1379,6 +1391,7 @@ ${SIGNING_MESSAGE}Cleaning build area... done.
 Found pre-existing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}, archiving for uninstallation
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
+
 Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test dkms_replace_test.
 EOF
 run_status_with_expected_output 'dkms_replace_test' << EOF
@@ -1683,6 +1696,7 @@ post_install: line 3
 post_install: line 4/stderr
 post_install: line 5
 Running depmod... done.
+
 Autoinstall of module dkms_patches_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}applying patch patch1.patch...patching file Makefile
 patching file dkms_patches_test.c
@@ -1697,6 +1711,7 @@ ${SIGNING_MESSAGE_patches}Cleaning build area... done.
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_patches_test.ko${mod_compression_ext}
 Running depmod... done.
+
 Autoinstall of module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Running the pre_build script:
@@ -1713,6 +1728,7 @@ Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_scripts_test.ko$
 
 Running the post_install script:
 Running depmod... done.
+
 Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_noisy_test dkms_patches_test dkms_scripts_test.
 EOF
 run_status_with_expected_output 'dkms_patches_test' << EOF
@@ -1753,11 +1769,13 @@ post_remove: line 2/stderr
 post_remove: line 3
 post_remove: line 4/stderr
 post_remove: line 5
+
 dkms: removing module dkms_patches_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Module dkms_patches_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_patches_test.ko${mod_compression_ext}
+
 dkms: removing module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
@@ -1765,6 +1783,7 @@ Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_scripts_test.ko${mod_compression_ext}
 
 Running the post_remove script:
+
 Running depmod... done.
 EOF
 run_status_with_expected_output 'dkms_patches_test' << EOF
@@ -2604,6 +2623,7 @@ make -j1 KERNELRELEASE=${KERNEL_VER} all <omitting possibly set CC/LD/... flags>
 
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
+
 Autoinstall on ${KERNEL_VER} failed for module(s) dkms_failing_test(10).
 
 Error! One or more modules failed to install during autoinstall.
@@ -2626,6 +2646,7 @@ make -j1 KERNELRELEASE=${KERNEL_VER} all <omitting possibly set CC/LD/... flags>
 
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
+
 Autoinstall on ${KERNEL_VER} failed for module(s) dkms_failing_test(10).
 dkms_failing_dependencies_test/1.0 autoinstall failed due to missing dependencies: dkms_failing_test.
 
@@ -2698,6 +2719,7 @@ ${SIGNING_PROLOGUE}Warning: The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KE
 for module dkms_build_exclusive_test/1.0 includes a BUILD_EXCLUSIVE directive
 which does not match this kernel/arch/config.
 This indicates that it should not be built.
+
 Autoinstall on ${KERNEL_VER} was skipped for module(s) dkms_build_exclusive_test.
 EOF
 run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
@@ -2720,6 +2742,7 @@ ${SIGNING_PROLOGUE}Warning: The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KE
 for module dkms_build_exclusive_test/1.0 includes a BUILD_EXCLUSIVE directive
 which does not match this kernel/arch/config.
 This indicates that it should not be built.
+
 Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
@@ -2728,6 +2751,7 @@ ${SIGNING_MESSAGE}Cleaning build area... done.
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
+
 Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test.
 Autoinstall on ${KERNEL_VER} was skipped for module(s) dkms_build_exclusive_test.
 EOF
@@ -2763,6 +2787,7 @@ ${SIGNING_PROLOGUE}Warning: The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KE
 for module dkms_build_exclusive_test/1.0 includes a BUILD_EXCLUSIVE directive
 which does not match this kernel/arch/config.
 This indicates that it should not be built.
+
 Autoinstall of module dkms_failing_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
@@ -2772,6 +2797,7 @@ make -j1 KERNELRELEASE=${KERNEL_VER} all <omitting possibly set CC/LD/... flags>
 
 Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
 Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
+
 Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Cleaning build area... done.
@@ -2780,6 +2806,7 @@ ${SIGNING_MESSAGE}Cleaning build area... done.
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
+
 Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test.
 Autoinstall on ${KERNEL_VER} was skipped for module(s) dkms_build_exclusive_test.
 Autoinstall on ${KERNEL_VER} failed for module(s) dkms_failing_test(10).
@@ -2829,11 +2856,13 @@ ${SIGNING_PROLOGUE}Warning: The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KE
 for module dkms_build_exclusive_test/1.0 includes a BUILD_EXCLUSIVE directive
 which does not match this kernel/arch/config.
 This indicates that it should not be built.
+
 Autoinstall of module dkms_build_exclusive_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}Warning: The /var/lib/dkms/dkms_build_exclusive_dependencies_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf
 for module dkms_build_exclusive_dependencies_test/1.0 includes a BUILD_EXCLUSIVE directive
 which does not match this kernel/arch/config.
 This indicates that it should not be built.
+
 Autoinstall on ${KERNEL_VER} was skipped for module(s) dkms_build_exclusive_test dkms_build_exclusive_dependencies_test.
 EOF
 run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
@@ -3103,6 +3132,7 @@ Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
+
 Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test.
 EOF
 run_with_expected_output dkms status << EOF
