@@ -1121,7 +1121,6 @@ prepare_signing()
             sign_file="$install_tree/$kernelver/build/scripts/sign-file"
         fi
     fi
-    echo ""
     echo "Sign command: $sign_file"
 
     if [[ ! -f ${sign_file} || ! -x ${sign_file} ]]; then
@@ -1345,6 +1344,7 @@ prepare_kernel_and_signing()
     set_kernel_source_dir_and_kconfig "$kernelver"
     prepare_kernel "$kernelver"
     prepare_signing
+    echo ""
 }
 
 do_build()
