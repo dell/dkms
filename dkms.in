@@ -1428,7 +1428,6 @@ do_install()
     local count
     lib_tree="$install_tree/$kernelver"
 
-    echo ""
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
         # Check this version against what is already in the kernel
         check_version_sanity "$kernelver" "$arch" "$obsolete_by" "${dest_module_name[$count]}" || continue
@@ -1630,6 +1629,7 @@ maybe_install_module() (
     is_module_installed "$1" "$2" "$3" "$4" && {
         if [[ "$force" = "true" ]]; then
             do_uninstall "$3" "$4"
+            echo ""
         else
             echo "Module $1/$2 already installed on kernel $3 ($4), skip." \
                  "You may override by specifying --force."
