@@ -414,7 +414,6 @@ echo 'Building the test module'
 set_signing_message "dkms_test" "1.0"
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -453,7 +452,6 @@ Public certificate (MOK): /tmp/dkms_test_certificate
 Sign command: /no/such/file
 Binary /no/such/file not found, modules won't be signed
 
-
 Cleaning build area... done.
 Building module(s)... done.
 Cleaning build area... done.
@@ -466,7 +464,6 @@ ${SIGNING_PROLOGUE_command}
 Signing key: /no/such/path.key
 Public certificate (MOK): /var/lib/dkms/mok.pub
 Key file /no/such/path.key not found and can't be generated, modules won't be signed
-
 
 Cleaning build area... done.
 Building module(s)... done.
@@ -481,7 +478,6 @@ Signing key: /tmp/dkms_test_private_key
 Public certificate (MOK): /no/such/path.crt
 Certificate file /no/such/path.crt not found and can't be generated, modules won't be signed
 
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -495,7 +491,6 @@ EOF
 Sign command: /lib/modules/${KERNEL_VER}/build/scripts/sign-file
 Signing key: /tmp/dkms_test_dir_${KERNEL_VER}/key
 Public certificate (MOK): /tmp/dkms_test_dir_${KERNEL_VER}/cert
-
 
 Cleaning build area... done.
 Building module(s)... done.
@@ -522,7 +517,6 @@ EOF
         echo "CONFIG_MODULE_SIG_HASH=\"${ALTER_HASH}\"" > /tmp/dkms_test_kconfig
         run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --config /tmp/dkms_test_kconfig --force << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -541,7 +535,6 @@ cp test/framework/temp_key_cert.conf /etc/dkms/framework.conf.d/dkms_test_framew
 echo 'Building the test module again by force'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -692,7 +685,6 @@ run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << 
 ${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -758,7 +750,6 @@ run_with_expected_output dkms build -k "${KERNEL_VER}" test/dkms_test-1.0/dkms.c
 ${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -804,7 +795,6 @@ echo "Running dkms autoinstall"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -869,7 +859,6 @@ EOF
 echo 'Building the test module'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -901,7 +890,6 @@ echo "Running dkms kernel_postinst"
 run_with_expected_output dkms kernel_postinst -k "${KERNEL_VER}" << EOF
 Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -968,7 +956,6 @@ echo 'Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -999,7 +986,6 @@ echo 'Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 Autoinstall of module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_dependencies}Cleaning build area... done.
@@ -1050,7 +1036,6 @@ echo 'Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -1059,7 +1044,6 @@ Running depmod... done.
 
 Autoinstall of module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_dependencies}Cleaning build area... done.
@@ -1144,7 +1128,6 @@ echo 'Building the test module with unsatisfied dependencies by force'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 --force << EOF
 ${SIGNING_PROLOGUE}
 Warning: Trying to build module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}) despite of missing BUILD_DEPENDS: dkms_test.
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_dependencies}Cleaning build area... done.
@@ -1251,7 +1234,6 @@ echo 'Building the test module with circular dependencies by force'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_circular_dependencies_test -v 1.0 --force << EOF
 ${SIGNING_PROLOGUE}
 Warning: Trying to build module dkms_circular_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}) despite of missing BUILD_DEPENDS: dkms_circular_dependencies_test.
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -1307,7 +1289,6 @@ EOF
 set_signing_message "dkms_test" "1.0"
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -1330,7 +1311,6 @@ EOF
 set_signing_message "dkms_replace_test" "2.0" "dkms_test"
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_replace_test -v 2.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -1376,7 +1356,6 @@ echo 'Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 Autoinstall of module dkms_replace_test/2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -1471,7 +1450,6 @@ patching file dkms_patches_test.c
 applying patch subdir/patch2.patch...patching file Makefile
 patching file dkms_patches_test.c
  done.
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_patches}Cleaning build area... done.
@@ -1509,7 +1487,6 @@ SIGNING_MESSAGE_scripts="$SIGNING_MESSAGE"
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_scripts_test -v 1.0 << EOF
 ${SIGNING_PROLOGUE}
 Running the pre_build script:
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_scripts}Running the post_build script:
@@ -1571,7 +1548,6 @@ pre_build: line 2/stderr
 pre_build: line 3
 pre_build: line 4/stderr
 pre_build: line 5
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_noisy}Running the post_build script:
@@ -1640,7 +1616,6 @@ pre_build: line 2/stderr
 pre_build: line 3
 pre_build: line 4/stderr
 pre_build: line 5
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_noisy}Running the post_build script:
@@ -1676,7 +1651,6 @@ patching file dkms_patches_test.c
 applying patch subdir/patch2.patch...patching file Makefile
 patching file dkms_patches_test.c
  done.
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_patches}Cleaning build area... done.
@@ -1686,7 +1660,6 @@ Running depmod... done.
 Autoinstall of module dkms_scripts_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
 Running the pre_build script:
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE_scripts}Running the post_build script:
@@ -1830,7 +1803,6 @@ echo 'Building the noautoinstall test module'
 set_signing_message "dkms_noautoinstall_test" "1.0"
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_noautoinstall_test -v 1.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -1953,7 +1925,6 @@ run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_conf_test -v 1.
 ${SIGNING_PROLOGUE}
 dkms.conf: Warning! Zero modules specified.
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
-
 
 Cleaning build area... done.
 Building module(s)... done.
@@ -2104,7 +2075,6 @@ BUILD_MESSAGES="${SIGNING_MESSAGE}${SIGNING_MESSAGE}"
 fi
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_duplicate_test -v 1.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area...(bad exit status: 1)
 Failed command:
 echo oops >&2 && false
@@ -2148,7 +2118,6 @@ echo ' Building and installing the test module'
 set_signing_message "dkms_crlf_test" "1.0" "dkms_dos_test"
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_crlf_test -v 1.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -2201,7 +2170,6 @@ echo 'Building the multiver test modules'
 set_signing_message "dkms_multiver_test" "1.0"
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_multiver_test -v 1.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -2213,7 +2181,6 @@ EOF
 set_signing_message "dkms_multiver_test" "2.0"
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_multiver_test -v 2.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -2340,7 +2307,6 @@ echo 'Building the nover/emptyver test modules'
 set_signing_message "dkms_nover_test" "1.0"
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_nover_test -v 1.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -2351,7 +2317,6 @@ EOF
 set_signing_message "dkms_emptyver_test" "1.0"
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_emptyver_test -v 1.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -2451,7 +2416,6 @@ echo 'Installing the nover update test 1.0 modules'
 set_signing_message "dkms_nover_update_test" "1.0"
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_nover_update_test -v 1.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -2476,7 +2440,6 @@ echo 'Installing the nover update test 2.0 modules'
 set_signing_message "dkms_nover_update_test" "2.0"
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_nover_update_test -v 2.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -2503,7 +2466,6 @@ echo 'Building the nover update test 3.0 modules'
 set_signing_message "dkms_nover_update_test" "3.0"
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_nover_update_test -v 3.0 << EOF
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -2574,7 +2536,6 @@ echo 'Running autoinstall with failing test module (expected error)'
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
 Autoinstall of module dkms_failing_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)...(bad exit status: 2)
 Failed command:
@@ -2598,7 +2559,6 @@ echo 'Running autoinstall with failing test module and test module with dependen
 run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
 Autoinstall of module dkms_failing_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)...(bad exit status: 2)
 Failed command:
@@ -2708,7 +2668,6 @@ This indicates that it should not be built.
 
 Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -2753,7 +2712,6 @@ This indicates that it should not be built.
 
 Autoinstall of module dkms_failing_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)...(bad exit status: 2)
 Failed command:
@@ -2764,7 +2722,6 @@ Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
 
 Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 ${SIGNING_PROLOGUE}
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -3061,7 +3018,6 @@ run_with_expected_output dkms build test/dkms_test-1.0 -k "${KERNEL_VER}" << EOF
 ${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 
-
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -3072,7 +3028,6 @@ set_signing_message "dkms_multiver_test" "1.0"
 run_with_expected_output dkms build test/dkms_multiver_test/1.0 -k "${KERNEL_VER}" << EOF
 ${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_multiver_test/1.0/source -> /usr/src/dkms_multiver_test-1.0
-
 
 Cleaning build area... done.
 Building module(s)... done.
@@ -3087,7 +3042,6 @@ set_signing_message "dkms_multiver_test" "2.0"
 run_with_expected_output dkms build test/dkms_multiver_test/2.0 -k "${KERNEL_VER}" << EOF
 ${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_multiver_test/2.0/source -> /usr/src/dkms_multiver_test-2.0
-
 
 Cleaning build area... done.
 Building module(s)... done.
