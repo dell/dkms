@@ -692,6 +692,7 @@ run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << 
 ${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 
+
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -756,6 +757,7 @@ echo 'Building the test module by config file (combining add, build)'
 run_with_expected_output dkms build -k "${KERNEL_VER}" test/dkms_test-1.0/dkms.conf << EOF
 ${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+
 
 Cleaning build area... done.
 Building module(s)... done.
@@ -1952,6 +1954,7 @@ ${SIGNING_PROLOGUE}
 dkms.conf: Warning! Zero modules specified.
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
 
+
 Cleaning build area... done.
 Building module(s)... done.
 Cleaning build area... done.
@@ -3058,6 +3061,7 @@ run_with_expected_output dkms build test/dkms_test-1.0 -k "${KERNEL_VER}" << EOF
 ${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 
+
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -3068,6 +3072,7 @@ set_signing_message "dkms_multiver_test" "1.0"
 run_with_expected_output dkms build test/dkms_multiver_test/1.0 -k "${KERNEL_VER}" << EOF
 ${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_multiver_test/1.0/source -> /usr/src/dkms_multiver_test-1.0
+
 
 Cleaning build area... done.
 Building module(s)... done.
@@ -3082,6 +3087,7 @@ set_signing_message "dkms_multiver_test" "2.0"
 run_with_expected_output dkms build test/dkms_multiver_test/2.0 -k "${KERNEL_VER}" << EOF
 ${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_multiver_test/2.0/source -> /usr/src/dkms_multiver_test-2.0
+
 
 Cleaning build area... done.
 Building module(s)... done.

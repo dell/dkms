@@ -1136,7 +1136,10 @@ prepare_signing()
 prepare_build()
 {
     # If the module has not been added, try to add it.
-    is_module_added "$module" "$module_version" || add_module
+    if ! is_module_added "$module" "$module_version" ; then
+        add_module
+        echo ""
+    fi
 
     local -r base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
     local -r build_dir="$dkms_tree/$module/$module_version/build"
