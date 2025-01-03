@@ -30,7 +30,6 @@
 # 1: check_rw_dkms_tree(): No write access to DKMS tree at ...
 # 1: mktemp_or_die(): Unable to make temporary file/directory.
 # 1: check_module_args(): Arguments <module> and <module-version> are not specified.
-# 1: prepare_kernel(): Your kernel headers for kernel ... cannot be found ...
 # 1: run_match(): Invalid number of parameters passed.
 # 1: global: If more than one arch is specified on the command line, then there "must be an equal number of kernel versions also specified (1:1 relationship).
 # 2: global: Unknown option: ...
@@ -74,6 +73,7 @@
 # 12: setup_kernels_arches(): Could not determine architecture.
 # 13: build: Aborting build of module ... for kernel ... due to missing BUILD_DEPENDS: ...
 # 14: kernel_prerm: dkms kernel_prerm for kernel ... failed for module(s) ...
+# 21: prepare_kernel(): Your kernel headers for kernel ... cannot be found ...
 # 77: skipped due to BUILD_EXCLUSIVE
 # 101: install: pre_install failed, aborting install.
 
@@ -1020,7 +1020,7 @@ prepare_kernel()
 
     # Check that kernel-source exists
     _check_kernel_dir "$1" || {
-        die 1 "Your kernel headers for kernel $1 cannot be found at $install_tree/$1/build or $install_tree/$1/source." \
+        die 21 "Your kernel headers for kernel $1 cannot be found at $install_tree/$1/build or $install_tree/$1/source." \
             "Please install the linux-headers-$1 package or use the --kernelsourcedir option to tell DKMS where it's located."
     }
 }
