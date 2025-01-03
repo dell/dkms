@@ -430,6 +430,13 @@ run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
+echo 'Building the test module for a kernel without headers installed (expected error)'
+run_with_expected_error 21 dkms build -k "${KERNEL_VER}-noheaders" -m dkms_test -v 1.0 << EOF
+
+Error! Your kernel headers for kernel ${KERNEL_VER}-noheaders cannot be found at /lib/modules/${KERNEL_VER}-noheaders/build or /lib/modules/${KERNEL_VER}-noheaders/source.
+Please install the linux-headers-${KERNEL_VER}-noheaders package or use the --kernelsourcedir option to tell DKMS where it's located.
+EOF
+
 echo 'Building the test module for more than one kernel version (same version twice for this test)'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
 Module dkms_test/1.0 already built for kernel ${KERNEL_VER} (${KERNEL_ARCH}), skip. You may override by specifying --force.
