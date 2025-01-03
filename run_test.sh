@@ -820,7 +820,7 @@ Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER}-noheaders (${KERNEL
 Error! Your kernel headers for kernel ${KERNEL_VER}-noheaders cannot be found at /lib/modules/${KERNEL_VER}-noheaders/build or /lib/modules/${KERNEL_VER}-noheaders/source.
 Please install the linux-headers-${KERNEL_VER}-noheaders package or use the --kernelsourcedir option to tell DKMS where it's located.
 
-Autoinstall on ${KERNEL_VER}-noheaders failed for module(s) dkms_test(1).
+Autoinstall on ${KERNEL_VER}-noheaders failed for module(s) dkms_test(21).
 
 Error! One or more modules failed to install during autoinstall.
 Refer to previous errors for more information.
