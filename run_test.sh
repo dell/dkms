@@ -70,6 +70,7 @@ TEST_TMPFILES=(
     "/tmp/dkms_test_certificate"
     "/tmp/dkms_test_kconfig"
     "/etc/dkms/framework.conf.d/dkms_test_framework.conf"
+    "/etc/dkms/no-autoinstall"
     "test_cmd_output.log"
     "test_cmd_stdout.log"
     "test_cmd_stderr.log"
@@ -856,6 +857,28 @@ check_no_dkms_test
 ############################################################################
 echo '*** Testing dkms autoinstall/kernel_{postinst/prerm}'
 ############################################################################
+
+echo 'Testing without modules and without headers'
+
+echo ' Running dkms autoinstall'
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}-noheaders" << EOF
+EOF
+
+echo 'Testing without modules but with /etc/dkms/no-autoinstall'
+touch /etc/dkms/no-autoinstall
+
+echo ' Running dkms autoinstall'
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+Automatic installation of modules has been disabled.
+EOF
+
+rm -f /etc/dkms/no-autoinstall
+
+echo 'Testing without modules'
+
+echo ' Running dkms autoinstall'
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+EOF
 
 echo 'Building the test module by config file (combining add, build)'
 run_with_expected_output dkms build -k "${KERNEL_VER}" test/dkms_test-1.0/dkms.conf << EOF
