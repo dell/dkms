@@ -1426,7 +1426,7 @@ echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 ############################################################################
-echo '*** Testing multiple dkms modules and more dkms features'
+echo '*** Testing more dkms features'
 ############################################################################
 
 echo 'Adding test module with patches'
@@ -1596,6 +1596,22 @@ run_status_with_expected_output 'dkms_noisy_test' << EOF
 dkms_noisy_test/1.0: added
 EOF
 
+# neither remove the modules here nor run check_no_dkms_test,
+# keep them added for the next part
+
+############################################################################
+echo '*** Testing multiple dkms modules'
+############################################################################
+
+echo 'Adding test module with dependencies'
+run_with_expected_output dkms add test/dkms_dependencies_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_dependencies_test/1.0/source -> /usr/src/dkms_dependencies_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_dependencies_test-1.0
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+dkms_dependencies_test/1.0: added
+EOF
+
 echo 'Adding noautoinstall test module'
 run_with_expected_output dkms add test/dkms_noautoinstall_test-1.0 << EOF
 Creating symlink /var/lib/dkms/dkms_noautoinstall_test/1.0/source -> /usr/src/dkms_noautoinstall_test-1.0
@@ -1692,7 +1708,14 @@ ${SIGNING_MESSAGE}Cleaning build area... done.
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 
-Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_noisy_test dkms_patches_test dkms_scripts_test dkms_test.
+Autoinstall of module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE_dependencies}Cleaning build area... done.
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_noisy_test dkms_patches_test dkms_scripts_test dkms_test dkms_dependencies_test.
 EOF
 run_status_with_expected_output 'dkms_patches_test' << EOF
 dkms_patches_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
@@ -1702,6 +1725,9 @@ dkms_scripts_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 run_status_with_expected_output 'dkms_noisy_test' << EOF
 dkms_noisy_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+dkms_dependencies_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
 dkms_noautoinstall_test/1.0: added
@@ -1722,6 +1748,9 @@ EOF
 run_status_with_expected_output 'dkms_noisy_test' << EOF
 dkms_noisy_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+dkms_dependencies_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
 run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
 dkms_noautoinstall_test/1.0: added
 EOF
@@ -1731,6 +1760,11 @@ EOF
 
 echo 'Running dkms kernel_prerm'
 run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
+dkms: removing module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Module dkms_dependencies_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_test.ko${mod_compression_ext}
+
 dkms: removing module dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 Module dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
@@ -1770,6 +1804,9 @@ EOF
 run_status_with_expected_output 'dkms_noisy_test' << EOF
 dkms_noisy_test/1.0: added
 EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+dkms_dependencies_test/1.0: added
+EOF
 run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
 dkms_noautoinstall_test/1.0: added
 EOF
@@ -1788,6 +1825,9 @@ dkms_scripts_test/1.0: added
 EOF
 run_status_with_expected_output 'dkms_noisy_test' << EOF
 dkms_noisy_test/1.0: added
+EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+dkms_dependencies_test/1.0: added
 EOF
 run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
 dkms_noautoinstall_test/1.0: added
@@ -1826,6 +1866,16 @@ EOF
 run_status_with_expected_output 'dkms_noisy_test' << EOF
 EOF
 
+echo 'Removing the test module with dependencies'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_dependencies_test -v 1.0 << EOF
+Module dkms_dependencies_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_dependencies_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+
+Deleting module dkms_dependencies_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_dependencies_test' << EOF
+EOF
+
 echo 'Removing the noautoinstall test module'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_noautoinstall_test -v 1.0 << EOF
 Module dkms_noautoinstall_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
@@ -1850,6 +1900,7 @@ remove_module_source_tree \
         /usr/src/dkms_patches_test-1.0 \
         /usr/src/dkms_scripts_test-1.0 \
         /usr/src/dkms_noisy_test-1.0 \
+        /usr/src/dkms_dependencies_test-1.0 \
         /usr/src/dkms_noautoinstall_test-1.0 \
         /usr/src/dkms_test-1.0
 
