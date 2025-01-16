@@ -1612,6 +1612,15 @@ run_status_with_expected_output 'dkms_dependencies_test' << EOF
 dkms_dependencies_test/1.0: added
 EOF
 
+echo 'Adding build-exclusive test module'
+run_with_expected_output dkms add test/dkms_build_exclusive_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_build_exclusive_test/1.0/source -> /usr/src/dkms_build_exclusive_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_build_exclusive_test-1.0
+run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
+dkms_build_exclusive_test/1.0: added
+EOF
+
 echo 'Adding noautoinstall test module'
 run_with_expected_output dkms add test/dkms_noautoinstall_test-1.0 << EOF
 Creating symlink /var/lib/dkms/dkms_noautoinstall_test/1.0/source -> /usr/src/dkms_noautoinstall_test-1.0
@@ -1634,6 +1643,12 @@ echo "Running dkms autoinstall with multiple modules"
 set_signing_message "dkms_test" "1.0"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 ${SIGNING_PROLOGUE}
+Autoinstall of module dkms_build_exclusive_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Warning: The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf
+for module dkms_build_exclusive_test/1.0 includes a BUILD_EXCLUSIVE directive
+which does not match this kernel/arch/config.
+This indicates that it should not be built.
+
 Autoinstall of module dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 applying patch patch2.patch...patching file Makefile
 patching file dkms_noisy_test.c
@@ -1716,6 +1731,7 @@ Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_tes
 Running depmod... done.
 
 Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_noisy_test dkms_patches_test dkms_scripts_test dkms_test dkms_dependencies_test.
+Autoinstall on ${KERNEL_VER} was skipped for module(s) dkms_build_exclusive_test.
 EOF
 run_status_with_expected_output 'dkms_patches_test' << EOF
 dkms_patches_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
@@ -1728,6 +1744,9 @@ dkms_noisy_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 run_status_with_expected_output 'dkms_dependencies_test' << EOF
 dkms_dependencies_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
+dkms_build_exclusive_test/1.0: added
 EOF
 run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
 dkms_noautoinstall_test/1.0: added
@@ -1738,6 +1757,15 @@ EOF
 
 echo "Running dkms autoinstall again with multiple modules"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+${SIGNING_PROLOGUE}
+Autoinstall of module dkms_build_exclusive_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Warning: The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf
+for module dkms_build_exclusive_test/1.0 includes a BUILD_EXCLUSIVE directive
+which does not match this kernel/arch/config.
+This indicates that it should not be built.
+
+Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_dependencies_test dkms_noisy_test dkms_patches_test dkms_scripts_test dkms_test.
+Autoinstall on ${KERNEL_VER} was skipped for module(s) dkms_build_exclusive_test.
 EOF
 run_status_with_expected_output 'dkms_patches_test' << EOF
 dkms_patches_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
@@ -1750,6 +1778,9 @@ dkms_noisy_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 run_status_with_expected_output 'dkms_dependencies_test' << EOF
 dkms_dependencies_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
+dkms_build_exclusive_test/1.0: added
 EOF
 run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
 dkms_noautoinstall_test/1.0: added
@@ -1807,6 +1838,9 @@ EOF
 run_status_with_expected_output 'dkms_dependencies_test' << EOF
 dkms_dependencies_test/1.0: added
 EOF
+run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
+dkms_build_exclusive_test/1.0: added
+EOF
 run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
 dkms_noautoinstall_test/1.0: added
 EOF
@@ -1828,6 +1862,9 @@ dkms_noisy_test/1.0: added
 EOF
 run_status_with_expected_output 'dkms_dependencies_test' << EOF
 dkms_dependencies_test/1.0: added
+EOF
+run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
+dkms_build_exclusive_test/1.0: added
 EOF
 run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
 dkms_noautoinstall_test/1.0: added
@@ -1876,6 +1913,16 @@ EOF
 run_status_with_expected_output 'dkms_dependencies_test' << EOF
 EOF
 
+echo 'Removing the build-exclusive test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_build_exclusive_test -v 1.0 << EOF
+Module dkms_build_exclusive_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_build_exclusive_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+
+Deleting module dkms_build_exclusive_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
+EOF
+
 echo 'Removing the noautoinstall test module'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_noautoinstall_test -v 1.0 << EOF
 Module dkms_noautoinstall_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
@@ -1901,6 +1948,7 @@ remove_module_source_tree \
         /usr/src/dkms_scripts_test-1.0 \
         /usr/src/dkms_noisy_test-1.0 \
         /usr/src/dkms_dependencies_test-1.0 \
+        /usr/src/dkms_build_exclusive_test-1.0 \
         /usr/src/dkms_noautoinstall_test-1.0 \
         /usr/src/dkms_test-1.0
 
