@@ -674,7 +674,6 @@ EOF
 
 echo 'Removing the test module'
 run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
-
 Deleting module dkms_test/1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
@@ -1914,7 +1913,6 @@ dkms_conf_test/1.0: added
 EOF
 
 run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
-
 Deleting module dkms_conf_test/1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_conf_test' << EOF
@@ -1969,7 +1967,6 @@ dkms_conf_test/1.0: added
 EOF
 
 run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
-
 Deleting module dkms_conf_test/1.0 completely from the DKMS tree.
 EOF
 
@@ -1996,7 +1993,6 @@ dkms_conf_test/1.0: added
 EOF
 
 run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
-
 Deleting module dkms_conf_test/1.0 completely from the DKMS tree.
 EOF
 
@@ -2022,7 +2018,6 @@ dkms_conf_test/1.0: added
 EOF
 
 run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
-
 Deleting module dkms_conf_test/1.0 completely from the DKMS tree.
 EOF
 
@@ -2048,7 +2043,6 @@ dkms_conf_test/1.0: added
 EOF
 
 run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
-
 Deleting module dkms_conf_test/1.0 completely from the DKMS tree.
 EOF
 
@@ -2796,7 +2790,6 @@ EOF
 
 echo 'Removing the build-exclusive dependencies test module'
 run_with_expected_output dkms remove --all -m dkms_build_exclusive_dependencies_test -v 1.0 << EOF
-
 Deleting module dkms_build_exclusive_dependencies_test/1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_build_exclusive_dependencies_test' << EOF
@@ -2806,7 +2799,6 @@ remove_module_source_tree /usr/src/dkms_build_exclusive_dependencies_test-1.0
 
 echo 'Removing the build-exclusive test module'
 run_with_expected_output dkms remove --all -m dkms_build_exclusive_test -v 1.0 << EOF
-
 Deleting module dkms_build_exclusive_test/1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
