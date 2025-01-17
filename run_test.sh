@@ -474,7 +474,22 @@ Error! DKMS tree already contains: dkms_test/1.0
 You cannot add the same module/version combo more than once.
 EOF
 
-echo 'Adding the test module by version (expected error)'
+echo 'Removing the test module'
+run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
+Deleting module dkms_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+
+echo 'Adding the test module by version'
+run_with_expected_output dkms add -m dkms_test -v 1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+
+echo 'Adding the test module by version again (expected error)'
 run_with_expected_error 3 dkms add -m dkms_test -v 1.0 << EOF
 
 Error! DKMS tree already contains: dkms_test/1.0
@@ -762,21 +777,6 @@ if ! [[ -d /usr/src/dkms_test-1.0 ]] ; then
     echo >&2 'Error: directory /usr/src/dkms_test-1.0 was removed'
     exit 1
 fi
-
-echo 'Adding the test module by version'
-run_with_expected_output dkms add -m dkms_test -v 1.0 << EOF
-Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
-EOF
-run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0: added
-EOF
-
-echo 'Removing the test module'
-run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
-Deleting module dkms_test/1.0 completely from the DKMS tree.
-EOF
-run_status_with_expected_output 'dkms_test' << EOF
-EOF
 
 echo 'Installing the test module by version (combining add, build, install)'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
