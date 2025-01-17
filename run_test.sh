@@ -442,8 +442,33 @@ run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0: added
 EOF
 
-echo 'Adding the test module again (expected error)'
+echo 'Adding the test module by directory again (expected error)'
 run_with_expected_error 3 dkms add test/dkms_test-1.0 << EOF
+
+Error! DKMS tree already contains: dkms_test/1.0
+You cannot add the same module/version combo more than once.
+EOF
+
+echo 'Removing the test module'
+run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
+Deleting module dkms_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+
+remove_module_source_tree /usr/src/dkms_test-1.0
+
+echo 'Adding the test module by config file'
+run_with_expected_output dkms add test/dkms_test-1.0/dkms.conf << EOF
+Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_test-1.0
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+
+echo 'Adding the test module by config file again (expected error)'
+run_with_expected_error 3 dkms add test/dkms_test-1.0/dkms.conf << EOF
 
 Error! DKMS tree already contains: dkms_test/1.0
 You cannot add the same module/version combo more than once.
