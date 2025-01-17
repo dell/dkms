@@ -558,6 +558,37 @@ run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
+echo 'Removing the test module with --all'
+run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
+Module dkms_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+
+Deleting module dkms_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+if [[ -e "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" ]] ; then
+    echo >&2 "Error: module not removed in /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}"
+    exit 1
+fi
+
+remove_module_source_tree /usr/src/dkms_test-1.0
+
+echo 'Checking that the environment is clean again'
+check_no_dkms_test
+
+    ############################################################################
+    echo '*** Testing module signing'
+    ############################################################################
+
+    echo 'Adding the test module'
+    run_with_expected_output dkms add test/dkms_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+EOF
+    check_module_source_tree_created /usr/src/dkms_test-1.0
+    run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+
 if (( NO_SIGNING_TOOL == 0 )); then
     echo 'Building the test module with bad sign_file path in framework file'
     cp test/framework/bad_sign_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
@@ -826,8 +857,8 @@ EOF
     fi
 fi
 
-echo 'Removing the test module with --all'
-run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
+    echo 'Removing the test module'
+    run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -837,10 +868,6 @@ Deleting module dkms_test/1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
 EOF
-if [[ -e "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" ]] ; then
-    echo >&2 "Error: module not removed in /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}"
-    exit 1
-fi
 
 if (( NO_SIGNING_TOOL == 0 )); then
     echo 'Removing temporary files'
