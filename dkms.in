@@ -1986,7 +1986,8 @@ module_status_weak() {
         else
             continue
         fi
-        IFS=/ read -r m v k a < <(IFS=$oifs find_module_from_ko "$weak_ko") || continue
+        IFS=/ read -r m v k a <<< "$(IFS=$oifs find_module_from_ko "$weak_ko")"
+        [[ "$m" ]] || continue
         kern=${weak_ko#"${install_tree}/"}
         kern=${kern%/weak-updates/*}
         [[ $m = "${1:-*}" && $v = "${2:-*}" && $k = "${5:-*}" && $a = "${4:-*}" && $kern = "${3:-*}" ]] || continue
