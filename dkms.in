@@ -2434,7 +2434,7 @@ run_match()
         fi
         maybe_build_module "$template_module" "$template_version" "$kernelver" "$arch"
         maybe_install_module "$template_module" "$template_version" "$kernelver" "$arch"
-    done < <(echo "$template_kernel_status")
+    done <<< "$(echo "$template_kernel_status")"
 }
 
 report_build_problem()
