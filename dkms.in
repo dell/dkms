@@ -919,7 +919,7 @@ check_version_sanity()
         fi
     fi
     set_module_suffix "$1"
-    read -ra kernels_module < <(find_module "$lib_tree" "${4}")
+    read -ra kernels_module <<< "$(find_module "$lib_tree" "${4}")"
     [[ ${#kernels_module[@]} -eq 0 ]] && return 0
 
     if [[ "$force_version_override" == "true" ]]; then
