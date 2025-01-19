@@ -2712,7 +2712,7 @@ kernel_preinst()
         [[ $AUTOINSTALL ]] || continue
         echo "dkms: removing module $m/$v for kernel ${kernelver[0]} (${arch[0]})" >&2
         (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
-    done < <(list_module_version_combos)
+    done <<< "$(list_module_version_combos)"
 
     if [[ -f $dkms_tree/depmod-pending-${kernelver[0]}-${arch[0]} ]]; then
         rm -f "${dkms_tree:?}/depmod-pending-${kernelver[0]}-${arch[0]}"
@@ -2764,7 +2764,7 @@ kernel_prerm()
         echo "dkms: removing module $m/$v for kernel ${kernelver[0]} (${arch[0]})" >&2
         (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
         echo ""
-    done < <(list_module_version_combos)
+    done <<< "$(list_module_version_combos)"
 
     if [[ -f $dkms_tree/depmod-pending-${kernelver[0]}-${arch[0]} ]]; then
         rm -f "${dkms_tree:?}/depmod-pending-${kernelver[0]}-${arch[0]}"
