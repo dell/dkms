@@ -551,8 +551,8 @@ dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
 if (( NO_SIGNING_TOOL == 0 )); then
-    echo ' Extracting serial number from the certificate'
-    MODULE_SERIAL="$(cert_serial /tmp/dkms_test_certificate)"
+    echo ' Extracting serial number (aka sig_key in modinfo) from the certificate'
+    CERT_SERIAL="$(cert_serial /tmp/dkms_test_certificate)"
 fi
 
 echo 'Installing the test module'
@@ -608,11 +608,12 @@ if (( NO_SIGNING_TOOL == 0 )); then
     elif [[ "${SIG_HASH}" == "unknown" ]]; then
         echo '  Current kmod reports unknown hash algorithm. Skipping...'
     elif [[ ! "${SIG_KEY}" ]]; then
-        echo >&2 "Error: module was not signed"
+        # kmod may not be linked with openssl and thus can't extract the key from module
+        echo >&2 "Error: module was not signed, or key is unknown"
         exit 1
     else
         run_with_expected_output sh -c "echo '${SIG_KEY}'" << EOF
-${MODULE_SERIAL}
+${CERT_SERIAL}
 EOF
     fi
 fi
@@ -724,11 +725,11 @@ if (( NO_SIGNING_TOOL == 0 )); then
         echo '  Current kmod reports unknown hash algorithm. Skipping...'
     elif [[ ! "${SIG_KEY}" ]]; then
         # kmod may not be linked with openssl and thus can't extract the key from module
-        echo >&2 "Error: modules was not signed, or key is unknown"
+        echo >&2 "Error: module was not signed, or key is unknown"
         exit 1
     else
         run_with_expected_output sh -c "echo '${SIG_KEY}'" << EOF
-${MODULE_SERIAL}
+${CERT_SERIAL}
 EOF
     fi
 fi
