@@ -2021,7 +2021,7 @@ do_status_weak()
     while read -r status mvka; do
         IFS=/ read -r m v k a kern <<< "$mvka"
         echo "$m, $v, $k, $a: installed-weak from $kern"
-    done < <(module_status_weak "$@")
+    done <<< "$(module_status_weak "$@")"
 }
 
 # Spit out all the extra status information that people running DKMS are
