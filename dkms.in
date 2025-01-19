@@ -2722,7 +2722,7 @@ kernel_prerm()
         echo "dkms: removing module $m/$v for kernel $kernelver ($arch)" >&2
         (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
         echo ""
-    done < <(list_module_version_combos)
+    done <<< "$(list_module_version_combos)"
 
     if [[ -f $dkms_tree/depmod-pending-$kernelver-$arch ]]; then
         rm -f $dkms_tree/depmod-pending-$kernelver-$arch
