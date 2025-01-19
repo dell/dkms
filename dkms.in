@@ -2586,7 +2586,7 @@ autoinstall() {
         elif [[ ("$(VER "$v")" > "$(VER "${latest["$m"]}")") ]]; then
             latest["$m"]="$v"
         fi
-    done < <(module_status)
+    done <<< "$(module_status)"
 
     # Walk through our list of known modules, and create
     # a list of modules that need to be reinstalled.
