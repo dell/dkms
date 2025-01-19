@@ -834,7 +834,7 @@ get_module_verinfo(){
                 srcver="${vals[1]}"
                 ;;
         esac
-    done < <(modinfo "$1")
+    done <<< "$(modinfo "$1")"
 
     echo -E "${ver}"
     # Use obsolete checksum info if srcversion is not available
