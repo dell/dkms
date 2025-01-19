@@ -2110,7 +2110,7 @@ module_status() {
         is_module_added "$m" "$v" || continue
         ret=0
         module_status_built "$m" "$v" "$3" "$4" || echo "added $m/$v"
-    done < <(list_module_version_combos "$1" "$2")
+    done <<< "$(list_module_version_combos "$1" "$2")"
     return $ret
 }
 
