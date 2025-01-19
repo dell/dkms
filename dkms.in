@@ -1229,7 +1229,7 @@ prepare_and_actual_build()
     for bd in "${BUILD_DEPENDS[@]}"; do
         while read -r status mvka; do
             [[ $status = installed ]] && continue 2
-        done < <(module_status "$bd" "*" "$kernelver" "$arch")
+        done <<< "$(module_status "$bd" "*" "$kernelver" "$arch")"
         bd_missing="$bd_missing $bd"
     done
     if [[ $bd_missing ]]; then
