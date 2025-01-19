@@ -714,6 +714,7 @@ remove_module_source_tree /usr/src/dkms_test-1.0
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
+if (( NO_SIGNING_TOOL == 0 )); then
     ############################################################################
     echo '*** Testing module signing'
     ############################################################################
@@ -727,7 +728,6 @@ EOF
 dkms_test/1.0: added
 EOF
 
-if (( NO_SIGNING_TOOL == 0 )); then
     echo 'Building the test module with bad sign_file path in framework file'
     cp test/framework/bad_sign_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
     run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
@@ -739,7 +739,7 @@ Building module(s)... done.
 Cleaning build area... done.
 EOF
 
-    echo ' Building the test module with bad mok_signing_key path in framework file'
+    echo 'Building the test module with bad mok_signing_key path in framework file'
     cp test/framework/bad_key_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
     run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
 ${SIGNING_PROLOGUE_command}
@@ -752,7 +752,7 @@ Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
 EOF
 
-    echo ' Building the test module with bad mok_certificate path in framework file'
+    echo 'Building the test module with bad mok_certificate path in framework file'
     cp test/framework/bad_cert_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
     run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
 ${SIGNING_PROLOGUE_command}
@@ -766,7 +766,7 @@ ${SIGNING_MESSAGE}Cleaning build area... done.
 EOF
     rm /tmp/dkms_test_private_key
 
-    echo ' Building the test module with path contains variables in framework file'
+    echo 'Building the test module with path contains variables in framework file'
     mkdir "/tmp/dkms_test_dir_${KERNEL_VER}/"
     cp test/framework/variables_in_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
     run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
@@ -790,7 +790,7 @@ Signing key: /tmp/dkms_test_private_key
 Public certificate (MOK): /tmp/dkms_test_certificate
 "
 
-    echo ' Building the test module using a different hash algorithm'
+    echo 'Building the test module using a different hash algorithm'
     if kmod_broken_hashalgo; then
         echo '  Current kmod has broken hash algorithm code. Skipping...'
     elif [[ "${CURRENT_HASH}" == "unknown" ]]; then
@@ -813,7 +813,6 @@ ${ALTER_HASH}
 EOF
         rm /tmp/dkms_test_kconfig
     fi
-fi
 
 echo 'Building the test module again by force'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
@@ -826,10 +825,8 @@ run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
-if (( NO_SIGNING_TOOL == 0 )); then
     echo ' Extracting serial number (aka sig_key in modinfo) from the certificate'
     CERT_SERIAL="$(cert_serial /tmp/dkms_test_certificate)"
-fi
 
 echo 'Installing the test module'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
@@ -848,7 +845,6 @@ license:        GPL
 version:        1.0
 EOF
 
-if (( NO_SIGNING_TOOL == 0 )); then
     echo ' Checking module signature'
     SIG_KEY="$(modinfo -F sig_key "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" | tr -d ':')"
     SIG_HASH="$(modinfo -F sig_hashalgo "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}")"
@@ -866,7 +862,6 @@ if (( NO_SIGNING_TOOL == 0 )); then
 ${CERT_SERIAL}
 EOF
     fi
-fi
 
 echo 'Uninstalling the test module'
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
@@ -920,7 +915,6 @@ license:        GPL
 version:        1.0
 EOF
 
-if (( NO_SIGNING_TOOL == 0 )); then
     echo ' Checking module signature'
     SIG_KEY="$(modinfo -F sig_key "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" | tr -d ':')"
     SIG_HASH="$(modinfo -F sig_hashalgo "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}")"
@@ -938,7 +932,6 @@ if (( NO_SIGNING_TOOL == 0 )); then
 ${CERT_SERIAL}
 EOF
     fi
-fi
 
     echo 'Removing the test module'
     run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
@@ -952,17 +945,16 @@ EOF
 run_status_with_expected_output 'dkms_test' << EOF
 EOF
 
-if (( NO_SIGNING_TOOL == 0 )); then
     echo 'Removing temporary files'
     rm /tmp/dkms_test_private_key /tmp/dkms_test_certificate
     SIGNING_PROLOGUE="${SIGNING_PROLOGUE_}"
     rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
-fi
 
 remove_module_source_tree /usr/src/dkms_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
+fi
 
 ############################################################################
 echo '*** Testing dkms autoinstall/kernel_{postinst/prerm}, dkms_autoinstaller'
