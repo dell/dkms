@@ -447,12 +447,6 @@ dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
 if (( NO_SIGNING_TOOL == 0 )); then
-    SIGNING_PROLOGUE_="${SIGNING_PROLOGUE}"
-    SIGNING_PROLOGUE="${SIGNING_PROLOGUE_command}
-Signing key: /tmp/dkms_test_private_key
-Public certificate (MOK): /tmp/dkms_test_certificate
-"
-
     echo 'Building the test module with bad sign_file path in framework file'
     cp test/framework/bad_sign_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
     run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
@@ -508,14 +502,19 @@ EOF
     BUILT_MODULE_PATH="/var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/module/dkms_test.ko${mod_compression_ext}"
     CURRENT_HASH="$(modinfo -F sig_hashalgo "${BUILT_MODULE_PATH}")"
 
+    cp test/framework/temp_key_cert.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    SIGNING_PROLOGUE_="${SIGNING_PROLOGUE}"
+    SIGNING_PROLOGUE="${SIGNING_PROLOGUE_command}
+Signing key: /tmp/dkms_test_private_key
+Public certificate (MOK): /tmp/dkms_test_certificate
+"
+
     echo ' Building the test module using a different hash algorithm'
     if kmod_broken_hashalgo; then
         echo '  Current kmod has broken hash algorithm code. Skipping...'
     elif [[ "${CURRENT_HASH}" == "unknown" ]]; then
         echo '  Current kmod reports unknown hash algorithm. Skipping...'
     else
-        cp test/framework/temp_key_cert.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
-
         if [[ "${CURRENT_HASH}" == "sha512" ]]; then
             ALTER_HASH="sha256"
         else
@@ -533,11 +532,7 @@ ${ALTER_HASH}
 EOF
         rm /tmp/dkms_test_kconfig
     fi
-
-    rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 fi
-
-cp test/framework/temp_key_cert.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
 echo 'Building the test module again by force'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
@@ -750,6 +745,13 @@ if [[ -e "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_comp
     exit 1
 fi
 
+if (( NO_SIGNING_TOOL == 0 )); then
+    echo 'Removing temporary files'
+    rm /tmp/dkms_test_private_key /tmp/dkms_test_certificate
+    SIGNING_PROLOGUE="${SIGNING_PROLOGUE_}"
+    rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
+fi
+
 remove_module_source_tree /usr/src/dkms_test-1.0
 
 echo 'Building the test module by config file (combining add, build)'
@@ -921,13 +923,6 @@ Deleting module dkms_test/1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
 EOF
-
-echo 'Removing temporary files'
-if (( NO_SIGNING_TOOL == 0 )); then
-    rm /tmp/dkms_test_private_key /tmp/dkms_test_certificate
-    SIGNING_PROLOGUE="${SIGNING_PROLOGUE_}"
-fi
-rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
 remove_module_source_tree /usr/src/dkms_test-1.0
 
