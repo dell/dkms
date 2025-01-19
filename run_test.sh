@@ -784,8 +784,7 @@ EOF
     CURRENT_HASH="$(modinfo -F sig_hashalgo "${BUILT_MODULE_PATH}")"
 
     cp test/framework/temp_key_cert.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
-    SIGNING_PROLOGUE_="${SIGNING_PROLOGUE}"
-    SIGNING_PROLOGUE="${SIGNING_PROLOGUE_command}
+    SIGNING_PROLOGUE_tmp_key_cert="${SIGNING_PROLOGUE_command}
 Signing key: /tmp/dkms_test_private_key
 Public certificate (MOK): /tmp/dkms_test_certificate
 "
@@ -803,7 +802,7 @@ Public certificate (MOK): /tmp/dkms_test_certificate
         fi
         echo "CONFIG_MODULE_SIG_HASH=\"${ALTER_HASH}\"" > /tmp/dkms_test_kconfig
         run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --config /tmp/dkms_test_kconfig --force << EOF
-${SIGNING_PROLOGUE}
+${SIGNING_PROLOGUE_tmp_key_cert}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -816,7 +815,7 @@ EOF
 
 echo 'Building the test module again by force'
 run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
-${SIGNING_PROLOGUE}
+${SIGNING_PROLOGUE_tmp_key_cert}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -894,7 +893,7 @@ EOF
 
 echo 'Installing the test module by version (combining add, build, install)'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-${SIGNING_PROLOGUE}
+${SIGNING_PROLOGUE_tmp_key_cert}
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 
 Cleaning build area... done.
@@ -947,7 +946,6 @@ EOF
 
     echo 'Removing temporary files'
     rm /tmp/dkms_test_private_key /tmp/dkms_test_certificate
-    SIGNING_PROLOGUE="${SIGNING_PROLOGUE_}"
     rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
 remove_module_source_tree /usr/src/dkms_test-1.0
