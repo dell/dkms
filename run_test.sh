@@ -864,6 +864,14 @@ echo ' Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}-noheaders" << EOF
 EOF
 
+echo ' Running dkms kernel_postinst'
+run_with_expected_output dkms kernel_postinst -k "${KERNEL_VER}-noheaders" << EOF
+EOF
+
+echo ' Running dkms kernel_prerm'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}-noheaders" << EOF
+EOF
+
 echo 'Testing without modules but with /etc/dkms/no-autoinstall'
 touch /etc/dkms/no-autoinstall
 
@@ -872,12 +880,29 @@ run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 Automatic installation of modules has been disabled.
 EOF
 
+echo ' Running dkms kernel_postinst'
+run_with_expected_output dkms kernel_postinst -k "${KERNEL_VER}" << EOF
+Automatic installation of modules has been disabled.
+EOF
+
+echo ' Running dkms kernel_prerm'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
+EOF
+
 rm -f /etc/dkms/no-autoinstall
 
 echo 'Testing without modules'
 
 echo ' Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+EOF
+
+echo ' Running dkms kernel_postinst'
+run_with_expected_output dkms kernel_postinst -k "${KERNEL_VER}" << EOF
+EOF
+
+echo ' Running dkms kernel_prerm'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
 EOF
 
 echo 'Building the test module by config file (combining add, build)'
