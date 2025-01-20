@@ -1000,6 +1000,13 @@ run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0: added
 EOF
 
+if [[ -x /usr/lib/dkms/dkms_autoinstaller ]]; then
+echo ' Running dkms_autoinstaller'
+run_with_expected_output /usr/lib/dkms/dkms_autoinstaller start "${KERNEL_VER}" << EOF
+Automatic installation of modules has been disabled.
+EOF
+fi
+
 echo ' Running dkms kernel_postinst'
 run_with_expected_output dkms kernel_postinst -k "${KERNEL_VER}" << EOF
 Automatic installation of modules has been disabled.
