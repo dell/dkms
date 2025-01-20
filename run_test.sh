@@ -989,14 +989,42 @@ echo ' Running dkms kernel_prerm'
 run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}-noheaders" << EOF
 EOF
 
+echo 'Testing with /etc/dkms/no-autoinstall'
 touch /etc/dkms/no-autoinstall
-echo "Running dkms autoinstall with /etc/dkms/no-autoinstall present"
+
+echo ' Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 Automatic installation of modules has been disabled.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0: added
 EOF
+
+echo ' Running dkms kernel_postinst'
+run_with_expected_output dkms kernel_postinst -k "${KERNEL_VER}" << EOF
+Automatic installation of modules has been disabled.
+EOF
+
+echo ' Installing the test module'
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+${SIGNING_PROLOGUE}
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE}Cleaning build area... done.
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+
+echo ' Running dkms kernel_prerm'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
+dkms: removing module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+
+Running depmod... done.
+EOF
+
 rm -f /etc/dkms/no-autoinstall
 
 echo 'Running dkms autoinstall'
