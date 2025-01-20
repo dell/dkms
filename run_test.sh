@@ -971,6 +971,13 @@ Error! Your kernel headers for kernel ${KERNEL_VER}-noheaders cannot be found at
 Please install the linux-headers-${KERNEL_VER}-noheaders package or use the --kernelsourcedir option to tell DKMS where it's located.
 EOF
 
+if [[ -x /usr/lib/dkms/dkms_autoinstaller ]]; then
+echo ' Running dkms_autoinstaller'
+run_with_expected_output /usr/lib/dkms/dkms_autoinstaller start "${KERNEL_VER}-noheaders" << EOF
+Automatic installation of modules for kernel ${KERNEL_VER}-noheaders was skipped since the kernel headers for this kernel do not seem to be installed.
+EOF
+fi
+
 echo ' Running dkms kernel_postinst (expected error)'
 run_with_expected_error 21 dkms kernel_postinst -k "${KERNEL_VER}-noheaders" << EOF
 
