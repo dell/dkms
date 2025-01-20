@@ -962,6 +962,26 @@ run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0: added
 EOF
 
+echo 'Testing without headers'
+
+echo ' Running dkms autoinstall (expected error)'
+run_with_expected_error 21 dkms autoinstall -k "${KERNEL_VER}-noheaders" << EOF
+
+Error! Your kernel headers for kernel ${KERNEL_VER}-noheaders cannot be found at /lib/modules/${KERNEL_VER}-noheaders/build or /lib/modules/${KERNEL_VER}-noheaders/source.
+Please install the linux-headers-${KERNEL_VER}-noheaders package or use the --kernelsourcedir option to tell DKMS where it's located.
+EOF
+
+echo ' Running dkms kernel_postinst (expected error)'
+run_with_expected_error 21 dkms kernel_postinst -k "${KERNEL_VER}-noheaders" << EOF
+
+Error! Your kernel headers for kernel ${KERNEL_VER}-noheaders cannot be found at /lib/modules/${KERNEL_VER}-noheaders/build or /lib/modules/${KERNEL_VER}-noheaders/source.
+Please install the linux-headers-${KERNEL_VER}-noheaders package or use the --kernelsourcedir option to tell DKMS where it's located.
+EOF
+
+echo ' Running dkms kernel_prerm'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}-noheaders" << EOF
+EOF
+
 touch /etc/dkms/no-autoinstall
 echo "Running dkms autoinstall with /etc/dkms/no-autoinstall present"
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
@@ -993,13 +1013,6 @@ run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
-EOF
-
-echo "Running dkms autoinstall for a kernel without headers installed (expected error)"
-run_with_expected_error 21 dkms autoinstall -k "${KERNEL_VER}-noheaders" << EOF
-
-Error! Your kernel headers for kernel ${KERNEL_VER}-noheaders cannot be found at /lib/modules/${KERNEL_VER}-noheaders/build or /lib/modules/${KERNEL_VER}-noheaders/source.
-Please install the linux-headers-${KERNEL_VER}-noheaders package or use the --kernelsourcedir option to tell DKMS where it's located.
 EOF
 
 echo 'Running dkms kernel_prerm w/o kernel argument (expected error)'
