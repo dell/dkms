@@ -855,7 +855,7 @@ echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 ############################################################################
-echo '*** Testing dkms autoinstall/kernel_{postinst/prerm}'
+echo '*** Testing dkms autoinstall/kernel_{postinst/prerm}, dkms_autoinstaller'
 ############################################################################
 
 echo 'Testing without modules and without headers'
@@ -863,6 +863,13 @@ echo 'Testing without modules and without headers'
 echo ' Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}-noheaders" << EOF
 EOF
+
+if [[ -x /usr/lib/dkms/dkms_autoinstaller ]]; then
+echo ' Running dkms_autoinstaller'
+run_with_expected_output /usr/lib/dkms/dkms_autoinstaller start "${KERNEL_VER}-noheaders" << EOF
+Automatic installation of modules for kernel ${KERNEL_VER}-noheaders was skipped since the kernel headers for this kernel do not seem to be installed.
+EOF
+fi
 
 echo ' Running dkms kernel_postinst'
 run_with_expected_output dkms kernel_postinst -k "${KERNEL_VER}-noheaders" << EOF
@@ -880,6 +887,13 @@ run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 Automatic installation of modules has been disabled.
 EOF
 
+if [[ -x /usr/lib/dkms/dkms_autoinstaller ]]; then
+echo ' Running dkms_autoinstaller'
+run_with_expected_output /usr/lib/dkms/dkms_autoinstaller start "${KERNEL_VER}" << EOF
+Automatic installation of modules has been disabled.
+EOF
+fi
+
 echo ' Running dkms kernel_postinst'
 run_with_expected_output dkms kernel_postinst -k "${KERNEL_VER}" << EOF
 Automatic installation of modules has been disabled.
@@ -896,6 +910,12 @@ echo 'Testing without modules'
 echo ' Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 EOF
+
+if [[ -x /usr/lib/dkms/dkms_autoinstaller ]]; then
+echo ' Running dkms_autoinstaller'
+run_with_expected_output /usr/lib/dkms/dkms_autoinstaller start "${KERNEL_VER}" << EOF
+EOF
+fi
 
 echo ' Running dkms kernel_postinst'
 run_with_expected_output dkms kernel_postinst -k "${KERNEL_VER}" << EOF
