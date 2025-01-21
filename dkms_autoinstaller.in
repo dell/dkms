@@ -17,20 +17,9 @@
 ### END INIT INFO
 
 
-if [ -f /lib/lsb/init-functions ]; then
-    . /lib/lsb/init-functions
-elif [ -f /etc/rc.d/init.d/functions ]; then
-    . /etc/rc.d/init.d/functions
-fi
-
 exec="@SBINDIR@/dkms"
-prog=${exec##*/}
 
 test -f $exec || exit 0
-
-[ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
-
-uname_s=$(uname -s)
 
 _get_kernel_dir() {
     KVER=$1
