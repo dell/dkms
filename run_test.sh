@@ -1057,6 +1057,42 @@ run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
+if [[ -x /usr/lib/dkms/dkms_autoinstaller ]]; then
+echo 'Unbuilding the test module'
+run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+
+echo 'Running dkms_autoinstaller'
+run_with_expected_output /usr/lib/dkms/dkms_autoinstaller start "${KERNEL_VER}" << EOF
+${SIGNING_PROLOGUE}
+Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE}Cleaning build area... done.
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Running dkms_autoinstaller again'
+run_with_expected_output /usr/lib/dkms/dkms_autoinstaller start "${KERNEL_VER}" << EOF
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+fi
+
 echo 'Running dkms kernel_prerm w/o kernel argument (expected error)'
 run_with_expected_error 4 dkms kernel_prerm << EOF
 
