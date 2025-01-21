@@ -1213,6 +1213,24 @@ Error! One or more modules failed to install during autoinstall.
 Refer to previous errors for more information.
 EOF
 
+echo ' Running dkms kernel_postinst with failing test module (expected error)'
+run_with_expected_error 11 dkms kernel_postinst -k "${KERNEL_VER}" << EOF
+${SIGNING_PROLOGUE}
+Autoinstall of module dkms_failing_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Cleaning build area... done.
+Building module(s)...(bad exit status: 2)
+Failed command:
+make -j1 KERNELRELEASE=${KERNEL_VER} all <omitting possibly set CC/LD/... flags>
+
+Error! Bad return status for module build on kernel: ${KERNEL_VER} (${KERNEL_ARCH})
+Consult /var/lib/dkms/dkms_failing_test/1.0/build/make.log for more information.
+
+Autoinstall on ${KERNEL_VER} failed for module(s) dkms_failing_test(10).
+
+Error! One or more modules failed to install during autoinstall.
+Refer to previous errors for more information.
+EOF
+
 echo ' Removing failing test module'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_failing_test -v 1.0 << EOF
 Module dkms_failing_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
