@@ -29,7 +29,7 @@ SED_SUBSTITUTIONS	 = \
 %: %.in
 	$(SED) $(SED_SUBSTITUTIONS) $< > $@
 
-all: \
+GENERATED= \
 	dkms \
 	dkms.8 \
 	dkms_autoinstaller \
@@ -43,20 +43,11 @@ all: \
 	debian_kernel_prerm.d \
 	redhat_kernel_install.d
 
+all: $(GENERATED)
+
 clean:
 	-rm -rf dist/
-	-rm -f dkms
-	-rm -f dkms.8
-	-rm -f dkms_autoinstaller
-	-rm -f dkms.bash-completion
-	-rm -f dkms.zsh-completion
-	-rm -f dkms_common.postinst
-	-rm -f dkms_framework.conf
-	-rm -f dkms.service
-	-rm -f debian_kernel_install.d
-	-rm -f debian_kernel_postinst.d
-	-rm -f debian_kernel_prerm.d
-	-rm -f redhat_kernel_install.d
+	$(RM) $(GENERATED)
 
 install: all
 	$(if $(strip $(VAR)),$(error Setting VAR is not supported))
