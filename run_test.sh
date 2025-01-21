@@ -1215,7 +1215,7 @@ EOF
 
 if [[ -x /usr/lib/dkms/dkms_autoinstaller ]]; then
 echo ' Running dkms_autoinstaller with failing test module (expected error)'
-run_with_expected_error 11 /usr/lib/dkms/dkms_autoinstaller start "${KERNEL_VER}" << EOF
+run_with_expected_error 1 /usr/lib/dkms/dkms_autoinstaller start "${KERNEL_VER}" << EOF
 ${SIGNING_PROLOGUE}
 Autoinstall of module dkms_failing_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 Cleaning build area... done.
