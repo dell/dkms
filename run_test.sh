@@ -1212,6 +1212,15 @@ run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
 dkms_noautoinstall_test/1.0: added
 EOF
 
+if [[ -x /usr/lib/dkms/dkms_autoinstaller ]]; then
+echo 'Running dkms_autoinstaller'
+run_with_expected_output /usr/lib/dkms/dkms_autoinstaller start "${KERNEL_VER}" << EOF
+EOF
+run_status_with_expected_output 'dkms_noautoinstall_test' << EOF
+dkms_noautoinstall_test/1.0: added
+EOF
+fi
+
 echo 'Running dkms kernel_postinst'
 run_with_expected_output dkms kernel_postinst -k "${KERNEL_VER}" << EOF
 EOF
