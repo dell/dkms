@@ -18,20 +18,9 @@
 
 
 exec="@SBINDIR@/dkms"
+MODDIR="@MODDIR@"
 
 test -f $exec || exit 0
-
-_get_kernel_dir() {
-    KVER=$1
-    DIR="@MODDIR@/$KVER/build"
-    echo $DIR
-}
-
-_check_kernel_dir() {
-    DIR=$(_get_kernel_dir $1)
-    test -e $DIR/include
-    return $?
-}
 
 case "$1" in
     start)
@@ -40,7 +29,7 @@ case "$1" in
 		else
 			kernel=$(uname -r)
 		fi
-		if ! _check_kernel_dir $kernel; then
+		if [ ! -d "$MODDIR/$kernel/build/include" ]; then
 			echo "Automatic installation of modules for kernel $kernel was skipped since the kernel headers for this kernel do not seem to be installed."
 		else
 			dkms autoinstall --kernelver $kernel
