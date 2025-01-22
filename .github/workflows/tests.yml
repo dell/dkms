@@ -54,22 +54,26 @@ jobs:
       if: matrix.distro.name == 'almalinux' || contains(matrix.distro.name, 'centos') || contains(matrix.distro.name, 'fedora')
       run: |
         yum install -y diffutils elfutils-libelf gcc kernel kernel-devel make openssl patch
+        make install-redhat
 
     - name: Install Alpine dependencies
       if: matrix.distro.name == 'alpine'
       run: |
         apk --no-cache --update add bash gcc linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-dev make openssl coreutils patch
+        make install
 
     - name: Install Arch Linux dependencies
       if: matrix.distro.name == 'archlinux'
       run: |
         pacman -Syu --noconfirm diffutils gcc make linux${{ matrix.distro.variant }} linux${{ matrix.distro.variant }}-headers openssl patch
+        make install
 
     - name: Install Debian dependencies
       if: matrix.distro.name == 'debian'
       run: |
         apt-get update -q
         apt-get install -qy make linux-headers-amd64 linux-image-amd64 openssl xz-utils patch
+        make install-debian
 
     - name: Install Gentoo Linux dependencies
       if: matrix.distro.name == 'gentoo/stage3'
@@ -77,22 +81,20 @@ jobs:
         echo -e "MAKEOPTS=\"-j$(nproc) -l$(nproc)\"\nACCEPT_LICENSE=\"*\"" >> /etc/portage/make.conf
         wget --progress=dot:mega -O - https://github.com/gentoo-mirror/gentoo/archive/master.tar.gz | tar -xz && mv gentoo-master /var/db/repos/gentoo
         FEATURES="getbinpkg binpkg-ignore-signature parallel-fetch parallel-install pkgdir-index-trusted" USE="-initramfs" emerge --quiet --noreplace -j$(nproc) -l$(nproc) --autounmask-continue --with-bdeps=n '>=sys-kernel/gentoo-kernel-bin-6.6.0'
+        make install
 
     - name: Install openSUSE leap dependencies
       if: contains(matrix.distro.name, 'opensuse')
       run: |
         zypper --non-interactive install diffutils elfutils gcc kernel${{ matrix.distro.variant }} kernel${{ matrix.distro.variant }}-devel make openssl patch
+        make install
 
     - name: Install Ubuntu dependencies
       if: matrix.distro.name == 'ubuntu'
       run: |
         apt-get update -q
         apt-get install -qy gcc make linux-headers-generic linux-image-generic openssl shim-signed patch
-
-    - name: Install dkms
-      run: |
-        sed -i -e '/echo -en "."/d' dkms.in
-        make install
+        make install-debian
 
     - name: Run tests
       run: |
