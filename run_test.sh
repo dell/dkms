@@ -862,37 +862,22 @@ ${CERT_SERIAL}
 EOF
     fi
 
-echo 'Uninstalling the test module'
-run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+    echo 'Removing the test module'
+    run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
-EOF
-run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
-EOF
-
-echo 'Unbuilding the test module'
-run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-Module dkms_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
-EOF
-run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0: added
-EOF
-
-echo 'Removing the test module'
-run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-Module dkms_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
-Module dkms_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 
 Deleting module dkms_test/1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
 EOF
 
-echo 'Installing the test module by version (combining add, build, install)'
-run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+    remove_module_source_tree /usr/src/dkms_test-1.0
+
+    echo 'Installing the test module (combining add, build, install)'
+    run_with_expected_output dkms install -k "${KERNEL_VER}" test/dkms_test-1.0 << EOF
 ${SIGNING_PROLOGUE_tmp_key_cert}
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 
@@ -902,6 +887,7 @@ ${SIGNING_MESSAGE}Cleaning build area... done.
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
+    check_module_source_tree_created /usr/src/dkms_test-1.0
 run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
