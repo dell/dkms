@@ -813,26 +813,26 @@ EOF
         rm /tmp/dkms_test_kconfig
     fi
 
-echo 'Building the test module again by force'
-run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+    echo 'Building the test module again by force'
+    run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
 ${SIGNING_PROLOGUE_tmp_key_cert}
 Cleaning build area... done.
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
 EOF
-run_status_with_expected_output 'dkms_test' << EOF
+    run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
     echo ' Extracting serial number (aka sig_key in modinfo) from the certificate'
     CERT_SERIAL="$(cert_serial /tmp/dkms_test_certificate)"
 
-echo 'Installing the test module'
-run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+    echo 'Installing the test module'
+    run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
 EOF
-run_status_with_expected_output 'dkms_test' << EOF
+    run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
@@ -871,7 +871,7 @@ Running depmod... done.
 
 Deleting module dkms_test/1.0 completely from the DKMS tree.
 EOF
-run_status_with_expected_output 'dkms_test' << EOF
+    run_status_with_expected_output 'dkms_test' << EOF
 EOF
 
     remove_module_source_tree /usr/src/dkms_test-1.0
@@ -888,12 +888,12 @@ Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_com
 Running depmod... done.
 EOF
     check_module_source_tree_created /usr/src/dkms_test-1.0
-run_status_with_expected_output 'dkms_test' << EOF
+    run_status_with_expected_output 'dkms_test' << EOF
 dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
-echo 'Checking modinfo'
-run_with_expected_output sh -c "$(declare -f modinfo_quad); modinfo_quad /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" << EOF
+    echo 'Checking modinfo'
+    run_with_expected_output sh -c "$(declare -f modinfo_quad); modinfo_quad /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}" << EOF
 description:    A Simple dkms test module
 filename:       /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 license:        GPL
@@ -927,17 +927,17 @@ Running depmod... done.
 
 Deleting module dkms_test/1.0 completely from the DKMS tree.
 EOF
-run_status_with_expected_output 'dkms_test' << EOF
+    run_status_with_expected_output 'dkms_test' << EOF
 EOF
 
     echo 'Removing temporary files'
     rm /tmp/dkms_test_private_key /tmp/dkms_test_certificate
     rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
-remove_module_source_tree /usr/src/dkms_test-1.0
+    remove_module_source_tree /usr/src/dkms_test-1.0
 
-echo 'Checking that the environment is clean again'
-check_no_dkms_test
+    echo 'Checking that the environment is clean again'
+    check_no_dkms_test
 fi
 
 ############################################################################
