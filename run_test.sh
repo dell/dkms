@@ -1121,10 +1121,9 @@ EOF
 rm -f /etc/dkms/no-autoinstall
 
 echo 'Running dkms autoinstall --all (expected error)'
-run_with_expected_error 21 dkms autoinstall --all << EOF
+run_with_expected_error 5 dkms autoinstall --all << EOF
 
-Error! Your kernel headers for kernel  cannot be found at /lib/modules//build or /lib/modules//source.
-Please install the linux-headers- package or use the --kernelsourcedir option to tell DKMS where it's located.
+Error! The action autoinstall does not support the --all parameter.
 EOF
 
 echo 'Running dkms autoinstall'

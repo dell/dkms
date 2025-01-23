@@ -2956,6 +2956,7 @@ add | build | install)
     ${action}_module
     ;;
 autoinstall)
+    check_all_is_banned $action
     check_root && autoinstall
     ;;
 match)
