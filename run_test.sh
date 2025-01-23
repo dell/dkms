@@ -1878,7 +1878,7 @@ Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compr
 Restoring archived original module
 Running depmod... done.
 
-Removing original_module from DKMS tree for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Removing original module(s) from DKMS tree for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 EOF
 if [ "${expected_dest_loc}" != "kernel/extra" ]; then
     # A replaced module originating from a kernel image should get restored
@@ -1935,7 +1935,7 @@ Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compr
 Restoring archived original module
 Running depmod... done.
 
-Removing original_module from DKMS tree for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Removing original module(s) from DKMS tree for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Deleting module dkms_replace_test/2.0 completely from the DKMS tree.
 EOF

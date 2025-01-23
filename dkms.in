@@ -1767,16 +1767,11 @@ do_uninstall()
     fi
 
     # Delete the original_module if nothing for this kernel is installed anymore
-    if [[ $was_active && -d $dkms_tree/$module/original_module/$1/$2 && ! -d $dkms_tree/$module/original_module/$1/$2/collisions ]]; then
+    if [[ $was_active && -d $dkms_tree/$module/original_module/$1/$2 ]]; then
         echo ""
-        echo "Removing original_module from DKMS tree for kernel $1 ($2)"
+        echo "Removing original module(s) from DKMS tree for kernel $1 ($2)"
         rm -rf "$dkms_tree/$module/original_module/$1/$2" 2>/dev/null
         [[ $(find $dkms_tree/$module/original_module/$1/* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module/$1"
-    elif [[ $was_active && -d $dkms_tree/$module/original_module/$1/$2/collisions ]]; then
-        echo ""
-        echo "Keeping directory $dkms_tree/$module/original_module/$1/$2/collisions/"
-        echo "for your reference purposes.  Your kernel originally contained multiple"
-        echo "same-named modules and this directory is now where these are located."
     fi
     [[ $(find $dkms_tree/$module/original_module/* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module"
 }
