@@ -40,6 +40,7 @@ GENERATED= \
 	dkms.service \
 	debian_kernel_install.d \
 	debian_kernel_postinst.d \
+	debian_kernel_preinst.d \
 	debian_kernel_prerm.d \
 	redhat_kernel_install.d
 
@@ -82,6 +83,7 @@ install-debian: install
 	install -D -m 0755 debian_kernel_install.d $(DESTDIR)$(KINSTALL)/40-dkms.install
 	install -D -m 0755 debian_kernel_postinst.d $(DESTDIR)$(KCONF)/postinst.d/dkms
 	install -D -m 0755 debian_kernel_postinst.d $(DESTDIR)$(KCONF)/header_postinst.d/dkms
+	install -D -m 0755 debian_kernel_preinst.d $(DESTDIR)$(KCONF)/preinst.d/dkms
 	install -D -m 0755 debian_kernel_prerm.d $(DESTDIR)$(KCONF)/prerm.d/dkms
 
 install-doc:

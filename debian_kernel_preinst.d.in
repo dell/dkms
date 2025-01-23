@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# This script is triggered when the kernel (linux-image) package is being
+# installed/upgraded.  We're passed the version of the kernel being installed.
+inst_kern=$1
+
+if command -v dkms > /dev/null; then
+    dkms kernel_preinst -k "$inst_kern"
+fi
+
+exit 0
