@@ -72,7 +72,7 @@
 # 11: autoinstall: One or more modules failed to install during autoinstall.
 # 12: setup_kernels_arches(): Could not determine architecture.
 # 13: build: Aborting build of module ... for kernel ... due to missing BUILD_DEPENDS: ...
-# 14: kernel_prerm: dkms kernel_prerm for kernel ... failed for module(s) ...
+# 14: kernel_preinst/prerm: dkms kernel_preinst/prerm for kernel ... failed for module(s) ...
 # 21: prepare_kernel(): Your kernel headers for kernel ... cannot be found ...
 # 77: skipped due to BUILD_EXCLUSIVE
 # 101: install: pre_install failed, aborting install.
@@ -258,7 +258,7 @@ show_usage()
     echo "Usage: $0 [action] [options]"
     echo "  [action]  = { add | remove | build | unbuild | install | uninstall | match |"
     echo "               autoinstall | mktarball | ldtarball | status | generate_mok |"
-    echo "               kernel_postinst | kernel_prerm }"
+    echo "               kernel_preinst | kernel_postinst | kernel_prerm }"
     echo "  [options] = [-m module] [-v module-version] [-k kernel-version] [-a arch]"
     echo "              [-c dkms.conf-location] [-q] [--force] [--force-version-override] [--all]"
     echo "              [--templatekernel=kernel] [--directive='cli-directive=cli-value']"
@@ -365,7 +365,7 @@ check_all_is_banned()
 have_one_kernel() {
     check_all_is_banned $1
     if (( ${#kernelver[@]} != 1 )); then
-        [[ $1 =~ kernel_(postinst|prerm) ]] && die 4 "The action $1 requires exactly one kernel version parameter on the command line."
+        [[ $1 =~ kernel_(preinst|postinst|prerm) ]] && die 4 "The action $1 requires exactly one kernel version parameter on the command line."
         die 4 "The action $1 does not support multiple kernel version parameters on the command line."
     fi
 }
@@ -2637,6 +2637,45 @@ autoinstall() {
     fi
 }
 
+# This is roughly the inverse action to 'autoinstall'. It is supposed to be
+# called before upgrade of a kernel to first remove all modules that are
+# currently built or installed for that kernel to ensure they get rebuilt
+# by kernel_postinst later on.
+# Upon initial installation of a kernel this is a no-op.
+#
+# Ideally we should only mark them as needing a rebuild instead of removing
+# them right away, but such functionality is yet to be implemented.
+kernel_preinst()
+{
+    local m
+    local v
+    local failed
+
+    have_one_kernel kernel_prerm
+
+    # run depmod only once after uninstalling all dkms modules
+    delayed_depmod=1
+
+    while IFS='/' read m v; do
+        is_module_built "$m" "$v" "$kernelver" "$arch" || continue
+        read_conf_or_die "$kernelver" "$arch" "$dkms_tree/$m/$v/source/dkms.conf"
+        [[ $AUTOINSTALL ]] || continue
+        echo "dkms: removing module $m/$v for kernel $kernelver ($arch)" >&2
+        (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
+    done < <(list_module_version_combos)
+
+    if [[ -f $dkms_tree/depmod-pending-$kernelver-$arch ]]; then
+        rm -f $dkms_tree/depmod-pending-$kernelver-$arch
+        invoke_command "do_depmod $1" "Running depmod" '' background
+    fi
+    delayed_depmod=
+
+    # clean leftover empty directories
+    [[ ! -d $install_tree/$kernelver ]] || find "$install_tree/$kernelver" -type d -empty -delete
+
+    [[ -z $failed ]] || die 14 "dkms kernel_preinst for kernel $kernelver ($arch) failed for module(s)$failed."
+}
+
 # A wrapper for 'autoinstall', to be used in combination with 'kernel_prerm'.
 kernel_postinst()
 {
@@ -2765,7 +2804,7 @@ no_depmod=""
 delayed_depmod=""
 prepared_kernel="none"
 
-action_re='^(remove|(auto|un)?install|match|mktarball|(un)?build|add|status|ldtarball|generate_mok|kernel_(postinst|prerm))$'
+action_re='^(remove|(auto|un)?install|match|mktarball|(un)?build|add|status|ldtarball|generate_mok|kernel_(preinst|postinst|prerm))$'
 
 # Parse command line arguments
 while (($# > 0)); do
@@ -2941,7 +2980,7 @@ parallel_jobs=${parallel_jobs:-$(get_num_cpus)}
 [[ "$parallel_jobs" = 0 ]] && parallel_jobs=""
 
 # Require explicit --kernelver argument
-[[ $action =~ kernel_(postinst|prerm) ]] && have_one_kernel "$action"
+[[ $action =~ kernel_(preinst|postinst|prerm) ]] && have_one_kernel "$action"
 
 setup_kernels_arches "$action"
 
@@ -3001,7 +3040,7 @@ generate_mok)
     read_framework_conf $dkms_framework_signing_variables
     prepare_mok
     ;;
-kernel_postinst | kernel_prerm)
+kernel_preinst | kernel_postinst | kernel_prerm)
     check_root && have_one_kernel "$action" && "$action"
     ;;
 *)
