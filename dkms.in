@@ -363,11 +363,11 @@ check_all_is_banned()
 
 # A little test function for DKMS commands that only work on one kernel.
 have_one_kernel() {
+    check_all_is_banned $1
     if (( ${#kernelver[@]} != 1 )); then
         [[ $1 =~ kernel_(postinst|prerm) ]] && die 4 "The action $1 requires exactly one kernel version parameter on the command line."
         die 4 "The action $1 does not support multiple kernel version parameters on the command line."
     fi
-    check_all_is_banned $1
 }
 
 # Set up the kernelver and arch arrays.  You must have a 1:1 correspondence --
