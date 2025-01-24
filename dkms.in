@@ -2956,7 +2956,7 @@ add | build | install)
     ${action}_module
     ;;
 autoinstall)
-    check_all_is_banned $action
+    have_one_kernel $action
     check_root && autoinstall
     ;;
 match)
