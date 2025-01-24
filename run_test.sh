@@ -1126,6 +1126,12 @@ run_with_expected_error 5 dkms autoinstall --all << EOF
 Error! The action autoinstall does not support the --all parameter.
 EOF
 
+echo 'Running dkms autoinstall for more than one kernel version (same version twice for this test) (expected error)'
+run_with_expected_error 4 dkms autoinstall -k "${KERNEL_VER}" -k "${KERNEL_VER}" << EOF
+
+Error! The action autoinstall does not support multiple kernel version parameters on the command line.
+EOF
+
 echo 'Running dkms autoinstall'
 run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
 ${SIGNING_PROLOGUE}
