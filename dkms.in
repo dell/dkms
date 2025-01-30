@@ -192,7 +192,7 @@ invoke_command()
     fi
 
     if [ -n "$progresspid" ]; then
-        kill "$progresspid" >/dev/null 2>&1
+        kill -9 "$progresspid" >/dev/null 2>&1
         wait "$progresspid" 2>/dev/null
     fi
 
@@ -333,9 +333,9 @@ set_module_suffix()
     # $1 = the kernel to base the module_suffix on
     kernel_test="${1:-$(uname -r)}"
     module_uncompressed_suffix=".ko"
-    find $install_tree/$kernel_test/ -name "*.ko.gz" | grep -q . && module_compressed_suffix=".gz"
-    find $install_tree/$kernel_test/ -name "*.ko.xz" | grep -q . && module_compressed_suffix=".xz"
-    find $install_tree/$kernel_test/ -name "*.ko.zst" | grep -q . && module_compressed_suffix=".zst"
+    find $install_tree/$kernel_test/ -name "*.ko.gz" 2>/dev/null | grep -q . && module_compressed_suffix=".gz"
+    find $install_tree/$kernel_test/ -name "*.ko.xz" 2>/dev/null | grep -q . && module_compressed_suffix=".xz"
+    find $install_tree/$kernel_test/ -name "*.ko.zst" 2>/dev/null | grep -q . && module_compressed_suffix=".zst"
     module_suffix="$module_uncompressed_suffix$module_compressed_suffix"
 }
 
