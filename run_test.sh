@@ -187,9 +187,9 @@ run_status_with_expected_output() {
 generalize_expected_output() {
     local output_log=$1
 
-    # On CentOS, weak-modules is executed. Drop it from the output, to be more generic
-    sed -i '/^Adding any weak-modules$/d' ${output_log}
-    sed -i '/^Removing any linked weak-modules$/d' ${output_log}
+    # On Red Hat and SUSE based distributions, weak-modules is executed. Drop it from the output, to be more generic
+    sed -i '/^Adding linked weak modules.*$/d' ${output_log}
+    sed -i '/^Removing linked weak modules.*$/d' ${output_log}
     # Signing related output. Drop it from the output, to be more generic
     if (( NO_SIGNING_TOOL == 0 )); then
         sed -i '/^EFI variables are not supported on this system/d' ${output_log}
