@@ -596,11 +596,9 @@ module. If unset, it is assumed to be "make clean".
 .B NO_WEAK_MODULES=
 The
 .B NO_WEAK_MODULES
-parameter prevents dkms from creating a symlink into the weak-updates directory, which is the
-default on Red Hat derivatives. The weak modules facility was designed to eliminate the need to
-rebuild kernel modules when kernel upgrades occur and relies on the symbols within the kABI.
+parameter prevents dkms from creating a symlink into the weak-updates directory. The weak modules facility was designed to eliminate the need to rebuild kernel modules when kernel upgrades occur and relies on the symbols within the kABI.
 
-Fedora does not guaranteed a stable kABI so it should be disabled in the specific module override by setting it to "yes". For example, for an Nvidia DKMS module you would set the following in /etc/dkms/nvidia.conf:
+The kABI kernel module interface is currently supported on Red Hat Enterprise Linux (and derivatives), SUSE Linux Enterprise Server and openSUSE Leap.
 
 NO_WEAK_MODULES="yes"
 .TP
