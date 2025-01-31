@@ -374,6 +374,7 @@ setup_kernels_arches()
         local i
         i=0
         while read line; do
+            [[ -n "$line" ]] || continue
             line=${line#*/}; line=${line#*/};
             # (I would leave out the delimiters in the status output
             #  in the first place.)
