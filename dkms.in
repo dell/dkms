@@ -413,7 +413,7 @@ setup_kernels_arches()
                         arch[0]=$(uname -m)
                         # shellcheck disable=SC2010
                         # TODO: replace ls | grep
-                        if [[ ${arch[0]} = x86_64 ]] && grep -q Intel /proc/cpuinfo && ls "$install_tree/${kernelver[0]}/build/configs" 2>/dev/null | grep -q "ia32e"; then
+                        if [[ ${arch[0]} = x86_64 ]] && [[ -r /proc/cpuinfo ]] && grep -q Intel /proc/cpuinfo && ls "$install_tree/${kernelver[0]}/build/configs" 2>/dev/null | grep -q "ia32e"; then
                             arch[0]="ia32e"
                         fi
                     fi
