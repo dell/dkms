@@ -387,6 +387,7 @@ setup_kernels_arches()
         local i
         i=0
         while read -r line; do
+            [[ $line ]] || continue
             line=${line#*/}; line=${line#*/};
             # (I would leave out the delimiters in the status output
             #  in the first place.)
@@ -825,6 +826,7 @@ get_module_verinfo(){
     local vals
     vals=
     while read -ra vals; do
+        [[ ${#vals[@]} -eq 0 ]] && continue
         case "${vals[0]}" in
             version:)
                 ver="${vals[1]}"
@@ -1228,6 +1230,7 @@ prepare_and_actual_build()
     # shellcheck disable=SC2153
     for bd in "${BUILD_DEPENDS[@]}"; do
         while read -r status mvka; do
+            [[ $status ]] || continue
             [[ $status = installed ]] && continue 2
         done <<< "$(module_status "$bd" "*" "$kernelver" "$arch")"
         bd_missing="$bd_missing $bd"
@@ -1987,7 +1990,7 @@ module_status_weak() {
             continue
         fi
         IFS=/ read -r m v k a <<< "$(IFS=$oifs find_module_from_ko "$weak_ko")"
-        [[ "$m" ]] || continue
+        [[ $m ]] || continue
         kern=${weak_ko#"${install_tree}/"}
         kern=${kern%/weak-updates/*}
         [[ $m = "${1:-*}" && $v = "${2:-*}" && $k = "${5:-*}" && $a = "${4:-*}" && $kern = "${3:-*}" ]] || continue
@@ -2019,6 +2022,7 @@ do_status_weak()
     local kern
     local status
     while read -r status mvka; do
+        [[ $status ]] || continue
         IFS=/ read -r m v k a kern <<< "$mvka"
         echo "$m, $v, $k, $a: installed-weak from $kern"
     done <<< "$(module_status_weak "$@")"
@@ -2106,6 +2110,7 @@ module_status() {
     local v
     ret=1
     while IFS='/' read -r m v; do
+        [[ $m ]] || continue
         is_module_broken "$m" "$v" && { echo "broken $m/$v"; continue; }
         is_module_added "$m" "$v" || continue
         ret=0
@@ -2434,7 +2439,7 @@ run_match()
         fi
         maybe_build_module "$template_module" "$template_version" "$kernelver" "$arch"
         maybe_install_module "$template_module" "$template_version" "$kernelver" "$arch"
-    done <<< "$(echo "$template_kernel_status")"
+    done <<< "$template_kernel_status"
 }
 
 report_build_problem()
@@ -2573,6 +2578,7 @@ autoinstall() {
     # Walk through our list of installed and built modules, and create
     # a list of modules and their latest version.
     while read -r status mvka; do
+        [[ $status ]] || continue
         IFS='/' read -r m v k a <<< "$mvka"
         # If the module status is broken there is nothing that can be done
         if [[ $status = broken ]]; then
@@ -2760,6 +2766,7 @@ kernel_prerm()
     delayed_depmod=1
 
     while IFS='/' read -r m v; do
+        [[ $m ]] || continue
         is_module_built "$m" "$v" "${kernelver[0]}" "${arch[0]}" || continue
         echo "dkms: removing module $m/$v for kernel ${kernelver[0]} (${arch[0]})" >&2
         (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
