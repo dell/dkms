@@ -155,6 +155,13 @@ if [ -z "$autoinstall" ]; then
     exit 0
 fi
 
+dkms_conf="/var/lib/dkms/$NAME/$VERSION/source/dkms.conf"
+autoinstall=$(bash -c 'AUTOINSTALL=; . "'"$dkms_conf"'" >/dev/null 2>&1; echo $AUTOINSTALL')
+if [ -z "$autoinstall" ]; then
+    echo "Not building the $NAME module which does not have AUTOINSTALL enabled."
+    exit 0
+fi
+
 # On 1st installation, let us look for a directory
 # in @MODDIR@ which matches $(uname -r). If none
 # is found it is possible that buildd is being used
@@ -206,9 +213,9 @@ if [ -n "$ARCH" ]; then
 fi
 
 for KERNEL in $KERNELS; do
+    echo ""
     dkms_status=$(dkms status -m $NAME -v $VERSION -k $KERNEL $ARCH)
     if [ $(echo $KERNEL | grep -c "BOOT") -gt 0 ]; then
-        echo ""
         echo "Module build and install for $KERNEL was skipped as "
         echo "it is a BOOT variant"
         continue

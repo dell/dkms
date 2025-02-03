@@ -9,6 +9,7 @@ dkms.service
 dkms_common.postinst
 debian_kernel_install.d
 debian_kernel_postinst.d
+debian_kernel_preinst.d
 debian_kernel_prerm.d
 redhat_kernel_install.d
 
