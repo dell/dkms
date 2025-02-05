@@ -1877,7 +1877,6 @@ Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Restoring archived original module
 Running depmod... done.
-
 Removing original module(s) from DKMS tree for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 EOF
 if [ "${expected_dest_loc}" != "kernel/extra" ]; then
@@ -1934,7 +1933,6 @@ Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Restoring archived original module
 Running depmod... done.
-
 Removing original module(s) from DKMS tree for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Deleting module dkms_replace_test/2.0 completely from the DKMS tree.
