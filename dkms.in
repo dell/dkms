@@ -601,6 +601,8 @@ read_conf()
         "/etc/dkms/$module-$module_version.conf" \
         "/etc/dkms/$module-$module_version-$1.conf" \
         "/etc/dkms/$module-$module_version-$1-$2.conf" \
+        "/etc/dkms/$module--$1.conf" \
+        "/etc/dkms/$module--$1-$2.conf" \
     ; do
         [[ -e $_conf_file ]] && safe_source "$_conf_file" $dkms_conf_variables
     done
