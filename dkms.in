@@ -595,9 +595,13 @@ read_conf()
     # Source in the dkms.conf.
     # Allow for user-specified overrides in order of specificity.
     local _conf_file
-    for _conf_file in "$read_conf_file" "/etc/dkms/$module.conf" \
-        "/etc/dkms/$module-$module_version.conf" "/etc/dkms/$module-$module_version-$1.conf" \
-        "/etc/dkms/$module-$module_version-$1-$2.conf"; do
+    for _conf_file in \
+        "$read_conf_file" \
+        "/etc/dkms/$module.conf" \
+        "/etc/dkms/$module-$module_version.conf" \
+        "/etc/dkms/$module-$module_version-$1.conf" \
+        "/etc/dkms/$module-$module_version-$1-$2.conf" \
+    ; do
         [[ -e $_conf_file ]] && safe_source "$_conf_file" $dkms_conf_variables
     done
 
