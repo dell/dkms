@@ -52,8 +52,9 @@ jobs:
 
     - name: Install dependencies for Red Hat based distributions
       if: matrix.distro.name == 'almalinux' || contains(matrix.distro.name, 'centos') || contains(matrix.distro.name, 'fedora')
+      # Allowerasing in place for differences between container only packages and full packages
       run: |
-        yum install -y diffutils elfutils-libelf gcc kernel kernel-devel make openssl patch
+        yum install -y --allowerasing diffutils elfutils-libelf gcc kernel kernel-devel make openssl patch
         make install-redhat
 
     - name: Install Alpine dependencies
