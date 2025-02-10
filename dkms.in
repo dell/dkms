@@ -802,6 +802,7 @@ get_module_verinfo(){
     local vals
     vals=
     while read -a vals; do
+        [[ "$vals" ]] || continue
         case "${vals[0]}" in
             version:)
                 ver="${vals[1]}"
@@ -1204,6 +1205,7 @@ prepare_and_actual_build()
     bd_missing=
     for bd in "${BUILD_DEPENDS[@]}"; do
         while read status mvka; do
+            [[ -n "$status" ]] || continue
             [[ $status = installed ]] && continue 2
         done <<< "$(module_status "$bd" "*" "$kernelver" "$arch")"
         bd_missing="$bd_missing $bd"
@@ -1980,6 +1982,7 @@ do_status_weak()
     local kern
     local status
     while read status mvka && [[ -n "$status" ]]; do
+        [[ -n "$status" ]] || continue
         IFS=/ read m v k a kern <<< "$mvka"
         echo "$m, $v, $k, $a: installed-weak from $kern"
     done <<< "$(module_status_weak "$@")"
@@ -2067,6 +2070,7 @@ module_status() {
     local v
     ret=1
     while IFS='/' read m v; do
+        [[ -n "$m" ]] || continue
         is_module_broken "$m" "$v" && { echo "broken $m/$v"; continue; }
         is_module_added "$m" "$v" || continue
         ret=0
@@ -2532,6 +2536,7 @@ autoinstall() {
     # Walk through our list of installed and built modules, and create
     # a list of modules and their latest version.
     while read status mvka; do
+    	[[ -n "$status" ]] || continue
         IFS='/' read m v k a <<< "$mvka"
         # If the module status is broken there is nothing that can be done
         if [[ $status = broken ]]; then
@@ -2719,6 +2724,7 @@ kernel_prerm()
     delayed_depmod=1
 
     while IFS='/' read m v; do
+        [[ -n "$m" ]] || continue
         is_module_built "$m" "$v" "$kernelver" "$arch" || continue
         echo "dkms: removing module $m/$v for kernel $kernelver ($arch)" >&2
         (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
