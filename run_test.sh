@@ -513,11 +513,14 @@ echo 'Checking make.log content'
 check_make_log_content /var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/log/make.log << EOF
 DKMS (${DKMS_VERSION}) make.log for dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 <timestamp>
+
 Cleaning build area
 # command: make -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build clean
 
 # exit code: 0
 # elapsed time: <hh:mm:ss>
+----------------------------------------------------------------
+
 Building module(s)
 # command: make -j1 KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build
   CC      dkms_test.o
@@ -526,12 +529,15 @@ Building module(s)
 
 # exit code: 0
 # elapsed time: <hh:mm:ss>
+----------------------------------------------------------------
+
 Cleaning build area
 # command: make -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_test/1.0/build clean
   CLEAN   Module.symvers
 
 # exit code: 0
 # elapsed time: <hh:mm:ss>
+----------------------------------------------------------------
 EOF
 
 echo 'Building the test module again'
@@ -2108,6 +2114,7 @@ echo 'Checking make.log content'
 check_make_log_content /var/lib/dkms/dkms_noisy_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/log/make.log << EOF
 DKMS (${DKMS_VERSION}) make.log for dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 <timestamp>
+
 Applying patch patch2.patch
 # command: patch -p1 < ./patches/patch2.patch
 patching file Makefile
@@ -2115,6 +2122,8 @@ patching file dkms_noisy_test.c
 
 # exit code: 0
 # elapsed time: <hh:mm:ss>
+----------------------------------------------------------------
+
 Applying patch patch1.patch
 # command: patch -p1 < ./patches/patch1.patch
 patching file Makefile
@@ -2124,6 +2133,8 @@ Hunk #1 succeeded at 18 (offset 2 lines).
 
 # exit code: 0
 # elapsed time: <hh:mm:ss>
+----------------------------------------------------------------
+
 Running the pre_build script
 # command: cd /var/lib/dkms/dkms_noisy_test/1.0/build/ && /var/lib/dkms/dkms_noisy_test/1.0/build/script.sh pre_build
 /var/lib/dkms/dkms_noisy_test/1.0/build/script.sh pre_build
@@ -2135,6 +2146,8 @@ pre_build: line 5
 
 # exit code: 0
 # elapsed time: <hh:mm:ss>
+----------------------------------------------------------------
+
 Cleaning build area
 # command: make clean
 make -C /lib/modules/${UNAME_R}/build M=/var/lib/dkms/dkms_noisy_test/1.0/build clean
@@ -2143,6 +2156,8 @@ make: *** [Makefile:7: clean] Error 2
 
 # exit code: 2
 # elapsed time: <hh:mm:ss>
+----------------------------------------------------------------
+
 Building module(s)
 # command: make -j1 KERNELRELEASE=${KERNEL_VER} -C /lib/modules/${KERNEL_VER}/build M=/var/lib/dkms/dkms_noisy_test/1.0/build
   CC      dkms_noisy_test.o
@@ -2151,6 +2166,8 @@ Building module(s)
 
 # exit code: 0
 # elapsed time: <hh:mm:ss>
+----------------------------------------------------------------
+
 Running the post_build script
 # command: cd /var/lib/dkms/dkms_noisy_test/1.0/build/ && /var/lib/dkms/dkms_noisy_test/1.0/build/script.sh post_build
 /var/lib/dkms/dkms_noisy_test/1.0/build/script.sh post_build
@@ -2162,6 +2179,8 @@ post_build: line 5
 
 # exit code: 0
 # elapsed time: <hh:mm:ss>
+----------------------------------------------------------------
+
 Cleaning build area
 # command: make clean
 make -C /lib/modules/${UNAME_R}/build M=/var/lib/dkms/dkms_noisy_test/1.0/build clean
@@ -2170,6 +2189,7 @@ make: *** [Makefile:7: clean] Error 2
 
 # exit code: 2
 # elapsed time: <hh:mm:ss>
+----------------------------------------------------------------
 EOF
 
 echo 'Unbuilding the noisy test module'
