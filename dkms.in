@@ -175,6 +175,7 @@ invoke_command()
     if [[ -n "$cmd_output_file" ]]; then
         local t_start
         local t_end
+        echo "" >> "$cmd_output_file"
         echo -e "$cmd_description" >> "$cmd_output_file"
         echo -e "# command: $cmd" >> "$cmd_output_file"
         t_start=$SECONDS
@@ -183,6 +184,7 @@ invoke_command()
         t_end=$SECONDS
         echo -e "\n# exit code: $exitval" >> "$cmd_output_file"
         echo "# elapsed time: $(date -u -d "0 $t_end sec - $t_start sec" +%T)" >> "$cmd_output_file"
+        echo "----------------------------------------------------------------" >> "$cmd_output_file"
     elif [[ -z "$cmd_output_file" && $cmd_mode == background && ! $verbose ]]; then
         ( eval "$cmd" ) >/dev/null 2>&1
         exitval=$?
