@@ -17,8 +17,10 @@ _subdirectories()
 # complete on $2 part of filenames matching pattern $1 under /usr/src
 _filename_parts()
 {
-	COMPREPLY=( $( command ls -F /usr/src/ 2>/dev/null | grep -E '^'$1'/$' \
-		| sed -r -e 's/^([^-]+)-(.+)\/$/\'$2'/' | grep "^$cur" ) )
+    # shellcheck disable=SC1003
+    # TODO: figure out what is going on here
+	COMPREPLY=( $( command ls -F /usr/src/ 2>/dev/null | grep -E '^'"$1"'/$' \
+		| sed -r -e 's/^([^-]+)-(.+)\/$/\'"$2"'/' | grep "^$cur" ) )
 }
 
 _dkms()
@@ -31,13 +33,13 @@ _dkms()
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "add remove build unbuild install uninstall autoinstall \
 			match mktarball ldtarball generate_mok \
-			status" -- $cur ) )
+			status" -- "$cur" ) )
 	else
 		prev=${COMP_WORDS[COMP_CWORD-1]}
 		command=${COMP_WORDS[1]}
 		case $prev in
 			-a)
-				COMPREPLY=( $( compgen -W "$(uname -m)" -- $cur ) )
+				COMPREPLY=( $( compgen -W "$(uname -m)" -- "$cur" ) )
 				return 0
 				;;
 			-m)
@@ -59,7 +61,7 @@ _dkms()
 					if [ "$command" = 'add' ]; then
 						_filename_parts "$module-.*" 2
 					else
-						_subdirectories /var/lib/dkms/$module
+						_subdirectories "/var/lib/dkms/$module"
 					fi
 					return 0
 				fi
@@ -123,7 +125,7 @@ _dkms()
 				--version --all --kernelsourcedir \
 				--directive"
 
-			COMPREPLY=( $( compgen -W "$options" -- $cur ) )
+			COMPREPLY=( $( compgen -W "$options" -- "$cur" ) )
 		fi
 	fi
 }
