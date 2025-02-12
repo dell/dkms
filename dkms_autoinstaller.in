@@ -32,7 +32,7 @@ case "$1" in
 		if [ ! -d "$MODDIR/$kernel/build/include" ]; then
 			echo "Automatic installation of modules for kernel $kernel was skipped since the kernel headers for this kernel do not seem to be installed."
 		else
-			dkms autoinstall --kernelver $kernel
+			dkms autoinstall --kernelver "$kernel"
 			res=$?
 			test $res = 0
 		fi
