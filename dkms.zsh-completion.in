@@ -38,6 +38,8 @@ if [[ -n $cmd ]]; then
   curcontext="${curcontext%:*}-$cmd:"
 else
   # Exclude sub-commands based on any options specified so far.
+  # shellcheck disable=SC1073,SC1058,SC1072,SC1009
+  # for loop too long TODO: fix
   for cmds opts in \
     '(remove|build|install|uninstall|match|status|mktarball)' 'k' \
     '(add|remove)' '-_safe_upgrade' \
