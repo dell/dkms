@@ -1468,7 +1468,7 @@ do_install()
         module_count=${#installed_modules[@]}
         original_copy=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$kernelver/$arch" "$m")
         if [[ -L $dkms_tree/$module/kernel-$kernelver-$arch &&
-           -n "$original_copy" ]]; then
+            -n "$original_copy" ]]; then
             echo "An original module was already stored during a previous install"
         elif ! [[ -L $dkms_tree/$module/kernel-$kernelver-$arch ]]; then
             local original_module
