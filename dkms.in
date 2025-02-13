@@ -1981,7 +1981,7 @@ do_status_weak()
     local a
     local kern
     local status
-    while read status mvka && [[ -n "$status" ]]; do
+    while read status mvka; do
         [[ -n "$status" ]] || continue
         IFS=/ read m v k a kern <<< "$mvka"
         echo "$m, $v, $k, $a: installed-weak from $kern"
