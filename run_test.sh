@@ -2076,19 +2076,22 @@ EOF
 echo 'Building and installing the noisy test module'
 set_signing_message "dkms_noisy_test" "1.0"
 SIGNING_MESSAGE_noisy="$SIGNING_MESSAGE"
+if [ -d "/lib/modules/${UNAME_R}/build" ]; then
+    CLEANING_MESSAGE="Cleaning build area... done."
+else
+    CLEANING_MESSAGE="Cleaning build area...(bad exit status: 2)
+Failed command:
+make clean"
+fi
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_noisy_test -v 1.0 << EOF
 ${SIGNING_PROLOGUE}
 Applying patch patch2.patch... done.
 Applying patch patch1.patch... done.
 Running the pre_build script... done.
-Cleaning build area...(bad exit status: 2)
-Failed command:
-make clean
+${CLEANING_MESSAGE}
 Building module(s)... done.
 ${SIGNING_MESSAGE_noisy}Running the post_build script... done.
-Cleaning build area...(bad exit status: 2)
-Failed command:
-make clean
+${CLEANING_MESSAGE}
 Running the pre_install script:
 /var/lib/dkms/dkms_noisy_test/1.0/source/script.sh pre_install
 pre_install: line 1
@@ -2111,6 +2114,25 @@ dkms_noisy_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 echo 'Checking make.log content'
+if [ -d "/lib/modules/${UNAME_R}/build" ]; then
+    CLEANING_LOG_BEFORE="# command: make clean
+make -C /lib/modules/${UNAME_R}/build M=/var/lib/dkms/dkms_noisy_test/1.0/build clean
+
+# exit code: 0"
+    CLEANING_LOG_AFTER="# command: make clean
+make -C /lib/modules/${UNAME_R}/build M=/var/lib/dkms/dkms_noisy_test/1.0/build clean
+  CLEAN   Module.symvers
+
+# exit code: 0"
+else
+    CLEANING_LOG_BEFORE="# command: make clean
+make -C /lib/modules/${UNAME_R}/build M=/var/lib/dkms/dkms_noisy_test/1.0/build clean
+make[1]: *** /lib/modules/${UNAME_R}/build: No such file or directory.  Stop.
+make: *** [Makefile:7: clean] Error 2
+
+# exit code: 2"
+    CLEANING_LOG_AFTER=$CLEANING_LOG_BEFORE
+fi
 check_make_log_content /var/lib/dkms/dkms_noisy_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/log/make.log << EOF
 DKMS (${DKMS_VERSION}) make.log for dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 <timestamp>
@@ -2149,12 +2171,7 @@ pre_build: line 5
 ----------------------------------------------------------------
 
 Cleaning build area
-# command: make clean
-make -C /lib/modules/${UNAME_R}/build M=/var/lib/dkms/dkms_noisy_test/1.0/build clean
-make[1]: *** /lib/modules/${UNAME_R}/build: No such file or directory.  Stop.
-make: *** [Makefile:7: clean] Error 2
-
-# exit code: 2
+${CLEANING_LOG_BEFORE}
 # elapsed time: <hh:mm:ss>
 ----------------------------------------------------------------
 
@@ -2182,12 +2199,7 @@ post_build: line 5
 ----------------------------------------------------------------
 
 Cleaning build area
-# command: make clean
-make -C /lib/modules/${UNAME_R}/build M=/var/lib/dkms/dkms_noisy_test/1.0/build clean
-make[1]: *** /lib/modules/${UNAME_R}/build: No such file or directory.  Stop.
-make: *** [Makefile:7: clean] Error 2
-
-# exit code: 2
+${CLEANING_LOG_AFTER}
 # elapsed time: <hh:mm:ss>
 ----------------------------------------------------------------
 EOF
@@ -2267,14 +2279,10 @@ Autoinstall of module dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARC
 Applying patch patch2.patch... done.
 Applying patch patch1.patch... done.
 Running the pre_build script... done.
-Cleaning build area...(bad exit status: 2)
-Failed command:
-make clean
+${CLEANING_MESSAGE}
 Building module(s)... done.
 ${SIGNING_MESSAGE_noisy}Running the post_build script... done.
-Cleaning build area...(bad exit status: 2)
-Failed command:
-make clean
+${CLEANING_MESSAGE}
 Running the pre_install script:
 /var/lib/dkms/dkms_noisy_test/1.0/source/script.sh pre_install
 pre_install: line 1
