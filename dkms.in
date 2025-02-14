@@ -384,7 +384,7 @@ setup_kernels_arches()
     if [[ $all && $1 != status ]]; then
         local i
         i=0
-        while read line; do
+        while read -r line; do
             line=${line#*/}; line=${line#*/};
             # (I would leave out the delimiters in the status output
             #  in the first place.)
@@ -803,7 +803,7 @@ get_module_verinfo(){
     local checksum
     local vals
     vals=
-    while read -a vals; do
+    while read -ra vals; do
         case "${vals[0]}" in
             version:)
                 ver="${vals[1]}"
@@ -900,7 +900,7 @@ check_version_sanity()
         fi
     fi
     set_module_suffix "$1"
-    read -a kernels_module < <(find_module "$lib_tree" "${4}")
+    read -ra kernels_module < <(find_module "$lib_tree" "${4}")
     [[ -z $kernels_module ]] && return 0
 
     if [[ "$force_version_override" == "true" ]]; then
@@ -1205,7 +1205,7 @@ prepare_and_actual_build()
     # Check for missing BUILD_DEPENDS
     bd_missing=
     for bd in "${BUILD_DEPENDS[@]}"; do
-        while read status mvka; do
+        while read -r status mvka; do
             [[ $status = installed ]] && continue 2
         done < <(module_status "$bd" "*" "$kernelver" "$arch")
         bd_missing="$bd_missing $bd"
@@ -1952,7 +1952,7 @@ module_status_weak() {
     for weak_ko in "$install_tree/"*/weak-updates/*; do
         [[ -e $weak_ko ]] || continue
         [[ -L $weak_ko ]] && installed_ko="$(readlink -f "$weak_ko")" || continue
-        IFS=/ read m v k a < <(IFS=$oifs find_module_from_ko "$weak_ko") || continue
+        IFS=/ read -r m v k a < <(IFS=$oifs find_module_from_ko "$weak_ko") || continue
         kern=${weak_ko#$install_tree/}
         kern=${kern%/weak-updates/*}
         [[ $m = ${1:-*} && $v = ${2:-*} && $k = ${5:-*} && $a = ${4:-*} && $kern = ${3:-*} ]] || continue
@@ -1960,7 +1960,7 @@ module_status_weak() {
     done
     # Check to see that all ko's are present for each module
     for mod in ${!already_found[@]}; do
-        IFS=/ read m v k a kern <<< "$mod"
+        IFS=/ read -r m v k a kern <<< "$mod"
         # ensure each module is weak linked
         for installed_ko in $(find $dkms_tree/$m/$v/$kern/$a/module -type f); do
             [[ ${already_found[$mod]} != *"$installed_ko"* ]] && continue 2
@@ -1981,8 +1981,8 @@ do_status_weak()
     local a
     local kern
     local status
-    while read status mvka; do
-        IFS=/ read m v k a kern <<< "$mvka"
+    while read -r status mvka; do
+        IFS=/ read -r m v k a kern <<< "$mvka"
         echo "$m, $v, $k, $a: installed-weak from $kern"
     done < <(module_status_weak "$@")
 }
@@ -2068,7 +2068,7 @@ module_status() {
     local m
     local v
     ret=1
-    while IFS='/' read m v; do
+    while IFS='/' read -r m v; do
         is_module_broken "$m" "$v" && { echo "broken $m/$v"; continue; }
         is_module_added "$m" "$v" || continue
         ret=0
@@ -2091,8 +2091,8 @@ do_status() {
     # separate deprecation warnings from status output
     tmpfile=$(mktemp_or_die)
     (module_status "$@") >"$tmpfile"
-    while read status mvka; do
-        IFS=/ read m v k a <<< "$mvka"
+    while read -r status mvka; do
+        IFS=/ read -r m v k a <<< "$mvka"
         case $status in
             broken)
                 echo "$m/$v: $status"
@@ -2378,7 +2378,7 @@ run_match()
     prepare_kernel "$kernelver"
 
     # Iterate over the kernel_status and match kernel to the template_kernel
-    while read template_line; do
+    while read -r template_line; do
         template_module=$(echo "$template_line" | awk {'print $1'} | sed 's/,$//')
         template_version=$(echo "$template_line" | awk {'print $2'} | sed 's/,$//')
 
@@ -2417,9 +2417,9 @@ read_arg() {
     local rematch
     rematch='^[^=]*=(.*)$'
     if [[ $2 =~ $rematch ]]; then
-        read "$1" <<< "${BASH_REMATCH[1]}"
+        read -r "$1" <<< "${BASH_REMATCH[1]}"
     else
-        read "$1" <<< "$3"
+        read -r "$1" <<< "$3"
         # There is no way to shift our callers args, so
         # return 1 to indicate they should do it instead.
         return 1
@@ -2533,8 +2533,8 @@ autoinstall() {
 
     # Walk through our list of installed and built modules, and create
     # a list of modules and their latest version.
-    while read status mvka; do
-        IFS='/' read m v k a <<< "$mvka"
+    while read -r status mvka; do
+        IFS='/' read -r m v k a <<< "$mvka"
         # If the module status is broken there is nothing that can be done
         if [[ $status = broken ]]; then
             error "$m/$v is broken! Missing the source directory or the symbolic link pointing to it."\
@@ -2592,7 +2592,7 @@ autoinstall() {
 
         # Step 2: Install modules that have an empty dependency list.
         for modv in "${to_install[@]}"; do
-            IFS=/ read m v <<< "$modv"
+            IFS=/ read -r m v <<< "$modv"
             if [[ -z ${build_depends[$m]} ]]; then
                 is_module_built "$m" "$v" "$kernelver" "$arch" || prepare_kernel_and_signing
                 echo "Autoinstall of module $m/$v for kernel $kernelver ($arch)"
@@ -2638,7 +2638,7 @@ autoinstall() {
     fi
 
     for mv in "${to_install[@]}"; do
-        IFS=/ read m v <<< "$mv"
+        IFS=/ read -r m v <<< "$mv"
         echo "$m/$v autoinstall failed due to missing dependencies: ${build_depends[$m]}."
     done
 
@@ -2667,7 +2667,7 @@ kernel_preinst()
     # run depmod only once after uninstalling all dkms modules
     delayed_depmod=1
 
-    while IFS='/' read m v; do
+    while IFS='/' read -r m v; do
         is_module_built "$m" "$v" "$kernelver" "$arch" || continue
         read_conf_or_die "$kernelver" "$arch" "$dkms_tree/$m/$v/source/dkms.conf"
         [[ $AUTOINSTALL ]] || continue
@@ -2720,7 +2720,7 @@ kernel_prerm()
     # run depmod only once after uninstalling all dkms modules
     delayed_depmod=1
 
-    while IFS='/' read m v; do
+    while IFS='/' read -r m v; do
         is_module_built "$m" "$v" "$kernelver" "$arch" || continue
         echo "dkms: removing module $m/$v for kernel $kernelver ($arch)" >&2
         (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
@@ -2954,7 +2954,7 @@ done
 # Sanity checking
 
 # The <(cmd) idiom does not work if /proc is not mounted
-read line < <(echo "Hello, DKMS!")
+read -r line < <(echo "Hello, DKMS!")
 if [[ $line != "Hello, DKMS!" ]]; then
     warn "dkms will not function properly if /proc is not mounted."
 fi
