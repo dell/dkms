@@ -1469,13 +1469,13 @@ do_install()
             echo "An original module was already stored during a previous install"
         elif ! [[ -L $dkms_tree/$module/kernel-$kernelver-$arch ]]; then
             local original_module
-            local found_orginal
+            local found_original
             local archive_pref1
             local archive_pref2
             local archive_pref3
             local archive_pref4
             original_module=""
-            found_orginal=""
+            found_original=""
             archive_pref1=$(compressed_or_uncompressed "$lib_tree/extra" "$m")
             archive_pref2=$(compressed_or_uncompressed "$lib_tree/updates" "$m")
             archive_pref3=$(compressed_or_uncompressed "$lib_tree${dest_module_location[$count]}" "$m")
