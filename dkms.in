@@ -388,35 +388,35 @@ setup_kernels_arches()
             line=${line#*/}; line=${line#*/};
             # (I would leave out the delimiters in the status output
             #  in the first place.)
-            kernelver[$i]=${line%/*}
-            arch[$i]=${line#*/}
-            i=$(($i + 1))
+            kernelver[i]=${line%/*}
+            arch[i]=${line#*/}
+            i=$((i + 1))
         done < <(module_status_built "$module" "$module_version" | sort -V)
     fi
 
     # Set default kernel version and arch, if none set (but only --all isn't set)
     if [[ $1 != status ]]; then
-        if [[ ! $kernelver && ! $all ]]; then
+        if [[ ${#kernelver[@]} -eq 0 && ! $all ]]; then
             kernelver[0]=$(uname -r)
         fi
-        if [[ ! $arch ]]; then
+        if [[ ${#arch[@]} -eq 0 ]]; then
             case "$running_distribution" in
                 debian* | ubuntu* | arch*)
                     arch[0]=$(uname -m)
                     ;;
                 *)
-                    kernelver_rpm=$(rpm -qf "$install_tree/$kernelver" 2>/dev/null | \
+                    kernelver_rpm=$(rpm -qf "$install_tree/${kernelver[0]}" 2>/dev/null | \
                     grep -v "not owned by any package" | grep kernel | head -n 1)
                     if ! arch[0]=$(rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null); then
                         arch[0]=$(uname -m)
-                        if [[ $arch = x86_64 ]] && grep -q Intel /proc/cpuinfo && ls "$install_tree/$kernelver/build/configs" 2>/dev/null | grep -q "ia32e"; then
+                        if [[ ${arch[0]} = x86_64 ]] && grep -q Intel /proc/cpuinfo && ls "$install_tree/${kernelver[0]}/build/configs" 2>/dev/null | grep -q "ia32e"; then
                             arch[0]="ia32e"
                         fi
                     fi
                     ;;
             esac
         fi
-        if [[ ! $arch ]]; then
+        if [[ ${#arch[@]} -eq 0 ]]; then
             die 12 "Could not determine architecture."
         fi
     fi
@@ -424,15 +424,15 @@ setup_kernels_arches()
     # If only one arch is specified, make it so for all the kernels
     if ((${#arch[@]} == 1 && ${#kernelver[@]} > 1)); then
         while ((${#arch[@]} < ${#kernelver[@]})); do
-            arch[${#arch[@]}]=$arch
+            arch[${#arch[@]}]=${arch[0]}
         done
     fi
 
     # Set global multi_arch
     multi_arch=""
     local i
-    for ((i=0; $i < ${#arch[@]}; i++)); do
-        [[ $arch != ${arch[$i]} ]] && {
+    for ((i=0; i < ${#arch[@]}; i++)); do
+        [[ "${arch[0]}" != "${arch[i]}" ]] && {
             multi_arch="true"
             break
         }
@@ -657,31 +657,31 @@ read_conf()
     done
     for ((index=0; index < array_size; index++)); do
         # Set values
-        built_module_name[$index]=${BUILT_MODULE_NAME[$index]}
-        built_module_location[$index]=${BUILT_MODULE_LOCATION[$index]}
-        dest_module_name[$index]=${DEST_MODULE_NAME[$index]}
-        dest_module_location[$index]=${DEST_MODULE_LOCATION[$index]}
-        case ${STRIP[$index]} in
+        built_module_name[index]=${BUILT_MODULE_NAME[index]}
+        built_module_location[index]=${BUILT_MODULE_LOCATION[index]}
+        dest_module_name[index]=${DEST_MODULE_NAME[index]}
+        dest_module_location[index]=${DEST_MODULE_LOCATION[index]}
+        case ${STRIP[index]} in
             [nN]*)
-                strip[$index]="no"
+                strip[index]="no"
                 ;;
             [yY]*)
-                strip[$index]="yes"
+                strip[index]="yes"
                 ;;
             '')
-                strip[$index]=${strip[0]:-yes}
+                strip[index]=${strip[0]:-yes}
                 ;;
         esac
 
         # If unset, set by defaults
         [[ ! ${built_module_name[$index]} ]] && \
             ((array_size == 1)) && \
-            built_module_name[$index]=$PACKAGE_NAME
+            built_module_name[index]=$PACKAGE_NAME
         [[ ! ${dest_module_name[$index]} ]] && \
-            dest_module_name[$index]=${built_module_name[$index]}
+            dest_module_name[index]=${built_module_name[index]}
         [[ ${built_module_location[$index]} && \
             ${built_module_location[$index]:(-1)} != / ]] && \
-            built_module_location[$index]="${built_module_location[$index]}/"
+            built_module_location[index]="${built_module_location[index]}/"
 
         # FAIL if no built_module_name
         if [[ ! ${built_module_name[$index]} ]]; then
@@ -706,7 +706,7 @@ read_conf()
         esac
 
         # Override location for specific distributions
-        dest_module_location[$index]="$(override_dest_module_location "${dest_module_location[$index]}")"
+        dest_module_location[index]="$(override_dest_module_location "${dest_module_location[index]}")"
 
         # Fail if no DEST_MODULE_LOCATION
         if [[ ! ${DEST_MODULE_LOCATION[$index]} ]]; then
@@ -762,8 +762,8 @@ read_conf()
     count=0
     for ((index=0; index < ${#PATCH[@]}; index++)); do
     if [[ ${PATCH[$index]} && (! ${PATCH_MATCH[$index]} || $1 =~ ${PATCH_MATCH[$index]}) ]]; then
-        patch_array[$count]="${PATCH[$index]}"
-        count=$(($count+1))
+        patch_array[count]="${PATCH[index]}"
+        count=$((count+1))
     fi
     done
 
@@ -839,7 +839,7 @@ compare_module_version()
             echo "="
         fi
         return 0
-    elif [[ ! "$ver1" ]] || [[ ! "$ver2" ]]; then
+    elif [[ ${#ver1[@]} -eq 0 ]] || [[ ${#ver2[@]} -eq 0 ]]; then
         echo "?"
     elif [[ "$(VER "${ver1[0]}")" > "$(VER "${ver2[0]}")" ]]; then
         echo ">"
@@ -872,8 +872,8 @@ check_version_sanity()
         obs=("${3//-/ }")
         my=("${1//-/ }")
         obsolete=0
-        if [[ ${obs} && ${my} ]]; then
-            if [[ $(VER "${obs}") == $(VER "${my}") && ! $force ]]; then
+        if [[ ${#obs[@]} -gt 0 && ${#my[@]} -gt 0 ]]; then
+            if [[ $(VER "${obs[0]}") == $(VER "${my[0]}") && ! $force ]]; then
                 # They get obsoleted possibly in this kernel release
                 if [[ ! ${obs[1]} ]]; then
                     # They were obsoleted in this upstream kernel
@@ -885,7 +885,7 @@ check_version_sanity()
                     # They were obsoleted in this ABI bump of the kernel
                     obsolete=1
                 fi
-            elif [[ $(VER "${my}") > $(VER "${obs}") && ! $force ]]; then
+            elif [[ $(VER "${my[0]}") > $(VER "${obs[0]}") && ! $force ]]; then
                 # They were obsoleted in an earlier kernel release
                 obsolete=1
             fi
@@ -901,7 +901,7 @@ check_version_sanity()
     fi
     set_module_suffix "$1"
     read -ra kernels_module < <(find_module "$lib_tree" "${4}")
-    [[ -z $kernels_module ]] && return 0
+    [[ ${#kernels_module[@]} -eq 0 ]] && return 0
 
     if [[ "$force_version_override" == "true" ]]; then
         # Skip the following version checking code.
@@ -1995,7 +1995,7 @@ module_status_built_extra() (
     [[ -d $dkms_tree/$1/original_module/$3/$4 ]] && echo -n " (Original modules exist)"
     for ((count=0; count < ${#dest_module_name[@]}; count++)); do
         tree_mod=$(compressed_or_uncompressed "$dkms_tree/$1/$2/$3/$4/module" "${dest_module_name[$count]}")
-        if ! [[ -n "$tree_mod" ]]; then
+        if [[ -z "$tree_mod" ]]; then
             echo -n " (Built modules are missing in the kernel modules folder)"
             break
         elif _is_module_installed "$@"; then
@@ -2554,25 +2554,25 @@ autoinstall() {
     for m in "${known_modules[@]}"; do
         v="${latest["$m"]}"
         # If the module is already installed or weak-installed, skip it.
-        if _is_module_installed "$m" "$v" "$kernelver" "$arch"; then
+        if _is_module_installed "$m" "$v" "${kernelver[0]}" "${arch[0]}"; then
             installed_modules[${#installed_modules[@]}]="$m"
             continue
         fi
-        if module_status_weak "$m" "$v" "$kernelver" "$arch" >/dev/null; then
+        if module_status_weak "$m" "$v" "${kernelver[0]}" "${arch[0]}" >/dev/null; then
             installed_modules[${#installed_modules[@]}]="$m"
             continue
         fi
         # If the module does not want to be autoinstalled, skip it.
-        module=$m module_version=$v read_conf_or_die "$kernelver" "$arch" "$dkms_tree/$m/$v/source/dkms.conf"
+        module=$m module_version=$v read_conf_or_die "${kernelver[0]}" "${arch[0]}" "$dkms_tree/$m/$v/source/dkms.conf"
         if [[ ! $AUTOINSTALL ]]; then
             continue
         fi
         # Otherwise, autoinstall the latest version we have hanging around.
         to_install[${#to_install[@]}]="$m/$v"
-        build_depends["$m"]="${BUILD_DEPENDS[@]}"
+        build_depends["$m"]="${BUILD_DEPENDS[*]}"
     done
 
-    [[ $to_install ]] || return 0
+    [[ ${#to_install[@]} -eq 0 ]] && return 0
 
     while true; do
         progress=0
@@ -2594,16 +2594,16 @@ autoinstall() {
         for modv in "${to_install[@]}"; do
             IFS=/ read -r m v <<< "$modv"
             if [[ -z ${build_depends[$m]} ]]; then
-                is_module_built "$m" "$v" "$kernelver" "$arch" || prepare_kernel_and_signing
-                echo "Autoinstall of module $m/$v for kernel $kernelver ($arch)"
-                (module="$m" module_version="$v" kernelver="$kernelver" arch="$arch" install_module)
+                is_module_built "$m" "$v" "${kernelver[0]}" "${arch[0]}" || prepare_kernel_and_signing
+                echo "Autoinstall of module $m/$v for kernel ${kernelver[0]} (${arch[0]})"
+                (module="$m" module_version="$v" kernelver="${kernelver[0]}" arch="${arch[0]}" install_module)
                 status=$?
                 if (( status == 0 )); then
                     installed_modules[${#installed_modules[@]}]="$m"
-                    progress=$(($progress +1))
+                    progress=$((progress +1))
                 elif (( status == 77 )); then
                     skipped_modules[${#skipped_modules[@]}]="$m"
-                    progress=$(($progress +1))
+                    progress=$((progress +1))
                 else
                     failed_modules[${#failed_modules[@]}]="$m($status)"
                 fi
@@ -2626,15 +2626,15 @@ autoinstall() {
     done
 
     if (( ${#installed_modules[@]} > 0 )); then
-        echo "Autoinstall on $kernelver succeeded for module(s) ${installed_modules[@]}."
+        echo "Autoinstall on ${kernelver[0]} succeeded for module(s) ${installed_modules[*]}."
     fi
 
     if (( ${#skipped_modules[@]} > 0 )); then
-        echo "Autoinstall on $kernelver was skipped for module(s) ${skipped_modules[@]}."
+        echo "Autoinstall on ${kernelver[0]} was skipped for module(s) ${skipped_modules[*]}."
     fi
 
     if (( ${#failed_modules[@]} > 0 )); then
-        echo "Autoinstall on $kernelver failed for module(s) ${failed_modules[@]}."
+        echo "Autoinstall on ${kernelver[0]} failed for module(s) ${failed_modules[*]}."
     fi
 
     for mv in "${to_install[@]}"; do
@@ -2668,23 +2668,23 @@ kernel_preinst()
     delayed_depmod=1
 
     while IFS='/' read -r m v; do
-        is_module_built "$m" "$v" "$kernelver" "$arch" || continue
-        read_conf_or_die "$kernelver" "$arch" "$dkms_tree/$m/$v/source/dkms.conf"
+        is_module_built "$m" "$v" "${kernelver[0]}" "${arch[0]}" || continue
+        read_conf_or_die "${kernelver[0]}" "${arch[0]}" "$dkms_tree/$m/$v/source/dkms.conf"
         [[ $AUTOINSTALL ]] || continue
-        echo "dkms: removing module $m/$v for kernel $kernelver ($arch)" >&2
+        echo "dkms: removing module $m/$v for kernel ${kernelver[0]} (${arch[0]})" >&2
         (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
     done < <(list_module_version_combos)
 
-    if [[ -f $dkms_tree/depmod-pending-$kernelver-$arch ]]; then
-        rm -f "$dkms_tree/depmod-pending-$kernelver-$arch"
+    if [[ -f $dkms_tree/depmod-pending-${kernelver[0]}-${arch[0]} ]]; then
+        rm -f "$dkms_tree/depmod-pending-${kernelver[0]}-${arch[0]}"
         invoke_command "do_depmod $1" "Running depmod" '' background
     fi
     delayed_depmod=
 
     # clean leftover empty directories
-    [[ ! -d $install_tree/$kernelver ]] || find "$install_tree/$kernelver" -type d -empty -delete
+    [[ ! -d $install_tree/${kernelver[0]} ]] || find "$install_tree/${kernelver[0]}" -type d -empty -delete
 
-    [[ -z $failed ]] || die 14 "dkms kernel_preinst for kernel $kernelver ($arch) failed for module(s)$failed."
+    [[ -z $failed ]] || die 14 "dkms kernel_preinst for kernel ${kernelver[0]} (${arch[0]}) failed for module(s)$failed."
 }
 
 # A wrapper for 'autoinstall', to be used in combination with 'kernel_prerm'.
@@ -2721,22 +2721,22 @@ kernel_prerm()
     delayed_depmod=1
 
     while IFS='/' read -r m v; do
-        is_module_built "$m" "$v" "$kernelver" "$arch" || continue
-        echo "dkms: removing module $m/$v for kernel $kernelver ($arch)" >&2
+        is_module_built "$m" "$v" "${kernelver[0]}" "${arch[0]}" || continue
+        echo "dkms: removing module $m/$v for kernel ${kernelver[0]} (${arch[0]})" >&2
         (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
         echo ""
     done < <(list_module_version_combos)
 
-    if [[ -f $dkms_tree/depmod-pending-$kernelver-$arch ]]; then
-        rm -f "$dkms_tree/depmod-pending-$kernelver-$arch"
+    if [[ -f $dkms_tree/depmod-pending-${kernelver[0]}-${arch[0]} ]]; then
+        rm -f "$dkms_tree/depmod-pending-${kernelver[0]}-${arch[0]}"
         invoke_command "do_depmod $1" "Running depmod" '' background
     fi
     delayed_depmod=
 
     # clean leftover empty directories
-    [[ ! -d $install_tree/$kernelver ]] || find "$install_tree/$kernelver" -type d -empty -delete
+    [[ ! -d $install_tree/${kernelver[0]} ]] || find "$install_tree/${kernelver[0]}" -type d -empty -delete
 
-    [[ -z $failed ]] || die 14 "dkms kernel_prerm for kernel $kernelver ($arch) failed for module(s)$failed."
+    [[ -z $failed ]] || die 14 "dkms kernel_prerm for kernel ${kernelver[0]} (${arch[0]}) failed for module(s)$failed."
 }
 
 #############################
@@ -2973,13 +2973,13 @@ if (( ${#kernelver[@]} != ${#arch[@]} && \
 fi
 
 # Check that kernel version and all aren't both set simultaneously
-if [[ $kernelver && $all ]]; then
+if [[ ${#kernelver[@]} -gt 0 && $all ]]; then
     die 2 "You cannot specify a kernel version and also specify" \
         "--all on the command line."
 fi
 
 # Check that arch and all aren't both set simultaneously
-if [[ $arch && $all ]]; then
+if [[ ${#arch[@]} -gt 0 && $all ]]; then
     die 3 "You cannot specify an arch and also specify" \
         "--all on the command line."
 fi
