@@ -526,7 +526,9 @@ safe_source() {
     # $@ = environment variables to echo out
     local to_source_file
     to_source_file="$1"; shift
-    declare -a -r export_envs=("$@")
+    # shellcheck disable=SC2206
+    # we intentionally split the string into a multi-element array
+    declare -a -r export_envs=( $@ )
     local -r CR=$(echo -e '\r')
     local tmpfile
     tmpfile=$(mktemp_or_die)
@@ -535,8 +537,8 @@ safe_source() {
     # This is really ugly, but a neat hack
     # Remember, in bash 2.0 and greater all variables are really arrays.
     for _export_env in "${export_envs[@]}"; do
-        for _i in $(eval echo \${!$_export_env[@]}); do
-            eval echo '$_export_env[$_i]=\"${'$_export_env'[$_i]%$CR}\"'
+        for _i in $(eval echo \${!"${_export_env}"[@]}); do
+            eval echo '$_export_env[$_i]=\"${'"${_export_env}"'[$_i]%$CR}\"'
         done
     done
 
@@ -607,7 +609,7 @@ read_conf()
         "/etc/dkms/$module--$1.conf" \
         "/etc/dkms/$module--$1-$2.conf" \
     ; do
-        [[ -e $_conf_file ]] && safe_source "$_conf_file" $dkms_conf_variables
+        [[ -e $_conf_file ]] && safe_source "$_conf_file" "$dkms_conf_variables"
     done
 
     # Source in the directive_array
@@ -1117,7 +1119,7 @@ prepare_mok()
 prepare_signing()
 {
     # Lazy source in signing related configuration
-    read_framework_conf $dkms_framework_signing_variables
+    read_framework_conf "$dkms_framework_signing_variables"
 
     do_signing=0
 
