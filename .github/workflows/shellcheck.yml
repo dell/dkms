@@ -1,0 +1,21 @@
+name: Shellcheck
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          additional_files: '*.in'
+          ignore_names: >-
+            dkms.8.in
+            dkms.service.in
+            dkms_framework.conf.in

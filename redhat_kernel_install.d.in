@@ -3,13 +3,15 @@
 COMMAND=$1
 KERNEL_VERSION=$2
 
+res=0
 case "$COMMAND" in
     add)
-        dkms kernel_postinst --kernelver $KERNEL_VERSION
+        dkms kernel_postinst --kernelver "$KERNEL_VERSION"
         res=$?
         ;;
     remove)
-        dkms kernel_prerm --kernelver $KERNEL_VERSION
+        dkms kernel_prerm --kernelver "$KERNEL_VERSION"
         res=$?
         ;;
 esac
+exit $res

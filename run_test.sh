@@ -80,7 +80,7 @@ TEST_TMPFILES=(
 # Reportedly in some cases the entries in the modinfo output are ordered
 # differently. Fetch whatever we need and sort them.
 modinfo_quad() {
-    modinfo $1 | grep -E "^description:|^filename:|^license:|^version:" | sort
+    modinfo "$1" | grep -E "^description:|^filename:|^license:|^version:" | sort
 }
 
 SIGNING_MESSAGE=""
@@ -101,12 +101,12 @@ dkms_status_grep_dkms_module() {
 clean_dkms_env() {
     local found_module
 
-    for module in ${TEST_MODULES[@]}; do
-        found_module="$(dkms_status_grep_dkms_module ${module})"
+    for module in "${TEST_MODULES[@]}"; do
+        found_module=$(dkms_status_grep_dkms_module "${module}")
         if [[ -n "$found_module" ]] ; then
             local version
             for version in 1.0 2.0 3.0; do
-                test ! -d "/var/lib/dkms/${module}/${version}" || dkms remove ${module}/${version} >/dev/null || true
+                test ! -d "/var/lib/dkms/${module}/${version}" || dkms remove "${module}/${version}" >/dev/null || true
             done
         fi
         rm -rf "/var/lib/dkms/${module}/"
@@ -124,8 +124,8 @@ clean_dkms_env() {
 check_no_dkms_test() {
     local found_module
 
-    for module in ${TEST_MODULES[@]}; do
-        found_module="$(dkms_status_grep_dkms_module ${module})"
+    for module in "${TEST_MODULES[@]}"; do
+        found_module=$(dkms_status_grep_dkms_module "${module}")
         if [[ -n "$found_module" ]] ; then
             echo >&2 "Error: module ${module} is still in DKMS tree"
             exit 1
@@ -154,12 +154,13 @@ check_no_dkms_test() {
 }
 
 cert_serial() {
-    local ver="$(openssl version)"
+    local ver
+    ver=$(openssl version)
     # Some systems in CI test are still using ancient versions of openssl program.
     if [[ "$ver" = "OpenSSL 1.0."* ]] || [[ "$ver" = "OpenSSL 0."* ]]; then
-        openssl x509 -text -inform DER -in "$1" -noout | grep -A 1 'X509v3 Subject Key Identifier' | tail -n 1 | tr 'a-z' 'A-Z' | tr -d ' :'
+        openssl x509 -text -inform DER -in "$1" -noout | grep -A 1 'X509v3 Subject Key Identifier' | tail -n 1 | tr '[:lower:]' '[:upper:]' | tr -d ' :'
     else
-        openssl x509 -serial -inform DER -in "$1" -noout | tr 'a-z' 'A-Z' | sed 's/^SERIAL=//'
+        openssl x509 -serial -inform DER -in "$1" -noout | tr '[:lower:]' '[:upper:]' | sed 's/^SERIAL=//'
     fi
 }
 
@@ -188,27 +189,27 @@ generalize_expected_output() {
     local output_log=$1
 
     # On Red Hat and SUSE based distributions, weak-modules is executed. Drop it from the output, to be more generic
-    sed -i '/^Adding linked weak modules.*$/d' ${output_log}
-    sed -i '/^Removing linked weak modules.*$/d' ${output_log}
+    sed -i '/^Adding linked weak modules.*$/d' "${output_log}"
+    sed -i '/^Removing linked weak modules.*$/d' "${output_log}"
     # Signing related output. Drop it from the output, to be more generic
     if (( NO_SIGNING_TOOL == 0 )); then
-        sed -i '/^EFI variables are not supported on this system/d' ${output_log}
-        sed -i '/^\/sys\/firmware\/efi\/efivars not found, aborting./d' ${output_log}
-        sed -i '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' ${output_log}
-        sed -i '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' ${output_log}
+        sed -i '/^EFI variables are not supported on this system/d' "${output_log}"
+        sed -i '/^\/sys\/firmware\/efi\/efivars not found, aborting./d' "${output_log}"
+        sed -i '/^Certificate or key are missing, generating them using update-secureboot-policy...$/d' "${output_log}"
+        sed -i '/^Certificate or key are missing, generating self signed certificate for MOK...$/d' "${output_log}"
     else
-        sed -i "/^Binary .* not found, modules won't be signed$/d" ${output_log}
+        sed -i "/^Binary .* not found, modules won't be signed$/d" "${output_log}"
         # Uncomment the following line to run this script with --no-signing-tool on platforms where the sign-file tool exists
-        # sed -i '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' ${output_log}
+        # sed -i '/^Signing module \/var\/lib\/dkms\/dkms_test\/1.0\/build\/dkms_test.ko$/d' "${output_log}"
     fi
     # OpenSSL non-critical errors while signing. Remove them to be more generic
-    sed -i '/^At main.c:/d' ${output_log}
-    sed -i '/^- SSL error:/d' ${output_log}
+    sed -i '/^At main.c:/d' "${output_log}"
+    sed -i '/^- SSL error:/d' "${output_log}"
     # Apport related error that can occur in the CI. Drop from the output to be more generic
-    sed -i "/^python3: can't open file '\/usr\/share\/apport\/package-hooks\/dkms_packages.py'\: \[Errno 2\] No such file or directory$/d" ${output_log}
-    sed -i "/^ERROR (dkms apport): /d" ${output_log}
+    sed -i "/^python3: can't open file '\/usr\/share\/apport\/package-hooks\/dkms_packages.py'\: \[Errno 2\] No such file or directory$/d" "${output_log}"
+    sed -i "/^ERROR (dkms apport): /d" "${output_log}"
     # Swap any CC/LD/... flags (if set) with a placeholder message
-    sed -i "s|\(make -j1 KERNELRELEASE=${KERNEL_VER} all\).*|\1 <omitting possibly set CC/LD/... flags>|" ${output_log}
+    sed -i "s|\(make -j1 KERNELRELEASE=${KERNEL_VER} all\).*|\1 <omitting possibly set CC/LD/... flags>|" "${output_log}"
 }
 
 run_with_expected_output() {
@@ -216,32 +217,32 @@ run_with_expected_output() {
 }
 
 run_with_expected_error() {
-    local expected_error_code="$1"
-    local dkms_command="$3"
+    local expected_error_code=$1
+    local dkms_command=$3
     local output_log=test_cmd_output.log
     local expected_output_log=test_cmd_expected_output.log
     local error_code=0
 
     shift
-    cat > ${expected_output_log}
-    stdbuf -o L -e L "$@" > ${output_log} 2>&1 || error_code=$?
+    cat > "${expected_output_log}"
+    stdbuf -o L -e L "$@" > "${output_log}" 2>&1 || error_code=$?
     if [[ "${error_code}" != "${expected_error_code}" ]] ; then
         echo "Error: command '$*' returned status ${error_code} instead of expected ${expected_error_code}"
-        cat ${output_log}
-        rm ${expected_output_log} ${output_log}
+        cat "${output_log}"
+        rm "${expected_output_log}" "${output_log}"
         return 1
     fi
-    generalize_expected_output ${output_log} ${dkms_command}
-    if ! diff -U3 ${expected_output_log} ${output_log} ; then
+    generalize_expected_output "${output_log}" "${dkms_command}"
+    if ! diff -U3 "${expected_output_log}" "${output_log}" ; then
         echo >&2 "Error: unexpected output from: $*"
-        rm ${expected_output_log} ${output_log}
+        rm "${expected_output_log}" "${output_log}"
         return 1
     fi
-    rm ${expected_output_log} ${output_log}
+    rm "${expected_output_log}" "${output_log}"
 }
 
 generalize_make_log() {
-    local output_log="$1"
+    local output_log=$1
 
     sed -r -i '
 # timestamp on line 2
@@ -264,23 +265,23 @@ s/ \[M\] /     /
 /^  BTF     dkms_(.*_)?test.ko$/d
 /Skipping BTF generation for (\/var\/lib\/dkms\/.*\/)?dkms_(.*_)?test.ko due to unavailability of vmlinux$/d
 /^  CLEAN   \.tmp_versions$/d
-' ${output_log}
+' "${output_log}"
 }
 
 check_make_log_content() {
-    local make_log="$1"
+    local make_log=$1
     local output_log=test_cmd_output.log
     local expected_output_log=test_cmd_expected_output.log
 
-    cat > ${expected_output_log}
-    cat "$make_log" > ${output_log}
-    generalize_make_log ${output_log}
-    if ! diff -U3 ${expected_output_log} ${output_log} ; then
+    cat > "${expected_output_log}"
+    cat "$make_log" > "${output_log}"
+    generalize_make_log "${output_log}"
+    if ! diff -U3 "${expected_output_log}" "${output_log}" ; then
         echo >&2 "Error: unexpected make.log difference"
-        rm ${expected_output_log} ${output_log}
+        rm "${expected_output_log}" "${output_log}"
         return 1
     fi
-    rm ${expected_output_log} ${output_log}
+    rm "${expected_output_log}" "${output_log}"
 }
 
 check_module_source_tree_created() {
@@ -305,7 +306,7 @@ remove_module_source_tree() {
                 ;;
         esac
     done
-    echo "Removing source tree $@"
+    echo "Removing source tree $*"
     rm -r "$@"
 }
 
@@ -510,7 +511,7 @@ dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
 echo 'Checking make.log content'
-check_make_log_content /var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/log/make.log << EOF
+check_make_log_content "/var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/log/make.log" << EOF
 DKMS (${DKMS_VERSION}) make.log for dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 <timestamp>
 
@@ -1890,10 +1891,10 @@ if [ "${expected_dest_loc}" != "kernel/extra" ]; then
     # to its original location, but since we are testing with a dkms module
     # (installed to a dynamic location), this may not happen.
     echo 'Moving the restored module back to its correct location (testing artefact)'
-    mkdir -p /lib/modules/${KERNEL_VER}/${expected_dest_loc}
-    mv  /lib/modules/${KERNEL_VER}/kernel/extra/dkms_test.ko${mod_compression_ext} \
-        /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
-    rmdir --ignore-fail-on-non-empty /lib/modules/${KERNEL_VER}/kernel/extra /lib/modules/${KERNEL_VER}/kernel
+    mkdir -p "/lib/modules/${KERNEL_VER}/${expected_dest_loc}"
+    mv  "/lib/modules/${KERNEL_VER}/kernel/extra/dkms_test.ko${mod_compression_ext}" \
+        "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}"
+    rmdir --ignore-fail-on-non-empty "/lib/modules/${KERNEL_VER}/kernel/extra" "/lib/modules/${KERNEL_VER}/kernel"
 fi
 run_status_with_expected_output 'dkms_replace_test' << EOF
 dkms_replace_test/2.0: added
@@ -1945,10 +1946,10 @@ Deleting module dkms_replace_test/2.0 completely from the DKMS tree.
 EOF
 if [ "${expected_dest_loc}" != "kernel/extra" ]; then
     echo 'Moving the restored module back to its correct location (testing artefact)'
-    mkdir -p /lib/modules/${KERNEL_VER}/${expected_dest_loc}
-    mv  /lib/modules/${KERNEL_VER}/kernel/extra/dkms_test.ko${mod_compression_ext} \
-        /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
-    rmdir --ignore-fail-on-non-empty /lib/modules/${KERNEL_VER}/kernel/extra /lib/modules/${KERNEL_VER}/kernel
+    mkdir -p "/lib/modules/${KERNEL_VER}/${expected_dest_loc}"
+    mv  "/lib/modules/${KERNEL_VER}/kernel/extra/dkms_test.ko${mod_compression_ext}" \
+        "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}"
+    rmdir --ignore-fail-on-non-empty "/lib/modules/${KERNEL_VER}/kernel/extra" "/lib/modules/${KERNEL_VER}/kernel"
 fi
 run_status_with_expected_output 'dkms_replace_test' << EOF
 EOF
@@ -2133,7 +2134,7 @@ make: *** [Makefile:7: clean] Error 2
 # exit code: 2"
     CLEANING_LOG_AFTER=$CLEANING_LOG_BEFORE
 fi
-check_make_log_content /var/lib/dkms/dkms_noisy_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/log/make.log << EOF
+check_make_log_content "/var/lib/dkms/dkms_noisy_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/log/make.log" << EOF
 DKMS (${DKMS_VERSION}) make.log for dkms_noisy_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 <timestamp>
 
@@ -2563,10 +2564,10 @@ check_no_dkms_test
 echo '*** Testing malformed/borderline dkms.conf'
 ############################################################################
 
-abspwd=$(readlink -f $(pwd))
+abspwd=$(readlink -f "$(pwd)")
 
 echo 'Testing dkms add of source tree without dkms.conf (expected error)'
-run_with_expected_error 1 dkms add ${abspwd}/test/dkms_conf_test_no_conf << EOF
+run_with_expected_error 1 dkms add "${abspwd}/test/dkms_conf_test_no_conf" << EOF
 
 Error! Arguments <module> and <module-version> are not specified.
 Usage: add <module>/<module-version> or
