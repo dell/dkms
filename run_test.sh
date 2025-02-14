@@ -3756,3 +3756,5 @@ echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 echo '*** All tests successful :)'
+
+# vim: et:ts=4:sw=4

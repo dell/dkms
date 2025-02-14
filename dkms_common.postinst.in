@@ -260,3 +260,5 @@ for KERNEL in $KERNELS; do
         dkms install -m $NAME -v $VERSION -k $KERNEL $ARCH
     fi
 done
+
+# vim: et:ts=4:sw=4
