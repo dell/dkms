@@ -801,15 +801,15 @@ get_module_verinfo(){
     local vals
     vals=
     while read -a vals; do
-    case "${vals[0]}" in
-        version:)
-            ver="${vals[1]}"
-            checksum="${vals[2]}"
-            ;;
-        srcversion:)
-            srcver="${vals[1]}"
-            ;;
-    esac
+        case "${vals[0]}" in
+            version:)
+                ver="${vals[1]}"
+                checksum="${vals[2]}"
+                ;;
+            srcversion:)
+                srcver="${vals[1]}"
+                ;;
+        esac
     done < <(modinfo "$1")
 
     echo -E "${ver}"
@@ -3008,50 +3008,50 @@ if [[ -z $NO_WEAK_MODULES ]]; then
 fi
 
 case "$action" in
-remove | unbuild | uninstall)
-    check_module_args $action
-    module_is_broken_and_die
-    module_is_added_or_die
-    [[ $action = uninstall ]] && check_root || check_rw_dkms_tree
-    ${action}_module
-    ;;
-add | build | install)
-    check_all_is_banned $action # TODO: fix/enable --all
-    [[ $action != add ]] && module_is_broken_and_die
-    [[ $action = install ]] && check_root || check_rw_dkms_tree
-    ${action}_module
-    ;;
-autoinstall)
-    have_one_kernel $action
-    check_root && autoinstall
-    ;;
-match)
-    check_root && have_one_kernel "match" && run_match
-    ;;
-mktarball)
-    check_module_args mktarball
-    module_is_broken_and_die
-    module_is_added_or_die
-    make_tarball
-    ;;
-status)
-    show_status
-    ;;
-ldtarball) # Make sure they're root if we're using --force
-    if [[ $(id -u) != 0 ]] && [[ $force = true ]]; then
-        die 1 "You must be root to use this command with the --force option."
-    fi
-    load_tarball && add_module
-    ;;
-generate_mok)
-    read_framework_conf $dkms_framework_signing_variables
-    prepare_mok
-    ;;
-kernel_preinst | kernel_postinst | kernel_prerm)
-    check_root && have_one_kernel "$action" && "$action"
-    ;;
-*)
-    error "Unknown action specified: \"$action\""
-    show_usage
-    ;;
+    remove | unbuild | uninstall)
+        check_module_args $action
+        module_is_broken_and_die
+        module_is_added_or_die
+        [[ $action = uninstall ]] && check_root || check_rw_dkms_tree
+        ${action}_module
+        ;;
+    add | build | install)
+        check_all_is_banned $action # TODO: fix/enable --all
+        [[ $action != add ]] && module_is_broken_and_die
+        [[ $action = install ]] && check_root || check_rw_dkms_tree
+        ${action}_module
+        ;;
+    autoinstall)
+        have_one_kernel $action
+        check_root && autoinstall
+        ;;
+    match)
+        check_root && have_one_kernel "match" && run_match
+        ;;
+    mktarball)
+        check_module_args mktarball
+        module_is_broken_and_die
+        module_is_added_or_die
+        make_tarball
+        ;;
+    status)
+        show_status
+        ;;
+    ldtarball) # Make sure they're root if we're using --force
+        if [[ $(id -u) != 0 ]] && [[ $force = true ]]; then
+            die 1 "You must be root to use this command with the --force option."
+        fi
+        load_tarball && add_module
+        ;;
+    generate_mok)
+        read_framework_conf $dkms_framework_signing_variables
+        prepare_mok
+        ;;
+    kernel_preinst | kernel_postinst | kernel_prerm)
+        check_root && have_one_kernel "$action" && "$action"
+        ;;
+    *)
+        error "Unknown action specified: \"$action\""
+        show_usage
+        ;;
 esac
