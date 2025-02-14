@@ -3055,3 +3055,5 @@ case "$action" in
         show_usage
         ;;
 esac
+
+# vim: et:ts=4:sw=4
