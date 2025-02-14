@@ -176,6 +176,7 @@ invoke_command()
     if [[ -n "$cmd_output_file" ]]; then
         local t_start
         local t_end
+        # shellcheck disable=SC2129
         echo "" >> "$cmd_output_file"
         echo -e "$cmd_description" >> "$cmd_output_file"
         echo -e "# command: $cmd" >> "$cmd_output_file"
@@ -183,6 +184,7 @@ invoke_command()
         ( eval "$cmd" ) >> "$cmd_output_file" 2>&1
         exitval=$?
         t_end=$SECONDS
+        # shellcheck disable=SC2129
         echo -e "\n# exit code: $exitval" >> "$cmd_output_file"
         echo "# elapsed time: $(date -u -d "0 $t_end sec - $t_start sec" +%T)" >> "$cmd_output_file"
         echo "----------------------------------------------------------------" >> "$cmd_output_file"
@@ -409,6 +411,8 @@ setup_kernels_arches()
                     grep -v "not owned by any package" | grep kernel | head -n 1)
                     if ! arch[0]=$(rpm -q --queryformat "%{ARCH}" "$kernelver_rpm" 2>/dev/null); then
                         arch[0]=$(uname -m)
+                        # shellcheck disable=SC2010
+                        # TODO: replace ls | grep
                         if [[ ${arch[0]} = x86_64 ]] && grep -q Intel /proc/cpuinfo && ls "$install_tree/${kernelver[0]}/build/configs" 2>/dev/null | grep -q "ia32e"; then
                             arch[0]="ia32e"
                         fi
@@ -433,6 +437,7 @@ setup_kernels_arches()
     local i
     for ((i=0; i < ${#arch[@]}; i++)); do
         [[ "${arch[0]}" != "${arch[i]}" ]] && {
+            # shellcheck disable=SC2034
             multi_arch="true"
             break
         }
@@ -474,6 +479,7 @@ distro_version()
     for f in /etc/os-release /usr/lib/os-release; do
         if [[ -e $f ]]; then
             (
+                # shellcheck disable=SC1090
                 . "$f"
                 if [[ "$ID" = "ubuntu" ]]; then
                     # ID_LIKE=debian in ubuntu
@@ -529,14 +535,18 @@ safe_source() {
     # shellcheck disable=SC2206
     # we intentionally split the string into a multi-element array
     declare -a -r export_envs=( $@ )
+    # shellcheck disable=SC2034
+    # false positive
     local -r CR=$(echo -e '\r')
     local tmpfile
     tmpfile=$(mktemp_or_die)
     ( exec >"$tmpfile"
+    # shellcheck disable=SC1090
     . "$to_source_file" >/dev/null
     # This is really ugly, but a neat hack
     # Remember, in bash 2.0 and greater all variables are really arrays.
     for _export_env in "${export_envs[@]}"; do
+        # shellcheck disable=SC1083,SC2294
         for _i in $(eval echo \${!"${_export_env}"[@]}); do
             eval echo '$_export_env[$_i]=\"${'"${_export_env}"'[$_i]%$CR}\"'
         done
@@ -549,6 +559,7 @@ safe_source() {
         echo "$directive_name=\"$directive_value\""
     done
     )
+    # shellcheck disable=SC1090
     . "$tmpfile"
     rm "${tmpfile:?}"
 
@@ -621,15 +632,23 @@ read_conf()
     done
 
     # Set variables
+    # shellcheck disable=SC2153
     clean="$CLEAN"
     package_name="$PACKAGE_NAME"
     package_version="$PACKAGE_VERSION"
+    # shellcheck disable=SC2153
     post_add="$POST_ADD"
+    # shellcheck disable=SC2153
     post_build="$POST_BUILD"
+    # shellcheck disable=SC2153
     post_install="$POST_INSTALL"
+    # shellcheck disable=SC2153
     post_remove="$POST_REMOVE"
+    # shellcheck disable=SC2153
     pre_build="$PRE_BUILD"
+    # shellcheck disable=SC2153
     pre_install="$PRE_INSTALL"
+    # shellcheck disable=SC2153
     obsolete_by="$OBSOLETE_BY"
 
     # Fail if no PACKAGE_NAME
@@ -649,6 +668,7 @@ read_conf()
     local array_size
     local s
     array_size=0
+    # shellcheck disable=SC2153
     for s in ${#BUILT_MODULE_NAME[@]} \
         ${#BUILT_MODULE_LOCATION[@]} \
         ${#DEST_MODULE_NAME[@]} \
@@ -661,6 +681,7 @@ read_conf()
         built_module_location[index]=${BUILT_MODULE_LOCATION[index]}
         dest_module_name[index]=${DEST_MODULE_NAME[index]}
         dest_module_location[index]=${DEST_MODULE_LOCATION[index]}
+        # shellcheck disable=SC2153
         case ${STRIP[index]} in
             [nN]*)
                 strip[index]="no"
@@ -859,10 +880,8 @@ check_version_sanity()
     # $4 = dest_module_name
 
     local lib_tree
-    local res
     local i
     lib_tree="$install_tree/$1"
-    res=
     i=0
     if [[ -n $3 ]]; then
         # Magic split into array syntax saves trivial awk and cut calls.
@@ -1095,7 +1114,7 @@ prepare_mok()
     echo "Public certificate (MOK): $mok_certificate"
 
     # scripts/sign-file.c in kernel source also supports using "pkcs11:..." as private key
-    if [[ $mok_signing_key != "pkcs11:"* ]] && ( [[ ! -f $mok_signing_key || ! -f $mok_certificate ]] ); then
+    if [[ $mok_signing_key != "pkcs11:"* ]] && [[ ! -f $mok_signing_key || ! -f $mok_certificate ]]; then
         echo "Certificate or key are missing, generating self signed certificate for MOK..."
         if ! command -v openssl >/dev/null; then
             echo "openssl not found, can't generate key and certificate."
@@ -1198,12 +1217,15 @@ prepare_and_actual_build()
         "This indicates that it should not be built."
 
     # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
+    # shellcheck disable=SC1083,SC2012
+    # TODO: use find instead of ls
     (($(ls "$source_dir" | wc -l | awk {'print $1'}) < 2)) && die 8 \
         "The directory $source_dir does not appear to have module source located within it."\
         "Build halted."
 
     # Check for missing BUILD_DEPENDS
     bd_missing=
+    # shellcheck disable=SC2153
     for bd in "${BUILD_DEPENDS[@]}"; do
         while read -r status mvka; do
             [[ $status = installed ]] && continue 2
@@ -1332,10 +1354,16 @@ prepare_and_actual_build()
         fi
 
         if [[ $module_compressed_suffix = .gz ]]; then
+            # shellcheck disable=SC2086
+            # splitting is intentional
             gzip $compress_gzip_opts -f "$built_module" || compressed_module=""
         elif [[ $module_compressed_suffix = .xz ]]; then
+            # shellcheck disable=SC2086
+            # splitting is intentional
             xz $compress_xz_opts -f "$built_module" || compressed_module=""
         elif [[ $module_compressed_suffix = .zst ]]; then
+            # shellcheck disable=SC2086
+            # splitting is intentional
             zstd $compress_zstd_opts -f "$built_module" || compressed_module=""
         fi
         if [[ -n $compressed_module ]]; then
@@ -1897,6 +1925,8 @@ remove_module()
     fi
 
     # Get rid of any remnant directories if necessary
+    # shellcheck disable=SC2012
+    # TODO: use find instead
     if (($(ls "$dkms_tree/$module" | wc -w | awk '{print $1}') == 0)); then
         rm -rf "${dkms_tree:?}/$module" 2>/dev/null
     fi
@@ -1951,7 +1981,11 @@ module_status_weak() {
     local -A already_found
     for weak_ko in "$install_tree/"*/weak-updates/*; do
         [[ -e $weak_ko ]] || continue
-        [[ -L $weak_ko ]] && installed_ko="$(readlink -f "$weak_ko")" || continue
+        if [[ -L $weak_ko ]]; then
+            installed_ko="$(readlink -f "$weak_ko")"
+        else
+            continue
+        fi
         IFS=/ read -r m v k a < <(IFS=$oifs find_module_from_ko "$weak_ko") || continue
         kern=${weak_ko#"${install_tree}/"}
         kern=${kern%/weak-updates/*}
@@ -1962,6 +1996,8 @@ module_status_weak() {
     for mod in "${!already_found[@]}"; do
         IFS=/ read -r m v k a kern <<< "$mod"
         # ensure each module is weak linked
+        # shellcheck disable=SC2044
+        # TODO: use find + -exec instead
         for installed_ko in $(find "$dkms_tree/$m/$v/$kern/$a/module" -type f); do
             [[ ${already_found[$mod]} != *"$installed_ko"* ]] && continue 2
         done
@@ -2117,7 +2153,6 @@ do_status() {
 show_status()
 {
     local j
-    local state_array
     if ((${#kernelver[@]} == 0)); then
         do_status "$module" "$module_version" "$kernelver" "$arch"
         do_status_weak "$module" "$module_version" "$kernelver" "$arch"
@@ -2185,6 +2220,7 @@ make_tarball()
         cp -rf "$source_dir/"* "$temp_dir_name/dkms_source_tree"
     fi
 
+    # shellcheck disable=SC1083
     if (( $(echo "$kernel_version_list" | wc -m | awk {'print $1'}) > 200 )); then
         kernel_version_list="manykernels"
     fi
@@ -2379,7 +2415,9 @@ run_match()
 
     # Iterate over the kernel_status and match kernel to the template_kernel
     while read -r template_line; do
+        # shellcheck disable=SC1083
         template_module=$(echo "$template_line" | awk {'print $1'} | sed 's/,$//')
+        # shellcheck disable=SC1083
         template_version=$(echo "$template_line" | awk {'print $2'} | sed 's/,$//')
 
         # Print out a match header
@@ -2401,7 +2439,7 @@ run_match()
 report_build_problem()
 {
     # If apport is on the system, files a build problem
-    if [[ -x /usr/share/apport/apport ]] && which python3 >/dev/null; then
+    if [[ -x /usr/share/apport/apport ]] && command -v python3 >/dev/null; then
         python3 /usr/share/apport/package-hooks/dkms_packages.py -m "$module" -v "$module_version" -k "${kernelver[0]}"
     fi
     die "$@"
@@ -2492,10 +2530,10 @@ add_source_tree() {
         "$source_tree/$module-$module_version")
             return
             ;;
-        "$dkms_tree/$module/$version/source")
+        "$dkms_tree/$module/$module_version/source")
             return
             ;;
-        "$dkms_tree/$module/$version/build")
+        "$dkms_tree/$module/$module_version/build")
             return
             ;;
     esac
@@ -2753,6 +2791,8 @@ umask 022
 unset CC CXX CFLAGS CXXFLAGS LDFLAGS
 
 # Set important variables
+# shellcheck disable=SC2034
+# not used now, might use later
 current_kernel=$(uname -r)
 current_os=$(uname -s)
 running_distribution=$(distro_version) || exit
@@ -2777,6 +2817,7 @@ fi
 rm -f "${tmpfile:?}"
 
 # These can come from the environment or the config file
+# shellcheck disable=SC1091
 [[ ! ${ADDON_MODULES_DIR} && -e /etc/sysconfig/module-init-tools ]] && . /etc/sysconfig/module-init-tools
 addon_modules_dir="${ADDON_MODULES_DIR}"
 
@@ -2822,6 +2863,7 @@ while (($# > 0)); do
     case $1 in
         --module*|-m)
             read_arg _mv "$1" "$2" || shift
+            # shellcheck disable=SC2154
             parse_moduleversion "$_mv"
             ;;
         -v)
@@ -2829,6 +2871,7 @@ while (($# > 0)); do
             ;;
         --kernelver*|-k)
             read_arg _ka "$1" "$2" || shift
+            # shellcheck disable=SC2154
             parse_kernelarch "$_ka"
             ;;
         --templatekernel*)
@@ -2898,6 +2941,7 @@ while (($# > 0)); do
             ;;
         --arch*|-a)
             read_arg _aa "$1" "$2" || shift
+            # shellcheck disable=SC2154
             arch[${#arch[@]}]="$_aa"
             ;;
         --kernelsourcedir*)
@@ -2906,6 +2950,7 @@ while (($# > 0)); do
             ;;
         --directive*)
             read_arg _da "$1" "$2" || shift
+            # shellcheck disable=SC2154
             directive_array[${#directive_array[@]}]="$_da"
             ;;
         --no-depmod)
@@ -3003,7 +3048,9 @@ if [[ -z $NO_WEAK_MODULES ]]; then
         weak_modules_remove='/usr/sbin/weak-modules --no-initramfs --remove-modules'
         ;;
     sles* | suse* | opensuse*)
+        # shellcheck disable=SC2016
         weak_modules_add='/usr/lib/module-init-tools/weak-modules2 --add-kernel-modules ${kernelver}'
+        # shellcheck disable=SC2016
         weak_modules_remove='/usr/lib/module-init-tools/weak-modules2 --remove-kernel-modules ${kernelver}'
         ;;
     *)
@@ -3016,13 +3063,21 @@ case "$action" in
         check_module_args "$action"
         module_is_broken_and_die
         module_is_added_or_die
-        [[ $action = uninstall ]] && check_root || check_rw_dkms_tree
+        if [[ $action = uninstall ]]; then
+            check_root
+        else
+            check_rw_dkms_tree
+        fi
         "${action}_module"
         ;;
     add | build | install)
         check_all_is_banned "$action" # TODO: fix/enable --all
         [[ $action != add ]] && module_is_broken_and_die
-        [[ $action = install ]] && check_root || check_rw_dkms_tree
+        if [[ $action = install ]]; then
+            check_root
+        else
+            check_rw_dkms_tree
+        fi
         "${action}_module"
         ;;
     autoinstall)
