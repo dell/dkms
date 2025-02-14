@@ -462,8 +462,8 @@ do_depmod()
     if [[ -f $install_tree/$1/modules.dep && ! -s $install_tree/$1/modules.dep ]]; then
         # if modules.dep is empty, we just removed the last kernel module from
         # no longer installed kernel $1, so do not leave stale depmod files around
-        rm -fv "$install_tree/$1/"modules.{alias,dep,devname,softdep,symbols,weakdep,*.bin}
-        rmdir --ignore-fail-on-non-empty "$install_tree/$1"
+        rm -fv "${install_tree:?}/$1/"modules.{alias,dep,devname,softdep,symbols,weakdep,*.bin}
+        rmdir --ignore-fail-on-non-empty "${install_tree:?}/$1"
         [[ -d $install_tree/$1 ]] || echo "removed directory $install_tree/$1"
     fi
 }
@@ -550,7 +550,7 @@ safe_source() {
     done
     )
     . "$tmpfile"
-    rm "$tmpfile"
+    rm "${tmpfile:?}"
 
     (( ${#REMAKE_INITRD[@]} )) && deprecated "REMAKE_INITRD ($to_source_file)"
     (( ${#MODULES_CONF[@]} )) && deprecated "MODULES_CONF ($to_source_file)"
@@ -1073,7 +1073,7 @@ prepare_mok()
                     fi
                     # update-secureboot-policy won't create new key if $mok_certificate exists
                     if [[ -f ${mok_certificate} ]]; then
-                        rm -f "${mok_certificate}"
+                        rm -f "${mok_certificate:?}"
                     fi
                     echo "Certificate or key are missing, generating them using update-secureboot-policy..."
                     SHIM_NOTRIGGER=y update-secureboot-policy --new-key &>/dev/null
@@ -1220,7 +1220,7 @@ prepare_and_actual_build()
     fi
 
     # Set up temporary build directory for build
-    rm -rf "$build_dir"
+    rm -rf "${build_dir:?}"
     cp -a "$source_dir/" "$build_dir"
 
     echo "DKMS (@RELEASE_STRING@) make.log for $module/$module_version for kernel $kernelver ($arch)" >> "$build_log"
@@ -1358,7 +1358,7 @@ prepare_and_actual_build()
     mv -f "$build_log" "$base_dir/log/make.log" 2>/dev/null
 
     # Clean the build directory
-    rm -rf "$dkms_tree/$module/$module_version/build"
+    rm -rf "${dkms_tree:?}/$module/$module_version/build"
 }
 
 prepare_kernel_and_signing()
@@ -1526,7 +1526,7 @@ do_install()
     fi
 
     # Create the kernel-<kernelver> symlink to designate this version as active
-    rm -f "$dkms_tree/$module/kernel-$kernelver-$arch" 2>/dev/null
+    rm -f "${dkms_tree:?}/$module/kernel-$kernelver-$arch" 2>/dev/null
     ln -s "$module_version/$kernelver/$arch" "$dkms_tree/$module/kernel-$kernelver-$arch" 2>/dev/null
 
     # Add to kabi-tracking
@@ -1753,7 +1753,7 @@ do_uninstall()
 
             if [[ ${real_dest_module_location} ]]; then
                 echo "Deleting $install_tree/$1${real_dest_module_location}/${dest_module_name[$count]}$module_suffix"
-                rm -f "$install_tree/$1${real_dest_module_location}/${dest_module_name[$count]}$module_uncompressed_suffix"*
+                rm -f "${install_tree:?}/$1${real_dest_module_location}/${dest_module_name[$count]}$module_uncompressed_suffix"*
                 dir_to_remove="${real_dest_module_location#/}"
                 while [[ ${dir_to_remove} != "${dir_to_remove#/}" ]]; do
                     dir_to_remove="${dir_to_remove#/}"
@@ -1778,7 +1778,7 @@ do_uninstall()
                 mv -f "$origmod" "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/" 2>/dev/null
             fi
         done
-        rm -f "$dkms_tree/$module/kernel-$1-$2"
+        rm -f "${dkms_tree:?}/$module/kernel-$1-$2"
     else
         echo "This module version was INACTIVE for this kernel."
     fi
@@ -1796,10 +1796,10 @@ do_uninstall()
     # Delete the original_module if nothing for this kernel is installed anymore
     if [[ $was_active && -d $dkms_tree/$module/original_module/$1/$2 ]]; then
         echo "Removing original module(s) from DKMS tree for kernel $1 ($2)"
-        rm -rf "$dkms_tree/$module/original_module/$1/$2" 2>/dev/null
-        [[ $(find "$dkms_tree/$module/original_module/$1/"* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module/$1"
+        rm -rf "${dkms_tree:?}/$module/original_module/$1/$2" 2>/dev/null
+        [[ $(find "$dkms_tree/$module/original_module/$1/"* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "${dkms_tree:?}/$module/original_module/$1"
     fi
-    [[ $(find "$dkms_tree/$module/original_module/"* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "$dkms_tree/$module/original_module"
+    [[ $(find "$dkms_tree/$module/original_module/"* -maxdepth 0 -type d 2>/dev/null) ]] || rm -rf "${dkms_tree:?}/$module/original_module"
 }
 
 module_is_broken_and_die() {
@@ -1847,9 +1847,9 @@ uninstall_module()
 do_unbuild()
 {
     # Delete or "unbuild" the $kernel_version/$arch_used part of the tree
-    rm -rf "$dkms_tree/$module/$module_version/$1/$2"
-    [[ $(find "$dkms_tree/$module/$module_version/$1/"* -maxdepth 0 -type d 2>/dev/null) ]] || \
-        rm -rf "$dkms_tree/$module/$module_version/$1"
+    rm -rf "${dkms_tree:?}/$module/$module_version/$1/$2"
+    [[ $(find "${dkms_tree:?}/$module/$module_version/$1/"* -maxdepth 0 -type d 2>/dev/null) ]] || \
+        rm -rf "${dkms_tree:?}/$module/$module_version/$1"
 }
 
 # Remove the built module, w/o removing/unregistering it.
@@ -1878,7 +1878,7 @@ remove_module()
             lock_head=$(head -n 1 "$lock_file" 2>/dev/null)
             lock_tail=$(tail -n 1 "$lock_file" 2>/dev/null)
             [[ $lock_head = $module-$module_version && $time_stamp && $lock_tail = "$time_stamp" ]] || continue
-            rm -f "$lock_file"
+            rm -f "${lock_file:?}"
             die 0 "Remove cancelled because --rpm_safe_upgrade scenario detected."
         done
     fi
@@ -1893,12 +1893,12 @@ remove_module()
     # Delete the $module_version part of the tree if no other $module_version/$kernel_version dirs exist
     if ! find "$dkms_tree/$module/$module_version/"* -maxdepth 0 -type d 2>/dev/null | grep -Eqv "(build|tarball|driver_disk|rpm|deb|source)$"; then
         echo "Deleting module $module/$module_version completely from the DKMS tree."
-        rm -rf "$dkms_tree/$module/$module_version"
+        rm -rf "${dkms_tree:?}/$module/$module_version"
     fi
 
     # Get rid of any remnant directories if necessary
     if (($(ls "$dkms_tree/$module" | wc -w | awk '{print $1}') == 0)); then
-        rm -rf "$dkms_tree/$module" 2>/dev/null
+        rm -rf "${dkms_tree:?}/$module" 2>/dev/null
     fi
 }
 
@@ -2109,7 +2109,7 @@ do_status() {
                 ;;
         esac
     done < "$tmpfile"
-    rm "$tmpfile"
+    rm "${tmpfile:?}"
 }
 
 # Show all our status in the format that external callers expect, even
@@ -2135,7 +2135,7 @@ make_tarball()
     read_conf_or_die "$kernelver" "$arch"
 
     local -r temp_dir_name=$(mktemp_or_die -d "$tmp_location/dkms.XXXXXX")
-    make_tarball_rm_temp_dir_name="rm -rf $temp_dir_name"
+    make_tarball_rm_temp_dir_name="rm -rf ${temp_dir_name:?}"
     mkdir -p "$temp_dir_name/dkms_main_tree"
 
     if [[ $source_only ]]; then
@@ -2250,7 +2250,7 @@ load_tarball()
 
     # Untar it into $tmp_location
     local -r temp_dir_name=$(mktemp_or_die -d "$tmp_location/dkms.XXXXXX")
-    load_tarball_rm_temp_dir_name="rm -rf $temp_dir_name"
+    load_tarball_rm_temp_dir_name="rm -rf ${temp_dir_name:?}"
     tar -xaf "$archive_location" -C "$temp_dir_name"
 
     if [[ ! -d $temp_dir_name/dkms_main_tree ]]; then
@@ -2323,7 +2323,7 @@ load_tarball()
             warn "$dkms_dir_location already exists. Skipping..."
         else
             echo "Loading $dkms_dir_location..."
-            rm -rf "$dkms_dir_location"
+            rm -rf "${dkms_dir_location:?}"
             mkdir -p "$dkms_dir_location"
             cp -rf "$directory/"* "$dkms_dir_location/"
         fi
@@ -2484,7 +2484,7 @@ add_source_tree() {
     if [[ $force && -d $source_tree/$module-$module_version ]]; then
         echo >&2
         echo "Forcing install of $module/$module_version"
-        rm -rf "$source_tree/$module-$module_version"
+        rm -rf "${source_tree:?}/$module-$module_version"
     fi
 
     # We are already installed, just return.
@@ -2676,7 +2676,7 @@ kernel_preinst()
     done < <(list_module_version_combos)
 
     if [[ -f $dkms_tree/depmod-pending-${kernelver[0]}-${arch[0]} ]]; then
-        rm -f "$dkms_tree/depmod-pending-${kernelver[0]}-${arch[0]}"
+        rm -f "${dkms_tree:?}/depmod-pending-${kernelver[0]}-${arch[0]}"
         invoke_command "do_depmod $1" "Running depmod" '' background
     fi
     delayed_depmod=
@@ -2728,7 +2728,7 @@ kernel_prerm()
     done < <(list_module_version_combos)
 
     if [[ -f $dkms_tree/depmod-pending-${kernelver[0]}-${arch[0]} ]]; then
-        rm -f "$dkms_tree/depmod-pending-${kernelver[0]}-${arch[0]}"
+        rm -f "${dkms_tree:?}/depmod-pending-${kernelver[0]}-${arch[0]}"
         invoke_command "do_depmod $1" "Running depmod" '' background
     fi
     delayed_depmod=
@@ -2774,7 +2774,7 @@ echo "Hello, DKMS!" > "$tmpfile"
 if [[ "$(cat "$tmpfile")" != "Hello, DKMS!" ]]; then
     warn "dkms will not function properly without some free space in \$TMPDIR ($tmp_location)."
 fi
-rm -f "$tmpfile"
+rm -f "${tmpfile:?}"
 
 # These can come from the environment or the config file
 [[ ! ${ADDON_MODULES_DIR} && -e /etc/sysconfig/module-init-tools ]] && . /etc/sysconfig/module-init-tools
