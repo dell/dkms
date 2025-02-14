@@ -1509,6 +1509,7 @@ do_install()
         # Copy module to its location
         echo "Installing $install_tree/$kernelver${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
         mkdir -p $install_tree/$kernelver${dest_module_location[$count]}
+        local symlink=
         [[ $symlink_modules ]] && symlink="-s"
         local toinstall
         toinstall=$(compressed_or_uncompressed "$base_dir/module" "$m")
@@ -2883,7 +2884,7 @@ while (($# > 0)); do
             read_arg install_tree "$1" "$2" || shift
             ;;
         --symlink-modules)
-            symlink_module="true"
+            symlink_modules="true"
             ;;
         --config*)
             read_arg kernel_config "$1" "$2" || shift
