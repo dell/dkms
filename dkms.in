@@ -1351,7 +1351,6 @@ prepare_and_actual_build()
             "Make sure the name of the generated module is correct and at the root of the" \
             "build directory, or consult $build_log for more information."
     done
-    cd - >/dev/null || exit 15
 
     # Build success, so create DKMS structure for a built module
     mkdir -p "$base_dir/log"
@@ -1412,7 +1411,6 @@ prepare_and_actual_build()
     run_build_script post_build "$post_build" "$build_log"
 
     # Run the clean commands
-    cd "$dkms_tree/$module/$module_version/build" || exit 15
     invoke_command "$clean" "Cleaning build area" "$build_log" background
 
     cd - >/dev/null || exit 15
