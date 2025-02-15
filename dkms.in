@@ -1334,7 +1334,6 @@ prepare_and_actual_build()
     # Run the pre_build script
     run_build_script pre_build "$pre_build" "$build_log"
 
-    invoke_command "$clean" "Cleaning build area" "$build_log" background
     local the_make_command
     the_make_command="${make_command/#make/make -j$parallel_jobs KERNELRELEASE=$kernelver}"
 
