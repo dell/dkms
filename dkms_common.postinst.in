@@ -234,16 +234,15 @@ for KERNEL in $KERNELS; do
         if _check_kernel_dir "$KERNEL"; then
             echo "Building initial module $NAME/$VERSION for $KERNEL"
             set +e
-            dkms build -m "$NAME" -v "$VERSION" -k "$KERNEL" ${ARCH:+-a "$ARCH"} > /dev/null
+            dkms build -m "$NAME" -v "$VERSION" -k "$KERNEL" ${ARCH:+-a "$ARCH"}
             case $? in
             77)
+                # skipped due to BUILD_EXCLUSIVE
                 set -e
-                echo "Skipped."
                 continue
                 ;;
             0)
                 set -e
-                echo "Done."
                 ;;
             *)
                 exit $?
