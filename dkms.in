@@ -124,7 +124,7 @@ _get_kernel_dir() {
 
 _check_kernel_dir() {
     DIR=$(_get_kernel_dir "$1")
-    test -e "$DIR/include"
+    [[ -e "$DIR/include" ]]
     return $?
 }
 
@@ -197,7 +197,7 @@ invoke_command()
         exitval=$?
     fi
 
-    if [ -n "$progresspid" ]; then
+    if [[ $progresspid ]]; then
         kill -9 "$progresspid" >/dev/null 2>&1
         wait "$progresspid" 2>/dev/null
     fi
@@ -1448,7 +1448,7 @@ do_build()
 
     # Save a copy of the new module
     mkdir -p "$tmp_base_dir/module"
-    if [ -f "$build_dir/Module.symvers" ] ; then
+    if [[ -f "$build_dir/Module.symvers" ]] ; then
         cp -f "$build_dir/Module.symvers" "$tmp_base_dir/module/Module.symvers"
     fi
     for ((count=0; count < num_modules; count++)); do
@@ -1789,7 +1789,7 @@ is_module_built() {
     for m in "${dest_module_name[@]}"; do
         local t
         t=$(compressed_or_uncompressed "$d/module" "$m")
-        test -n "$t" || return 1
+        [[ $t ]] || return 1
     done
 }
 
