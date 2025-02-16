@@ -91,7 +91,7 @@ modinfo_quad() {
 
 SIGNING_MESSAGE=""
 declare -i NO_SIGNING_TOOL
-if [ "$#" = 1 ] && [ "$1" = "--no-signing-tool" ]; then
+if [[ $# = 1 ]] && [[ $1 = "--no-signing-tool" ]]; then
     echo 'Ignore signing tool errors'
     NO_SIGNING_TOOL=1
 else
@@ -112,7 +112,7 @@ clean_dkms_env() {
         if [[ -n "$found_module" ]] ; then
             local version
             for version in 1.0 2.0 3.0; do
-                test ! -d "/var/lib/dkms/${module}/${version}" || dkms remove "${module}/${version}" >/dev/null || true
+                [[ ! -d "/var/lib/dkms/${module}/${version}" ]] || dkms remove "${module}/${version}" >/dev/null || true
             done
         fi
         rm -rf "/var/lib/dkms/${module}/"
@@ -327,7 +327,7 @@ kmod_broken_hashalgo() {
 
 mod_compression_ext=
 kernel_config="/lib/modules/${KERNEL_VER}/build/.config"
-if [ -f "${kernel_config}" ]; then
+if [[ -f $kernel_config ]]; then
     if grep -q "^CONFIG_MODULE_COMPRESS_NONE=y" "${kernel_config}" ; then
         mod_compression_ext=
     elif grep -q "^CONFIG_MODULE_COMPRESS_GZIP=y" "${kernel_config}" ; then
@@ -390,13 +390,13 @@ echo "Expected extension: ${mod_compression_ext:-(none)}"
 for sign_file in $distro_sign_file_candidates \
     "/lib/modules/${KERNEL_VER}/build/scripts/sign-file"
 do
-    test ! -x "${sign_file}" || break
+    [[ ! -x $sign_file ]] || break
 done
 
 SIGNING_PROLOGUE_command="Sign command: ${sign_file}"
 SIGNING_PROLOGUE_key="Signing key: ${distro_modsigkey}"
 SIGNING_PROLOGUE_cert="Public certificate (MOK): ${distro_modsigcert}"
-if [ "${sign_file}" = "/usr/bin/kmodsign" ]; then
+if [[ $sign_file = "/usr/bin/kmodsign" ]]; then
     SIGNING_PROLOGUE_key="Signing key: /var/lib/shim-signed/mok/MOK.priv"
     SIGNING_PROLOGUE_cert="Public certificate (MOK): /var/lib/shim-signed/mok/MOK.der"
 fi
@@ -2065,7 +2065,7 @@ EOF
 echo 'Building and installing the noisy test module'
 set_signing_message "dkms_noisy_test" "1.0"
 SIGNING_MESSAGE_noisy="$SIGNING_MESSAGE"
-if [ -d "/lib/modules/${UNAME_R}/build" ]; then
+if [[ -d "/lib/modules/${UNAME_R}/build" ]]; then
     CLEANING_MESSAGE_noisy="Cleaning build area... done."
 else
     CLEANING_MESSAGE_noisy="Cleaning build area...(bad exit status: 2)
@@ -2102,7 +2102,7 @@ dkms_noisy_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 echo 'Checking make.log content'
-if [ -d "/lib/modules/${UNAME_R}/build" ]; then
+if [[ -d "/lib/modules/${UNAME_R}/build" ]]; then
     CLEANING_LOG_noisy="# command: make clean
 make -C /lib/modules/${UNAME_R}/build M=/var/lib/dkms/dkms_noisy_test/1.0/build clean
   CLEAN   Module.symvers
@@ -3520,16 +3520,16 @@ osrelease_cleanup() {
 }
 
 for f in /etc/os-release /usr/lib/os-release; do
-    if [ -e "$f" ]; then
+    if [[ -e "$f" ]]; then
         cp --preserve=all -f "$f" _os-release
         break
     fi
 done
-[ -f _os-release ] || { echo >&2 "Error: file os-release not found"; exit 1; }
+[[ -f _os-release ]] || { echo >&2 "Error: file os-release not found"; exit 1; }
 trap osrelease_cleanup EXIT
 
 mv_osrelease() {
-    if [ -f "$1" ]; then
+    if [[ -f "$1" ]]; then
        mv "$1" "$2" || { echo >&2 "Error: could not move os-release $1"; exit 1; }
     fi
 }
