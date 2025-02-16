@@ -2549,6 +2549,7 @@ dkms.conf: Error! 'BUILT_MODULE_NAME' directive ends in '.o' or '.ko' in record 
 dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified for record #1.
 dkms.conf: Error! Directive 'DEST_MODULE_LOCATION' does not begin with
 '/kernel', '/updates', or '/extra' in record #1.
+dkms.conf: Error! Unsupported AUTOINSTALL value 'maybe'
 
 Error! Bad conf file.
 File: ${abspwd}/test/dkms_conf_test_invalid/dkms.conf does not represent a valid dkms.conf file.
