@@ -807,6 +807,21 @@ read_conf()
     # Set clean
     [[ $clean ]] || clean="make clean"
 
+    # Check for allowed AUTOINSTALL values: "yes", "no", ""
+    case "$AUTOINSTALL" in
+        "")
+            ;;
+        [Yy][Ee][Ss])
+            ;;
+        [Nn][Oo])
+            AUTOINSTALL=""
+            ;;
+        *)
+            echo "dkms.conf: Error! Unsupported AUTOINSTALL value '$AUTOINSTALL'" >&2
+            return_value=1
+            ;;
+    esac
+
     ((return_value == 0)) && last_mvka="$module/$module_version/$1/$2" && last_mvka_conf="$(readlink -f "$read_conf_file")"
     return $return_value
 }
