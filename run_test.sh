@@ -662,9 +662,9 @@ fi
 
 echo 'Installing the test module by version (combining add, build, install)'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 
+${SIGNING_PROLOGUE}
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -878,9 +878,9 @@ EOF
 
     echo 'Installing the test module (combining add, build, install)'
     run_with_expected_output dkms install -k "${KERNEL_VER}" test/dkms_test-1.0 << EOF
-${SIGNING_PROLOGUE_tmp_key_cert}
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 
+${SIGNING_PROLOGUE_tmp_key_cert}
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
 Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
@@ -1012,9 +1012,9 @@ EOF
 
 echo 'Building the test module by config file (combining add, build)'
 run_with_expected_output dkms build -k "${KERNEL_VER}" test/dkms_test-1.0/dkms.conf << EOF
-${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 
+${SIGNING_PROLOGUE}
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
 EOF
@@ -2573,10 +2573,10 @@ EOF
 
 echo 'Testing add/build/install of a test module building zero kernel modules'
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_conf_test -v 1.0 << EOF
-${SIGNING_PROLOGUE}
 dkms.conf: Warning! Zero modules specified.
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
 
+${SIGNING_PROLOGUE}
 Building module(s)... done.
 Cleaning build area... done.
 Running depmod... done.
@@ -2609,7 +2609,6 @@ EOF
 
 echo 'Building test module without source (expected error)'
 run_with_expected_error 8 dkms build -k "${KERNEL_VER}" -m dkms_conf_test -v 1.0 << EOF
-${SIGNING_PROLOGUE}
 
 Error! The directory /var/lib/dkms/dkms_conf_test/1.0/source does not appear to have module source located within it.
 Build halted.
@@ -3231,7 +3230,6 @@ EOF
 # Should this really fail?
 echo '(Not) building the build-exclusive test module'
 run_with_expected_error 77 dkms build -k "${KERNEL_VER}" -m dkms_build_exclusive_test -v 1.0 << EOF
-${SIGNING_PROLOGUE}
 Warning: The /var/lib/dkms/dkms_build_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf
 for module dkms_build_exclusive_test/1.0 includes a BUILD_EXCLUSIVE directive
 which does not match this kernel/arch/config.
@@ -3614,9 +3612,9 @@ rm -rf /var/lib/dkms/dkms_test/
 echo 'Adding and building the test module by directory'
 set_signing_message "dkms_test" "1.0"
 run_with_expected_output dkms build test/dkms_test-1.0 -k "${KERNEL_VER}" << EOF
-${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
 
+${SIGNING_PROLOGUE}
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
 EOF
@@ -3624,9 +3622,9 @@ EOF
 echo 'Adding and building the multiver test module 1.0 by directory'
 set_signing_message "dkms_multiver_test" "1.0"
 run_with_expected_output dkms build test/dkms_multiver_test/1.0 -k "${KERNEL_VER}" << EOF
-${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_multiver_test/1.0/source -> /usr/src/dkms_multiver_test-1.0
 
+${SIGNING_PROLOGUE}
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
 EOF
@@ -3637,9 +3635,9 @@ rm /var/lib/dkms/dkms_multiver_test/1.0/source
 echo 'Adding and building the multiver test module 2.0 by directory'
 set_signing_message "dkms_multiver_test" "2.0"
 run_with_expected_output dkms build test/dkms_multiver_test/2.0 -k "${KERNEL_VER}" << EOF
-${SIGNING_PROLOGUE}
 Creating symlink /var/lib/dkms/dkms_multiver_test/2.0/source -> /usr/src/dkms_multiver_test-2.0
 
+${SIGNING_PROLOGUE}
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
 EOF

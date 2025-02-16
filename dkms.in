@@ -1211,7 +1211,7 @@ prepare_signing()
 }
 
 # Build a module that has been registered with DKMS.
-prepare_and_actual_build()
+do_build()
 {
     # If the module has not been added, try to add it.
     if ! is_module_added "$module" "$module_version" ; then
@@ -1250,6 +1250,8 @@ prepare_and_actual_build()
     (($(ls "$source_dir" | wc -l | awk {'print $1'}) < 2)) && die 8 \
         "The directory $source_dir does not appear to have module source located within it."\
         "Build halted."
+
+    prepare_kernel_and_signing
 
     if [[ -f $kernel_source_dir/.kernelvariables ]]; then
         CC=$(echo -e "show-%:\n\t@echo \$(\$*)\ninclude $kernel_source_dir/.kernelvariables" | make -f - show-CC)
@@ -1431,12 +1433,6 @@ prepare_kernel_and_signing()
     prepare_signing
     prepared_kernel="$kernelver/$arch"
     echo ""
-}
-
-do_build()
-{
-    prepare_kernel_and_signing
-    prepare_and_actual_build
 }
 
 # Force the installation of a module if this is listed
