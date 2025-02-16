@@ -1251,6 +1251,46 @@ prepare_and_actual_build()
         "The directory $source_dir does not appear to have module source located within it."\
         "Build halted."
 
+    if [[ -f $kernel_source_dir/.kernelvariables ]]; then
+        CC=$(echo -e "show-%:\n\t@echo \$(\$*)\ninclude $kernel_source_dir/.kernelvariables" | make -f - show-CC)
+        export CC
+    else
+        unset CC
+    fi
+
+    if [[ -e "${kernel_config}" ]]; then
+        local cc
+        cc=$(sed -n 's|^CONFIG_CC_VERSION_TEXT="\([^ ]*\) .*"|\1|p' "${kernel_config}")
+        if command -v "$cc" >/dev/null; then
+            CC="$cc"
+            KERNEL_CC="$cc"
+            export CC
+            export KERNEL_CC
+        fi
+
+        if grep -q 'CONFIG_CC_IS_CLANG=y' "${kernel_config}"; then
+            local cc
+            cc=clang
+            if command -v "$cc" >/dev/null; then
+                CC="$cc"
+                KERNEL_CC="$cc"
+                export CC
+                export KERNEL_CC
+            fi
+        fi
+
+        if grep -q 'CONFIG_LD_IS_LLD=y' "${kernel_config}"; then
+            local ld
+            ld=ld.lld
+            if command -v "$ld" >/dev/null; then
+                LD="$ld"
+                KERNEL_LD="$ld"
+                export LD
+                export KERNEL_LD
+            fi
+        fi
+    fi
+
     # Check for missing BUILD_DEPENDS
     bd_missing=
     # shellcheck disable=SC2153
@@ -1292,46 +1332,6 @@ prepare_and_actual_build()
             report_build_problem 6 "Application of patch $p failed." \
             "Consult $build_log for more information."
     done
-
-    if [[ -f $kernel_source_dir/.kernelvariables ]]; then
-        CC=$(echo -e "show-%:\n\t@echo \$(\$*)\ninclude $kernel_source_dir/.kernelvariables" | make -f - show-CC)
-        export CC
-    else
-        unset CC
-    fi
-
-    if [[ -e "${kernel_config}" ]]; then
-        local cc
-        cc=$(sed -n 's|^CONFIG_CC_VERSION_TEXT="\([^ ]*\) .*"|\1|p' "${kernel_config}")
-        if command -v "$cc" >/dev/null; then
-            CC="$cc"
-            KERNEL_CC="$cc"
-            export CC
-            export KERNEL_CC
-        fi
-
-        if grep -q 'CONFIG_CC_IS_CLANG=y' "${kernel_config}"; then
-            local cc
-            cc=clang
-            if command -v "$cc" >/dev/null; then
-                CC="$cc"
-                KERNEL_CC="$cc"
-                export CC
-                export KERNEL_CC
-            fi
-        fi
-
-        if grep -q 'CONFIG_LD_IS_LLD=y' "${kernel_config}"; then
-            local ld
-            ld=ld.lld
-            if command -v "$ld" >/dev/null; then
-                LD="$ld"
-                KERNEL_LD="$ld"
-                export LD
-                export KERNEL_LD
-            fi
-        fi
-    fi
 
     # Run the pre_build script
     run_build_script pre_build "$pre_build" "$build_log"
