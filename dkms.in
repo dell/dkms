@@ -134,7 +134,7 @@ on_exit()
     local j
     j="$(jobs -p)"
 
-    [[ -n "$j" ]] && kill "$j" 2>/dev/null
+    [[ $j ]] && kill "$j" 2>/dev/null
 
     [[ $make_tarball_rm_temp_dir_name ]] && eval "$make_tarball_rm_temp_dir_name"
     [[ $load_tarball_rm_temp_dir_name ]] && eval "$load_tarball_rm_temp_dir_name"
@@ -174,7 +174,7 @@ invoke_command()
         progresspid=$!
     fi
 
-    if [[ -n "$cmd_output_file" ]]; then
+    if [[ $cmd_output_file ]]; then
         local t_start
         local t_end
         # shellcheck disable=SC2129
@@ -955,7 +955,7 @@ check_version_sanity()
     local i
     lib_tree="$install_tree/$1"
     i=0
-    if [[ -n $3 ]]; then
+    if [[ $3 ]]; then
         # Magic split into array syntax saves trivial awk and cut calls.
         local -a obs
         local -a my
@@ -1490,7 +1490,7 @@ do_build()
             # splitting is intentional
             zstd $compress_zstd_opts -f "$built_module" || compressed_module=""
         fi
-        if [[ -n $compressed_module ]]; then
+        if [[ $compressed_module ]]; then
             cp -f "$compressed_module" "$tmp_base_dir/module/${dest_module_name[$count]}$module_suffix"
         else
             cp -f "$built_module" "$tmp_base_dir/module/${dest_module_name[$count]}$module_uncompressed_suffix"
@@ -1891,7 +1891,7 @@ find_actual_dest_module_location()
 
     for l in $locations; do
         installed=$(compressed_or_uncompressed "${install_tree}/${kernelver}${l}" "${dest_module_name[${count}]}")
-        if [[ -n "${installed}" ]] && compare_module_version "${dkms_owned}" "${installed}" &>/dev/null; then
+        if [[ $installed ]] && compare_module_version "${dkms_owned}" "${installed}" &>/dev/null; then
             echo "${l}"
             return 0
         fi
@@ -1978,7 +1978,7 @@ do_uninstall()
             fi
             local origmod
             origmod=$(compressed_or_uncompressed "$original_module_backup_dir" "$m")
-            if [[ -n $origmod ]]; then
+            if [[ $origmod ]]; then
                 # Module was archived by older dkms versions without creating .origin
                 echo "Restoring archived original module"
                 mkdir -p "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
@@ -2145,7 +2145,7 @@ find_module_from_ko()
 module_status_weak() {
     # $1 = module, $2 = module version, $3 = kernel version weak installed to,
     # $4 = kernel arch, $5 = kernel version built for
-    [[ -n $NO_WEAK_MODULES ]] || return 1
+    [[ $NO_WEAK_MODULES ]] || return 1
     [[ $weak_modules_add ]] && [[ $weak_modules_remove ]] || return 1
     local m
     local v
