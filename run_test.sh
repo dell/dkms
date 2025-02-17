@@ -109,7 +109,7 @@ clean_dkms_env() {
 
     for module in "${TEST_MODULES[@]}"; do
         found_module=$(dkms_status_grep_dkms_module "${module}")
-        if [[ -n "$found_module" ]] ; then
+        if [[ $found_module ]] ; then
             local version
             for version in 1.0 2.0 3.0; do
                 [[ ! -d "/var/lib/dkms/${module}/${version}" ]] || dkms remove "${module}/${version}" >/dev/null || true
@@ -132,7 +132,7 @@ check_no_dkms_test() {
 
     for module in "${TEST_MODULES[@]}"; do
         found_module=$(dkms_status_grep_dkms_module "${module}")
-        if [[ -n "$found_module" ]] ; then
+        if [[ $found_module ]] ; then
             echo >&2 "Error: module ${module} is still in DKMS tree"
             exit 1
         fi
