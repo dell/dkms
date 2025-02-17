@@ -113,7 +113,7 @@ readonly mv_re='^([^/]*)/(.*)$'
 
 # Areas that will vary between Linux and other OS's
 _get_kernel_dir() {
-    if [[ -z $ksourcedir_fromcli ]]; then
+    if [[ ! $ksourcedir_fromcli ]]; then
         KVER=$1
         DIR="$install_tree/$KVER/build"
         echo "$DIR"
@@ -189,7 +189,7 @@ invoke_command()
         echo -e "\n# exit code: $exitval" >> "$cmd_output_file"
         echo "# elapsed time: $(date -u -d "0 $t_end sec - $t_start sec" +%T)" >> "$cmd_output_file"
         echo "----------------------------------------------------------------" >> "$cmd_output_file"
-    elif [[ -z "$cmd_output_file" && $cmd_mode == background && ! $verbose ]]; then
+    elif [[ ! $cmd_output_file && $cmd_mode = background && ! $verbose ]]; then
         ( eval "$cmd" ) >/dev/null 2>&1
         exitval=$?
     else
@@ -347,11 +347,11 @@ set_module_suffix()
 
 set_kernel_source_dir_and_kconfig()
 {
-    if [[ -z "${ksourcedir_fromcli}" ]]; then
+    if [[ ! $ksourcedir_fromcli ]]; then
         # $1 = the kernel to base the directory on
         kernel_source_dir="$(_get_kernel_dir "$1")"
     fi
-    if [[ -z "${kconfig_fromcli}" ]]; then
+    if [[ ! $kconfig_fromcli ]]; then
         if [[ -e "${kernel_source_dir}/include/config/auto.conf" ]]; then
             kernel_config="${kernel_source_dir}/include/config/auto.conf"
         else
@@ -1162,7 +1162,7 @@ prepare_kernel()
 
 prepare_mok()
 {
-    if [[ -z "${mok_signing_key}" ]]; then
+    if [[ ! $mok_signing_key ]]; then
         # No custom key specified, use the default key created by update-secureboot-policy for Ubuntu
         # Debian's update-secureboot-policy has no --new-key option
         case "$running_distribution" in
@@ -1190,14 +1190,14 @@ prepare_mok()
                 mok_certificate=${MODULES_SIGN_CERT}
 
                 # If still empty, attempt to read the signing configuration set for portage.
-                if [[ -z "${mok_signing_key}" && -f /etc/portage/make.conf ]]; then
+                if [[ ! $mok_signing_key && -f /etc/portage/make.conf ]]; then
                     mok_signing_key=$(grep "^MODULES_SIGN_KEY=" /etc/portage/make.conf | cut -f2 -d= | sed 's/"//g')
                 fi
-                if [[ -z "${mok_certificate}" && -f /etc/portage/make.conf ]]; then
+                if [[ ! $mok_certificate && -f /etc/portage/make.conf ]]; then
                     mok_certificate=$(grep "^MODULES_SIGN_CERT=" /etc/portage/make.conf | cut -f2 -d= | sed 's/"//g')
                 fi
 
-                if [[ -z "${mok_signing_key}" && -f ${kernel_config} ]]; then
+                if [[ ! $mok_signing_key && -f ${kernel_config} ]]; then
                     mok_signing_key=$(grep "^CONFIG_MODULE_SIG_KEY=" "${kernel_config}" | cut -f2 -d= | sed 's/"//g')
                     # Kernel module signing facility requires PEM files containing both
                     # the key and the certificate, so in this case both will be the same.
@@ -1207,12 +1207,12 @@ prepare_mok()
         esac
     fi
 
-    if [[ ! ${mok_signing_key} ]]; then
+    if [[ ! $mok_signing_key ]]; then
         mok_signing_key="/var/lib/dkms/mok.key"
     fi
     echo "Signing key: $mok_signing_key"
 
-    if [[ ! ${mok_certificate} ]]; then
+    if [[ ! $mok_certificate ]]; then
         mok_certificate="/var/lib/dkms/mok.pub"
     fi
     echo "Public certificate (MOK): $mok_certificate"
@@ -1710,7 +1710,7 @@ do_install()
     ln -s "$module_version/$kernelver/$arch" "$active_link"
 
     # Add to kabi-tracking
-    if [[ -z $NO_WEAK_MODULES ]]; then
+    if [[ ! $NO_WEAK_MODULES ]]; then
         if [[ ${weak_modules_add} ]]; then
             echo "Adding linked weak modules..."
             list_each_installed_module "$module" "$kernelver" "$arch" | ${weak_modules_add}
@@ -1923,7 +1923,7 @@ do_uninstall()
         was_active="true"
         echo "Before uninstall, this module version was ACTIVE on this kernel."
         # remove kabi-tracking if last instance removed
-        if [[ -z $NO_WEAK_MODULES ]]; then
+        if [[ ! $NO_WEAK_MODULES ]]; then
             if [[ ${weak_modules_remove} ]] && (module_status_built "$module" "$module_version" | grep -q "installed"); then
                 echo "Removing linked weak modules..."
                 list_each_installed_module "$module" "$1" "$2" | ${weak_modules_remove}
@@ -2218,7 +2218,7 @@ module_status_built_extra() (
     [[ -d $dkms_tree/$1/original_module/$3/$4 ]] && echo -n " (Original modules exist)"
     for ((count=0; count < num_modules; count++)); do
         tree_mod=$(compressed_or_uncompressed "$dkms_tree/$1/$2/$3/$4/module" "${dest_module_name[$count]}")
-        if [[ -z "$tree_mod" ]]; then
+        if [[ ! $tree_mod ]]; then
             echo -n " (Built modules are missing in the kernel modules folder)"
             break
         elif _is_module_installed "$@"; then
@@ -2763,7 +2763,7 @@ autoinstall() {
                 "Manual intervention is required!"
             continue
         fi
-        if [[ -z ${latest[$m]} ]]; then
+        if [[ ! ${latest[$m]} ]]; then
             known_modules[${#known_modules[@]}]="$m"
             latest[$m]="$v"
         elif [[ ("$(VER "$v")" > "$(VER "${latest["$m"]}")") ]]; then
@@ -2815,7 +2815,7 @@ autoinstall() {
         # Step 2: Install modules that have an empty dependency list.
         for modv in "${to_install[@]}"; do
             IFS=/ read -r m v <<< "$modv"
-            if [[ -z ${build_depends[$m]} ]]; then
+            if [[ ! ${build_depends[$m]} ]]; then
                 is_module_built "$m" "$v" "${kernelver[0]}" "${arch[0]}" || prepare_kernel_and_signing
                 echo "Autoinstall of module $m/$v for kernel ${kernelver[0]} (${arch[0]})"
                 (module="$m" module_version="$v" kernelver="${kernelver[0]}" arch="${arch[0]}" install_module)
@@ -2906,7 +2906,7 @@ kernel_preinst()
     # clean leftover empty directories
     [[ ! -d $install_tree/${kernelver[0]} ]] || find "$install_tree/${kernelver[0]}" -type d -empty -delete
 
-    [[ -z $failed ]] || die 14 "dkms kernel_preinst for kernel ${kernelver[0]} (${arch[0]}) failed for module(s)$failed."
+    [[ ! $failed ]] || die 14 "dkms kernel_preinst for kernel ${kernelver[0]} (${arch[0]}) failed for module(s)$failed."
 }
 
 # A wrapper for 'autoinstall', to be used in combination with 'kernel_prerm'.
@@ -2959,7 +2959,7 @@ kernel_prerm()
     # clean leftover empty directories
     [[ ! -d $install_tree/${kernelver[0]} ]] || find "$install_tree/${kernelver[0]}" -type d -empty -delete
 
-    [[ -z $failed ]] || die 14 "dkms kernel_prerm for kernel ${kernelver[0]} (${arch[0]}) failed for module(s)$failed."
+    [[ ! $failed ]] || die 14 "dkms kernel_prerm for kernel ${kernelver[0]} (${arch[0]}) failed for module(s)$failed."
 }
 
 #############################
@@ -3220,7 +3220,7 @@ parallel_jobs=${parallel_jobs:-$(get_num_cpus)}
 setup_kernels_arches "$action"
 
 # Since initramfs/initrd rebuild is not requested, skip it with Redhat's weak-modules
-if [[ -z $NO_WEAK_MODULES ]]; then
+if [[ ! $NO_WEAK_MODULES ]]; then
     case "$running_distribution" in
     rhel*)
         weak_modules_add='/usr/sbin/weak-modules --no-initramfs --add-modules'
