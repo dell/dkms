@@ -1382,7 +1382,9 @@ prepare_and_actual_build()
 
         if (( do_signing )); then
             echo "Signing module $built_module"
-            "$sign_file" "$sign_hash" "$mok_signing_key" "$mok_certificate" "$built_module" 2>/dev/null
+            if ! signing_command_output=$("$sign_file" "$sign_hash" "$mok_signing_key" "$mok_certificate" "$built_module" 2>&1); then
+                warn "Failed to sign module '$built_module'!" "$signing_command_output"
+            fi
         fi
 
         if [[ $module_compressed_suffix = .gz ]]; then
