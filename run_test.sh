@@ -767,6 +767,20 @@ Cleaning build area... done.
 Building module(s)... done.
 Cleaning build area... done.
 EOF
+
+    echo 'Building the test module with a failing sign_file command'
+    cp test/framework/fail_sign_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+Sign command: /bin/false
+Signing key: /tmp/dkms_test_private_key
+Public certificate (MOK): /tmp/dkms_test_certificate
+
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE}Warning: Failed to sign module '/var/lib/dkms/dkms_test/1.0/build/dkms_test.ko'!
+
+Cleaning build area... done.
+EOF
     rm /tmp/dkms_test_private_key
 
     echo 'Building the test module with path contains variables in framework file'
