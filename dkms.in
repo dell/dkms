@@ -387,13 +387,14 @@ setup_kernels_arches()
         local i
         i=0
         while read -r line; do
+            [[ $line ]] || continue
             line=${line#*/}; line=${line#*/};
             # (I would leave out the delimiters in the status output
             #  in the first place.)
             kernelver[i]=${line%/*}
             arch[i]=${line#*/}
             i=$((i + 1))
-        done < <(module_status_built "$module" "$module_version" | sort -V)
+        done <<< "$(module_status_built "$module" "$module_version" | sort -V)"
     fi
 
     # Set default kernel version and arch, if none set (but only --all isn't set)
@@ -413,7 +414,7 @@ setup_kernels_arches()
                         arch[0]=$(uname -m)
                         # shellcheck disable=SC2010
                         # TODO: replace ls | grep
-                        if [[ ${arch[0]} = x86_64 ]] && grep -q Intel /proc/cpuinfo && ls "$install_tree/${kernelver[0]}/build/configs" 2>/dev/null | grep -q "ia32e"; then
+                        if [[ ${arch[0]} = x86_64 ]] && [[ -r /proc/cpuinfo ]] && grep -q Intel /proc/cpuinfo && ls "$install_tree/${kernelver[0]}/build/configs" 2>/dev/null | grep -q "ia32e"; then
                             arch[0]="ia32e"
                         fi
                     fi
@@ -825,6 +826,7 @@ get_module_verinfo(){
     local vals
     vals=
     while read -ra vals; do
+        [[ $vals ]] || continue
         case "${vals[0]}" in
             version:)
                 ver="${vals[1]}"
@@ -834,7 +836,7 @@ get_module_verinfo(){
                 srcver="${vals[1]}"
                 ;;
         esac
-    done < <(modinfo "$1")
+    done <<< "$(modinfo "$1")"
 
     echo -E "${ver}"
     # Use obsolete checksum info if srcversion is not available
@@ -919,7 +921,7 @@ check_version_sanity()
         fi
     fi
     set_module_suffix "$1"
-    read -ra kernels_module < <(find_module "$lib_tree" "${4}")
+    read -ra kernels_module <<< "$(find_module "$lib_tree" "${4}")"
     [[ ${#kernels_module[@]} -eq 0 ]] && return 0
 
     if [[ "$force_version_override" == "true" ]]; then
@@ -1228,8 +1230,9 @@ prepare_and_actual_build()
     # shellcheck disable=SC2153
     for bd in "${BUILD_DEPENDS[@]}"; do
         while read -r status mvka; do
+            [[ $status ]] || continue
             [[ $status = installed ]] && continue 2
-        done < <(module_status "$bd" "*" "$kernelver" "$arch")
+        done <<< "$(module_status "$bd" "*" "$kernelver" "$arch")"
         bd_missing="$bd_missing $bd"
     done
     if [[ $bd_missing ]]; then
@@ -1986,8 +1989,9 @@ module_status_weak() {
         else
             continue
         fi
-        IFS=/ read -r m v k a < <(IFS=$oifs find_module_from_ko "$weak_ko") || continue
-        kern=${weak_ko#"${install_tree}/"}
+        IFS=/ read m v k a <<<"$(IFS=$oifs find_module_from_ko "$weak_ko")"
+        [[ $m ]] || continue
+        kern=${weak_ko#$install_tree/}
         kern=${kern%/weak-updates/*}
         [[ $m = "${1:-*}" && $v = "${2:-*}" && $k = "${5:-*}" && $a = "${4:-*}" && $kern = "${3:-*}" ]] || continue
         already_found[$m/$v/$kern/$a/$k]+=${weak_ko##*/}" "
@@ -2018,9 +2022,10 @@ do_status_weak()
     local kern
     local status
     while read -r status mvka; do
-        IFS=/ read -r m v k a kern <<< "$mvka"
+        [[ $status ]] || continue
+        IFS=/ read m v k a kern <<< "$mvka"
         echo "$m, $v, $k, $a: installed-weak from $kern"
-    done < <(module_status_weak "$@")
+    done <<< "$(module_status_weak "$@")"
 }
 
 # Spit out all the extra status information that people running DKMS are
@@ -2105,11 +2110,12 @@ module_status() {
     local v
     ret=1
     while IFS='/' read -r m v; do
+        [[ $m ]] || continue
         is_module_broken "$m" "$v" && { echo "broken $m/$v"; continue; }
         is_module_added "$m" "$v" || continue
         ret=0
         module_status_built "$m" "$v" "$3" "$4" || echo "added $m/$v"
-    done < <(list_module_version_combos "$1" "$2")
+    done <<< "$(list_module_version_combos "$1" "$2")"
     return $ret
 }
 
@@ -2433,7 +2439,7 @@ run_match()
         fi
         maybe_build_module "$template_module" "$template_version" "$kernelver" "$arch"
         maybe_install_module "$template_module" "$template_version" "$kernelver" "$arch"
-    done < <(echo "$template_kernel_status")
+    done <<< "$(echo "$template_kernel_status")"
 }
 
 report_build_problem()
@@ -2572,7 +2578,8 @@ autoinstall() {
     # Walk through our list of installed and built modules, and create
     # a list of modules and their latest version.
     while read -r status mvka; do
-        IFS='/' read -r m v k a <<< "$mvka"
+    	[[ $status ]] || continue
+        IFS='/' read m v k a <<< "$mvka"
         # If the module status is broken there is nothing that can be done
         if [[ $status = broken ]]; then
             error "$m/$v is broken! Missing the source directory or the symbolic link pointing to it."\
@@ -2585,7 +2592,7 @@ autoinstall() {
         elif [[ ("$(VER "$v")" > "$(VER "${latest["$m"]}")") ]]; then
             latest["$m"]="$v"
         fi
-    done < <(module_status)
+    done <<< "$(module_status)"
 
     # Walk through our list of known modules, and create
     # a list of modules that need to be reinstalled.
@@ -2711,7 +2718,7 @@ kernel_preinst()
         [[ $AUTOINSTALL ]] || continue
         echo "dkms: removing module $m/$v for kernel ${kernelver[0]} (${arch[0]})" >&2
         (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
-    done < <(list_module_version_combos)
+    done <<<"$(list_module_version_combos)"
 
     if [[ -f $dkms_tree/depmod-pending-${kernelver[0]}-${arch[0]} ]]; then
         rm -f "${dkms_tree:?}/depmod-pending-${kernelver[0]}-${arch[0]}"
@@ -2759,11 +2766,12 @@ kernel_prerm()
     delayed_depmod=1
 
     while IFS='/' read -r m v; do
+        [[ $m ]] || continue
         is_module_built "$m" "$v" "${kernelver[0]}" "${arch[0]}" || continue
         echo "dkms: removing module $m/$v for kernel ${kernelver[0]} (${arch[0]})" >&2
         (module="$m" module_version="$v" unbuild_module) || failed="$failed $m/$v($?)"
         echo ""
-    done < <(list_module_version_combos)
+    done <<< "$(list_module_version_combos)"
 
     if [[ -f $dkms_tree/depmod-pending-${kernelver[0]}-${arch[0]} ]]; then
         rm -f "${dkms_tree:?}/depmod-pending-${kernelver[0]}-${arch[0]}"
@@ -2997,12 +3005,6 @@ while (($# > 0)); do
 done
 
 # Sanity checking
-
-# The <(cmd) idiom does not work if /proc is not mounted
-read -r line < <(echo "Hello, DKMS!")
-if [[ $line != "Hello, DKMS!" ]]; then
-    warn "dkms will not function properly if /proc is not mounted."
-fi
 
 # Error out if binaries-only is set and source-only is set
 if [[ $binaries_only && $source_only ]]; then
