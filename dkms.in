@@ -1090,7 +1090,7 @@ prepare_mok()
                 if [[ ! -f ${mok_signing_key} || ! -f ${mok_certificate} ]]; then
                     if [[ ! -x "$(command -v update-secureboot-policy)" ]]; then
                         echo "Binary update-secureboot-policy not found, modules won't be signed"
-                        return
+                        return 1
                     fi
                     # update-secureboot-policy won't create new key if $mok_certificate exists
                     if [[ -f ${mok_certificate} ]]; then
@@ -1139,21 +1139,23 @@ prepare_mok()
         echo "Certificate or key are missing, generating self signed certificate for MOK..."
         if ! command -v openssl >/dev/null; then
             echo "openssl not found, can't generate key and certificate."
-            return
+            return 1
         fi
         openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS module signing key" \
             -newkey rsa:2048 -keyout "$mok_signing_key" \
             -outform DER -out "$mok_certificate" > /dev/null 2>&1
         if [[ ! -f ${mok_signing_key} ]]; then
             echo "Key file ${mok_signing_key} not found and can't be generated, modules won't be signed"
-            return
+            return 1
         fi
     fi
 
     if [[ ! -f ${mok_certificate} ]]; then
         echo "Certificate file ${mok_certificate} not found and can't be generated, modules won't be signed"
-        return
+        return 1
     fi
+
+    return 0
 }
 
 prepare_signing()
@@ -1201,9 +1203,9 @@ prepare_signing()
         return
     fi
 
-    prepare_mok
-
-    do_signing=1
+    if prepare_mok; then
+        do_signing=1
+    fi
 }
 
 # Build a module that has been registered with DKMS.

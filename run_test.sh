@@ -752,7 +752,7 @@ Key file /no/such/path.key not found and can't be generated, modules won't be si
 
 Cleaning build area... done.
 Building module(s)... done.
-${SIGNING_MESSAGE}Cleaning build area... done.
+Cleaning build area... done.
 EOF
 
     echo 'Building the test module with bad mok_certificate path in framework file'
@@ -765,7 +765,7 @@ Certificate file /no/such/path.crt not found and can't be generated, modules won
 
 Cleaning build area... done.
 Building module(s)... done.
-${SIGNING_MESSAGE}Cleaning build area... done.
+Cleaning build area... done.
 EOF
     rm /tmp/dkms_test_private_key
 
