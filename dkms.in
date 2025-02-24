@@ -827,6 +827,7 @@ get_module_verinfo(){
     vals=
     while read -ra vals; do
         [[ ${#vals[@]} -eq 0 ]] && continue
+        [[ ${vals[0]} ]] || continue
         case "${vals[0]}" in
             version:)
                 ver="${vals[1]}"
@@ -2600,13 +2601,8 @@ autoinstall() {
     # Walk through our list of installed and built modules, and create
     # a list of modules and their latest version.
     while read -r status mvka; do
-<<<<<<< HEAD
         [[ $status ]] || continue
         IFS='/' read -r m v k a <<< "$mvka"
-=======
-    	[[ $status ]] || continue
-        IFS='/' read m v k a <<< "$mvka"
->>>>>>> 1265f10 (Make sure loops don't iterate over empty elements due to `<<<"$(cmd)"`)
         # If the module status is broken there is nothing that can be done
         if [[ $status = broken ]]; then
             error "$m/$v is broken! Missing the source directory or the symbolic link pointing to it."\
