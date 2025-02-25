@@ -1361,9 +1361,9 @@ do_build()
     for ((count=0; count < ${#built_module_name[@]}; count++)); do
         [[ -e ${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix ]] && continue
         report_build_problem 7 \
-            "Build of ${built_module_name[$count]}$module_uncompressed_suffix failed for: $kernelver ($arch)" \
-            "Make sure the name of the generated module is correct and at the root of the" \
-            "build directory, or consult $build_log for more information."
+            "Build of ${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix failed for: $kernelver ($arch)" \
+            "Make sure the name and location of the generated module are correct," \
+            "or consult $build_log for more information."
     done
 
     # Build success, so create DKMS structure for a built module
