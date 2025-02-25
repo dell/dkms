@@ -1008,7 +1008,13 @@ run_build_script() {
     run="$dkms_tree/$module/$module_version/$script_type/$2"
     if [[ -x ${run%% *} ]]; then
         if [[ $3 ]]; then
-            invoke_command "cd $dkms_tree/$module/$module_version/$script_type/ && $run" "Running the $1 script" "$3" background || exit $?
+            local res
+            res=0
+            invoke_command "cd $dkms_tree/$module/$module_version/$script_type/ && $run" "Running the $1 script" "$3" background || res=$?
+            if [[ $res != 0 ]]; then
+                echo "Consult $3 for more information."
+                exit "$res"
+            fi
         else
         echo "Running the $1 script:"
         (
