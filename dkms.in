@@ -804,9 +804,6 @@ read_conf()
         done
     fi
 
-    # Set clean
-    [[ $clean ]] || clean="make clean"
-
     # Check for allowed AUTOINSTALL values: "yes", "no", ""
     case "$AUTOINSTALL" in
         "")
