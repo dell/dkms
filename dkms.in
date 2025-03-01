@@ -404,7 +404,7 @@ setup_kernels_arches()
         fi
         if [[ ${#arch[@]} -eq 0 ]]; then
             case "$running_distribution" in
-                debian* | ubuntu* | arch*)
+                debian* | ubuntu* | arch* | gentoo*)
                     arch[0]=$(uname -m)
                     ;;
                 *)
@@ -1100,7 +1100,26 @@ prepare_mok()
                     SHIM_NOTRIGGER=y update-secureboot-policy --new-key &>/dev/null
                     update-secureboot-policy --enroll-key
                 fi
+                ;;
+            gentoo* )
+                # If the usual Gentoo/Portage environment variables are set, use those.
+                mok_signing_key=${MODULES_SIGN_KEY}
+                mok_certificate=${MODULES_SIGN_CERT}
 
+                # If still empty, attempt to read the signing configuration set for portage.
+                if [[ -z "${mok_signing_key}" && -f /etc/portage/make.conf ]]; then
+                    mok_signing_key=$(grep "^MODULES_SIGN_KEY=" /etc/portage/make.conf | cut -f2 -d= | sed 's/"//g')
+                fi
+                if [[ -z "${mok_certificate}" && -f /etc/portage/make.conf ]]; then
+                    mok_certificate=$(grep "^MODULES_SIGN_CERT=" /etc/portage/make.conf | cut -f2 -d= | sed 's/"//g')
+                fi
+
+                if [[ -z "${mok_signing_key}" && -f ${kernel_config} ]]; then
+                    mok_signing_key=$(grep "^CONFIG_MODULE_SIG_KEY=" "${kernel_config}" | cut -f2 -d= | sed 's/"//g')
+                    # Kernel module signing facility requires PEM files containing both
+                    # the key and the certificate, so in this case both will be the same.
+                    mok_certificate=${mok_signing_key}
+                fi
                 ;;
         esac
     fi
@@ -1166,6 +1185,9 @@ prepare_signing()
                 if [[ ! -x "${sign_file}" ]]; then
                     sign_file="/usr/src/linux-headers-$kernelver/scripts/sign-file"
                 fi
+                ;;
+            gentoo* )
+                sign_file="/usr/src/linux-$kernelver/scripts/sign-file"
                 ;;
         esac
         if [[ ! -f ${sign_file} ]]; then
@@ -1791,7 +1813,7 @@ do_uninstall()
                 done
 
                 case "$running_distribution" in
-                    debian* | ubuntu* | arch*)
+                    debian* | ubuntu* | arch* | gentoo*)
                         (if cd "$install_tree/$1"; then rmdir -p --ignore-fail-on-non-empty "${dir_to_remove}"; fi || true)
                         ;;
                     *)
