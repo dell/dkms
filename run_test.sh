@@ -335,6 +335,8 @@ fi
 os_id="$(sed -n 's/^ID\s*=\s*\(.*\)$/\1/p' /etc/os-release | tr -d '"')"
 shows_errors=yes
 distro_sign_file_candidates=
+distro_modsigkey=/var/lib/dkms/mok.key
+distro_modsigcert=/var/lib/dkms/mok.pub
 case "${os_id}" in
     centos | fedora | rhel | ovm | almalinux)
         expected_dest_loc=extra
@@ -364,6 +366,11 @@ case "${os_id}" in
     gentoo)
         expected_dest_loc=kernel/extra
         mod_compression_ext=
+        distro_sign_file_candidates="/usr/src/linux-${KERNEL_VER}/scripts/sign-file"
+        distro_modsigkey=/root/kernel_key.pem
+        distro_modsigcert=/root/kernel_cert.pem
+        echo "MODULES_SIGN_KEY=${distro_modsigkey}" >> /etc/portage/make.conf
+        echo "MODULES_SIGN_CERT=${distro_modsigcert}" >> /etc/portage/make.conf
         ;;
     *)
         echo >&2 "Error: unknown Linux distribution ID ${os_id}"
@@ -390,8 +397,8 @@ do
 done
 
 SIGNING_PROLOGUE_command="Sign command: ${sign_file}"
-SIGNING_PROLOGUE_key="Signing key: /var/lib/dkms/mok.key"
-SIGNING_PROLOGUE_cert="Public certificate (MOK): /var/lib/dkms/mok.pub"
+SIGNING_PROLOGUE_key="Signing key: ${distro_modsigkey}"
+SIGNING_PROLOGUE_cert="Public certificate (MOK): ${distro_modsigcert}"
 if [ "${sign_file}" = "/usr/bin/kmodsign" ]; then
     SIGNING_PROLOGUE_key="Signing key: /var/lib/shim-signed/mok/MOK.priv"
     SIGNING_PROLOGUE_cert="Public certificate (MOK): /var/lib/shim-signed/mok/MOK.der"
