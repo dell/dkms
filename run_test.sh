@@ -763,7 +763,7 @@ Key file /no/such/path.key not found and can't be generated, modules won't be si
 
 Cleaning build area... done.
 Building module(s)... done.
-${SIGNING_MESSAGE}Cleaning build area... done.
+Cleaning build area... done.
 EOF
 
     echo 'Building the test module with bad mok_certificate path in framework file'
@@ -776,7 +776,21 @@ Certificate file /no/such/path.crt not found and can't be generated, modules won
 
 Cleaning build area... done.
 Building module(s)... done.
-${SIGNING_MESSAGE}Cleaning build area... done.
+Cleaning build area... done.
+EOF
+
+    echo 'Building the test module with a failing sign_file command'
+    cp test/framework/fail_sign_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+Sign command: /bin/false
+Signing key: /tmp/dkms_test_private_key
+Public certificate (MOK): /tmp/dkms_test_certificate
+
+Cleaning build area... done.
+Building module(s)... done.
+${SIGNING_MESSAGE}Warning: Failed to sign module '/var/lib/dkms/dkms_test/1.0/build/dkms_test.ko'!
+
+Cleaning build area... done.
 EOF
     rm /tmp/dkms_test_private_key
 
@@ -2767,7 +2781,9 @@ echo ' Building and installing the test module'
 set_signing_message "dkms_duplicate_test" "1.0"
 if [[ ${mod_compression_ext} ]] && [[ ${shows_errors} = yes ]]; then
 BUILD_MESSAGES="${SIGNING_MESSAGE}strip: '/var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko': No such file
-${SIGNING_MESSAGE}${mod_compressor}: /var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko: No such file or directory
+${SIGNING_MESSAGE}Warning: Failed to sign module '/var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko'!
+sign-file: /var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko
+${mod_compressor}: /var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko: No such file or directory
 cp: cannot stat '/var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko': No such file or directory
 "
 else
