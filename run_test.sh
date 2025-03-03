@@ -374,13 +374,6 @@ case "${os_id}" in
         ;;
 esac
 
-mod_compressor=
-case "${mod_compression_ext}" in
-    .gz)    mod_compressor=gzip ;;
-    .xz)    mod_compressor=xz ;;
-    .zst)   mod_compressor=zst ;;
-esac
-
 echo "Checking module compression ..."
 echo "config: $(grep "^CONFIG_MODULE_COMPRESS" "${kernel_config}" || true)"
 echo "files: $(find "/lib/modules/${KERNEL_VER}" -name \*.ko\* 2>/dev/null | head -n1)"
@@ -2762,9 +2755,7 @@ EOF
 echo ' Building and installing the test module'
 set_signing_message "dkms_duplicate_test" "1.0"
 if [[ ${mod_compression_ext} ]]; then
-BUILD_MESSAGES="${SIGNING_MESSAGE}strip: '/var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko': No such file
-${SIGNING_MESSAGE}${mod_compressor}: /var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko: No such file or directory
-cp: cannot stat '/var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko': No such file or directory
+BUILD_MESSAGES="${SIGNING_MESSAGE}Warning: /var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko has disappeared
 "
 else
 BUILD_MESSAGES="${SIGNING_MESSAGE}${SIGNING_MESSAGE}"

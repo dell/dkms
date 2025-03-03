@@ -1367,6 +1367,11 @@ prepare_and_actual_build()
         built_module="$the_module$module_uncompressed_suffix"
         compressed_module="$the_module$module_suffix"
 
+        if [[ ! -f $built_module ]]; then
+            warn "$built_module has disappeared"
+            continue
+        fi
+
         if [[ ${strip[$count]} != no ]] && [[ ${CC} == "clang" ]]; then
             llvm-strip -g "$built_module"
         elif [[ ${strip[$count]} != no ]]; then
