@@ -2836,7 +2836,7 @@ symlink_modules=""
 # Set compression defaults
 compress_gzip_opts=""
 compress_xz_opts="--check=crc32 --lzma2=dict=1MiB"
-compress_zstd_opts="-q -T0"
+compress_zstd_opts="-q --rm -T0"
 
 # Check that we can write temporary files
 tmpfile=$(mktemp_or_die)

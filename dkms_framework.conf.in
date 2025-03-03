@@ -54,4 +54,4 @@
 # maximum compression, at the expense of speed when compressing.
 # compress_gzip_opts="-6"
 # compress_xz_opts="--check=crc32 --lzma2=dict=1MiB -6"
-# compress_zstd_opts="-q -T0 -3"
+# compress_zstd_opts="-q --rm -T0 -3"
