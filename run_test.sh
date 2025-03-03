@@ -333,7 +333,6 @@ fi
 
 # Compute the expected destination module location
 os_id="$(sed -n 's/^ID\s*=\s*\(.*\)$/\1/p' /etc/os-release | tr -d '"')"
-shows_errors=yes
 distro_sign_file_candidates=
 distro_modsigkey=/var/lib/dkms/mok.key
 distro_modsigcert=/var/lib/dkms/mok.pub
@@ -345,11 +344,9 @@ case "${os_id}" in
     sles | suse | opensuse*)
         expected_dest_loc=updates
         mod_compression_ext=.zst
-        shows_errors=no
         ;;
     arch)
         expected_dest_loc=updates/dkms
-        shows_errors=no
         ;;
     debian* | linuxmint)
         expected_dest_loc=updates/dkms
@@ -357,7 +354,6 @@ case "${os_id}" in
         ;;
     ubuntu)
         expected_dest_loc=updates/dkms
-        shows_errors=no
         distro_sign_file_candidates="/usr/bin/kmodsign /usr/src/linux-headers-${KERNEL_VER}/scripts/sign-file"
         ;;
     alpine)
@@ -2765,7 +2761,7 @@ EOF
 
 echo ' Building and installing the test module'
 set_signing_message "dkms_duplicate_test" "1.0"
-if [[ ${mod_compression_ext} ]] && [[ ${shows_errors} = yes ]]; then
+if [[ ${mod_compression_ext} ]]; then
 BUILD_MESSAGES="${SIGNING_MESSAGE}strip: '/var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko': No such file
 ${SIGNING_MESSAGE}${mod_compressor}: /var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko: No such file or directory
 cp: cannot stat '/var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko': No such file or directory
