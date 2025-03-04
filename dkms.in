@@ -1061,7 +1061,8 @@ add_module()
             "You cannot add the same module/version combo more than once."
     fi
 
-    [[ $conf ]] || conf="$source_tree/$module-$module_version/dkms.conf"
+    local source_conf
+    source_conf=${conf:-"$source_tree/$module-$module_version/dkms.conf"}
 
     # Check that /usr/src/$module-$module_version exists
     if ! [[ -d $source_tree/$module-$module_version ]]; then
@@ -1070,7 +1071,7 @@ add_module()
     fi
 
     # Check the conf file for sanity
-    read_conf_or_die "$kernelver" "$arch" "$conf"
+    read_conf_or_die "$kernelver" "$arch" "$source_conf"
 
     # Create the necessary dkms tree structure
     echo "Creating symlink $dkms_tree/$module/$module_version/source -> $source_tree/$module-$module_version"
