@@ -1504,6 +1504,7 @@ do_install()
     is_module_built "$module" "$module_version" "$kernelver" "$arch" || do_build
     local base_dir
     base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
+    local index
     local symlink
     [[ $symlink_modules ]] && symlink="-s"
 
@@ -1527,6 +1528,15 @@ do_install()
 
     # Read the conf file
     read_conf_or_die "$kernelver" "$arch"
+
+    # Validate build completeness
+    for ((index=0; index < num_modules; index++)); do
+        local m
+        local f
+        m=${dest_module_name[index]}
+        f=$(compressed_or_uncompressed "$base_dir/module" "$m")
+        [[ $f && -f $f ]] || die 6 "Missing module $m in $base_dir/module"
+    done
 
     # Check that its not already installed (kernel symlink)
     is_module_installed "$module" "$module_version" "$kernelver" "$arch" && die 5 \
