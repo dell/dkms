@@ -312,7 +312,7 @@ remove_module_source_tree() {
 
 # sig_hashalgo itself may show bogus value if kmod version < 26
 kmod_broken_hashalgo() {
-    local -ri kmod_ver=$(kmod --version | grep version | cut -f 3 -d ' ')
+    local -ri kmod_ver=$(kmod --version | sed -n 's/kmod version \([0-9]\+\).*/\1/p')
 
     (( kmod_ver < 26 ))
 }
