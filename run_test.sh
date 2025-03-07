@@ -420,6 +420,11 @@ run_with_expected_output dkms status -m dkms_test << EOF
 EOF
 rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
+only="${1:-}"
+[[ $only ]] && echo "Running only '$only' tests"
+
+if [[ ! $only || $only = basic ]]; then
+
 ############################################################################
 echo '*** Testing dkms on a regular module'
 ############################################################################
@@ -707,6 +712,10 @@ remove_module_source_tree /usr/src/dkms_test-1.0
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
+fi  # basic tests
+
+if [[ ! $only || $only = signing ]]; then
+
 if (( NO_SIGNING_TOOL == 0 )); then
     ############################################################################
     echo '*** Testing module signing'
@@ -938,6 +947,10 @@ EOF
     echo 'Checking that the environment is clean again'
     check_no_dkms_test
 fi
+
+fi  # signing tests
+
+if [[ ! $only || $only = autoinstall ]]; then
 
 ############################################################################
 echo '*** Testing dkms autoinstall/kernel_{postinst/prerm}, dkms_autoinstaller'
@@ -1352,6 +1365,10 @@ remove_module_source_tree /usr/src/dkms_failing_test-1.0
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
+fi  # autoinstall tests
+
+if [[ ! $only || $only = noautoinstall ]]; then
+
 ############################################################################
 echo '*** Testing dkms on a module with AUTOINSTALL=""'
 ############################################################################
@@ -1466,6 +1483,10 @@ remove_module_source_tree /usr/src/dkms_noautoinstall_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
+
+fi  # noautoinstall tests
+
+if [[ ! $only || $only = dependencies ]]; then
 
 ############################################################################
 echo '*** Testing dkms modules with dependencies'
@@ -1795,6 +1816,10 @@ remove_module_source_tree /usr/src/dkms_circular_dependencies_test-1.0
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
+fi  # dependencies tests
+
+if [[ ! $only || $only = replace ]]; then
+
 ############################################################################
 echo '*** Testing replacement of a pre-existing module'
 ############################################################################
@@ -1928,6 +1953,10 @@ remove_module_source_tree /usr/src/dkms_test-1.0 /usr/src/dkms_replace_test-2.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
+
+fi  # replace tests
+
+if [[ ! $only || $only = multiple ]]; then
 
 ############################################################################
 echo '*** Testing more dkms features'
@@ -2495,6 +2524,10 @@ remove_module_source_tree \
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
+fi  # multiple tests
+
+if [[ ! $only || $only = malformed ]]; then
+
 ############################################################################
 echo '*** Testing malformed/borderline dkms.conf'
 ############################################################################
@@ -2766,6 +2799,10 @@ remove_module_source_tree /usr/src/dkms_crlf_test-1.0
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
+fi  # malformed tests
+
+if [[ ! $only || $only = multiversion ]]; then
+
 ############################################################################
 echo '*** Testing dkms on a module with multiple versions'
 ############################################################################
@@ -2901,6 +2938,10 @@ remove_module_source_tree /usr/src/dkms_multiver_test-1.0 /usr/src/dkms_multiver
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
+
+fi  # multiversion tests
+
+if [[ ! $only || $only = noversion ]]; then
 
 ############################################################################
 echo '*** Testing dkms operations on modules with no or empty version'
@@ -3137,6 +3178,10 @@ remove_module_source_tree /usr/src/dkms_nover_update_test-{1,2,3}.0
 echo 'Checking that the environment is clean'
 check_no_dkms_test
 
+fi  # multiversion tests
+
+if [[ ! $only || $only = autoinstall ]]; then
+
 ############################################################################
 echo '*** Testing dkms autoinstall error handling'
 ############################################################################
@@ -3193,6 +3238,10 @@ remove_module_source_tree /usr/src/dkms_failing_dependencies_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
+
+fi  # autoinstall tests
+
+if [[ ! $only || $only = exclusive ]]; then
 
 ############################################################################
 echo '*** Running tests with BUILD_EXCLUSIVE_* modules'
@@ -3396,6 +3445,10 @@ remove_module_source_tree /usr/src/dkms_build_exclusive_test-1.0
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
+fi  # exclusive tests
+
+if [[ ! $only || $only = os-release ]]; then
+
 ############################################################################
 echo '*** Testing os-release detection'
 ############################################################################
@@ -3484,6 +3537,10 @@ trap - EXIT
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
+
+fi  # os-release tests
+
+if [[ ! $only || $only = broken ]]; then
 
 ############################################################################
 echo '*** Testing '"'broken'"' status'
@@ -3668,6 +3725,10 @@ rm -rf /var/lib/dkms/dkms_test/ /var/lib/dkms/dkms_multiver_test
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
+
+fi  # broken tests
+
+############################################################################
 
 echo '*** All tests successful :)'
 
