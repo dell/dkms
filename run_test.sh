@@ -33,6 +33,7 @@ TEST_MODULES=(
     "dkms_nover_update_test"
     "dkms_conf_test"
     "dkms_duplicate_test"
+    "dkms_duplicate_built_test"
     "dkms_patches_test"
     "dkms_scripts_test"
     "dkms_noisy_test"
@@ -57,6 +58,7 @@ TEST_TMPDIRS=(
     "/usr/src/dkms_nover_update_test-3.0"
     "/usr/src/dkms_conf_test-1.0"
     "/usr/src/dkms_duplicate_test-1.0"
+    "/usr/src/dkms_duplicate_built_test-1.0"
     "/usr/src/dkms_patches_test-1.0"
     "/usr/src/dkms_scripts_test-1.0"
     "/usr/src/dkms_noisy_test-1.0"
@@ -188,6 +190,8 @@ run_status_with_expected_output() {
 generalize_expected_output() {
     local output_log=$1
 
+    # Normalize temporary directories
+    sed -i "s|/\(tmp_${KERNEL_ARCH}\)_....../|/\1_XXXXXX/|g" "${output_log}"
     # On Red Hat and SUSE based distributions, weak-modules is executed. Drop it from the output, to be more generic
     sed -i '/^Adding linked weak modules.*$/d' "${output_log}"
     sed -i '/^Removing linked weak modules.*$/d' "${output_log}"
@@ -2769,6 +2773,49 @@ run_status_with_expected_output 'dkms_duplicate_test' << EOF
 EOF
 
 remove_module_source_tree /usr/src/dkms_duplicate_test-1.0
+
+# --------------------------------------------------------------------------
+
+if [[ ${mod_compression_ext} ]]; then
+echo 'Testing dkms.conf specifying a module twice in BUILT_MODULE_NAME[]'
+run_with_expected_output dkms add test/dkms_duplicate_built_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_duplicate_built_test/1.0/source -> /usr/src/dkms_duplicate_built_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_duplicate_built_test-1.0
+run_status_with_expected_output 'dkms_duplicate_built_test' << EOF
+dkms_duplicate_built_test/1.0: added
+EOF
+
+echo ' Building and installing the test module (expected error)'
+set_signing_message "dkms_duplicate_built_test" "1.0"
+if [[ ${mod_compression_ext} ]]; then
+BUILD_MESSAGES="${SIGNING_MESSAGE}Warning: /var/lib/dkms/dkms_duplicate_built_test/1.0/build/dkms_duplicate_built_test.ko has disappeared
+"
+else
+BUILD_MESSAGES="${SIGNING_MESSAGE}${SIGNING_MESSAGE}"
+fi
+run_with_expected_error 7 dkms install -k "${KERNEL_VER}" -m dkms_duplicate_built_test -v 1.0 << EOF
+${SIGNING_PROLOGUE}
+Building module(s)... done.
+${BUILD_MESSAGES}
+Error! Missing module 'dkms_duplicate2_built_test' in /var/lib/dkms/dkms_duplicate_built_test/1.0/${KERNEL_VER}/tmp_${KERNEL_ARCH}_XXXXXX/module
+EOF
+run_status_with_expected_output 'dkms_duplicate_built_test' << EOF
+dkms_duplicate_built_test/1.0: added
+EOF
+
+echo ' Removing the test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_duplicate_built_test -v 1.0 << EOF
+Module dkms_duplicate_built_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_duplicate_built_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+
+Deleting module dkms_duplicate_built_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_duplicate_built_test' << EOF
+EOF
+
+remove_module_source_tree /usr/src/dkms_duplicate_built_test-1.0
+fi
 
 # --------------------------------------------------------------------------
 
