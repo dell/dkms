@@ -34,6 +34,7 @@ TEST_MODULES=(
     "dkms_conf_test"
     "dkms_duplicate_test"
     "dkms_duplicate_built_test"
+    "dkms_duplicate_dest_test"
     "dkms_patches_test"
     "dkms_scripts_test"
     "dkms_noisy_test"
@@ -59,6 +60,7 @@ TEST_TMPDIRS=(
     "/usr/src/dkms_conf_test-1.0"
     "/usr/src/dkms_duplicate_test-1.0"
     "/usr/src/dkms_duplicate_built_test-1.0"
+    "/usr/src/dkms_duplicate_dest_test-1.0"
     "/usr/src/dkms_patches_test-1.0"
     "/usr/src/dkms_scripts_test-1.0"
     "/usr/src/dkms_noisy_test-1.0"
@@ -2816,6 +2818,49 @@ EOF
 
 remove_module_source_tree /usr/src/dkms_duplicate_built_test-1.0
 fi
+
+# --------------------------------------------------------------------------
+
+echo 'Testing dkms.conf specifying a module twice in DEST_MODULE_NAME[]'
+run_with_expected_output dkms add test/dkms_duplicate_dest_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_duplicate_dest_test/1.0/source -> /usr/src/dkms_duplicate_dest_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_duplicate_dest_test-1.0
+run_status_with_expected_output 'dkms_duplicate_dest_test' << EOF
+dkms_duplicate_dest_test/1.0: added
+EOF
+
+echo ' Building and installing the test module'
+set_signing_message "dkms_duplicate_dest_test" "1.0" "dkms_duplicate1_dest_test"
+SIGNING_MESSAGE_duplicate1_dest=$SIGNING_MESSAGE
+set_signing_message "dkms_duplicate_dest_test" "1.0" "dkms_duplicate2_dest_test"
+SIGNING_MESSAGE_duplicate2_dest=$SIGNING_MESSAGE
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_duplicate_dest_test -v 1.0 << EOF
+${SIGNING_PROLOGUE}
+Building module(s)... done.
+${SIGNING_MESSAGE_duplicate1_dest}${SIGNING_MESSAGE_duplicate2_dest}Cleaning build area... done.
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_dest_test.ko${mod_compression_ext}
+Module /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_dest_test.ko${mod_compression_ext} already installed at version 1.0, override by specifying --force
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_duplicate_dest_test' << EOF
+dkms_duplicate_dest_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo ' Removing the test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_duplicate_dest_test -v 1.0 << EOF
+Module dkms_duplicate_dest_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_dest_test.ko${mod_compression_ext}
+Module dkms_duplicate_dest_test.ko${mod_compression_ext} was not found within /lib/modules/${KERNEL_VER}/
+Running depmod... done.
+
+Deleting module dkms_duplicate_dest_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_duplicate_dest_test' << EOF
+EOF
+
+remove_module_source_tree /usr/src/dkms_duplicate_dest_test-1.0
 
 # --------------------------------------------------------------------------
 
