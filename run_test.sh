@@ -2613,6 +2613,8 @@ EOF
 
 remove_module_source_tree /usr/src/dkms_conf_test-1.0
 
+# --------------------------------------------------------------------------
+
 echo 'Testing dkms.conf with defaulted BUILT_MODULE_NAME'
 run_with_expected_output dkms add test/dkms_conf_test_defaulted_BUILT_MODULE_NAME << EOF
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
@@ -2637,6 +2639,8 @@ Deleting module dkms_conf_test/1.0 completely from the DKMS tree.
 EOF
 
 remove_module_source_tree /usr/src/dkms_conf_test-1.0
+
+# --------------------------------------------------------------------------
 
 echo 'Testing dkms.conf with missing patch'
 run_with_expected_output dkms add test/dkms_conf_test_patch_missing << EOF
@@ -2664,6 +2668,8 @@ EOF
 
 remove_module_source_tree /usr/src/dkms_conf_test-1.0
 
+# --------------------------------------------------------------------------
+
 echo 'Testing dkms.conf with bad patch path (../some.patch)'
 run_with_expected_output dkms add test/dkms_conf_test_patch_badpath1 << EOF
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
@@ -2689,6 +2695,8 @@ EOF
 
 remove_module_source_tree /usr/src/dkms_conf_test-1.0
 
+# --------------------------------------------------------------------------
+
 echo 'Testing dkms.conf with bad patch path (path/../some.patch)'
 run_with_expected_output dkms add test/dkms_conf_test_patch_badpath2 << EOF
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
@@ -2713,6 +2721,8 @@ Deleting module dkms_conf_test/1.0 completely from the DKMS tree.
 EOF
 
 remove_module_source_tree /usr/src/dkms_conf_test-1.0
+
+# --------------------------------------------------------------------------
 
 echo 'Testing dkms.conf specifying a module twice'
 run_with_expected_output dkms add test/dkms_duplicate_test << EOF
@@ -2760,6 +2770,8 @@ EOF
 
 remove_module_source_tree /usr/src/dkms_duplicate_test-1.0
 
+# --------------------------------------------------------------------------
+
 echo 'Testing dkms.conf with CR/LF line endings'
 run_with_expected_output dkms add test/dkms_crlf_test-1.0 << EOF
 Creating symlink /var/lib/dkms/dkms_crlf_test/1.0/source -> /usr/src/dkms_crlf_test-1.0
@@ -2795,6 +2807,8 @@ run_status_with_expected_output 'dkms_crlf_test' << EOF
 EOF
 
 remove_module_source_tree /usr/src/dkms_crlf_test-1.0
+
+# --------------------------------------------------------------------------
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
