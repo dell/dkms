@@ -74,6 +74,7 @@
 # 13: build: Aborting build of module ... for kernel ... due to missing BUILD_DEPENDS: ...
 # 14: kernel_preinst/prerm: dkms kernel_preinst/prerm for kernel ... failed for module(s) ...
 # 15: gloabl: a call to cd failed
+# 16: do_build()/do_install(): no $kernelver or $arch
 # 21: prepare_kernel(): Your kernel headers for kernel ... cannot be found ...
 # 77: skipped due to BUILD_EXCLUSIVE
 # 101: install: pre_install failed, aborting install.
@@ -1221,6 +1222,8 @@ prepare_signing()
 # Build a module that has been registered with DKMS.
 do_build()
 {
+    [[ $kernelver && $arch ]] || die 16 "do_build: Empty \$kernelver or \$arch"
+
     # If the module has not been added, try to add it.
     if ! is_module_added "$module" "$module_version" ; then
         add_module
@@ -1474,6 +1477,8 @@ force_installation()
 # They should be split into their own functions.
 do_install()
 {
+    [[ $kernelver && $arch ]] || die 16 "do_install: Empty \$kernelver or \$arch"
+
     # If the module has not been built, try to build it first.
     is_module_built "$module" "$module_version" "$kernelver" "$arch" || do_build
     local base_dir
