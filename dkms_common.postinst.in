@@ -212,12 +212,11 @@ echo "Building for $KERNELS" | tr '\n' ',' \
 
 if [ -n "$ARCH" ]; then
     echo "Building for architecture $ARCH"
-    ARCH="-a $ARCH"
 fi
 
 for KERNEL in $KERNELS; do
     echo ""
-    dkms_status=$(dkms status -m "$NAME" -v "$VERSION" -k "$KERNEL" "$ARCH")
+    dkms_status=$(dkms status -m "$NAME" -v "$VERSION" -k "$KERNEL" ${ARCH:+-a "$ARCH"})
     if [ "$(echo "$KERNEL" | grep -c "BOOT")" -gt 0 ]; then
         echo "Module build and install for $KERNEL was skipped as "
         echo "it is a BOOT variant"
@@ -235,7 +234,7 @@ for KERNEL in $KERNELS; do
         if _check_kernel_dir "$KERNEL"; then
             echo "Building initial module $NAME/$VERSION for $KERNEL"
             set +e
-            dkms build -m "$NAME" -v "$VERSION" -k "$KERNEL" "$ARCH" > /dev/null
+            dkms build -m "$NAME" -v "$VERSION" -k "$KERNEL" ${ARCH:+-a "$ARCH"} > /dev/null
             case $? in
             77)
                 set -e
@@ -250,7 +249,7 @@ for KERNEL in $KERNELS; do
                 exit $?
                 ;;
             esac
-            dkms_status=$(dkms status -m "$NAME" -v "$VERSION" -k "$KERNEL" "$ARCH")
+            dkms_status=$(dkms status -m "$NAME" -v "$VERSION" -k "$KERNEL" ${ARCH:+-a "$ARCH"})
         else
             echo "Module build for kernel $KERNEL was skipped since the"
             echo "kernel headers for this kernel do not seem to be installed."
@@ -260,7 +259,7 @@ for KERNEL in $KERNELS; do
     #if the module is built (either pre-built or just now), install it
     if [ "$(echo "$dkms_status" | grep -c ": built")" -eq 1 ] &&
        [ "$(echo "$dkms_status" | grep -c ": installed")" -eq 0 ]; then
-        dkms install -m "$NAME" -v "$VERSION" -k "$KERNEL" "$ARCH"
+        dkms install -m "$NAME" -v "$VERSION" -k "$KERNEL" ${ARCH:+-a "$ARCH"}
     fi
 done
 
