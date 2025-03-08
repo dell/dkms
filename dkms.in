@@ -432,16 +432,6 @@ setup_kernels_arches()
         done
     fi
 
-    # Set global multi_arch
-    multi_arch=""
-    local i
-    for ((i=0; i < ${#arch[@]}; i++)); do
-        [[ "${arch[0]}" != "${arch[i]}" ]] && {
-            # shellcheck disable=SC2034
-            multi_arch="true"
-            break
-        }
-    done
 }
 
 do_depmod()
