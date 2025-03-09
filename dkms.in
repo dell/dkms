@@ -1249,9 +1249,10 @@ do_build()
         echo ""
     fi
 
-    local -r base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
-    local -r build_dir="$dkms_tree/$module/$module_version/build"
     local -r source_dir="$dkms_tree/$module/$module_version/source"
+    local -r build_dir="$dkms_tree/$module/$module_version/build"
+    local -r kernelver_dir="$dkms_tree/$module/$module_version/$kernelver"
+    local -r base_dir="$kernelver_dir/$arch"
     local -r build_log="$build_dir/make.log"
     local bd
     local bd_missing
@@ -1387,13 +1388,15 @@ do_build()
     done
 
     # Build success, so create DKMS structure for a built module
-    mkdir -p "$base_dir/log"
-    [[ $kernel_config ]] && cp -f "$kernel_config" "$base_dir/log/"
+    mkdir -p "$kernelver_dir"
+    local -r tmp_base_dir=$(mktemp_or_die -d "$kernelver_dir/tmp_${arch}_XXXXXX")
+    mkdir -p "$tmp_base_dir/log"
+    [[ $kernel_config ]] && cp -f "$kernel_config" "$tmp_base_dir/log/"
 
     # Save a copy of the new module
-    mkdir "$base_dir/module" >/dev/null
+    mkdir -p "$tmp_base_dir/module"
     if [ -f "$build_dir/Module.symvers" ] ; then
-        cp -f "$build_dir/Module.symvers" "$base_dir/module/Module.symvers"
+        cp -f "$build_dir/Module.symvers" "$tmp_base_dir/module/Module.symvers"
     fi
     for ((count=0; count < num_modules; count++)); do
         local the_module
@@ -1435,9 +1438,9 @@ do_build()
             zstd $compress_zstd_opts -f "$built_module" || compressed_module=""
         fi
         if [[ -n $compressed_module ]]; then
-            cp -f "$compressed_module" "$base_dir/module/${dest_module_name[$count]}$module_suffix" >/dev/null
+            cp -f "$compressed_module" "$tmp_base_dir/module/${dest_module_name[$count]}$module_suffix"
         else
-            cp -f "$built_module" "$base_dir/module/${dest_module_name[$count]}$module_uncompressed_suffix" >/dev/null
+            cp -f "$built_module" "$tmp_base_dir/module/${dest_module_name[$count]}$module_uncompressed_suffix"
         fi
     done
 
@@ -1449,9 +1452,13 @@ do_build()
         local m
         local f
         m=${dest_module_name[index]}
-        f=$(compressed_or_uncompressed "$base_dir/module" "$m")
-        [[ $f && -f $f ]] || die 7 "Missing module '$m' in $base_dir/module"
+        f=$(compressed_or_uncompressed "$tmp_base_dir/module" "$m")
+        [[ $f && -f $f ]] || die 7 "Missing module '$m' in $tmp_base_dir/module"
     done
+
+    # Rename the temporary directory
+    chmod 0755 "$tmp_base_dir"
+    mv -T "$tmp_base_dir" "$base_dir" || die 7 "do_build: final mv failed ($?)"
 
     # Run the clean commands
     invoke_command "$clean" "Cleaning build area" "$build_log" background
@@ -1462,7 +1469,7 @@ do_build()
     mv -f "$build_log" "$base_dir/log/make.log" 2>/dev/null
 
     # Clean the build directory
-    rm -rf "${dkms_tree:?}/$module/$module_version/build"
+    rm -rf "${build_dir:?}"
 }
 
 prepare_kernel_and_signing()
