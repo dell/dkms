@@ -1902,9 +1902,33 @@ do_uninstall()
             else
                 echo "Module $m$module_suffix was not found within $install_tree/$1/"
             fi
+            if [[ -d $original_module_backup_dir ]]; then
+                local origin_file
+                while IFS= read -r origin_file
+                do
+                    [[ $origin_file ]] || continue
+                    local original_module
+                    original_module=${origin_file%.origin}
+                    [[ -f $original_module ]] || continue
+                    local original_location
+                    original_location=$(head -n 1 "$origin_file")
+                    case $original_location in
+                        "$install_tree/$1/"*)
+                            echo "Restoring archived original module $original_location"
+                            mkdir -p "${original_location%/*}"
+                            mv -f "$original_module" "$original_location"
+                            rm -f "$origin_file"
+                            ;;
+                        *)  warn "Bad original location '$original_location' in $origin_file"
+                            ;;
+                    esac
+                done <<< "$(find "$original_module_backup_dir" -type f -name "$m.*.origin")"
+                find "${original_module_backup_dir%/*}" -type d -empty -delete
+            fi
             local origmod
             origmod=$(compressed_or_uncompressed "$original_module_backup_dir" "$m")
             if [[ -n $origmod ]]; then
+                # Module was archived by older dkms versions without creating .origin
                 echo "Restoring archived original module"
                 mkdir -p "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
                 mv -f "$origmod" "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/" 2>/dev/null

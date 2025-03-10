@@ -1855,20 +1855,9 @@ run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_replace_test -v
 Module dkms_replace_test/2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
-Restoring archived original module
+Restoring archived original module /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
-Removing original module(s) from DKMS tree for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 EOF
-if [ "${expected_dest_loc}" != "kernel/extra" ]; then
-    # A replaced module originating from a kernel image should get restored
-    # to its original location, but since we are testing with a dkms module
-    # (installed to a dynamic location), this may not happen.
-    echo 'Moving the restored module back to its correct location (testing artefact)'
-    mkdir -p "/lib/modules/${KERNEL_VER}/${expected_dest_loc}"
-    mv  "/lib/modules/${KERNEL_VER}/kernel/extra/dkms_test.ko${mod_compression_ext}" \
-        "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}"
-    rmdir --ignore-fail-on-non-empty "/lib/modules/${KERNEL_VER}/kernel/extra" "/lib/modules/${KERNEL_VER}/kernel"
-fi
 run_status_with_expected_output 'dkms_replace_test' << EOF
 dkms_replace_test/2.0: added
 EOF
@@ -1910,19 +1899,11 @@ run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_replace_test -v 
 Module dkms_replace_test/2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
-Restoring archived original module
+Restoring archived original module /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
 Running depmod... done.
-Removing original module(s) from DKMS tree for kernel ${KERNEL_VER} (${KERNEL_ARCH})
 
 Deleting module dkms_replace_test/2.0 completely from the DKMS tree.
 EOF
-if [ "${expected_dest_loc}" != "kernel/extra" ]; then
-    echo 'Moving the restored module back to its correct location (testing artefact)'
-    mkdir -p "/lib/modules/${KERNEL_VER}/${expected_dest_loc}"
-    mv  "/lib/modules/${KERNEL_VER}/kernel/extra/dkms_test.ko${mod_compression_ext}" \
-        "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}"
-    rmdir --ignore-fail-on-non-empty "/lib/modules/${KERNEL_VER}/kernel/extra" "/lib/modules/${KERNEL_VER}/kernel"
-fi
 run_status_with_expected_output 'dkms_replace_test' << EOF
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
