@@ -21,3 +21,10 @@ static void __exit dkms_test_cleanup(void)
 module_init(dkms_test_init);
 module_exit(dkms_test_cleanup);
 MODULE_VERSION(DKMS_TEST_VER);
+
+void dkms_test_exported_function(void)
+{
+    printk(KERN_INFO "Function exported by the dkms test module.\n");
+}
+
+EXPORT_SYMBOL_GPL(dkms_test_exported_function);
