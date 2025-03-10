@@ -1610,6 +1610,7 @@ do_install()
                 echo "Found pre-existing $original_module, archiving for uninstallation"
                 mkdir -p "$original_module_backup_dir"
                 mv -f "$original_module" "$original_module_backup_dir/"
+                echo "$original_module" > "$original_module_backup_dir/${original_module##*/}.origin"
                 found_original="yes"
                 break
             done
@@ -1627,6 +1628,7 @@ do_install()
                 dup_tree="${dup_tree/"${dup_name}"}"
                 mkdir -p "$original_module_backup_dir/collisions/$dup_tree"
                 mv -f "$module_dup" "$original_module_backup_dir/collisions/$dup_tree/"
+                echo "$module_dup" > "$original_module_backup_dir/collisions/$dup_tree/$dup_name.origin"
             done
         fi
 
