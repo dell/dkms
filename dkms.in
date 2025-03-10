@@ -1520,14 +1520,18 @@ do_install()
 
     # If the module has not been built, try to build it first.
     is_module_built "$module" "$module_version" "$kernelver" "$arch" || do_build
-    local base_dir
-    base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
+
+    local -r base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
+    local -r lib_tree="$install_tree/$kernelver"
+    local -r original_module_backup_dir="$dkms_tree/$module/original_module/$kernelver/$arch"
+    local -r active_link="$dkms_tree/$module/kernel-$kernelver-$arch"
+    local count
     local index
     local symlink
     [[ $symlink_modules ]] && symlink="-s"
 
     # Save the status of $force
-    tmp_force="$force"
+    local -r tmp_force="$force"
 
     # If the module is set to be force-installed
     local ret
@@ -1539,6 +1543,7 @@ do_install()
         force_version_override="true"
         echo "Forcing version override of $module"
     fi
+
     # Make sure that kernel exists to install into
     [[ -e $install_tree/$kernelver ]] || die 6 \
         "The directory $install_tree/$kernelver doesn't exist." \
@@ -1567,10 +1572,7 @@ do_install()
     [[ $rpm_safe_upgrade ]] && force="true"
 
     # Save the original_module if one exists, none have been saved before, and this is the first module for this kernel
-    local lib_tree
     local any_module_installed
-    local count
-    lib_tree="$install_tree/$kernelver"
 
     if ! run_build_script pre_install "$pre_install" && ! [[ $force ]]; then
         die 101 "pre_install failed, aborting install." \
@@ -1588,11 +1590,10 @@ do_install()
         m=${dest_module_name[$count]}
         installed_modules=$(find_module "$lib_tree" "$m")
         module_count=${#installed_modules[@]}
-        original_copy=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$kernelver/$arch" "$m")
-        if [[ -L $dkms_tree/$module/kernel-$kernelver-$arch &&
-            -n "$original_copy" ]]; then
+        original_copy=$(compressed_or_uncompressed "$original_module_backup_dir" "$m")
+        if [[ -L $active_link && $original_copy ]]; then
             echo "An original module was already stored during a previous install"
-        elif ! [[ -L $dkms_tree/$module/kernel-$kernelver-$arch ]]; then
+        elif [[ ! -L $active_link ]]; then
             local original_module
             local found_original
             local archive_pref1
@@ -1609,14 +1610,14 @@ do_install()
             for original_module in $archive_pref1 $archive_pref2 $archive_pref3 $archive_pref4; do
                 [[ -f $original_module ]] || continue
                 echo "Found pre-existing $original_module, archiving for uninstallation"
-                mkdir -p "$dkms_tree/$module/original_module/$kernelver/$arch"
-                mv -f "$original_module" "$dkms_tree/$module/original_module/$kernelver/$arch/"
+                mkdir -p "$original_module_backup_dir"
+                mv -f "$original_module" "$original_module_backup_dir/"
                 found_original="yes"
                 break
             done
             if [[ ! $found_original ]] && ((module_count > 1)); then
                 echo "Multiple original modules exist, so none will be put back in place during a later uninstall"
-                echo "All instances will be stored for reference purposes in $dkms_tree/$module/original_module/$kernelver/$arch/collisions/"
+                echo "All instances will be stored for reference purposes in $original_module_backup_dir/collisions/"
             fi
         fi
 
@@ -1626,8 +1627,8 @@ do_install()
                 dup_tree="${module_dup#"${lib_tree}"}";
                 dup_name="${module_dup##*/}"
                 dup_tree="${dup_tree/"${dup_name}"}"
-                mkdir -p "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
-                mv -f "$module_dup" "$dkms_tree/$module/original_module/$kernelver/$arch/collisions/$dup_tree"
+                mkdir -p "$original_module_backup_dir/collisions/$dup_tree"
+                mv -f "$module_dup" "$original_module_backup_dir/collisions/$dup_tree/"
             done
         fi
 
@@ -1646,8 +1647,8 @@ do_install()
     fi
 
     # Create the kernel-<kernelver> symlink to designate this version as active
-    rm -f "${dkms_tree:?}/$module/kernel-$kernelver-$arch" 2>/dev/null
-    ln -s "$module_version/$kernelver/$arch" "$dkms_tree/$module/kernel-$kernelver-$arch" 2>/dev/null
+    rm -f "$active_link"
+    ln -s "$module_version/$kernelver/$arch" "$active_link"
 
     # Add to kabi-tracking
     if [[ -z $NO_WEAK_MODULES ]]; then
