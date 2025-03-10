@@ -1850,6 +1850,8 @@ do_uninstall()
     # $1 = kernel version
     # $2 = arch
 
+    local -r original_module_backup_dir="$dkms_tree/$module/original_module/$1/$2"
+
     echo "Module $module/$module_version for kernel $1 ($2):"
 
     set_module_suffix "$1"
@@ -1865,18 +1867,21 @@ do_uninstall()
         echo "Before uninstall, this module version was ACTIVE on this kernel."
         # remove kabi-tracking if last instance removed
         if [[ -z $NO_WEAK_MODULES ]]; then
-            if [[ ${weak_modules_remove} ]] && (module_status_built "$module" "$module_version" |grep -q "installed"); then
+            if [[ ${weak_modules_remove} ]] && (module_status_built "$module" "$module_version" | grep -q "installed"); then
                 echo "Removing linked weak modules..."
                 list_each_installed_module "$module" "$1" "$2" | ${weak_modules_remove}
             fi
         fi
 
         for ((count=0; count < num_modules; count++)); do
+            local m
+            m=${dest_module_name[$count]}
+
             real_dest_module_location="$(find_actual_dest_module_location "$module" "$count" "$1" "$2")"
 
             if [[ ${real_dest_module_location} ]]; then
-                echo "Deleting $install_tree/$1${real_dest_module_location}/${dest_module_name[$count]}$module_suffix"
-                rm -f "${install_tree:?}/$1${real_dest_module_location}/${dest_module_name[$count]}$module_uncompressed_suffix"*
+                echo "Deleting $install_tree/$1${real_dest_module_location}/$m$module_suffix"
+                rm -f "${install_tree:?}/$1${real_dest_module_location}/$m$module_uncompressed_suffix"*
                 dir_to_remove="${real_dest_module_location#/}"
                 while [[ ${dir_to_remove} != "${dir_to_remove#/}" ]]; do
                     dir_to_remove="${dir_to_remove#/}"
@@ -1891,10 +1896,10 @@ do_uninstall()
                         ;;
                 esac
             else
-                echo "Module ${dest_module_name[$count]}$module_suffix was not found within $install_tree/$1/"
+                echo "Module $m$module_suffix was not found within $install_tree/$1/"
             fi
             local origmod
-            origmod=$(compressed_or_uncompressed "$dkms_tree/$module/original_module/$1/$2" "${dest_module_name[$count]}")
+            origmod=$(compressed_or_uncompressed "$original_module_backup_dir" "$m")
             if [[ -n $origmod ]]; then
                 echo "Restoring archived original module"
                 mkdir -p "$install_tree/$1${DEST_MODULE_LOCATION[$count]}/"
