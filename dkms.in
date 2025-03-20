@@ -2640,7 +2640,7 @@ autoinstall() {
         fi
         # If the module does not want to be autoinstalled, skip it.
         module=$m module_version=$v read_conf_or_die "${kernelver[0]}" "${arch[0]}" "$dkms_tree/$m/$v/source/dkms.conf"
-        if [[ ! $AUTOINSTALL ]]; then
+        if [[ ! $AUTOINSTALL || $AUTOINSTALL == "no" ]]; then
             continue
         fi
         # Otherwise, autoinstall the latest version we have hanging around.
