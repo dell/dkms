@@ -840,6 +840,8 @@ read_conf_strict()
     read_conf "$@" || return $?
     show_deprecation_warnings=0
 
+    local index
+    local names
     local return_value
     return_value=0
 
@@ -847,6 +849,20 @@ read_conf_strict()
     if ((num_modules == 0)); then
         echo "dkms.conf: Warning! Zero modules specified." >&2
     fi
+
+    # FAIL on duplicate modules in BUILT_MODULE_NAME[]
+    names=
+    for ((index=0; index < num_modules; index++)); do
+        local m
+        m="${built_module_location[index]}${built_module_name[index]}"
+        case " $names " in
+            *" $m "*)
+                echo "dkms.conf: Error! Duplicate module '$m' in 'BUILT_MODULE_NAME[$index]'." >&2
+                return_value=1
+                ;;
+        esac
+        names="$names $m"
+    done
 
     return $return_value
 }

@@ -2731,47 +2731,14 @@ remove_module_source_tree /usr/src/dkms_conf_test-1.0
 
 # --------------------------------------------------------------------------
 
-echo 'Testing dkms.conf specifying a module twice'
-run_with_expected_output dkms add test/dkms_duplicate_test << EOF
-Creating symlink /var/lib/dkms/dkms_duplicate_test/1.0/source -> /usr/src/dkms_duplicate_test-1.0
+echo 'Testing dkms.conf specifying a module twice (expected error)'
+run_with_expected_error 8 dkms add test/dkms_duplicate_test << EOF
+dkms.conf: Error! Duplicate module 'dkms_duplicate_test' in 'BUILT_MODULE_NAME[1]'.
+
+Error! Bad conf file.
+File: /usr/src/dkms_duplicate_test-1.0/dkms.conf does not represent a valid dkms.conf file.
 EOF
 check_module_source_tree_created /usr/src/dkms_duplicate_test-1.0
-run_status_with_expected_output 'dkms_duplicate_test' << EOF
-dkms_duplicate_test/1.0: added
-EOF
-
-echo ' Building and installing the test module'
-set_signing_message "dkms_duplicate_test" "1.0"
-if [[ ${mod_compression_ext} ]]; then
-BUILD_MESSAGES="${SIGNING_MESSAGE}Warning: /var/lib/dkms/dkms_duplicate_test/1.0/build/dkms_duplicate_test.ko has disappeared
-"
-else
-BUILD_MESSAGES="${SIGNING_MESSAGE}${SIGNING_MESSAGE}"
-fi
-run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_duplicate_test -v 1.0 << EOF
-${SIGNING_PROLOGUE}
-Building module(s)... done.
-${BUILD_MESSAGES}Cleaning build area...(bad exit status: 1)
-Failed command:
-echo oops >&2 && false
-Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext}
-Module /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext} already installed (unversioned module), override by specifying --force
-Running depmod... done.
-EOF
-run_status_with_expected_output 'dkms_duplicate_test' << EOF
-dkms_duplicate_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
-EOF
-
-echo ' Removing the test module'
-run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_duplicate_test -v 1.0 << EOF
-Module dkms_duplicate_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
-Before uninstall, this module version was ACTIVE on this kernel.
-Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_duplicate_test.ko${mod_compression_ext}
-Module dkms_duplicate_test.ko${mod_compression_ext} was not found within /lib/modules/${KERNEL_VER}/
-Running depmod... done.
-
-Deleting module dkms_duplicate_test/1.0 completely from the DKMS tree.
-EOF
 run_status_with_expected_output 'dkms_duplicate_test' << EOF
 EOF
 
@@ -2779,46 +2746,18 @@ remove_module_source_tree /usr/src/dkms_duplicate_test-1.0
 
 # --------------------------------------------------------------------------
 
-if [[ ${mod_compression_ext} ]]; then
-echo 'Testing dkms.conf specifying a module twice in BUILT_MODULE_NAME[]'
-run_with_expected_output dkms add test/dkms_duplicate_built_test-1.0 << EOF
-Creating symlink /var/lib/dkms/dkms_duplicate_built_test/1.0/source -> /usr/src/dkms_duplicate_built_test-1.0
+echo 'Testing dkms.conf specifying a module twice in BUILT_MODULE_NAME[] (expected error)'
+run_with_expected_error 8 dkms add test/dkms_duplicate_built_test-1.0 << EOF
+dkms.conf: Error! Duplicate module 'dkms_duplicate_built_test' in 'BUILT_MODULE_NAME[1]'.
+
+Error! Bad conf file.
+File: /usr/src/dkms_duplicate_built_test-1.0/dkms.conf does not represent a valid dkms.conf file.
 EOF
 check_module_source_tree_created /usr/src/dkms_duplicate_built_test-1.0
-run_status_with_expected_output 'dkms_duplicate_built_test' << EOF
-dkms_duplicate_built_test/1.0: added
-EOF
-
-echo ' Building and installing the test module (expected error)'
-set_signing_message "dkms_duplicate_built_test" "1.0"
-if [[ ${mod_compression_ext} ]]; then
-BUILD_MESSAGES="${SIGNING_MESSAGE}Warning: /var/lib/dkms/dkms_duplicate_built_test/1.0/build/dkms_duplicate_built_test.ko has disappeared
-"
-else
-BUILD_MESSAGES="${SIGNING_MESSAGE}${SIGNING_MESSAGE}"
-fi
-run_with_expected_error 7 dkms install -k "${KERNEL_VER}" -m dkms_duplicate_built_test -v 1.0 << EOF
-${SIGNING_PROLOGUE}
-Building module(s)... done.
-${BUILD_MESSAGES}
-Error! Missing module 'dkms_duplicate2_built_test' in /var/lib/dkms/dkms_duplicate_built_test/1.0/${KERNEL_VER}/tmp_${KERNEL_ARCH}_XXXXXX/module
-EOF
-run_status_with_expected_output 'dkms_duplicate_built_test' << EOF
-dkms_duplicate_built_test/1.0: added
-EOF
-
-echo ' Removing the test module'
-run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_duplicate_built_test -v 1.0 << EOF
-Module dkms_duplicate_built_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
-Module dkms_duplicate_built_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
-
-Deleting module dkms_duplicate_built_test/1.0 completely from the DKMS tree.
-EOF
 run_status_with_expected_output 'dkms_duplicate_built_test' << EOF
 EOF
 
 remove_module_source_tree /usr/src/dkms_duplicate_built_test-1.0
-fi
 
 # --------------------------------------------------------------------------
 
