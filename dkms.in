@@ -864,6 +864,20 @@ read_conf_strict()
         names="$names $m"
     done
 
+    # FAIL on duplicate modules in DEST_MODULE_NAME[]
+    names=
+    for ((index=0; index < num_modules; index++)); do
+        local m
+        m=${dest_module_name[index]}
+        case " $names " in
+            *" $m "*)
+                echo "dkms.conf: Error! Duplicate module '$m' in 'DEST_MODULE_NAME[$index]'." >&2
+                return_value=1
+                ;;
+        esac
+        names="$names $m"
+    done
+
     return $return_value
 }
 
