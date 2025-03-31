@@ -663,19 +663,20 @@ read_conf()
         return_value=1
     fi
 
-    # Set module naming/location arrays
-    local index
-    local array_size
+    # Determine number of modules
     local s
-    array_size=0
+    num_modules=0
     # shellcheck disable=SC2153
     for s in ${#BUILT_MODULE_NAME[@]} \
         ${#BUILT_MODULE_LOCATION[@]} \
         ${#DEST_MODULE_NAME[@]} \
         ${#DEST_MODULE_LOCATION[@]}; do
-        ((s > array_size)) && array_size=$s
+        ((s > num_modules)) && num_modules=$s
     done
-    for ((index=0; index < array_size; index++)); do
+
+    # Set module naming/location arrays
+    local index
+    for ((index=0; index < num_modules; index++)); do
         # Set values
         built_module_name[index]=${BUILT_MODULE_NAME[index]}
         built_module_location[index]=${BUILT_MODULE_LOCATION[index]}
@@ -696,7 +697,7 @@ read_conf()
 
         # If unset, set by defaults
         [[ ! ${built_module_name[$index]} ]] && \
-            ((array_size == 1)) && \
+            ((num_modules == 1)) && \
             built_module_name[index]=$PACKAGE_NAME
         [[ ! ${dest_module_name[$index]} ]] && \
             dest_module_name[index]=${built_module_name[index]}
@@ -751,8 +752,18 @@ read_conf()
         esac
     done
 
+    # Array length sanity check
+    for s in ${#built_module_name[@]} \
+        ${#built_module_location[@]} \
+        ${#dest_module_name[@]} \
+        ${#dest_module_location[@]}; do
+        if ((s != num_modules)); then
+            echo "dkms.conf: Error! Module name/location array length mismatch.">&2
+            return_value=1
+        fi
+    done
     # Warn if no modules are specified
-    if ((array_size == 0)); then
+    if ((num_modules == 0)); then
         echo "dkms.conf: Warning! Zero modules specified." >&2
     fi
 
@@ -780,6 +791,7 @@ read_conf()
     fi
 
     # Set patch_array (including kernel specific patches)
+    local count
     count=0
     for ((index=0; index < ${#PATCH[@]}; index++)); do
     if [[ ${PATCH[$index]} && (! ${PATCH_MATCH[$index]} || $1 =~ ${PATCH_MATCH[$index]}) ]]; then
@@ -1364,7 +1376,7 @@ do_build()
         "Consult $build_log for more information."
 
     # Make sure all the modules built successfully
-    for ((count=0; count < ${#built_module_name[@]}; count++)); do
+    for ((count=0; count < num_modules; count++)); do
         [[ -e ${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix ]] && continue
         report_build_problem 7 \
             "Build of ${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix failed for: $kernelver ($arch)" \
@@ -1381,7 +1393,7 @@ do_build()
     if [ -f "$build_dir/Module.symvers" ] ; then
         cp -f "$build_dir/Module.symvers" "$base_dir/module/Module.symvers"
     fi
-    for ((count=0; count < ${#built_module_name[@]}; count++)); do
+    for ((count=0; count < num_modules; count++)); do
         local the_module
         local built_module
         local compressed_module
@@ -1528,7 +1540,7 @@ do_install()
     local count
     lib_tree="$install_tree/$kernelver"
 
-    for ((count=0; count < ${#built_module_name[@]}; count++)); do
+    for ((count=0; count < num_modules; count++)); do
         # Check this version against what is already in the kernel
         check_version_sanity "$kernelver" "$arch" "$obsolete_by" "${dest_module_name[$count]}" || continue
 
@@ -1598,7 +1610,7 @@ do_install()
 
     done
 
-    if ((${#built_module_name[@]} > 0)) && [[ ! "${any_module_installed}" ]]; then
+    if ((num_modules > 0)) && [[ ! "${any_module_installed}" ]]; then
         die 6 "Installation aborted."
     fi
 
@@ -1645,7 +1657,7 @@ list_each_installed_module()
     local count
     local real_dest_module_location
     local mod
-    for ((count=0; count < ${#built_module_name[@]}; count++)); do
+    for ((count=0; count < num_modules; count++)); do
         real_dest_module_location="$(find_actual_dest_module_location "$1" "$count" "$2" "$3")"
         mod=$(compressed_or_uncompressed "$install_tree/$2${real_dest_module_location}" "${dest_module_name[$count]}")
         echo "$mod"
@@ -1825,7 +1837,7 @@ do_uninstall()
             fi
         fi
 
-        for ((count=0; count < ${#built_module_name[@]}; count++)); do
+        for ((count=0; count < num_modules; count++)); do
             real_dest_module_location="$(find_actual_dest_module_location "$module" "$count" "$1" "$2")"
 
             if [[ ${real_dest_module_location} ]]; then
@@ -2080,7 +2092,7 @@ module_status_built_extra() (
     set_module_suffix "$3"
     read_conf "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf" 2>/dev/null
     [[ -d $dkms_tree/$1/original_module/$3/$4 ]] && echo -n " (Original modules exist)"
-    for ((count=0; count < ${#dest_module_name[@]}; count++)); do
+    for ((count=0; count < num_modules; count++)); do
         tree_mod=$(compressed_or_uncompressed "$dkms_tree/$1/$2/$3/$4/module" "${dest_module_name[$count]}")
         if [[ -z "$tree_mod" ]]; then
             echo -n " (Built modules are missing in the kernel modules folder)"
