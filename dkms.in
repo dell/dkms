@@ -834,6 +834,18 @@ read_conf()
     return $return_value
 }
 
+# read_conf() with additional dkms.conf checks that should prevent
+# add/build/install but not uninstall/unbuild/remove of bad modules.
+read_conf_strict()
+{
+    read_conf "$@" || return $?
+
+    local return_value
+    return_value=0
+
+    return $return_value
+}
+
 # Source specified variables from dkms framework configuration files.
 read_framework_conf() {
     for i in /etc/dkms/framework.conf /etc/dkms/framework.conf.d/*.conf; do
@@ -1001,6 +1013,12 @@ read_conf_or_die() {
         "File: ${3:-$conf} does not represent a valid dkms.conf file."
 }
 
+read_conf_strict_or_die() {
+    read_conf_strict "$@" && return
+    die 8 "Bad conf file."\
+        "File: ${3:-$conf} does not represent a valid dkms.conf file."
+}
+
 run_build_script() {
     # $1 = script type
     # $2 = script to run
@@ -1082,7 +1100,7 @@ add_module()
     fi
 
     # Check the conf file for sanity
-    read_conf_or_die "$kernelver" "$arch" "$source_conf"
+    read_conf_strict_or_die "$kernelver" "$arch" "$source_conf"
 
     # Create the necessary dkms tree structure
     echo "Creating symlink $dkms_tree/$module/$module_version/source -> $source_tree/$module-$module_version"
@@ -1270,7 +1288,7 @@ do_build()
 
     # Read the conf file
     set_module_suffix "$kernelver"
-    read_conf_or_die "$kernelver" "$arch"
+    read_conf_strict_or_die "$kernelver" "$arch"
 
     # Error out if build_exclude is set
     [[ $build_exclude ]] && diewarn 77 \
@@ -1550,7 +1568,7 @@ do_install()
         "You cannot install a module onto a non-existant kernel."
 
     # Read the conf file
-    read_conf_or_die "$kernelver" "$arch"
+    read_conf_strict_or_die "$kernelver" "$arch"
 
     # Validate build completeness
     for ((index=0; index < num_modules; index++)); do
