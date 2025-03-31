@@ -2180,7 +2180,7 @@ do_status_weak()
 # interested in, but that the DKMS internals do not usually care about.
 module_status_built_extra() (
     set_module_suffix "$3"
-    read_conf "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf" 2>/dev/null
+    read_conf "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf"
     [[ -d $dkms_tree/$1/original_module/$3/$4 ]] && echo -n " (Original modules exist)"
     for ((count=0; count < num_modules; count++)); do
         tree_mod=$(compressed_or_uncompressed "$dkms_tree/$1/$2/$3/$4/module" "${dest_module_name[$count]}")
@@ -2277,10 +2277,6 @@ do_status() {
     local v
     local k
     local a
-    local tmpfile
-    # separate deprecation warnings from status output
-    tmpfile=$(mktemp_or_die)
-    (module_status "$@") >"$tmpfile"
     while read -r status mvka; do
         IFS=/ read -r m v k a <<< "$mvka"
         case $status in
@@ -2298,8 +2294,7 @@ do_status() {
                 echo
                 ;;
         esac
-    done < "$tmpfile"
-    rm "${tmpfile:?}"
+    done <<< "$(module_status "$@")"
 }
 
 # Show all our status in the format that external callers expect, even
