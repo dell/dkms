@@ -1502,6 +1502,8 @@ do_install()
     is_module_built "$module" "$module_version" "$kernelver" "$arch" || do_build
     local base_dir
     base_dir="$dkms_tree/$module/$module_version/$kernelver/$arch"
+    local symlink
+    [[ $symlink_modules ]] && symlink="-s"
 
     # Save the status of $force
     tmp_force="$force"
@@ -1602,11 +1604,9 @@ do_install()
         # Copy module to its location
         echo "Installing $install_tree/$kernelver${dest_module_location[$count]}/${dest_module_name[$count]}$module_suffix"
         mkdir -p "$install_tree/$kernelver${dest_module_location[$count]}"
-        local symlink=
-        [[ $symlink_modules ]] && symlink="-s"
         local toinstall
         toinstall=$(compressed_or_uncompressed "$base_dir/module" "$m")
-        cp -f $symlink "$toinstall" "$install_tree/$kernelver${dest_module_location[$count]}/${toinstall##*/}"
+        cp -f $symlink "$toinstall" "$install_tree/$kernelver${dest_module_location[$count]}/${toinstall##*/}" || die 6 "Copying '$toinstall' failed"
         any_module_installed=1
 
     done
