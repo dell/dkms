@@ -1141,9 +1141,17 @@ prepare_mok()
             echo "openssl not found, can't generate key and certificate."
             return 1
         fi
+        # Newer openSUSE kernels require the codeSigning EKU
         openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS module signing key" \
             -newkey rsa:2048 -keyout "$mok_signing_key" \
+            -addext "extendedKeyUsage=codeSigning" \
             -outform DER -out "$mok_certificate" > /dev/null 2>&1
+        if [[ ! -f ${mok_signing_key} ]]; then
+            # The addExt argument is supported on openssl 1.1.1 and newer.  Try again without it.
+            openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS module signing key" \
+                -newkey rsa:2048 -keyout "$mok_signing_key" \
+                -outform DER -out "$mok_certificate" > /dev/null 2>&1
+        fi
         if [[ ! -f ${mok_signing_key} ]]; then
             echo "Key file ${mok_signing_key} not found and can't be generated, modules won't be signed"
             return 1
