@@ -39,6 +39,7 @@ TEST_MODULES=(
     "dkms_scripts_test"
     "dkms_noisy_test"
     "dkms_crlf_test"
+    "dkms_deprecated_test"
     "dkms_build_exclusive_test"
     "dkms_build_exclusive_dependencies_test"
 )
@@ -65,6 +66,7 @@ TEST_TMPDIRS=(
     "/usr/src/dkms_scripts_test-1.0"
     "/usr/src/dkms_noisy_test-1.0"
     "/usr/src/dkms_crlf_test-1.0"
+    "/usr/src/dkms_deprecated_test-1.0"
     "/usr/src/dkms_build_exclusive_test-1.0"
     "/usr/src/dkms_build_exclusive_dependencies_test-1.0"
     "/tmp/dkms_test_dir_${KERNEL_VER}/"
@@ -2574,6 +2576,8 @@ Error! Bad conf file.
 File: ${abspwd}/test/dkms_conf_test_invalid/dkms.conf does not represent a valid dkms.conf file.
 EOF
 
+# --------------------------------------------------------------------------
+
 echo 'Testing dkms.conf defining zero modules'
 run_with_expected_output dkms add test/dkms_conf_test_zero_modules << EOF
 dkms.conf: Warning! Zero modules specified.
@@ -2896,6 +2900,44 @@ run_status_with_expected_output 'dkms_crlf_test' << EOF
 EOF
 
 remove_module_source_tree /usr/src/dkms_crlf_test-1.0
+
+# --------------------------------------------------------------------------
+
+echo 'Testing dkms.conf with deprecated directives'
+run_with_expected_output dkms add test/dkms_deprecated_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_deprecated_test/1.0/source -> /usr/src/dkms_deprecated_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_deprecated_test-1.0
+run_status_with_expected_output 'dkms_deprecated_test' << EOF
+dkms_deprecated_test/1.0: added
+EOF
+
+echo ' Building and installing the test module'
+set_signing_message "dkms_deprecated_test" "1.0"
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_deprecated_test -v 1.0 << EOF
+${SIGNING_PROLOGUE}
+Building module(s)... done.
+${SIGNING_MESSAGE}Cleaning build area... done.
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_deprecated_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_deprecated_test' << EOF
+dkms_deprecated_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo ' Removing the test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_deprecated_test -v 1.0 << EOF
+Module dkms_deprecated_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_deprecated_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Deleting module dkms_deprecated_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_deprecated_test' << EOF
+EOF
+
+remove_module_source_tree /usr/src/dkms_deprecated_test-1.0
 
 # --------------------------------------------------------------------------
 
