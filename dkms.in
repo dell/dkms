@@ -762,10 +762,6 @@ read_conf()
             return_value=1
         fi
     done
-    # Warn if no modules are specified
-    if ((num_modules == 0)); then
-        echo "dkms.conf: Warning! Zero modules specified." >&2
-    fi
 
     # Get the correct make command
     [[ ${MAKE_MATCH[0]} ]] || make_command="${MAKE[0]}"
@@ -842,6 +838,11 @@ read_conf_strict()
 
     local return_value
     return_value=0
+
+    # Warn if no modules are specified
+    if ((num_modules == 0)); then
+        echo "dkms.conf: Warning! Zero modules specified." >&2
+    fi
 
     return $return_value
 }
