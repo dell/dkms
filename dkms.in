@@ -1540,14 +1540,15 @@ do_install()
     local count
     lib_tree="$install_tree/$kernelver"
 
+    if ! run_build_script pre_install "$pre_install" && ! [[ $force ]]; then
+        die 101 "pre_install failed, aborting install." \
+            "You may override by specifying --force."
+    fi
+
     for ((count=0; count < num_modules; count++)); do
         # Check this version against what is already in the kernel
         check_version_sanity "$kernelver" "$arch" "$obsolete_by" "${dest_module_name[$count]}" || continue
 
-        if ((count == 0)) && ! run_build_script pre_install "$pre_install" && ! [[ $force ]]; then
-            die 101 "pre_install failed, aborting install." \
-                "You may override by specifying --force."
-        fi
         local m
         local installed_modules
         local module_count
