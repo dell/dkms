@@ -2928,6 +2928,7 @@ Running depmod... done.
 EOF
 run_status_with_expected_output 'dkms_deprecated_test' << EOF
 Deprecated feature: REMAKE_INITRD (/var/lib/dkms/dkms_deprecated_test/1.0/source/dkms.conf)
+Deprecated feature: REMAKE_INITRD (/var/lib/dkms/dkms_deprecated_test/1.0/source/dkms.conf)
 dkms_deprecated_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
