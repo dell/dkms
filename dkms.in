@@ -97,6 +97,7 @@ readonly dkms_conf_variables="CLEAN PACKAGE_NAME
 
    REMAKE_INITRD MODULES_CONF MODULES_CONF_OBSOLETES
    MODULES_CONF_ALIAS_TYPE MODULES_CONF_OBSOLETE_ONLY"
+show_deprecation_warnings=0
 
 # All of the variables not related to signing we will accept from framework.conf.
 readonly dkms_framework_nonsigning_variables="source_tree dkms_tree install_tree tmp_location
@@ -563,6 +564,7 @@ safe_source() {
     . "$tmpfile"
     rm "${tmpfile:?}"
 
+    (( show_deprecation_warnings )) || return
     (( ${#REMAKE_INITRD[@]} )) && deprecated "REMAKE_INITRD ($to_source_file)"
     (( ${#MODULES_CONF[@]} )) && deprecated "MODULES_CONF ($to_source_file)"
     (( ${#MODULES_CONF_OBSOLETES[@]} )) && deprecated "MODULES_CONF_OBSOLETES ($to_source_file)"
@@ -834,7 +836,9 @@ read_conf()
 # add/build/install but not uninstall/unbuild/remove of bad modules.
 read_conf_strict()
 {
+    show_deprecation_warnings=1
     read_conf "$@" || return $?
+    show_deprecation_warnings=0
 
     local return_value
     return_value=0
