@@ -199,6 +199,8 @@ generalize_expected_output() {
     # On Red Hat and SUSE based distributions, weak-modules is executed. Drop it from the output, to be more generic
     sed -i '/^Adding linked weak modules.*$/d' "${output_log}"
     sed -i '/^Removing linked weak modules.*$/d' "${output_log}"
+    # Found on older distributions
+    sed -i '/^Deprecated feature: .* (\/etc\/dkms\/framework.conf)/d' "${output_log}"
     # Signing related output. Drop it from the output, to be more generic
     if (( NO_SIGNING_TOOL == 0 )); then
         sed -i '/^EFI variables are not supported on this system/d' "${output_log}"
@@ -2905,6 +2907,8 @@ remove_module_source_tree /usr/src/dkms_crlf_test-1.0
 
 echo 'Testing dkms.conf with deprecated directives'
 run_with_expected_output dkms add test/dkms_deprecated_test-1.0 << EOF
+Deprecated feature: REMAKE_INITRD (${abspwd}/test/dkms_deprecated_test-1.0/dkms.conf)
+Deprecated feature: REMAKE_INITRD (/usr/src/dkms_deprecated_test-1.0/dkms.conf)
 Creating symlink /var/lib/dkms/dkms_deprecated_test/1.0/source -> /usr/src/dkms_deprecated_test-1.0
 EOF
 check_module_source_tree_created /usr/src/dkms_deprecated_test-1.0
@@ -2915,6 +2919,7 @@ EOF
 echo ' Building and installing the test module'
 set_signing_message "dkms_deprecated_test" "1.0"
 run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_deprecated_test -v 1.0 << EOF
+Deprecated feature: REMAKE_INITRD (/var/lib/dkms/dkms_deprecated_test/1.0/source/dkms.conf)
 ${SIGNING_PROLOGUE}
 Building module(s)... done.
 ${SIGNING_MESSAGE}Cleaning build area... done.
@@ -2922,11 +2927,13 @@ Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_deprecated_test.
 Running depmod... done.
 EOF
 run_status_with_expected_output 'dkms_deprecated_test' << EOF
+Deprecated feature: REMAKE_INITRD (/var/lib/dkms/dkms_deprecated_test/1.0/source/dkms.conf)
 dkms_deprecated_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 echo ' Removing the test module'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_deprecated_test -v 1.0 << EOF
+Deprecated feature: REMAKE_INITRD (/var/lib/dkms/dkms_deprecated_test/1.0/source/dkms.conf)
 Module dkms_deprecated_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_deprecated_test.ko${mod_compression_ext}
