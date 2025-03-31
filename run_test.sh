@@ -2553,7 +2553,6 @@ echo 'Testing dkms add with empty dkms.conf (expected error)'
 run_with_expected_error 8 dkms add test/dkms_conf_test_empty << EOF
 dkms.conf: Error! No 'PACKAGE_NAME' directive specified.
 dkms.conf: Error! No 'PACKAGE_VERSION' directive specified.
-dkms.conf: Warning! Zero modules specified.
 
 Error! Bad conf file.
 File: ${abspwd}/test/dkms_conf_test_empty/dkms.conf does not represent a valid dkms.conf file.
@@ -2578,7 +2577,6 @@ EOF
 echo 'Testing dkms.conf defining zero modules'
 run_with_expected_output dkms add test/dkms_conf_test_zero_modules << EOF
 dkms.conf: Warning! Zero modules specified.
-dkms.conf: Warning! Zero modules specified.
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
 EOF
 check_module_source_tree_created /usr/src/dkms_conf_test-1.0
@@ -2597,19 +2595,18 @@ run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_conf_test -v 1.
 dkms.conf: Warning! Zero modules specified.
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
 
+dkms.conf: Warning! Zero modules specified.
 ${SIGNING_PROLOGUE}
 Building module(s)... done.
 Cleaning build area... done.
+dkms.conf: Warning! Zero modules specified.
 Running depmod... done.
 EOF
 run_status_with_expected_output 'dkms_conf_test' << EOF
-dkms.conf: Warning! Zero modules specified.
 dkms_conf_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
 run_with_expected_output dkms remove --all -m dkms_conf_test -v 1.0 << EOF
-dkms.conf: Warning! Zero modules specified.
-dkms.conf: Warning! Zero modules specified.
 Module dkms_conf_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
 Before uninstall, this module version was ACTIVE on this kernel.
 Running depmod... done.
