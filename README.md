@@ -96,7 +96,8 @@ By default, DKMS generates a self signed certificate for signing modules at
 build time and signs every module that it builds before it gets compressed in
 the configured kernel compression mechanism of choice.
 
-This requires the `openssl` command to be present on the system.
+This requires version 1.1.1 or newer of the `openssl` command to be present on
+the system.
 
 Private key and certificate are auto generated the first time DKMS is run and
 placed in `/var/lib/dkms`. These certificate files can be pre-populated with
