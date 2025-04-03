@@ -1499,9 +1499,6 @@ do_build()
         fi
     done
 
-    # Run the post_build script
-    run_build_script post_build "$post_build" "$build_log"
-
     # Validate build completeness
     for ((index=0; index < num_modules; index++)); do
         local m
@@ -1515,6 +1512,8 @@ do_build()
     chmod 0755 "$tmp_base_dir"
     mv -T "$tmp_base_dir" "$base_dir" || die 7 "do_build: final mv failed ($?)"
 
+    # Run the post_build script, requires accessible $mvka/module/
+    run_build_script post_build "$post_build" "$build_log"
     # Run the clean commands
     invoke_command "$clean" "Cleaning build area" "$build_log" background
 
