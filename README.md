@@ -1,15 +1,13 @@
-Dynamic Kernel Module System (DKMS)
-==
-This intention of this README is to explain how DKMS can be used in conjunction
-with tarballs which contain a dkms.conf file within them.
+# Dynamic Kernel Module System (DKMS)
+
+This intention of this README is to explain how DKMS can be used in conjunction with tarballs which contain a dkms.conf file within them.
 
 The DKMS project (and any updates) can be found at: https://github.com/dell/dkms
 
-Installation
---
 
-Installation is performed from the source directory with one of the following
-commands:
+## Installation
+
+Installation is performed from the source directory with one of the following commands:
 
 ```
 make install
@@ -17,119 +15,110 @@ make install-debian
 make install-redhat
 ```
 
-Distribution specific installations (RPM, DEB, etc.) are not contained in this
-source repository.
+Distribution specific installations (RPM, DEB, etc.) are not contained in this source repository.
 
 
-Installation via DKMS Tarballs
---
+## Installation of DKMS Tarballs
 
 DKMS can install directly from the following:
 
 1. Generic module source tarballs which contain a dkms.conf file
-2. Specially created DKMS tarballs with module source, pre-built module
-   binaries and a dkms.conf file
-3. Specially created DKMS tarballs with pre-built module binaries and a
-   dkms.conf file
-4. Manual placement of module source and dkms.conf file into
-   `/usr/src/<module>-<moduleversion>/` directory
+2. Specially created DKMS tarballs with module source, pre-built module binaries and a `dkms.conf` file
+3. Specially created DKMS tarballs with pre-built module binaries and a `dkms.conf` file
+4. Manual placement of module source and `dkms.conf` file into `/usr/src/<module>-<moduleversion>/` directory
 
-In order to load any tarball into the DKMS tree, you must use the following
-command:
+In order to load any tarball into the DKMS tree, you must use the following command:
 
 ```
 # dkms ldtarball /path/to/dkms_enabled.tar.gz
 ```
 
-This command will first inspect the tarball to ensure that it contains a
-dkms.conf configuration file for that module.  If it cannot find this file
-anywhere within the archive, then the ldtarball will fail.
+This command will first inspect the tarball to ensure that it contains a `dkms.conf` configuration file for that module.
+If it cannot find this file anywhere within the archive, then the `ldtarball` command will fail.
 
-From here, it will place the source in the tarball into
-`/usr/src/<module>-<moduleversion>/`. If source already exists in the directory,
-it will not overwrite it unless the --force option is specified. If the tarball
-is of type "c" above and does not contain source, it will only continue to load
-the tarball if existing module source is found in
-`/usr/src/<module>-<moduleversion>/` or if the --force option is specified.
+From here, it will place the source in the tarball into `/usr/src/<module>-<moduleversion>/`.
+If source already exists in the directory, it will not overwrite it unless the `--force` option is specified.
+If the tarball is of type "c" above and does not contain source, it will only continue to load the tarball if existing module source is found in `/usr/src/<module>-<moduleversion>/` or if the `--force` option is specified.
 
-Continuing on, if the tarball is of type "b" or "c" it will then load any
-pre-built binaries found within the tarball into the dkms tree, but will stop
-short of installing them.  Thus, all pre-built binaries will then be of in the
-*built* state when checked from the `dkms status` command.  You can then use the
-`dkms install` command to install any of these binaries.
+Continuing on, if the tarball is of type "b" or "c" it will then load any pre-built binaries found within the tarball into the DKMS tree, but will stop short of installing them.
+Thus, all pre-built binaries will then be of in the *built* state when checked from the `dkms status` command.  You can then use the `dkms install` command to install any of these binaries.
 
-To create a tarball of type "1" above, you need only to take module source and a
-dkms.conf file for that module and create a tarball from them.  Tarballs of
-type *2* or type *3* are created with the `dkms mktarball` command.  To create
-a type *3* tarball, you must specify the flag `--binaries-only` with the
-`mktarball`.
+To create a tarball of type "1" above, you need only to take module source and a `dkms.conf` file for that module and create a tarball from them.
+Tarballs of type *2* or type *3* are created with the `dkms mktarball` command.
+To create a type *3* tarball, you must specify the flag `--binaries-only` along with the `mktarball` command.
 
+### Installation on Systems with no Module Source and/or Compiler
 
+If you choose not to load module source on your system or if you choose not to load a compiler such as gcc onto your system, DKMS can still be used to install modules.
+It does this through use of DKMS binary only tarballs as explained in this README under tarballs of type *c*.
 
-Installation on Systems with no Module Source and/or Compiler
---
-
-If you choose not to load module source on your system or if you choose not to
-load a compiler such as gcc onto your system, DKMS can still be used to install
-modules.  It does this through use of DKMS binary only tarballs as explained in
-this README under tarballs of type *c*.
-
-If your system does not have module source, loading the dkms tarball will fail
-because of this.  To avoid this, use the --force flag, as such:
+If your system does not have module source, loading the dkms tarball will fail because of this.
+To avoid this, use the `--force` flag, as such:
 
 ```
 # dkms ldtarball /path/to/dkms_enabled.tar.gz --force
 ```
 
-This will load the pre-built binaries into the dkms tree, and create the
-directory `/usr/src/<module>-<moduleversion>/` which will only contain the
-module's dkms.conf configuration file.  Once the tarball is loaded, you can then
-use `dkms install` to install any of the pre-built modules.
+This will load the pre-built binaries into the dkms tree, and create the directory `/usr/src/<module>-<moduleversion>/` which will only contain the module's `dkms.conf` configuration file.
+Once the tarball is loaded, you can then use `dkms install` to install any of the pre-built modules.
 
-Of course, since module source will not be located in your dkms tree, you will
-not be able to build any modules with DKMS for this package.
+Of course, since the module source will not be located in your DKMS tree, you will not be able to build any modules with DKMS for this package.
 
-Module signing
---
 
-By default, DKMS generates a self signed certificate for signing modules at
-build time and signs every module that it builds before it gets compressed in
-the configured kernel compression mechanism of choice.
+## Module signing
 
-This requires version 1.1.1 or newer of the `openssl` command to be present on
-the system.
+By default, DKMS generates a self signed certificate for signing modules at build time and signs every module that it builds before it gets compressed in the configured kernel compression mechanism of choice.
 
-Private key and certificate are auto generated the first time DKMS is run and
-placed in `/var/lib/dkms`. These certificate files can be pre-populated with
-your own certificates of choice.
+Private key and certificate are auto generated the first time DKMS is run and placed in `/var/lib/dkms`.
+These certificate files can be pre-populated with your own certificates of choice.
 
-The location as well can be changed by setting the appropriate variables in
-`/etc/dkms/framework.conf`. For example, to allow usage of the system default
-Ubuntu `update-secureboot-policy` set the configuration file as follows:
+The location as well can be changed by setting the appropriate variables in `/etc/dkms/framework.conf`.
+For example, to allow usage of the system default Ubuntu `update-secureboot-policy` set the configuration file as follows:
+
 ```
 mok_signing_key="/var/lib/shim-signed/mok/MOK.priv"
 mok_certificate="/var/lib/shim-signed/mok/MOK.der"
 ```
-NOTE: If any of the files specified by `mok_signing_key` and
-`mok_certificate` are non-existant, dkms will re-create both files.
 
-The paths specified in `mok_signing_key`, `mok_certificate` and `sign_file` can
-use the variable `${kernelver}` to represent the target kernel version.
+NOTE: If any of the files specified by `mok_signing_key` and `mok_certificate` are non-existant, DKMS will re-create both files.
+
+The paths specified in `mok_signing_key`, `mok_certificate` and `sign_file` can use the variable `${kernelver}` to represent the target kernel version.
+
 ```
 sign_file="/lib/modules/${kernelver}/build/scripts/sign-file"
 ```
 
-The variable `mok_signing_key` can also be a `pkcs11:...` string for a [PKCS#11
-engine](https://www.rfc-editor.org/rfc/rfc7512), as long as the `sign_file`
-program supports it.
+The variable `mok_signing_key` can also be a `pkcs11:...` string for a [PKCS#11 engine](https://www.rfc-editor.org/rfc/rfc7512), as long as the `sign_file` program supports it.
 
-Secure Boot
---
+### Code Signing extended key usage validation
 
-On an UEFI system with Secure Boot enabled, modules require signing (as
-described in the above paragraph) before they can be loaded and the firmware of
-the system must know the correct public certificate to verify the module
-signature.
+Your kernel might be patched and compiled with the option `CONFIG_CHECK_CODESIGN_EKU` to assist with compliance to the NIAP Protection Profile for General Purpose Operating Systems.
+Page 35 of [version 4.3 of the specification](https://www.niap-ccevs.org/protectionprofiles/469) states:
+
+```
+* The OS shall validate the extendedKeyUsage field according to the following rules:
+  * Certificates used for trusted updates and executable code integrity
+    verification shall have the Code Signing Purpose (id-kp 3 with OID
+    1.3.6.1.5.5.7.3.3) in the extendedKeyUsage field.
+```
+
+So from DKMS 3.1.7 the MOK self signed certificate is now generated with the `extendedKeyUsage` set to `codeSigning`.
+This requires version *1.1.1 or newer* of the `openssl` command to be present on the system.
+
+In case your system is validating the extended key usage and you have autogenerated keys from a DKMS version prior to 3.1.7, the keys need to be regenerated.
+For example, assuming the default configuration:
+
+```
+# rm -fr /var/lib/dkms/mok.{key,pub}
+# dkms generate_mok
+Signing key: /var/lib/dkms/mok.key
+Public certificate (MOK): /var/lib/dkms/mok.pub
+```
+
+
+## Secure Boot
+
+On an UEFI system with Secure Boot enabled, modules require signing (as described in the above paragraph) before they can be loaded and the firmware of the system must know the correct public certificate to verify the module signature.
 
 For importing the MOK certificate make sure `mokutil` is installed.
 
@@ -190,11 +179,15 @@ signer:         DKMS module signing key
 
 The module can now be loaded without issues.
 
-Further Documentation
---
+### MOK certificate encryption algorithm
 
-Once DKMS is installed, you can reference its man page for further information
-on different DKMS options and also to understand the formatting of a module's
-dkms.conf configuration file.
+UEFI specification 2.11 [contains a list of valid encryption keys](https://uefi.org/specs/UEFI/2.11/37_Secure_Technologies.html#encryption-algorithm-properties) for the MOK certificate.
+The list is quite limited, basically offering only RSA as a valid key type.
+For maximum compatibility, DKMS generates the MOK certificate with a *2048 bit RSA key with SHA-2 256 as a digest*.
+
+
+## Further Documentation
+
+Once DKMS is installed, you can reference its man page for further information on different DKMS options and also to understand the formatting of a module's `dkms.conf` configuration file.
 
 The DKMS project is located at: https://github.com/dell/dkms
