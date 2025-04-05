@@ -1588,10 +1588,10 @@ do_install()
     # If the module is set to be force-installed
     local ret
     ret=$(force_installation "$module")
-    if [[ "$ret" == "force" ]];then
+    if [[ "$ret" == "force" ]]; then
         force="true"
         echo "Forcing installation of $module"
-    elif [[ "$ret" == "version-override" ]];then
+    elif [[ "$ret" == "version-override" ]]; then
         force_version_override="true"
         echo "Forcing version override of $module"
     fi
@@ -1602,6 +1602,7 @@ do_install()
         "You cannot install a module onto a non-existant kernel."
 
     # Read the conf file
+    set_module_suffix "$kernelver"
     read_conf_strict_or_die "$kernelver" "$arch"
 
     # Validate build completeness
@@ -1910,7 +1911,9 @@ do_uninstall()
 
     echo "Module $module/$module_version for kernel $1 ($2):"
 
+    # Read the conf file
     set_module_suffix "$1"
+    read_conf_or_die "$1" "$2"
 
     # If kernel-<kernelver> symlink points to this module, check for original_module and put it back
     local was_active
