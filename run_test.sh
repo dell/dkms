@@ -3639,50 +3639,33 @@ rm "/var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/module/dkms_test.ko
 # if the module didn't exist in the build tree it probably wasn't installed either
 rm "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}"
 run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0: added
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed (Built modules are missing in the kernel modules folder)
 EOF
 
 echo 'Uninstalling the "incomplete" test module'
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
-Module dkms_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Module dkms_test.ko${mod_compression_ext} was not found within /lib/modules/${KERNEL_VER}/
+Running depmod... done.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0: added
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built (Built modules are missing in the kernel modules folder)
 EOF
 
 echo 'Installing the "incomplete" test module (expected error)'
-run_with_expected_error 3 dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+run_with_expected_error 6 dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
 
-Error! This module/version has already been built on: ${KERNEL_VER}
-Directory /var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/${KERNEL_ARCH} already exists. Use the dkms remove function before trying to build again.
+Error! Missing module dkms_test in /var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/module
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0: added
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built (Built modules are missing in the kernel modules folder)
 EOF
 
 echo 'Removing the "incomplete" test module with --all'
 run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
-EOF
-run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0: added
-EOF
+Module dkms_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
 
-echo 'Adding the test module by version (expected error)'
-run_with_expected_error 3 dkms add -m dkms_test -v 1.0 << EOF
-
-Error! DKMS tree already contains: dkms_test/1.0
-You cannot add the same module/version combo more than once.
-EOF
-run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/1.0: added
-EOF
-
-echo 'Manually cleaning up dkms tree'
-rm -rf /var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}
-rm -f /var/lib/dkms/dkms_test/kernel-${KERNEL_VER}-${KERNEL_ARCH}
-
-echo 'Removing the test module with --all'
-run_with_expected_output dkms remove --all -m dkms_test -v 1.0 << EOF
 Deleting module dkms_test/1.0 completely from the DKMS tree.
 EOF
 run_status_with_expected_output 'dkms_test' << EOF
