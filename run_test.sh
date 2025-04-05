@@ -195,7 +195,7 @@ generalize_expected_output() {
     local output_log=$1
 
     # Normalize temporary directories
-    sed -i "s|/\(tmp_${KERNEL_ARCH}\)_....../|/\1_XXXXXX/|g" "${output_log}"
+    sed -i "s|/\(\.tmp_${KERNEL_ARCH}\)_....../|/\1_XXXXXX/|g" "${output_log}"
     # On Red Hat and SUSE based distributions, weak-modules is executed. Drop it from the output, to be more generic
     sed -i '/^Adding linked weak modules.*$/d' "${output_log}"
     sed -i '/^Removing linked weak modules.*$/d' "${output_log}"

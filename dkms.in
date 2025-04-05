@@ -1444,7 +1444,7 @@ do_build()
 
     # Build success, so create DKMS structure for a built module
     mkdir -p "$kernelver_dir"
-    local -r tmp_base_dir=$(mktemp_or_die -d "$kernelver_dir/tmp_${arch}_XXXXXX")
+    local -r tmp_base_dir=$(mktemp_or_die -d "$kernelver_dir/.tmp_${arch}_XXXXXX")
     mkdir -p "$tmp_base_dir/log"
     [[ $kernel_config ]] && cp -f "$kernel_config" "$tmp_base_dir/log/"
 
@@ -2076,7 +2076,7 @@ unbuild_module()
 remove_module()
 {
     # Clean up leftover temporary directories
-    rm -rf "${dkms_tree:?}/$module/$module_version"/*/tmp_*
+    rm -rf "${dkms_tree:?}/$module/$module_version"/*/.tmp_*
     find "$dkms_tree/$module/$module_version/" -maxdepth 1 -type d -empty -delete
 
     # Do --rpm_safe_upgrade check (exit out and don't do remove if inter-release RPM upgrade scenario occurs)
