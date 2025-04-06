@@ -589,10 +589,6 @@ to use the corresponding make command in the
 .B MAKE[#]
 directive array to build your module.
 .TP
-.B CLEAN=
-CLEAN specifies the make clean command to be used to clean up both before and after building the
-module. If unset, it is assumed to be "make clean".
-.TP
 .B NO_WEAK_MODULES=
 The
 .B NO_WEAK_MODULES
