@@ -84,7 +84,7 @@ shopt -s extglob
 # All of the variables we will accept from dkms.conf.
 # Does not include directives
 # The last group of variables has been deprecated
-readonly dkms_conf_variables="CLEAN PACKAGE_NAME
+readonly dkms_conf_variables="PACKAGE_NAME
    PACKAGE_VERSION POST_ADD POST_BUILD POST_INSTALL POST_REMOVE PRE_BUILD
    PRE_INSTALL BUILD_DEPENDS BUILD_EXCLUSIVE_ARCH BUILD_EXCLUSIVE_CONFIG
    BUILD_EXCLUSIVE_KERNEL BUILD_EXCLUSIVE_KERNEL_MIN BUILD_EXCLUSIVE_KERNEL_MAX
@@ -95,6 +95,7 @@ readonly dkms_conf_variables="CLEAN PACKAGE_NAME
    DEST_MODULE_LOCATION dest_module_location
    STRIP strip AUTOINSTALL NO_WEAK_MODULES
 
+   CLEAN
    REMAKE_INITRD MODULES_CONF MODULES_CONF_OBSOLETES
    MODULES_CONF_ALIAS_TYPE MODULES_CONF_OBSOLETE_ONLY"
 show_deprecation_warnings=0
@@ -565,6 +566,7 @@ safe_source() {
     rm "${tmpfile:?}"
 
     (( show_deprecation_warnings )) || return
+    (( ${#CLEAN[@]} )) && deprecated "CLEAN ($to_source_file)"
     (( ${#REMAKE_INITRD[@]} )) && deprecated "REMAKE_INITRD ($to_source_file)"
     (( ${#MODULES_CONF[@]} )) && deprecated "MODULES_CONF ($to_source_file)"
     (( ${#MODULES_CONF_OBSOLETES[@]} )) && deprecated "MODULES_CONF_OBSOLETES ($to_source_file)"
@@ -634,8 +636,6 @@ read_conf()
     done
 
     # Set variables
-    # shellcheck disable=SC2153
-    clean="$CLEAN"
     package_name="$PACKAGE_NAME"
     package_version="$PACKAGE_VERSION"
     # shellcheck disable=SC2153
@@ -773,9 +773,8 @@ read_conf()
         make_command="${MAKE[$index]}"
     done
 
-    # Use the generic make and make clean commands if not specified
+    # Use the generic make command if not specified
     [[ ! $make_command ]] && make_command="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build"
-    [[ ! $clean ]] && clean="make -C $kernel_source_dir M=$dkms_tree/$module/$module_version/build clean"
 
     # Check if clang was used to compile or lld was used to link the kernel.
     if [[ -e $kernel_source_dir/vmlinux ]]; then
