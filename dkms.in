@@ -1514,8 +1514,6 @@ do_build()
 
     # Run the post_build script, requires accessible $mvka/module/
     run_build_script post_build "$post_build" "$build_log"
-    # Run the clean commands
-    invoke_command "$clean" "Cleaning build area" "$build_log" background
 
     cd - >/dev/null || exit 15
 
