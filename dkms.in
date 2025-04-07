@@ -566,7 +566,12 @@ safe_source() {
     rm "${tmpfile:?}"
 
     (( show_deprecation_warnings )) || return
-    (( ${#CLEAN[@]} )) && deprecated "CLEAN ($to_source_file)"
+    if (( ${#CLEAN[@]} )); then
+        case "$CLEAN" in
+            true|/bin/true|/usr/bin/true) ;;
+            *)  deprecated "CLEAN ($to_source_file)" ;;
+        esac
+    fi
     (( ${#REMAKE_INITRD[@]} )) && deprecated "REMAKE_INITRD ($to_source_file)"
     (( ${#MODULES_CONF[@]} )) && deprecated "MODULES_CONF ($to_source_file)"
     (( ${#MODULES_CONF_OBSOLETES[@]} )) && deprecated "MODULES_CONF_OBSOLETES ($to_source_file)"
