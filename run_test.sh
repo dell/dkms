@@ -18,6 +18,15 @@ export DEBIAN_FRONTEND=noninteractive
 # Avoid output variations due to parallelism
 export parallel_jobs=1
 
+tmpdir=
+tmpdir_cleanup()
+{
+    rm -rf "${tmpdir:?}"
+}
+trap tmpdir_cleanup EXIT
+tmpdir=$(mktemp -d)
+[[ -d ${tmpdir} ]] || exit 1
+
 # Temporary files, directories, and modules created during tests
 TEST_MODULES=(
     "dkms_test"
@@ -69,12 +78,12 @@ TEST_TMPDIRS=(
     "/usr/src/dkms_deprecated_test-1.0"
     "/usr/src/dkms_build_exclusive_test-1.0"
     "/usr/src/dkms_build_exclusive_dependencies_test-1.0"
-    "/tmp/dkms_test_dir_${KERNEL_VER}/"
+    "${tmpdir}/dkms_test_dir_${KERNEL_VER}/"
 )
 TEST_TMPFILES=(
-    "/tmp/dkms_test_private_key"
-    "/tmp/dkms_test_certificate"
-    "/tmp/dkms_test_kconfig"
+    "${tmpdir}/dkms_test_private_key"
+    "${tmpdir}/dkms_test_certificate"
+    "${tmpdir}/dkms_test_kconfig"
     "/etc/dkms/framework.conf.d/dkms_test_framework.conf"
     "/etc/dkms/no-autoinstall"
     "test_cmd_output.log"
@@ -319,6 +328,12 @@ remove_module_source_tree() {
     rm -r "$@"
 }
 
+install_framework_conf()
+{
+    [[ $1 && $2 ]] || return
+    sed "s|@tmpdir@|${tmpdir:?}|g" "$1" > "$2"
+}
+
 # sig_hashalgo itself may show bogus value if kmod version < 26
 kmod_broken_hashalgo() {
     local -ri kmod_ver=$(kmod --version | sed -n 's/kmod version \([0-9]\+\).*/\1/p')
@@ -424,7 +439,7 @@ EOF
 
 echo 'Test framework file hijacking'
 mkdir -p /etc/dkms/framework.conf.d/
-cp test/framework/hijacking.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+install_framework_conf test/framework/hijacking.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
 run_with_expected_output dkms status -m dkms_test << EOF
 EOF
 rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
@@ -729,7 +744,7 @@ dkms_test/1.0: added
 EOF
 
     echo 'Building the test module with bad sign_file path in framework file'
-    cp test/framework/bad_sign_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    install_framework_conf test/framework/bad_sign_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
     run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
 Sign command: /no/such/file
 Binary /no/such/file not found, modules won't be signed
@@ -738,7 +753,7 @@ Building module(s)... done.
 EOF
 
     echo 'Building the test module with bad mok_signing_key path in framework file'
-    cp test/framework/bad_key_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    install_framework_conf test/framework/bad_key_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
     run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
 ${SIGNING_PROLOGUE_command}
 Signing key: /no/such/path.key
@@ -749,10 +764,10 @@ Building module(s)... done.
 EOF
 
     echo 'Building the test module with bad mok_certificate path in framework file'
-    cp test/framework/bad_cert_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    install_framework_conf test/framework/bad_cert_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
     run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
 ${SIGNING_PROLOGUE_command}
-Signing key: /tmp/dkms_test_private_key
+Signing key: ${tmpdir}/dkms_test_private_key
 Public certificate (MOK): /no/such/path.crt
 Certificate file /no/such/path.crt not found and can't be generated, modules won't be signed
 
@@ -760,37 +775,37 @@ Building module(s)... done.
 EOF
 
     echo 'Building the test module with a failing sign_file command'
-    cp test/framework/fail_sign_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    install_framework_conf test/framework/fail_sign_file_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
     run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
 Sign command: /bin/false
-Signing key: /tmp/dkms_test_private_key
-Public certificate (MOK): /tmp/dkms_test_certificate
+Signing key: ${tmpdir}/dkms_test_private_key
+Public certificate (MOK): ${tmpdir}/dkms_test_certificate
 
 Building module(s)... done.${SIGNING_MESSAGE}
 Warning: Failed to sign module '/var/lib/dkms/dkms_test/1.0/build/dkms_test.ko'!
 
 EOF
-    rm /tmp/dkms_test_private_key
+    rm "${tmpdir}/dkms_test_private_key"
 
     echo 'Building the test module with path contains variables in framework file'
-    mkdir "/tmp/dkms_test_dir_${KERNEL_VER}/"
-    cp test/framework/variables_in_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    mkdir "${tmpdir}/dkms_test_dir_${KERNEL_VER}/"
+    install_framework_conf test/framework/variables_in_path.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
     run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
 Sign command: /lib/modules/${KERNEL_VER}/build/scripts/sign-file
-Signing key: /tmp/dkms_test_dir_${KERNEL_VER}/key
-Public certificate (MOK): /tmp/dkms_test_dir_${KERNEL_VER}/cert
+Signing key: ${tmpdir}/dkms_test_dir_${KERNEL_VER}/key
+Public certificate (MOK): ${tmpdir}/dkms_test_dir_${KERNEL_VER}/cert
 
 Building module(s)... done.${SIGNING_MESSAGE}
 EOF
-    rm -r "/tmp/dkms_test_dir_${KERNEL_VER}/"
+    rm -r "${tmpdir}/dkms_test_dir_${KERNEL_VER}/"
 
     BUILT_MODULE_PATH="/var/lib/dkms/dkms_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/module/dkms_test.ko${mod_compression_ext}"
     CURRENT_HASH="$(modinfo -F sig_hashalgo "${BUILT_MODULE_PATH}")"
 
-    cp test/framework/temp_key_cert.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+    install_framework_conf test/framework/temp_key_cert.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
     SIGNING_PROLOGUE_tmp_key_cert="${SIGNING_PROLOGUE_command}
-Signing key: /tmp/dkms_test_private_key
-Public certificate (MOK): /tmp/dkms_test_certificate
+Signing key: ${tmpdir}/dkms_test_private_key
+Public certificate (MOK): ${tmpdir}/dkms_test_certificate
 "
 
     echo 'Building the test module using a different hash algorithm'
@@ -804,15 +819,15 @@ Public certificate (MOK): /tmp/dkms_test_certificate
         else
             ALTER_HASH="sha512"
         fi
-        echo "CONFIG_MODULE_SIG_HASH=\"${ALTER_HASH}\"" > /tmp/dkms_test_kconfig
-        run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --config /tmp/dkms_test_kconfig --force << EOF
+        echo "CONFIG_MODULE_SIG_HASH=\"${ALTER_HASH}\"" > "${tmpdir}/dkms_test_kconfig"
+        run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_test -v 1.0 --config "${tmpdir}/dkms_test_kconfig" --force << EOF
 ${SIGNING_PROLOGUE_tmp_key_cert}
 Building module(s)... done.${SIGNING_MESSAGE}
 EOF
         run_with_expected_output sh -c "modinfo -F sig_hashalgo '${BUILT_MODULE_PATH}'" << EOF
 ${ALTER_HASH}
 EOF
-        rm /tmp/dkms_test_kconfig
+        rm "${tmpdir}/dkms_test_kconfig"
     fi
 
     echo 'Building the test module again by force'
@@ -825,7 +840,7 @@ dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
 EOF
 
     echo ' Extracting serial number (aka sig_key in modinfo) from the certificate'
-    CERT_SERIAL="$(cert_serial /tmp/dkms_test_certificate)"
+    CERT_SERIAL="$(cert_serial "${tmpdir}/dkms_test_certificate")"
 
     echo 'Installing the test module'
     run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
@@ -929,7 +944,7 @@ EOF
 EOF
 
     echo 'Removing temporary files'
-    rm /tmp/dkms_test_private_key /tmp/dkms_test_certificate
+    rm "${tmpdir}/dkms_test_private_key" "${tmpdir}/dkms_test_certificate"
     rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
 
     remove_module_source_tree /usr/src/dkms_test-1.0
@@ -3511,7 +3526,7 @@ rm -f /usr/lib/os-release
 
 echo "Restoring /etc/os-release and /usr/bin/os-release"
 osrelease_cleanup
-trap - EXIT
+trap tmpdir_cleanup EXIT
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test
