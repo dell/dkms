@@ -739,8 +739,24 @@ This optional directive is an array that allows you to specify other modules as
 dependencies for your module. Each array element should be the
 .B PACKAGE_NAME
 of another module that is managed by dkms. Do not specify a version or
-architecture in the dependency. Note that this directive is only advisory;
-missing or broken dependencies cause non-fatal warnings.
+architecture in the dependency. A missing dependency requires the parameter
+.OP --force
+to still attempt the build of the module.
+.TP
+.B BUILD_DEPENDS_REBUILD=
+If this directive is set to
+.B yes
+then the module which has
+.B BUILD_DEPENDS
+being set, will get rebuilt every time a dependency changes version. This is usually provided in a specific
+.I /etc/dkms/<module>.conf
+on a per installation basis.
+
+To keep track of the dependency change, the version of the module that was used at build time is recorded in the file
+.I /var/lib/dkms/<module>/<kernel_version>-<arch>/.dep_<dependency>.
+As soon as the module version changes, this is compared and the dependent module is rebuilt. With the parameter
+.I --force
+the dependency is not tracked.
 .TP
 .B BUILD_EXCLUSIVE_KERNEL=
 This optional directive allows you to specify a regular expression which defines

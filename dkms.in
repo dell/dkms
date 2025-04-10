@@ -93,7 +93,7 @@ readonly dkms_conf_variables="PACKAGE_NAME
    built_module_name BUILT_MODULE_LOCATION built_module_location
    DEST_MODULE_NAME dest_module_name
    DEST_MODULE_LOCATION dest_module_location
-   STRIP strip AUTOINSTALL NO_WEAK_MODULES
+   STRIP strip AUTOINSTALL NO_WEAK_MODULES BUILD_DEPENDS_REBUILD
 
    CLEAN
    REMAKE_INITRD MODULES_CONF MODULES_CONF_OBSOLETES
@@ -582,8 +582,7 @@ safe_source() {
 # Source a dkms.conf file and perform appropriate postprocessing on it.
 # Do our best to not repeatedly source the same .conf file -- this can happen
 # when chaining module installation functions or autoinstalling.
-read_conf()
-{
+read_conf() {
     # $1 kernel version (required)
     # $2 arch (required)
     # $3 dkms.conf location (optional)
@@ -844,6 +843,21 @@ read_conf()
             ;;
         *)
             echo "dkms.conf: Error! Unsupported NO_WEAK_MODULES value '$NO_WEAK_MODULES'" >&2
+            return_value=1
+            ;;
+    esac
+
+    # Check for allowed BUILD_DEPENDS_REBUILD values: "yes", "no", ""
+    case "$BUILD_DEPENDS_REBUILD" in
+        "")
+            ;;
+        [Yy][Ee][Ss])
+            ;;
+        [Nn][Oo])
+            BUILD_DEPENDS_REBUILD=""
+            ;;
+        *)
+            echo "dkms.conf: Error! Unsupported BUILD_DEPENDS_REBUILD value '$BUILD_DEPENDS_REBUILD'" >&2
             return_value=1
             ;;
     esac
@@ -1542,6 +1556,20 @@ do_build()
 
     # Clean the build directory
     rm -rf "${build_dir:?}"
+
+    # After successful build, save dependency versions
+    if [[ $BUILD_DEPENDS_REBUILD ]] && [[ ! $force ]]; then
+        mkdir -p "$base_dir"
+        for bd in "${BUILD_DEPENDS[@]}"; do
+            local dep_version
+            dep_version=$(module_status "$bd" "*" "$kernelver" "$arch" | while read -r status mvka; do
+                [[ $status ]] || continue
+                IFS='/' read -r m v k a <<< "$mvka"
+                echo "$v"
+            done | sort -V | tail -n1)
+            [[ $dep_version ]] && echo "$dep_version" > "$base_dir/.dep_${bd}"
+        done
+    fi
 }
 
 prepare_kernel_and_signing()
@@ -1755,6 +1783,9 @@ do_install()
 
     # Restore the status of $force
     force="$tmp_force"
+
+    # First check and rebuild any modules with updated dependencies
+    check_and_rebuild_dependent_modules "${kernelver[0]}" "${arch[0]}"
 }
 
 # List each kernel object that has been installed for a particular module.
@@ -2967,6 +2998,136 @@ kernel_prerm()
     [[ ! -d $install_tree/${kernelver[0]} ]] || find "$install_tree/${kernelver[0]}" -type d -empty -delete
 
     [[ ! $failed ]] || die 14 "dkms kernel_prerm for kernel ${kernelver[0]} (${arch[0]}) failed for module(s)$failed."
+}
+
+# Check if a module's dependencies have been updated
+check_dependencies_updated() {
+
+    local module=$1
+    local module_version=$2
+
+    # $1 = module
+    # $2 = module version
+    # $3 = kernel version
+    # $4 = arch
+
+    local deps_updated=0
+
+    # Read the module's configuration
+    set_module_suffix "$3"
+    read_conf_strict_or_die "$3" "$4"
+
+    # Check each dependency
+    for bd in "${BUILD_DEPENDS[@]}"; do
+        # Get the latest version of the dependency
+        local dep_version
+        dep_version=$(module_status "$bd" "*" "$3" "$4" | while read -r status mvka; do
+            [[ $status ]] || continue
+            IFS='/' read -r m v k a <<< "$mvka"
+            echo "$v"
+        done | sort -V | tail -n1)
+
+        # If dependency is not installed, skip it
+        [[ $dep_version ]] || continue
+
+        # Check if dependency's version has changed since last build
+        local dep_version_file="$dkms_tree/$module/$module_version/$3/$4/.dep_${bd}"
+        if [[ -f "$dep_version_file" ]]; then
+            local old_version
+            old_version=$(cat "$dep_version_file")
+            if [[ "$old_version" != "$dep_version" ]]; then
+                deps_updated=1
+                break
+            fi
+        else
+            deps_updated=1
+            break
+        fi
+    done
+
+    return $deps_updated
+}
+
+# Check and rebuild all modules with updated dependencies
+check_and_rebuild_dependent_modules() {
+
+    # $1 = kernel version
+    # $2 = arch
+
+    local -a modules_to_rebuild
+    local -a rebuilt_modules
+    local progress=1
+
+    # First pass: collect all modules that need rebuilding
+    while read -r status mvka; do
+        [[ $status ]] || continue
+        IFS='/' read -r m v k a <<< "$mvka"
+        # Skip if not built for this kernel/arch
+        [[ "$k" = "$1" && "$a" = "$2" ]] || continue
+
+        # Read module's configuration by passing module and version of the dependent module)
+        module=$m module_version=$v read_conf_or_die "$1" "$2"
+
+        # Skip if no BUILD_DEPENDS, BUILD_DEPENDS_REBUILD is not set or --force is passed
+        [[ ${#BUILD_DEPENDS[@]} -eq 0 ]] || [[ -z $BUILD_DEPENDS_REBUILD ]] || [[ $force ]] && continue
+
+        # Check if dependencies have been updated
+        if ! check_dependencies_updated "$m" "$v" "$1" "$2"; then
+            modules_to_rebuild+=("$m/$v")
+        fi
+    done <<< "$(module_status)"
+
+    # Second pass: rebuild modules in dependency order
+    while (( progress > 0 )); do
+        progress=0
+        local -a next_rebuild
+
+        # Remove already rebuilt modules from dependency lists
+        for mv in "${modules_to_rebuild[@]}"; do
+            IFS=/ read -r m v <<< "$mv"
+            module=$m module_version=$v read_conf_or_die "$1" "$2"
+
+            # Check if all dependencies are satisfied
+            # shellcheck disable=SC2034
+            local can_rebuild=1
+            for bd in "${BUILD_DEPENDS[@]}"; do
+                local dep_found=0
+                for rm in "${rebuilt_modules[@]}"; do
+                    IFS=/ read -r dm <<< "$rm"
+                    [[ "$dm" = "$bd" ]] && dep_found=1 && break
+                done
+                if (( ! dep_found )); then
+                    can_rebuild=0
+                    break
+                fi
+            done
+
+            if (( ! can_rebuild )); then
+                module=$m module_version=$v
+                echo ""
+                echo "Rebuilding module $m/$v due to updated dependencies"
+                echo ""
+                do_uninstall "$1" "$2"
+                do_unbuild "$1" "$2"
+                if do_build; then
+                    do_install
+                    rebuilt_modules+=("$m/$v")
+                    progress=1
+                fi
+            else
+                next_rebuild+=("$m/$v")
+            fi
+        done
+        modules_to_rebuild=("${next_rebuild[@]}")
+    done
+
+    # Report any modules that couldn't be rebuilt
+    if (( ${#modules_to_rebuild[@]} > 0 )); then
+        echo "Warning: The following modules could not be rebuilt due to dependency cycles:"
+        for mv in "${modules_to_rebuild[@]}"; do
+            echo "  $mv"
+        done
+    fi
 }
 
 #############################
