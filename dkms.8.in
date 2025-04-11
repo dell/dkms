@@ -604,6 +604,12 @@ particular DKMS module. This can be specified as a particular upstream kernel or
 bump of a kernel. For example, "2.6.24" would be an upstream kernel and "2.6.24\-16" would
 represent an ABI bump for a kernel. Both are valid in this area.
 
+Please consider using
+.B BUILD_EXCLUSIVE_KERNEL_MAX
+instead of
+.B OBSOLETE_BY
+as the former is a more general approach to solve the same problem.
+
 Please avoid the use of
 .B OBSOLETE_BY
 wherever possible. It's use indicates a lack of proper module
