@@ -31,6 +31,7 @@ tmpdir=$(mktemp -d)
 TEST_MODULES=(
     "dkms_test"
     "dkms_dependencies_test"
+    "dkms_dependencies_rebuild_test"
     "dkms_circular_dependencies_test"
     "dkms_replace_test"
     "dkms_noautoinstall_test"
@@ -54,7 +55,9 @@ TEST_MODULES=(
 )
 TEST_TMPDIRS=(
     "/usr/src/dkms_test-1.0"
+    "/usr/src/dkms_test-2.0"
     "/usr/src/dkms_dependencies_test-1.0"
+    "/usr/src/dkms_dependencies_rebuild_test-1.0"
     "/usr/src/dkms_circular_dependencies_test-1.0"
     "/usr/src/dkms_replace_test-2.0"
     "/usr/src/dkms_noautoinstall_test-1.0"
@@ -339,6 +342,16 @@ kmod_broken_hashalgo() {
     local -ri kmod_ver=$(kmod --version | sed -n 's/kmod version \([0-9]\+\).*/\1/p')
 
     (( kmod_ver < 26 ))
+}
+
+# Function to check if a file does not exist
+file_not_exists() {
+    local file="$1"
+    if [ ! -e "$file" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 mod_compression_ext=
@@ -1808,6 +1821,335 @@ echo 'Checking that the environment is clean again'
 check_no_dkms_test
 
 fi  # dependencies tests
+
+if [[ ! $only || $only = rebuild_dependencies ]]; then
+
+############################################################################
+echo '*** Testing dkms modules with dependencies and rebuild requirements'
+############################################################################
+
+set_signing_message "dkms_dependencies_rebuild_test" "1.0"
+SIGNING_MESSAGE_rebuild_dependencies="$SIGNING_MESSAGE"
+set_signing_message "dkms_test" "2.0"
+SIGNING_MESSAGE_updated_dependency="$SIGNING_MESSAGE"
+set_signing_message "dkms_test" "1.0"
+
+echo 'Adding the prerequisite test module'
+run_with_expected_output dkms add test/dkms_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_test-1.0
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+EOF
+
+echo 'Running dkms autoinstall'
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+${SIGNING_PROLOGUE}
+Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Building module(s)... done.${SIGNING_MESSAGE}
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+EOF
+
+echo 'Adding test module with dependencies'
+run_with_expected_output dkms add test/dkms_dependencies_rebuild_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_dependencies_rebuild_test/1.0/source -> /usr/src/dkms_dependencies_rebuild_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_dependencies_rebuild_test-1.0
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0: added
+EOF
+
+echo 'Running dkms autoinstall'
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+${SIGNING_PROLOGUE}
+Autoinstall of module dkms_dependencies_rebuild_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Building module(s)... done.${SIGNING_MESSAGE_rebuild_dependencies}
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_rebuild_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test dkms_dependencies_rebuild_test.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo ' Checking the dependency version'
+run_with_expected_output cat /var/lib/dkms/dkms_dependencies_rebuild_test/kernel-"${KERNEL_VER}"-"${KERNEL_ARCH}"/.dep_dkms_test << EOF
+1.0
+EOF
+
+echo 'Running dkms kernel_prerm'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
+dkms: removing module dkms_dependencies_rebuild_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Module dkms_dependencies_rebuild_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_rebuild_test.ko${mod_compression_ext}
+
+dkms: removing module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0: added
+EOF
+
+echo 'Running dkms kernel_prerm again'
+run_with_expected_output dkms kernel_prerm -k "${KERNEL_VER}" << EOF
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0: added
+EOF
+
+echo 'Running dkms autoinstall'
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+${SIGNING_PROLOGUE}
+Autoinstall of module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Building module(s)... done.${SIGNING_MESSAGE}
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Autoinstall of module dkms_dependencies_rebuild_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH})
+Building module(s)... done.${SIGNING_MESSAGE_rebuild_dependencies}
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_rebuild_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Autoinstall on ${KERNEL_VER} succeeded for module(s) dkms_test dkms_dependencies_rebuild_test.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Running dkms autoinstall again'
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Removing the prerequisite test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Deleting module dkms_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+remove_module_source_tree /usr/src/dkms_test-1.0
+
+echo 'Adding the updated prerequisite test module'
+run_with_expected_output dkms add test/dkms_test-2.0 << EOF
+Creating symlink /var/lib/dkms/dkms_test/2.0/source -> /usr/src/dkms_test-2.0
+EOF
+check_module_source_tree_created /usr/src/dkms_test-2.0
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/2.0: added
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Building and installing the updated prerequisite test module and trigger rebuild of the dependent module'
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 2.0 << EOF
+${SIGNING_PROLOGUE}
+Building module(s)... done.${SIGNING_MESSAGE_updated_dependency}
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Rebuilding module dkms_dependencies_rebuild_test/1.0 due to updated dependencies
+
+Module dkms_dependencies_rebuild_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_rebuild_test.ko${mod_compression_ext}
+Running depmod... done.
+Building module(s)... done.${SIGNING_MESSAGE_rebuild_dependencies}
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_rebuild_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo ' Checking the updated dependency version after the rebuild'
+run_with_expected_output cat /var/lib/dkms/dkms_dependencies_rebuild_test/kernel-"${KERNEL_VER}"-"${KERNEL_ARCH}"/.dep_dkms_test << EOF
+2.0
+EOF
+
+echo 'Removing the test module with dependencies'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_dependencies_rebuild_test -v 1.0 << EOF
+Module dkms_dependencies_rebuild_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_rebuild_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Deleting module dkms_dependencies_rebuild_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+EOF
+
+echo 'Removing the updated prerequisite test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 2.0 << EOF
+Module dkms_test/2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Deleting module dkms_test/2.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+EOF
+
+remove_module_source_tree /usr/src/dkms_test-2.0 /usr/src/dkms_dependencies_rebuild_test-1.0
+
+echo 'Adding test module with unsatisfied dependencies'
+run_with_expected_output dkms add test/dkms_dependencies_rebuild_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_dependencies_rebuild_test/1.0/source -> /usr/src/dkms_dependencies_rebuild_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_dependencies_rebuild_test-1.0
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0: added
+EOF
+
+echo 'Building the test module with unsatisfied dependencies (expected error)'
+run_with_expected_error 13 dkms build -k "${KERNEL_VER}" -m dkms_dependencies_rebuild_test -v 1.0 << EOF
+${SIGNING_PROLOGUE}
+
+Error! Aborting build of module dkms_dependencies_rebuild_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}) due to missing BUILD_DEPENDS: dkms_test.
+You may override by specifying --force.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0: added
+EOF
+
+echo 'Building the test module with unsatisfied dependencies by force (expected success, ignoring build dependencies)'
+run_with_expected_output dkms build -k "${KERNEL_VER}" -m dkms_dependencies_rebuild_test -v 1.0 --force << EOF
+${SIGNING_PROLOGUE}
+Warning: Trying to build module dkms_dependencies_rebuild_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}) despite of missing BUILD_DEPENDS: dkms_test.
+Building module(s)... done.${SIGNING_MESSAGE_rebuild_dependencies}
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: built
+EOF
+
+echo ' Checking there is no dependency version generated when ignoring build dependencies'
+file_not_exists /var/lib/dkms/dkms_dependencies_rebuild_test/kernel-"${KERNEL_VER}"-"${KERNEL_ARCH}"/.dep_dkms_test
+
+echo 'Installing the test module with unsatisfied dependencies'
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_dependencies_rebuild_test -v 1.0 << EOF
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_rebuild_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo "Running dkms autoinstall"
+run_with_expected_output dkms autoinstall -k "${KERNEL_VER}" << EOF
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Unbuilding the test module with unsatisfied dependencies'
+run_with_expected_output dkms unbuild -k "${KERNEL_VER}" -m dkms_dependencies_rebuild_test -v 1.0 << EOF
+Module dkms_dependencies_rebuild_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_rebuild_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0: added
+EOF
+
+echo "Running dkms autoinstall (expected error)"
+run_with_expected_error 11 dkms autoinstall -k "${KERNEL_VER}" << EOF
+dkms_dependencies_rebuild_test/1.0 autoinstall failed due to missing dependencies: dkms_test.
+
+Error! One or more modules failed to install during autoinstall.
+Refer to previous errors for more information.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0: added
+EOF
+
+echo 'Removing the test module with unsatisfied dependencies'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_dependencies_rebuild_test -v 1.0 << EOF
+Module dkms_dependencies_rebuild_test/1.0 is not installed for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+Module dkms_dependencies_rebuild_test/1.0 is not built for kernel ${KERNEL_VER} (${KERNEL_ARCH}). Skipping...
+
+Deleting module dkms_dependencies_rebuild_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+EOF
+
+remove_module_source_tree /usr/src/dkms_dependencies_rebuild_test-1.0
+
+echo 'Checking that the environment is clean again'
+check_no_dkms_test
+
+fi  # rebuild_dependencies tests
 
 if [[ ! $only || $only = replace ]]; then
 
