@@ -105,7 +105,7 @@ the
 .I \-k
 option is not specified it builds for the currently running kernel and arch. All builds
 occur in the directory
-.I /var/lib/dkms/<module>/<module\-version>/build/.
+.I /var/lib/dkms/<module>/<module\-version>/build/ .
 If the module/module\-version combo has not been added, dkms will try to add it, and in that
 case
 .B build
@@ -190,8 +190,9 @@ Creates a tarball archive for the specified module/version of all files
 in the DKMS tree for that module/version combination. This includes
 the source and any built modules for kernels in the tree (as specified).
 Otherwise, you can specify
-a singular kernel to archive only, or multiple kernels to archive
-(\-k kernel1/arch1 \-k kernel2/arch2). Optionally, you can use
+a singular kernel to archive only, or multiple kernels to archive (
+.I \-k kernel1/arch1 \-k kernel2/arch2
+). Optionally, you can use
 .B \-\-archive
 to specify the file that you would like to save this
 tarball to. You can also specify
@@ -243,7 +244,7 @@ action may be used to re-add the module/version combination to dkms.
 .YS
 .IP "" 4
 Attempt to install the latest revision of all modules that have been installed for other kernel revisions.
-dkms_autoinstaller is a stub that uses this action to perform its work.
+The DKMS autoinstaller service is a stub that uses this action to perform its work.
 .SY generate_mok
 .YS
 .IP "" 4
@@ -276,15 +277,29 @@ system.
 The system architecture to perform the action upon. It is optional if you pass it as part of the
 .B \-k
 option. If not specified, it assumes
-the arch of the currently running system (`uname \-m`). You can specify multiple
-arch parameters on the same command line by repeating the \-a argument with a
-different arch name. When multiple architectures are specified, there must
-be a 1:1 relationship between \-k arguments to \-a arguments. DKMS will then
-assume the first \-a argument aligns with the first \-k kernel and so on for the
-second, third, etc.
+the arch of the currently running system (
+.B uname \-m
+). You can specify multiple arch parameters on the same command line by repeating the
+.B \-a
+argument with a different architecture name. When multiple architectures are specified, there must
+be a 1:1 relationship between
+.B \-k
+arguments to
+.B \-a
+arguments. DKMS will then assume the first
+.B \-a
+argument aligns with the first
+.B \-k
+and so on for the second, third, etc.
 
-For example, if you were to specify: \-k kernel1 \-k kernel2 \-a i386 \-k kernel3 \-a i686 \-a x86_64,
-DKMS would process this as: kernel1-i386, kernel2-i686, kernel3-x86_64.
+For example, if you were to specify:
+.B \-k kernel1 \-k kernel2 \-a i386 \-k kernel3 \-a i686 \-a x86_64
+, DKMS would process this as:
+.B kernel1-i386
+,
+.B kernel2-i686
+,
+.B kernel3-x86_64.
 .TP
 .B \-q, \-\-quiet
 Quiet.
@@ -293,14 +308,13 @@ Quiet.
 Prints the currently installed version of dkms and exits.
 .TP
 .B \-h, \-\-help
-Prints a short usage message and exits.
 .TP
 .B \-c <dkms.conf\-location>
 The location of the
 .I dkms.conf
 file. This is needed for the add action and if not specified,
 it is assumed to be located in
-.I /usr/src/<module>\-<module\-version>/.
+.I /usr/src/<module>\-<module\-version>/ .
 See below for more information on the format of
 .I dkms.conf.
 .TP
@@ -453,45 +467,60 @@ above) will be considered the "original_module". As well, all copies of the same
 module will be removed from your kernel tree and placed into
 .I /var/lib/dkms/<module>/original_module/$kernelver/collisions
 so that they can be *manually* accessible later. DKMS will never actually do anything
-with the modules found underneath the /collisions directory, and they will be stored there
-until you manually delete them.
+with the modules found underneath the
+.B /collisions
+directory, and they will be stored there until you manually delete them.
 .SH DKMS.CONF
 When performing an
 .BR add ,
 a proper
 .I dkms.conf
-file must be found. A properly formatted conf file is essential
-for communicating to
-.B dkms
-how and where the module should be installed. While not all the directives
-are required, providing as many as possible helps to limit any ambiguity. Note
-that the
+file must be found. A properly formatted configuration file is essential
+for communicating to DKMS how and where the module should be installed.
+While not all the directives are required, providing as many as possible helps to limit any ambiguity.
+Note that
 .I dkms.conf
-is really only a shell\-script of variable definitions which are then sourced in
-by the
+is really only a shell\-script of variable definitions which are then sourced in by the
 .B dkms
-executable (of the format, DIRECTIVE="directive text goes here"). As well, the
-directives are case\-sensitive and should be given in
-.B ALL CAPS.
+executable (of the format,
+.I DIRECTIVE="directive text goes here"
+). As well, the directives are case\-sensitive and should be given in ALL CAPS.
 
 It is important to understand that many of the DKMS directives are arrays whose index
 values are tied together. These array associations can be considered families, and there
-are currently three such families of directive arrays. MAKE[#] and MAKE_MATCH[#] make up
-one family. PATCH[#] and PATCH_MATCH[#] make up the second family. The third and
-largest family consists of BUILT_MODULE_NAME[#], BUILT_MODULE_LOCATION[#], DEST_MODULE_NAME[#],
-DEST_MODULE_LOCATION[#] and STRIP[#]. When indexing these arrays when creating your
-dkms.conf, each family should start at index value 0.
+are currently three such families of directive arrays.
+.B MAKE[#]
+and
+.B MAKE_MATCH[#]
+make up one family.
+.B PATCH[#]
+and
+.B PATCH_MATCH[#]
+make up the second family. The third and largest family consists of
+.B BUILT_MODULE_NAME[#]
+,
+.B BUILT_MODULE_LOCATION[#]
+,
+.B DEST_MODULE_NAME[#]
+,
+.B DEST_MODULE_LOCATION[#]
+and
+.B STRIP[#] .
+When indexing these arrays when creating your
+.I dkms.conf
+, each family should start at index value 0.
 .TP
 .B PACKAGE_NAME=
 This directive is used to give the name associated with the entire package of modules. This is the same
 name that is used with the
 .B \-m
-option when building, adding, etc. and may not necessarily be the same as the MODULE_NAME. This
-directive must be present in every dkms.conf.
+option when building, adding, etc. and may not necessarily be the same as the
+.B MODULE_NAME.
+This directive must be present in every DKMS configuration file.
 .TP
 .B PACKAGE_VERSION=
 This directive is used to give the version associated with the entire package of modules being installed within that dkms
-package. This directive must be present in every dkms.conf.
+package. This directive must be present in every DKMS configuration file.
 .TP
 .B BUILT_MODULE_NAME[#]=
 This directive gives the name of the module just after it is built. If your DKMS module
@@ -501,21 +530,38 @@ directive for all of the modules. This directive should explicitly not contain a
 trailing ".o" or ".ko".
 Note that for each module within a dkms package, the numeric value of
 .B #
-must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and
-DEST_MODULE_LOCATION and that the numbering should start at 0 (eg. BUILT_MODULE_NAME[0]="qla2200"
-BUILT_MODULE_NAME[1]="qla2300").
+must be the same for each of
+.B BUILT_MODULE_NAME
+,
+.B BUILT_MODULE_LOCATION
+,
+.B DEST_MODULE_NAME
+and
+.B DEST_MODULE_LOCATION
+and that the numbering should start at 0 (eg.
+.B BUILT_MODULE_NAME[0]="qla2200" BUILT_MODULE_NAME[1]="qla2300"
+).
 .TP
 .B BUILT_MODULE_LOCATION[#]=
 This directive tells DKMS where to find your built module after it has been built. This
 pathname should be given relative to the root directory of your source files (where your
-dkms.conf file can be found). If unset, DKMS expects to find your
+.I dkms.conf
+file can be found). If unset, DKMS expects to find your
 .B BUILT_MODULE_NAME[#]
 in the root directory of your source files.
 Note that for each module within a dkms package, the numeric value of
 .B #
-must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and
-DEST_MODULE_LOCATION and that the numbering should start at 0 (eg. BUILT_MODULE_LOCATION[0]="some/dir/"
-BUILT_MODULE_LOCATION[1]="other/dir/").
+must be the same for each of
+.B BUILT_MODULE_NAME
+,
+.B BUILT_MODULE_LOCATION
+,
+.B DEST_MODULE_NAME
+and
+.B DEST_MODULE_LOCATION
+and that the numbering should start at 0 (eg.
+.B BUILT_MODULE_LOCATION[0]="some/dir/" BUILT_MODULE_LOCATION[1]="other/dir/"
+).
 .TP
 .B DEST_MODULE_NAME[#]=
 This directive can be used to specify the name of the module as it should be installed. This
@@ -528,29 +574,51 @@ assumed to be the same value as
 .B BUILT_MODULE_NAME[#].
 Note that for each module within a dkms package, the numeric value of
 .B #
-must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and
-DEST_MODULE_LOCATION and that the numbering should start at 0 (eg. DEST_MODULE_NAME[0]="qla2200_6x"
-DEST_MODULE_NAME[1]="qla2300_6x").
+must be the same for each of
+.B BUILT_MODULE_NAME
+,
+.B BUILT_MODULE_LOCATION
+,
+.B DEST_MODULE_NAME
+and
+.B DEST_MODULE_LOCATION
+and that the numbering should start at 0 (eg.
+.B DEST_MODULE_NAME[0]="qla2200_6x" DEST_MODULE_NAME[1]="qla2300_6x"
+).
 .TP
 .B DEST_MODULE_LOCATION[#]=
 This directive specifies the destination where a module should be installed to, once compiled. It also
 is used for finding original_modules. This is a
 .B required
 directive, except as noted below. This directive must start with the text "/kernel" which is in reference to
-@MODDIR@/<kernelversion>/kernel.
+.I @MODDIR@/<kernelversion>/kernel.
 Note that for each module within a dkms package, the numeric value of
 .B #
-must be the same for each of BUILT_MODULE_NAME, BUILT_MODULE_LOCATION, DEST_MODULE_NAME and
-DEST_MODULE_LOCATION and that the numbering should start at 0 (eg. DEST_MODULE_LOCATION[0]="/kernel/drivers/something/"
-DEST_MODULE_LOCATION[1]="/kernel/drivers/other/").
+must be the same for each of
+.B BUILT_MODULE_NAME
+,
+.B BUILT_MODULE_LOCATION
+,
+.B DEST_MODULE_NAME
+and
+.B DEST_MODULE_LOCATION
+and that the numbering should start at 0 (eg.
+.B DEST_MODULE_LOCATION[0]="/kernel/drivers/something/" DEST_MODULE_LOCATION[1]="/kernel/drivers/other/"
+).
 
-DEST_MODULE_LOCATION is ignored on Fedora and Red Hat Enterprise Linux, Novell SuSE Linux Enterprise Server 10
-and higher, Novell SuSE Linux 10.0 and higher, and Ubuntu. Instead, the proper distribution-specific directory is used.
+.B DEST_MODULE_LOCATION
+is ignored on Fedora, Red Hat Enterprise Linux, SuSE Linux Enterprise Server, openSUSE and Ubuntu.
+Instead, the proper distribution-specific directory is used.
 .TP
 .B STRIP[#]=
 By default strip is considered to be "yes". If set to "no", DKMS will not
-run strip \-g against your built module to remove debug symbols from it.
-STRIP[0] is used as the default for any unset entries in the STRIP array.
+run strip
+.B \-g
+against your built module to remove debug symbols from it.
+.B STRIP[0]
+is used as the default for any unset entries in the
+.B STRIP
+array.
 .TP
 .B MAKE[#]=
 The MAKE directive array tells DKMS which make command should be used for building your module. The default make command
@@ -572,12 +640,16 @@ if MAKE[0] should be used to build the module for that kernel. If multiple
 .B MAKE_MATCH
 directives match against the kernel being built for, the last matching
 .B MAKE[#]
-will be used to build your module. If no MAKE directive is specified or if no
-MAKE_MATCH matches the kernel being built for, DKMS
-will attempt to use a generic MAKE command to build your module.
+will be used to build your module. If no
+.B MAKE
+directive is specified or if no
+.B MAKE_MATCH
+matches the kernel being built for, DKMS will attempt to use a generic make command to build your module.
 
-KERNELRELEASE will be automatically appended to MAKE[#]. If you want to
-suppress this behavior, you can quote the make command: 'make'.
+.B KERNELRELEASE=$kernelver -j$parallel_jobs
+will be automatically appended to
+.B MAKE[#].
+If you want to suppress this behavior, you can quote the make command: 'make'.
 .TP
 .B MAKE_MATCH[#]=
 See the above entry on
@@ -592,11 +664,11 @@ directive array to build your module.
 .B NO_WEAK_MODULES=
 The
 .B NO_WEAK_MODULES
-parameter prevents dkms from creating a symlink into the weak-updates directory. The weak modules facility was designed to eliminate the need to rebuild kernel modules when kernel upgrades occur and relies on the symbols within the kABI.
+directive, when set to "yes", prevents dkms from creating a symlink into the
+.B weak-updates
+directory. The weak modules facility was designed to eliminate the need to rebuild kernel modules when kernel upgrades occur and relies on the symbols within the kABI. Valid values are "yes" or "no".
 
-The kABI kernel module interface is currently supported on Red Hat Enterprise Linux (and derivatives), SUSE Linux Enterprise Server and openSUSE Leap.
-
-NO_WEAK_MODULES="yes"
+The kABI kernel module interface is currently supported on Red Hat Enterprise Linux (and derivatives), SUSE Linux Enterprise Server and openSUSE Leap; on other distributions this directive is ignored.
 .TP
 .B OBSOLETE_BY=
 This directive allows you to specify a kernel version that obsoletes the necessity for this
@@ -626,14 +698,18 @@ is meaningful only in the context of a single distribution/version.
 .TP
 .B PATCH[#]=
 Use the PATCH directive array to specify patches which should be applied to your source before a build occurs.
-All patches are expected to be in \-p1 format and are applied with the patch \-p1 command.
+All patches are expected to be in
+.B \-p1
+format and are applied with the patch
+.B \-p1
+command.
 Each directive should specify the filename of the patch to apply, and all patches must
 be located in the patches subdirectory of your source directory (
 .I /usr/src/<module>\-<module\-version>/patches/
 ). If any patch fails to apply, the build will be halted and the rejections can be
 inspected in
 .I /var/lib/dkms/<module>/<module\-version>/build/.
-If a PATCH should only be applied conditionally, the
+If a patch should only be applied conditionally, the
 .B PATCH_MATCH[#]
 array should be used, and a corresponding regular expression should be placed in
 .B PATCH_MATCH[#]
@@ -652,14 +728,11 @@ the kernels you intend the corresponding
 to be applied to before building that module.
 .TP
 .B AUTOINSTALL=
-If this directive is set to
-.B yes
-then the service
-.I /etc/rc.d/init.d/dkms_autoinstaller
-will automatically try to install this module on any kernel you boot into. See the section
-on
-.B dkms_autoinstaller
-for more information.
+If this directive is set to "yes" then the DKMS autoinstaller service
+will automatically try to install this module on any kernel you boot into.
+See the section on
+.B DKMS AUTOINSTALLER
+for more information. Valid values are "yes" or "no".
 .TP
 .B BUILD_DEPENDS[#]=
 This optional directive is an array that allows you to specify other modules as
@@ -675,9 +748,10 @@ the subset of kernels which DKMS is allowed to build your module for.
 If the kernel being built for does not match against this regular expression (or
 does not the satisfy the constraints of any other
 .B BUILD_EXCLUSIVE_*
-directive), the dkms build will error out with exit code 77.
-Note that dkms autoinstall will ignore this type of error condition and simply
-skip the respective modules.
+directive), the build will error out with exit code 77.
+Note that
+.B dkms autoinstall
+will ignore this type of error condition and simply skip the respective modules.
 For example, if you set it as ="^2\.4.*", your module would not be built for 2.6
 or later kernels.
 .TP
@@ -744,16 +818,14 @@ is performed. The path should be given relative to the root directory
 of your source. If the script exits with a non\-zero value, the
 install will be aborted. This is typically used to perform a custom
 version comparison.
-.TP
+.PP
 .SH DKMS.CONF VARIABLES
-Within your
-.I dkms.conf
-file, you can use certain variables which will be replaced at run\-time with their
-values.
+Within your DKMS configuration file, you can use certain variables which will be replaced at run\-time with their values.
 .TP
 .B $kernelver
 This variable can be used within a directive definition and during use, the actual kernel
-version in question will be substituted in its place. This is especially useful in MAKE
+version in question will be substituted in its place. This is especially useful in
+.B MAKE
 commands when specifying which INCLUDE statements should be used when compiling your
 module (eg. MAKE="make all INCLUDEDIR=@MODDIR@/${kernelver}/build/include").
 .TP
@@ -765,9 +837,11 @@ unless otherwise specified with the
 .B \-\-kernelsourcedir
 option.
 .SH DKMS.CONF OVERRIDES
-You can override the module-provided
+You can override directives provided in the module-provided
 .I dkms.conf
-files. Every time after a dkms.conf file is read, dkms will look for and read the following files in order:
+files. Every time after a
+.I dkms.conf
+file is read, dkms will look for and read the following files in order:
 .PP
 .I /etc/dkms/<module>.conf
 .br
@@ -777,17 +851,24 @@ files. Every time after a dkms.conf file is read, dkms will look for and read th
 .br
 .I /etc/dkms/<module>\-<module\-version>\-<kernel>\-<arch>.conf
 .PP
-You can use these files to override settings in the module-provided dkms.conf files.
-.SH /etc/dkms/framework.conf
-This configuration file controls how the overall DKMS framework handles. It is sourced
-in every time the dkms command is run. Mainly it can currently be used to set different
-default values for the variables.
+You can use these files to override settings in the module-provided
+.I dkms.conf
+file.
+.SH FRAMEWORK.CONF MAIN CONFIGURATION
+The
+.B /etc/dkms/framework.conf
+configuration file controls how the overall DKMS framework handles. It is sourced
+in every time the
+.B dkms
+command is run. Mainly it can currently be used to set different default values for the variables.
 
 The file contains descriptions for each directive it supports.
 
-Additionally to /etc/dkms/framework.conf,
-.B any file matching the glob
-/etc/dkms/framework.conf.d/*.conf will be loaded as well.
+Additionally to
+.B /etc/dkms/framework.conf
+, any file matching the glob
+.B /etc/dkms/framework.conf.d/*.conf
+will be loaded as well.
 .TP
 .B $dkms_tree, $source_tree, $install_tree, $tmp_location
 Control which folders DKMS uses for components and artifacts.
@@ -797,8 +878,15 @@ Can be set to anything but a null value to enable verbose output of external com
 .TP
 .B $symlink_modules
 Controls whether binary modules are copied to @MODDIR@ or if only symlinks are created there. Note that these variables can also
-be manipulated on the command line with \-\-dkmstree, \-\-sourcetree, \-\-installtree
-and \-\-symlink-modules options.
+be manipulated on the command line with
+.B \-\-dkmstree
+,
+.B \-\-sourcetree
+,
+.B \-\-installtree
+and
+.B \-\-symlink-modules
+options.
 .TP
 .B $autoinstall_all_kernels
 Used by the common postinst for DKMS modules. It controls if the build should be done for all installed kernels or only for the current and latest installed kernel. It has no command
@@ -806,7 +894,7 @@ line equivalent.
 .TP
 .B $sign_file
 This is the path of the
-.I sign-file
+.B sign-file
 kernel binary that is used to sign the kernel modules. The variable
 .B $kernelver
 can be used in path to represent the target kernel version. The path for the binary depends on the distribution.
@@ -816,11 +904,16 @@ Location of the key and certificate files used for Secure boot. The variable
 .B $kernelver
 can be used in path to represent the target kernel version.
 
-NOTE: If any of the files specified by $mok_signing_key and
-$mok_certificate are non-existant, dkms will re-create both files.
+NOTE: If any of the files specified by
+.B $mok_signing_key
+and
+.B $mok_certificate
+are non-existant, dkms will re-create both files.
 
-.I mok_signing_key
-can also be a "pkcs11:..." string for PKCS#11 engine, as long as the sign_file program supports it.
+.B mok_signing_key
+can also be a "pkcs11:..." string for PKCS#11 engine, as long as the
+.B sign-file
+program supports it.
 .TP
 .B $modprobe_on_install
 Automatically load the built modules upon successful installation.
@@ -830,11 +923,15 @@ Run no more than this number of jobs in parallel.
 .TP
 .B $compress_gzip_opts, $compress_xz_opts, $compress_zstd_opts
 Control how modules are compressed. By default, the highest available level of compression is used.
-.SH dkms_autoinstaller
-This boot\-time service automatically installs any module which has
+.SH DKMS AUTOINSTALLER
+The DKMS autoinstaller service (which can be
+.B dkms_autoinstaller
+or
+.B dkms.service
+depending on your distribution) is a boot\-time service automatically installs any module which has
 .B AUTOINSTALL="yes"
 set in its
-.B dkms.conf
+.I dkms.conf
 file. The service works quite simply and if multiple versions of a module are in
 your system's DKMS tree, it will not do anything and instead explain that manual
 intervention is required.

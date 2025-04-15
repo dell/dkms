@@ -833,6 +833,21 @@ read_conf()
             ;;
     esac
 
+    # Check for allowed NO_WEAK_MODULES values: "yes", "no", ""
+    case "$NO_WEAK_MODULES" in
+        "")
+            ;;
+        [Yy][Ee][Ss])
+            ;;
+        [Nn][Oo])
+            NO_WEAK_MODULES=""
+            ;;
+        *)
+            echo "dkms.conf: Error! Unsupported NO_WEAK_MODULES value '$NO_WEAK_MODULES'" >&2
+            return_value=1
+            ;;
+    esac
+
     ((return_value == 0)) && last_mvka="$module/$module_version/$1/$2" && last_mvka_conf="$(readlink -f "$read_conf_file")"
     return $return_value
 }
