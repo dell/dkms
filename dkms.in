@@ -817,50 +817,29 @@ read_conf() {
         done
     fi
 
-    # Check for allowed AUTOINSTALL values: "yes", "no", ""
-    case "$AUTOINSTALL" in
-        "")
-            ;;
-        [Yy][Ee][Ss])
-            ;;
-        [Nn][Oo])
-            AUTOINSTALL=""
-            ;;
-        *)
-            echo "dkms.conf: Error! Unsupported AUTOINSTALL value '$AUTOINSTALL'" >&2
-            return_value=1
-            ;;
-    esac
+    # Helper function to check yes/no values
+    check_yes_no_value() {
+        local var_name="$1"
+        local var_value="$2"
+        case "$var_value" in
+            "")
+                ;;
+            [Yy][Ee][Ss])
+                ;;
+            [Nn][Oo])
+                eval "$var_name=''"
+                ;;
+            *)
+                echo "dkms.conf: Error! Unsupported $var_name value '$var_value'" >&2
+                return_value=1
+                ;;
+        esac
+    }
 
-    # Check for allowed NO_WEAK_MODULES values: "yes", "no", ""
-    case "$NO_WEAK_MODULES" in
-        "")
-            ;;
-        [Yy][Ee][Ss])
-            ;;
-        [Nn][Oo])
-            NO_WEAK_MODULES=""
-            ;;
-        *)
-            echo "dkms.conf: Error! Unsupported NO_WEAK_MODULES value '$NO_WEAK_MODULES'" >&2
-            return_value=1
-            ;;
-    esac
-
-    # Check for allowed BUILD_DEPENDS_REBUILD values: "yes", "no", ""
-    case "$BUILD_DEPENDS_REBUILD" in
-        "")
-            ;;
-        [Yy][Ee][Ss])
-            ;;
-        [Nn][Oo])
-            BUILD_DEPENDS_REBUILD=""
-            ;;
-        *)
-            echo "dkms.conf: Error! Unsupported BUILD_DEPENDS_REBUILD value '$BUILD_DEPENDS_REBUILD'" >&2
-            return_value=1
-            ;;
-    esac
+    # Check for allowed values in boolean variables
+    check_yes_no_value "AUTOINSTALL" "$AUTOINSTALL"
+    check_yes_no_value "BUILD_DEPENDS_REBUILD" "$BUILD_DEPENDS_REBUILD"
+    check_yes_no_value "NO_WEAK_MODULES" "$NO_WEAK_MODULES"
 
     ((return_value == 0)) && last_mvka="$module/$module_version/$1/$2" && last_mvka_conf="$(readlink -f "$read_conf_file")"
     return $return_value
