@@ -2016,21 +2016,6 @@ run_with_expected_output cat /var/lib/dkms/dkms_dependencies_rebuild_test/kernel
 2.0
 EOF
 
-echo 'Removing the test module with dependencies'
-run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_dependencies_rebuild_test -v 1.0 << EOF
-Module dkms_dependencies_rebuild_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
-Before uninstall, this module version was ACTIVE on this kernel.
-Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_rebuild_test.ko${mod_compression_ext}
-Running depmod... done.
-
-Deleting module dkms_dependencies_rebuild_test/1.0 completely from the DKMS tree.
-EOF
-run_status_with_expected_output 'dkms_test' << EOF
-dkms_test/2.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
-EOF
-run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
-EOF
-
 echo 'Removing the updated prerequisite test module'
 run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 2.0 << EOF
 Module dkms_test/2.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
@@ -2043,9 +2028,82 @@ EOF
 run_status_with_expected_output 'dkms_test' << EOF
 EOF
 run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
 EOF
 
-remove_module_source_tree /usr/src/dkms_test-2.0 /usr/src/dkms_dependencies_rebuild_test-1.0
+remove_module_source_tree /usr/src/dkms_test-2.0
+
+echo 'Adding the downgraded prerequisite test module'
+run_with_expected_output dkms add test/dkms_test-1.0 << EOF
+Creating symlink /var/lib/dkms/dkms_test/1.0/source -> /usr/src/dkms_test-1.0
+EOF
+check_module_source_tree_created /usr/src/dkms_test-1.0
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0: added
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Building and installing the downgraded prerequisite test module and trigger rebuild of the dependent module'
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+${SIGNING_PROLOGUE}
+Building module(s)... done.${SIGNING_MESSAGE}
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Rebuilding module dkms_dependencies_rebuild_test/1.0 due to updated dependencies
+
+Module dkms_dependencies_rebuild_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_rebuild_test.ko${mod_compression_ext}
+Running depmod... done.
+Building module(s)... done.${SIGNING_MESSAGE_rebuild_dependencies}
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_rebuild_test.ko${mod_compression_ext}
+Running depmod... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+dkms_dependencies_rebuild_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo ' Checking the updated dependency version after the rebuild'
+run_with_expected_output cat /var/lib/dkms/dkms_dependencies_rebuild_test/kernel-"${KERNEL_VER}"-"${KERNEL_ARCH}"/.dep_dkms_test << EOF
+1.0
+EOF
+
+echo 'Removing the test module with dependencies'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_dependencies_rebuild_test -v 1.0 << EOF
+Module dkms_dependencies_rebuild_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_dependencies_rebuild_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Deleting module dkms_dependencies_rebuild_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+EOF
+
+echo 'Removing the downgraded prerequisite test module'
+run_with_expected_output dkms remove -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
+Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Deleting module dkms_test/1.0 completely from the DKMS tree.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+EOF
+run_status_with_expected_output 'dkms_dependencies_rebuild_test' << EOF
+EOF
+
+remove_module_source_tree /usr/src/dkms_test-1.0 /usr/src/dkms_dependencies_rebuild_test-1.0
 
 echo 'Adding test module with unsatisfied dependencies'
 run_with_expected_output dkms add test/dkms_dependencies_rebuild_test-1.0 << EOF
