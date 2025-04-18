@@ -102,11 +102,14 @@ show_deprecation_warnings=0
 
 # All of the variables not related to signing we will accept from framework.conf.
 readonly dkms_framework_nonsigning_variables="source_tree dkms_tree install_tree tmp_location
-   verbose symlink_modules autoinstall_all_kernels
-   modprobe_on_install parallel_jobs
-   compress_gzip_opts compress_xz_opts compress_zstd_opts"
+   verbose symlink_modules autoinstall_all_kernels modprobe_on_install parallel_jobs
+   compress_gzip_opts compress_xz_opts compress_zstd_opts
+   post_transaction"
 # All of the signing related variables we will accept from framework.conf.
 readonly dkms_framework_signing_variables="sign_file mok_signing_key mok_certificate"
+
+# The post transaction command we will accept from framework.conf
+readonly dkms_framework_post_transaction="post_transaction"
 
 # Some important regular expressions. Requires bash 3 or above.
 # Any poor souls still running bash 2 or older really need an upgrade.
@@ -3384,6 +3387,17 @@ if [[ ! $NO_WEAK_MODULES ]]; then
     esac
 fi
 
+# Execute post-transaction command if set and log its output
+execute_post_transaction() {
+    # Blank the log file before starting
+    : > "$dkms_tree/post_transaction.log"
+
+    # Lazy source in post_transaction related configuration
+    read_framework_conf "$dkms_framework_post_transaction"
+
+    invoke_command "$post_transaction" "Executing post-transaction command" "$dkms_tree/post_transaction.log" background
+}
+
 case "$action" in
     remove | unbuild | uninstall)
         check_module_args "$action"
@@ -3395,6 +3409,12 @@ case "$action" in
             check_rw_dkms_tree
         fi
         "${action}_module"
+        ret=$?
+        # Execute post_transaction command if set
+        if [[ $ret -eq 0 && -n "$post_transaction" ]]; then
+            execute_post_transaction
+        fi
+        exit $ret
         ;;
     add | build | install)
         check_all_is_banned "$action" # TODO: fix/enable --all
@@ -3405,10 +3425,22 @@ case "$action" in
             check_rw_dkms_tree
         fi
         "${action}_module"
+        ret=$?
+        # Execute post_transaction command if set
+        if [[ $ret -eq 0 && -n "$post_transaction" && $action = install ]]; then
+            execute_post_transaction
+        fi
+        exit $ret
         ;;
     autoinstall)
         have_one_kernel "$action"
         check_root && autoinstall
+        ret=$?
+        # Execute post_transaction command if set
+        if [[ $ret -eq 0 && -n "$post_transaction" ]]; then
+            execute_post_transaction
+        fi
+        exit $ret
         ;;
     match)
         check_root && have_one_kernel "match" && run_match
