@@ -939,6 +939,39 @@ Run no more than this number of jobs in parallel.
 .TP
 .B compress_gzip_opts, compress_xz_opts, compress_zstd_opts
 Control how modules are compressed. By default, the highest available level of compression is used.
+.TP
+.B post_transaction
+If the directive is set to any non null-value, the content of the directive will be executed with any command that change the content of the kernel modules folder, that is
+.B dkms autoinstall, dkms install
+and
+.B dkms remove/unbuild/uninstall.
+Can be used to trigger a global
+.B initrd
+rebuild or to call a script that performs some other tasks (calling
+.B kexec,
+triggering the restart of services not contained in a DKMS package, etc.). The command is constructed with the shell built-in
+.B eval
+and the variable
+.B $kernelver
+can be used to represent the target kernel version. Some examples:
+
+Regenerate the ram disk for the target kernel:
+.B post_transaction="dracut --force --kver $kernelver"
+(Red Hat style) or
+.B post_transaction="update-initramfs -k $kernelver"
+(Debian style).
+
+Launch an arbitrary script:
+.B post_transaction="/path/to/script.sh"
+
+Restart a service:
+.B post_transaction="systemctl restart something.service"
+
+Regenerate the ram disk for all installed kernels, ignoring the kernel version passed as the parameter:
+.B post_transaction="dracut --force --regenerate-all"
+(Red Hat style) or
+.B post_transaction="update-initramfs -k all"
+(Debian style).
 .SH DKMS AUTOINSTALLER
 The DKMS autoinstaller service (which can be
 .B dkms_autoinstaller

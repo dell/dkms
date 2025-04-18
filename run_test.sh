@@ -638,6 +638,37 @@ license:        GPL
 version:        1.0
 EOF
 
+echo 'Enable post-transaction command and install the module'
+mkdir -p /etc/dkms/framework.conf.d/
+install_framework_conf test/framework/post_transaction.conf /etc/dkms/framework.conf.d/dkms_test_framework.conf
+run_with_expected_output dkms install -k "${KERNEL_VER}" -m dkms_test -v 1.0 --force << EOF
+Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
+Before uninstall, this module version was ACTIVE on this kernel.
+Deleting /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+
+Installing /lib/modules/${KERNEL_VER}/${expected_dest_loc}/dkms_test.ko${mod_compression_ext}
+Running depmod... done.
+Executing post-transaction command... done.
+EOF
+run_status_with_expected_output 'dkms_test' << EOF
+dkms_test/1.0, ${KERNEL_VER}, ${KERNEL_ARCH}: installed
+EOF
+
+echo 'Checking post_transacion.log content'
+check_make_log_content "/var/lib/dkms/post_transaction.log" << EOF
+
+<timestamp>
+# command: echo This is a test message as post transaction. Kernel version is ${KERNEL_VER}
+This is a test message as post transaction. Kernel version is ${KERNEL_VER}
+
+# exit code: 0
+# elapsed time: <hh:mm:ss>
+----------------------------------------------------------------
+EOF
+
+rm /etc/dkms/framework.conf.d/dkms_test_framework.conf
+
 echo 'Uninstalling the test module'
 run_with_expected_output dkms uninstall -k "${KERNEL_VER}" -m dkms_test -v 1.0 << EOF
 Module dkms_test/1.0 for kernel ${KERNEL_VER} (${KERNEL_ARCH}):
