@@ -90,7 +90,7 @@ jobs:
     - name: Install openSUSE leap dependencies
       if: contains(matrix.distro.name, 'opensuse')
       run: |
-        zypper --non-interactive install diffutils elfutils gcc kernel${{ matrix.distro.variant }} kernel${{ matrix.distro.variant }}-devel make openssl patch
+        zypper --non-interactive install diffutils elfutils gcc kernel${{ matrix.distro.variant }} kernel${{ matrix.distro.variant }}-devel make openssl patch zstd
         make install
 
     - name: Install Ubuntu dependencies
