@@ -31,6 +31,7 @@ jobs:
           - {name: "debian", tag: "testing"}
           - {name: "debian", tag: "12"}
           - {name: "fedora", tag: "rawhide", url: "registry.fedoraproject.org/"}
+          - {name: "fedora", tag: "42", url: "registry.fedoraproject.org/"}
           - {name: "fedora", tag: "41", url: "registry.fedoraproject.org/"}
           - {name: "fedora", tag: "40", url: "registry.fedoraproject.org/"}
           - {name: "gentoo/stage3", tag: "latest"}
