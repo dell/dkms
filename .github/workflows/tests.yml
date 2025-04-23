@@ -33,7 +33,6 @@ jobs:
           - {name: "fedora", tag: "rawhide", url: "registry.fedoraproject.org/"}
           - {name: "fedora", tag: "42", url: "registry.fedoraproject.org/"}
           - {name: "fedora", tag: "41", url: "registry.fedoraproject.org/"}
-          - {name: "fedora", tag: "40", url: "registry.fedoraproject.org/"}
           - {name: "gentoo/stage3", tag: "latest"}
           - {name: "opensuse/tumbleweed", tag: "latest", variant: "-default", url: "registry.opensuse.org/"}
           - {name: "opensuse/leap", tag: "15.6", variant: "-default", url: "registry.opensuse.org/"}
