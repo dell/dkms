@@ -1424,7 +1424,7 @@ do_build()
 
     # Apply any patches
     for p in "${patch_array[@]}"; do
-        [[ patches/$p == *"/../"* ]] &&
+        [[ patches/$p == *"/../"* ]] && \
             report_build_problem 5 \
             "Patch $p as specified in dkms.conf contains '..' path component."
         [[ ! -e $build_dir/patches/$p ]] && \
