@@ -3437,7 +3437,7 @@ case "$action" in
         check_root && autoinstall
         ret=$?
         # Execute post_transaction command if set
-        if [[ $ret -eq 0 && -n "$post_transaction" ]]; then
+        if [[ $ret -eq 0 && -n "$post_transaction" && ${#installed_modules[@]} -gt 0 ]]; then
             execute_post_transaction
         fi
         exit $ret
