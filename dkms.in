@@ -1020,7 +1020,7 @@ check_version_sanity()
         return 0
     fi
     local dkms_module
-    dkms_module=$(compressed_or_uncompressed "$dkms_tree/$module/$module_version/$1/$2/module/" "${4}")
+    dkms_module=$(compressed_or_uncompressed "$dkms_tree/$module/$module_version/$1/$2/module" "${4}")
 
     local cmp_res
     cmp_res="$(compare_module_version "${kernels_module}" "${dkms_module}")"
