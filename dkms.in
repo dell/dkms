@@ -1472,7 +1472,6 @@ do_build()
     mkdir -p "$kernelver_dir"
     local -r tmp_base_dir=$(mktemp_or_die -d "$kernelver_dir/.tmp_${arch}_XXXXXX")
     mkdir -p "$tmp_base_dir/log"
-    [[ $kernel_config ]] && cp -f "$kernel_config" "$tmp_base_dir/log/"
 
     # Save a copy of the new module
     mkdir -p "$tmp_base_dir/module"
