@@ -57,7 +57,7 @@
 # compress_zstd_opts="-q --rm -T0 -3"
 
 # Command to run at the end of every DKMS transaction, for example after a new
-# kernel has been installed on the system and all modules have been succesfully
+# kernel has been installed on the system and all modules have been successfully
 # built and installed.
 # The command listed is executed if set to any non null value. $kernelver can be
 # used in path to represent the target kernel version.
