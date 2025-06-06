@@ -1366,7 +1366,17 @@ do_build()
 
     if [[ -e "${kernel_config}" ]]; then
         local cc
-        cc=$(sed -n 's|^CONFIG_CC_VERSION_TEXT="\([^ ]*\) .*"|\1|p' "${kernel_config}")
+        # Depending on the kernel version the strings might be formatted differently (with or without quotes):
+        #
+        # $ grep CONFIG_CC_VERSION_TEXT= /lib/modules/5.15.0-141-generic/build/.config
+        # CONFIG_CC_VERSION_TEXT="gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0"
+        # $ grep CONFIG_CC_VERSION_TEXT= /lib/modules/5.15.0-141-generic/build/include/config/auto.conf
+        # CONFIG_CC_VERSION_TEXT="gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0"
+        # $ grep CONFIG_CC_VERSION_TEXT= /lib/modules/6.8.0-60-generic/build/.config
+        # CONFIG_CC_VERSION_TEXT="x86_64-linux-gnu-gcc-12 (Ubuntu 12.3.0-1ubuntu1~22.04) 12.3.0"
+        # $ grep CONFIG_CC_VERSION_TEXT= /lib/modules/6.8.0-60-generic/build/include/config/auto.conf
+        # CONFIG_CC_VERSION_TEXT=x86_64-linux-gnu-gcc-12 (Ubuntu 12.3.0-1ubuntu1~22.04) 12.3.0
+        cc=$(sed -n 's|^CONFIG_CC_VERSION_TEXT="*\([^" ]*\) .*|\1|p' "${kernel_config}")
         if command -v "$cc" >/dev/null; then
             CC="$cc"
             KERNEL_CC="$cc"
