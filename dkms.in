@@ -806,19 +806,57 @@ read_conf() {
 
     # Set build_exclude
     [[ $obsolete_by && ! $BUILD_EXCLUSIVE_KERNEL_MAX ]] && BUILD_EXCLUSIVE_KERNEL_MAX=$obsolete_by
-    [[ $BUILD_EXCLUSIVE_KERNEL && ! $1 =~ $BUILD_EXCLUSIVE_KERNEL ]] && build_exclude="yes"
-    [[ $BUILD_EXCLUSIVE_KERNEL_MIN && "$(VER "$1")" < "$(VER "$BUILD_EXCLUSIVE_KERNEL_MIN")" ]] && build_exclude="yes"
-    [[ $BUILD_EXCLUSIVE_KERNEL_MAX && "$(VER "$1")" > "$(VER "$BUILD_EXCLUSIVE_KERNEL_MAX")" ]] && build_exclude="yes"
-    [[ $BUILD_EXCLUSIVE_ARCH && ! $2 =~ $BUILD_EXCLUSIVE_ARCH ]] && build_exclude="yes"
-    if [[ $BUILD_EXCLUSIVE_CONFIG && -e "${kernel_config}" ]]; then
-        local kconf
-        for kconf in $BUILD_EXCLUSIVE_CONFIG ; do
-            case "$kconf" in
-                !*) grep -q "^${kconf#!}=[ym]" "${kernel_config}" && build_exclude="yes" ;;
-                *)  grep -q "^${kconf}=[ym]" "${kernel_config}" || build_exclude="yes" ;;
-            esac
-        done
-    fi
+
+    # Function to check BUILD_EXCLUSIVE conditions for a specific module
+    check_build_exclusive_for_module() {
+        local module_index="$1"
+        local kernel_version="$2"
+        local arch="$3"
+
+        # Check global BUILD_EXCLUSIVE directives (backward compatibility)
+        [[ $BUILD_EXCLUSIVE_KERNEL && ! $kernel_version =~ $BUILD_EXCLUSIVE_KERNEL ]] && return 1
+        [[ $BUILD_EXCLUSIVE_KERNEL_MIN && "$(VER "$kernel_version")" < "$(VER "$BUILD_EXCLUSIVE_KERNEL_MIN")" ]] && return 1
+        [[ $BUILD_EXCLUSIVE_KERNEL_MAX && "$(VER "$kernel_version")" > "$(VER "$BUILD_EXCLUSIVE_KERNEL_MAX")" ]] && return 1
+        [[ $BUILD_EXCLUSIVE_ARCH && ! $arch =~ $BUILD_EXCLUSIVE_ARCH ]] && return 1
+
+        # Check per-module BUILD_EXCLUSIVE directives
+        [[ ${BUILD_EXCLUSIVE_KERNEL[$module_index]} && ! $kernel_version =~ ${BUILD_EXCLUSIVE_KERNEL[$module_index]} ]] && return 1
+        [[ ${BUILD_EXCLUSIVE_KERNEL_MIN[$module_index]} && "$(VER "$kernel_version")" < "$(VER "${BUILD_EXCLUSIVE_KERNEL_MIN[$module_index]}")" ]] && return 1
+        [[ ${BUILD_EXCLUSIVE_KERNEL_MAX[$module_index]} && "$(VER "$kernel_version")" > "$(VER "${BUILD_EXCLUSIVE_KERNEL_MAX[$module_index]}")" ]] && return 1
+        [[ ${BUILD_EXCLUSIVE_ARCH[$module_index]} && ! $arch =~ ${BUILD_EXCLUSIVE_ARCH[$module_index]} ]] && return 1
+
+        # Check BUILD_EXCLUSIVE_CONFIG (both global and per-module)
+        if [[ $BUILD_EXCLUSIVE_CONFIG && -e "${kernel_config}" ]]; then
+            local kconf
+            for kconf in $BUILD_EXCLUSIVE_CONFIG ; do
+                case "$kconf" in
+                    !*) grep -q "^${kconf#!}=[ym]" "${kernel_config}" && return 1 ;;
+                    *)  grep -q "^${kconf}=[ym]" "${kernel_config}" || return 1 ;;
+                esac
+            done
+        fi
+
+        if [[ ${BUILD_EXCLUSIVE_CONFIG[$module_index]} && -e "${kernel_config}" ]]; then
+            local kconf
+            for kconf in ${BUILD_EXCLUSIVE_CONFIG[$module_index]} ; do
+                case "$kconf" in
+                    !*) grep -q "^${kconf#!}=[ym]" "${kernel_config}" && return 1 ;;
+                    *)  grep -q "^${kconf}=[ym]" "${kernel_config}" || return 1 ;;
+                esac
+            done
+        fi
+
+        return 0
+    }
+
+    # Check if any module should be excluded from build
+    build_exclude=""
+    for ((index=0; index < num_modules; index++)); do
+        if ! check_build_exclusive_for_module "$index" "$1" "$2"; then
+            build_exclude="yes"
+            break
+        fi
+    done
 
     # Helper function to check yes/no values
     check_yes_no_value() {
