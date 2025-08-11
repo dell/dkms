@@ -62,3 +62,7 @@
 # The command listed is executed if set to any non null value. $kernelver can be
 # used in path to represent the target kernel version.
 # post_transaction=""
+
+# In common.postinst, if en error is encountered while building a module for
+# a kernel, continue on to the next kernel if true, otherwise stop.
+# continue_on_error="true"
