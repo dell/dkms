@@ -2429,7 +2429,7 @@ make_tarball()
         echo ""
         echo "Marking $source_dir for archiving..."
         mkdir -p "$temp_dir_name/dkms_source_tree"
-        cp -frT "$source_dir/" "$temp_dir_name/dkms_source_tree"
+        cp -fprT "$source_dir/" "$temp_dir_name/dkms_source_tree"
     fi
 
     # shellcheck disable=SC1083
@@ -2750,7 +2750,7 @@ add_source_tree() {
             ;;
     esac
     mkdir -p "$source_tree/$module-$module_version"
-    cp -frT "$from/" "$source_tree/$module-$module_version"
+    cp -fprT "$from/" "$source_tree/$module-$module_version"
 }
 
 # This code used to be in dkms_autoinstaller.
