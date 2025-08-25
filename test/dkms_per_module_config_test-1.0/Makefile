@@ -1,0 +1,1 @@
+obj-m += dkms_per_module_config_test_mod1.o dkms_per_module_config_test_mod2.o dkms_per_module_config_test_mod3.o

@@ -1,0 +1,1 @@
+obj-m += dkms_per_module_mixed_test_always.o dkms_per_module_mixed_test_never.o dkms_per_module_mixed_test_current.o
