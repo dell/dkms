@@ -128,4 +128,5 @@ jobs:
             [ -e "$depmod" ] && grep -r ^search "$depmod" || true
         done
 
+        # Run all tests
         ./run_test.sh
