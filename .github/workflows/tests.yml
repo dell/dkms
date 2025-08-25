@@ -13,6 +13,7 @@ jobs:
     strategy:
       matrix:
         distro:
+          - {name: "almalinux", tag: "10"}
           - {name: "almalinux", tag: "9"}
           - {name: "almalinux", tag: "8"}
           - {name: "alpine", tag: "3.22", variant: "-lts"}
@@ -29,8 +30,8 @@ jobs:
           - {name: "centos", tag: "stream10", url: "quay.io/centos/"}
           - {name: "centos", tag: "stream9", url: "quay.io/centos/"}
           - {name: "debian", tag: "testing"}
+          - {name: "debian", tag: "13"}
           - {name: "debian", tag: "12"}
-          - {name: "debian", tag: "testing"}
           - {name: "fedora", tag: "rawhide", url: "registry.fedoraproject.org/"}
           - {name: "fedora", tag: "42", url: "registry.fedoraproject.org/"}
           - {name: "fedora", tag: "41", url: "registry.fedoraproject.org/"}
