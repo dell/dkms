@@ -85,7 +85,6 @@ install-debian: install
 	install -D -m 0755 debian_kernel_postinst.d $(DESTDIR)$(KCONF)/header_postinst.d/dkms
 	install -D -m 0755 debian_kernel_preinst.d $(DESTDIR)$(KCONF)/preinst.d/dkms
 	install -D -m 0755 debian_kernel_prerm.d $(DESTDIR)$(KCONF)/prerm.d/dkms
-	install -D -m 0644 dkms.service $(DESTDIR)$(SYSTEMD)/dkms.service
 
 install-doc:
 	$(if $(strip $(DOC)),$(error Setting DOCDIR is not supported))
