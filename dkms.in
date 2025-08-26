@@ -149,6 +149,11 @@ on_exit()
 unset make_tarball_rm_temp_dir_name load_tarball_rm_temp_dir_name
 trap on_exit EXIT
 
+CP()
+{
+    cp --reflink=auto "$@"
+}
+
 # Run a command that we may or may not want to be detailed about.
 invoke_command()
 {
@@ -1467,7 +1472,7 @@ do_build()
 
     # Set up temporary build directory for build
     rm -rf "${build_dir:?}"
-    cp -a "$source_dir/" "$build_dir"
+    CP -a "$source_dir/" "$build_dir"
 
     echo "DKMS (@RELEASE_STRING@) make.log for $module/$module_version for kernel $kernelver ($arch)" >> "$build_log"
     date >> "$build_log"
@@ -1515,7 +1520,7 @@ do_build()
     # Save a copy of the new module
     mkdir -p "$tmp_base_dir/module"
     if [[ -f "$build_dir/Module.symvers" ]] ; then
-        cp -f "$build_dir/Module.symvers" "$tmp_base_dir/module/Module.symvers"
+        CP -f "$build_dir/Module.symvers" "$tmp_base_dir/module/Module.symvers"
     fi
     for ((count=0; count < num_modules; count++)); do
         local the_module
@@ -1557,9 +1562,9 @@ do_build()
             zstd $compress_zstd_opts -f "$built_module" || compressed_module=""
         fi
         if [[ $compressed_module ]]; then
-            cp -f "$compressed_module" "$tmp_base_dir/module/${dest_module_name[$count]}$module_suffix"
+            CP -f "$compressed_module" "$tmp_base_dir/module/${dest_module_name[$count]}$module_suffix"
         else
-            cp -f "$built_module" "$tmp_base_dir/module/${dest_module_name[$count]}$module_uncompressed_suffix"
+            CP -f "$built_module" "$tmp_base_dir/module/${dest_module_name[$count]}$module_uncompressed_suffix"
         fi
     done
 
@@ -1772,7 +1777,7 @@ do_install()
         dest_name=${toinstall##*/}
         echo "Installing $dest_dir/$dest_name"
         mkdir -p "$dest_dir"
-        cp -f $symlink "$toinstall" "$dest_dir/$dest_name" || die 6 "Copying '$toinstall' failed"
+        CP -f $symlink "$toinstall" "$dest_dir/$dest_name" || die 6 "Copying '$toinstall' failed"
         any_module_installed=1
 
     done
@@ -2446,7 +2451,7 @@ make_tarball()
             kernel_version_list="${kernel_version_list}-kernel${kernelver[$i]}-${arch[$i]}"
         fi
         mkdir -p "$temp_module_dir"
-        cp -rf "$intree_module_dir" "$temp_module_dir"
+        CP -rf "$intree_module_dir" "$temp_module_dir"
     done
     fi
 
@@ -2463,12 +2468,12 @@ make_tarball()
         echo "$module" > "$binary_only_dir/PACKAGE_NAME"
         echo "$module_version" > "$binary_only_dir/PACKAGE_VERSION"
         [[ ! $conf ]] && conf="$source_dir/dkms.conf"
-        cp -f "$conf" "$binary_only_dir/" 2>/dev/null
+        CP -f "$conf" "$binary_only_dir/" 2>/dev/null
     else
         echo ""
         echo "Marking $source_dir for archiving..."
         mkdir -p "$temp_dir_name/dkms_source_tree"
-        cp -fprT "$source_dir/" "$temp_dir_name/dkms_source_tree"
+        CP -fprT "$source_dir/" "$temp_dir_name/dkms_source_tree"
     fi
 
     # shellcheck disable=SC1083
@@ -2590,7 +2595,7 @@ load_tarball()
                 echo "Creating $source_dir"
                 mkdir -p "$source_dir"
                 echo "Copying dkms.conf to $source_dir ..."
-                cp -rf "$temp_dir_name/dkms_binaries_only/dkms.conf" "$source_dir"
+                CP -rf "$temp_dir_name/dkms_binaries_only/dkms.conf" "$source_dir"
             fi
             ;;
     esac
@@ -2612,7 +2617,7 @@ load_tarball()
             echo "Loading $dkms_dir_location..."
             rm -rf "${dkms_dir_location:?}"
             mkdir -p "$dkms_dir_location"
-            cp -rf "$directory/"* "$dkms_dir_location/"
+            CP -rf "$directory/"* "$dkms_dir_location/"
         fi
     done
 
@@ -2789,7 +2794,7 @@ add_source_tree() {
             ;;
     esac
     mkdir -p "$source_tree/$module-$module_version"
-    cp -fprT "$from/" "$source_tree/$module-$module_version"
+    CP -fprT "$from/" "$source_tree/$module-$module_version"
 }
 
 # This code used to be in dkms_autoinstaller.
