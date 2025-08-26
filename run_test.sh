@@ -3031,6 +3031,22 @@ remove_module_source_tree /usr/src/dkms_conf_test-1.0
 
 # --------------------------------------------------------------------------
 
+echo 'Testing dkms.conf with sparse BUILT_MODULE_NAME[] array (expected error)'
+run_with_expected_error 8 dkms add test/dkms_conf_test_sparse_arrays << EOF
+dkms.conf: Error! No 'BUILT_MODULE_NAME' directive specified for record #0.
+dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified for record #0.
+dkms.conf: Error! No 'BUILT_MODULE_NAME' directive specified for record #2.
+dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified for record #2.
+dkms.conf: Error! No 'BUILT_MODULE_NAME' directive specified for record #4.
+dkms.conf: Error! Directive 'DEST_MODULE_LOCATION' does not begin with
+'/kernel', '/updates', or '/extra' in record #4.
+
+Error! Bad conf file.
+File: ${abspwd}/test/dkms_conf_test_sparse_arrays/dkms.conf does not represent a valid dkms.conf file.
+EOF
+
+# --------------------------------------------------------------------------
+
 echo 'Testing dkms.conf with missing patch'
 run_with_expected_output dkms add test/dkms_conf_test_patch_missing << EOF
 Creating symlink /var/lib/dkms/dkms_conf_test/1.0/source -> /usr/src/dkms_conf_test-1.0
