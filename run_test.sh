@@ -55,40 +55,8 @@ TEST_MODULES=(
     "dkms_per_module_config_test"
     "dkms_per_module_kernel_version_test"
     "dkms_per_module_config_exclusive_test"
-    "dkms_per_module_mixed_test"
 )
 TEST_TMPDIRS=(
-    "/usr/src/dkms_test-1.0"
-    "/usr/src/dkms_test-2.0"
-    "/usr/src/dkms_dependencies_test-1.0"
-    "/usr/src/dkms_dependencies_rebuild_test-1.0"
-    "/usr/src/dkms_circular_dependencies_test-1.0"
-    "/usr/src/dkms_replace_test-2.0"
-    "/usr/src/dkms_noautoinstall_test-1.0"
-    "/usr/src/dkms_failing_test-1.0"
-    "/usr/src/dkms_failing_dependencies_test-1.0"
-    "/usr/src/dkms_multiver_test-1.0"
-    "/usr/src/dkms_multiver_test-2.0"
-    "/usr/src/dkms_nover_test-1.0"
-    "/usr/src/dkms_emptyver_test-1.0"
-    "/usr/src/dkms_nover_update_test-1.0"
-    "/usr/src/dkms_nover_update_test-2.0"
-    "/usr/src/dkms_nover_update_test-3.0"
-    "/usr/src/dkms_conf_test-1.0"
-    "/usr/src/dkms_duplicate_test-1.0"
-    "/usr/src/dkms_duplicate_built_test-1.0"
-    "/usr/src/dkms_duplicate_dest_test-1.0"
-    "/usr/src/dkms_patches_test-1.0"
-    "/usr/src/dkms_scripts_test-1.0"
-    "/usr/src/dkms_noisy_test-1.0"
-    "/usr/src/dkms_crlf_test-1.0"
-    "/usr/src/dkms_deprecated_test-1.0"
-    "/usr/src/dkms_build_exclusive_test-1.0"
-    "/usr/src/dkms_build_exclusive_dependencies_test-1.0"
-    "/usr/src/dkms_per_module_config_test-1.0"
-    "/usr/src/dkms_per_module_kernel_version_test-1.0"
-    "/usr/src/dkms_per_module_config_exclusive_test-1.0"
-    "/usr/src/dkms_per_module_mixed_test-1.0"
     "${tmpdir}/dkms_test_dir_${KERNEL_VER}/"
 )
 TEST_TMPFILES=(
@@ -126,11 +94,14 @@ dkms_status_grep_dkms_module() {
 
 clean_dkms_env() {
     local found_module
+    local module
+    local version
+    local dir
+    local file
 
     for module in "${TEST_MODULES[@]}"; do
         found_module=$(dkms_status_grep_dkms_module "${module}")
         if [[ $found_module ]] ; then
-            local version
             for version in 1.0 2.0 3.0; do
                 [[ ! -d "/var/lib/dkms/${module}/${version}" ]] || dkms remove "${module}/${version}" >/dev/null || true
             done
@@ -138,6 +109,9 @@ clean_dkms_env() {
         rm -rf "/var/lib/dkms/${module}/"
         rm -f "/lib/modules/${KERNEL_VER}/${expected_dest_loc}/${module}.ko${mod_compression_ext}"
         rm -f "/lib/modules/${KERNEL_VER}/kernel/extra/${module}.ko${mod_compression_ext}"
+        for version in 1.0 2.0 3.0; do
+            rm -rf "/usr/src/${module}-${version}"
+        done
     done
     for dir in "${TEST_TMPDIRS[@]}"; do
         rm -rf "$dir"
