@@ -739,14 +739,12 @@ read_conf() {
         # Override location for specific distributions
         dest_module_location[index]="$(override_dest_module_location "${dest_module_location[index]}")"
 
-        # Fail if no DEST_MODULE_LOCATION
-        if [[ ! ${DEST_MODULE_LOCATION[$index]} ]]; then
-            echo "dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified for record #$index.">&2
-            return_value=1
-        fi
-
         # Fail if bad DEST_MODULE_LOCATION
         case ${DEST_MODULE_LOCATION[$index]} in
+            "")
+                echo "dkms.conf: Error! No 'DEST_MODULE_LOCATION' directive specified for record #$index.">&2
+                return_value=1
+                ;;
             /kernel*)
                 ;;
             /updates*)
@@ -754,9 +752,9 @@ read_conf() {
             /extra*)
                 ;;
             *)
-            echo "dkms.conf: Error! Directive 'DEST_MODULE_LOCATION' does not begin with">&2
-            echo "'/kernel', '/updates', or '/extra' in record #$index.">&2
-            return_value=1
+                echo "dkms.conf: Error! Directive 'DEST_MODULE_LOCATION' does not begin with">&2
+                echo "'/kernel', '/updates', or '/extra' in record #$index.">&2
+                return_value=1
             ;;
         esac
     done
