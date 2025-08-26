@@ -673,15 +673,18 @@ read_conf() {
     fi
 
     # Determine number of modules
+    # The arrays are possibly sparse, so use the maximum index instead of the array length
     local s
-    num_modules=0
+    local max_index
+    max_index=-1
     # shellcheck disable=SC2153
-    for s in ${#BUILT_MODULE_NAME[@]} \
-        ${#BUILT_MODULE_LOCATION[@]} \
-        ${#DEST_MODULE_NAME[@]} \
-        ${#DEST_MODULE_LOCATION[@]}; do
-        ((s > num_modules)) && num_modules=$s
+    for s in "${!BUILT_MODULE_NAME[@]}" \
+        "${!BUILT_MODULE_LOCATION[@]}" \
+        "${!DEST_MODULE_NAME[@]}" \
+        "${!DEST_MODULE_LOCATION[@]}"; do
+        ((s > max_index)) && max_index=$s
     done
+    num_modules=$((max_index + 1))
 
     # Set module naming/location arrays
     local index
