@@ -802,19 +802,6 @@ For example, if you set it as ="CONFIG_PCI !CONFIG_PREEMPT_RT", your module
 would only be built for kernels that have PCI enabled, but the RT patchset
 disabled.
 .TP
-.B BUILD_EXCLUSIVE_KERNEL[#]=, BUILD_EXCLUSIVE_KERNEL_MIN[#]=, BUILD_EXCLUSIVE_KERNEL_MAX[#]=, BUILD_EXCLUSIVE_ARCH[#]=, BUILD_EXCLUSIVE_CONFIG[#]=
-These optional per-module directives function identically to their global counterparts
-but apply only to the specific module at the given index. They allow you to specify
-different BUILD_EXCLUSIVE constraints for each module in a multi-module package.
-The global BUILD_EXCLUSIVE directives are still checked for backward compatibility,
-and if any module fails either the global or its specific per-module constraints,
-the build will be excluded.
-
-For example, if you have two modules in your package:
-.B BUILD_EXCLUSIVE_KERNEL[0]="^5\..*"
-.B BUILD_EXCLUSIVE_KERNEL[1]="^6\..*"
-Module 0 would only be built for kernel 5.x, while module 1 would only be built for kernel 6.x.
-.TP
 .B POST_ADD=
 The name of the script to be run after an
 .B add
