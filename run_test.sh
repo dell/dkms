@@ -52,9 +52,6 @@ TEST_MODULES=(
     "dkms_deprecated_test"
     "dkms_build_exclusive_test"
     "dkms_build_exclusive_dependencies_test"
-    "dkms_per_module_config_test"
-    "dkms_per_module_kernel_version_test"
-    "dkms_per_module_config_exclusive_test"
 )
 TEST_TMPDIRS=(
     "${tmpdir}/dkms_test_dir_${KERNEL_VER}/"
@@ -3861,94 +3858,6 @@ run_status_with_expected_output 'dkms_build_exclusive_test' << EOF
 EOF
 
 remove_module_source_tree /usr/src/dkms_build_exclusive_test-1.0
-
-############################################################################
-echo '*** Testing per-module BUILD_EXCLUSIVE directives'
-############################################################################
-
-echo 'Adding per-module config test module'
-run_with_expected_output dkms add test/dkms_per_module_config_test-1.0 << EOF
-Creating symlink /var/lib/dkms/dkms_per_module_config_test/1.0/source -> /usr/src/dkms_per_module_config_test-1.0
-EOF
-check_module_source_tree_created /usr/src/dkms_per_module_config_test-1.0
-run_status_with_expected_output 'dkms_per_module_config_test' << EOF
-dkms_per_module_config_test/1.0: added
-EOF
-
-echo 'Testing per-module config test module build (should be excluded due to per-module restrictions)'
-run_with_expected_error 77 dkms build -k "${KERNEL_VER}" -m dkms_per_module_config_test -v 1.0 << EOF
-Warning: The /var/lib/dkms/dkms_per_module_config_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf
-for module dkms_per_module_config_test/1.0 includes a BUILD_EXCLUSIVE directive
-which does not match this kernel/arch/config.
-This indicates that it should not be built.
-EOF
-run_status_with_expected_output 'dkms_per_module_config_test' << EOF
-dkms_per_module_config_test/1.0: added
-EOF
-
-echo 'Removing per-module config test module'
-run_with_expected_output dkms remove --all -m dkms_per_module_config_test -v 1.0 << EOF
-Deleting module dkms_per_module_config_test/1.0 completely from the DKMS tree.
-EOF
-run_status_with_expected_output 'dkms_per_module_config_test' << EOF
-EOF
-remove_module_source_tree /usr/src/dkms_per_module_config_test-1.0
-
-echo 'Adding per-module kernel version test module'
-run_with_expected_output dkms add test/dkms_per_module_kernel_version_test-1.0 << EOF
-Creating symlink /var/lib/dkms/dkms_per_module_kernel_version_test/1.0/source -> /usr/src/dkms_per_module_kernel_version_test-1.0
-EOF
-check_module_source_tree_created /usr/src/dkms_per_module_kernel_version_test-1.0
-run_status_with_expected_output 'dkms_per_module_kernel_version_test' << EOF
-dkms_per_module_kernel_version_test/1.0: added
-EOF
-
-echo 'Testing per-module kernel version test module build (should be excluded due to kernel version restrictions)'
-run_with_expected_error 77 dkms build -k "${KERNEL_VER}" -m dkms_per_module_kernel_version_test -v 1.0 << EOF
-Warning: The /var/lib/dkms/dkms_per_module_kernel_version_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf
-for module dkms_per_module_kernel_version_test/1.0 includes a BUILD_EXCLUSIVE directive
-which does not match this kernel/arch/config.
-This indicates that it should not be built.
-EOF
-run_status_with_expected_output 'dkms_per_module_kernel_version_test' << EOF
-dkms_per_module_kernel_version_test/1.0: added
-EOF
-
-echo 'Removing per-module kernel version test module'
-run_with_expected_output dkms remove --all -m dkms_per_module_kernel_version_test -v 1.0 << EOF
-Deleting module dkms_per_module_kernel_version_test/1.0 completely from the DKMS tree.
-EOF
-run_status_with_expected_output 'dkms_per_module_kernel_version_test' << EOF
-EOF
-remove_module_source_tree /usr/src/dkms_per_module_kernel_version_test-1.0
-
-echo 'Adding per-module config exclusive test module'
-run_with_expected_output dkms add test/dkms_per_module_config_exclusive_test-1.0 << EOF
-Creating symlink /var/lib/dkms/dkms_per_module_config_exclusive_test/1.0/source -> /usr/src/dkms_per_module_config_exclusive_test-1.0
-EOF
-check_module_source_tree_created /usr/src/dkms_per_module_config_exclusive_test-1.0
-run_status_with_expected_output 'dkms_per_module_config_exclusive_test' << EOF
-dkms_per_module_config_exclusive_test/1.0: added
-EOF
-
-echo 'Testing per-module config exclusive test module build (should be excluded due to missing config)'
-run_with_expected_error 77 dkms build -k "${KERNEL_VER}" -m dkms_per_module_config_exclusive_test -v 1.0 << EOF
-Warning: The /var/lib/dkms/dkms_per_module_config_exclusive_test/1.0/${KERNEL_VER}/${KERNEL_ARCH}/dkms.conf
-for module dkms_per_module_config_exclusive_test/1.0 includes a BUILD_EXCLUSIVE directive
-which does not match this kernel/arch/config.
-This indicates that it should not be built.
-EOF
-run_status_with_expected_output 'dkms_per_module_config_exclusive_test' << EOF
-dkms_per_module_config_exclusive_test/1.0: added
-EOF
-
-echo 'Removing per-module config exclusive test module'
-run_with_expected_output dkms remove --all -m dkms_per_module_config_exclusive_test -v 1.0 << EOF
-Deleting module dkms_per_module_config_exclusive_test/1.0 completely from the DKMS tree.
-EOF
-run_status_with_expected_output 'dkms_per_module_config_exclusive_test' << EOF
-EOF
-remove_module_source_tree /usr/src/dkms_per_module_config_exclusive_test-1.0
 
 echo 'Checking that the environment is clean again'
 check_no_dkms_test

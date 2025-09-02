@@ -1,1 +1,0 @@
-obj-m += dkms_per_module_kernel_version_test_old.o dkms_per_module_kernel_version_test_new.o
