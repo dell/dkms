@@ -29,7 +29,6 @@ jobs:
           - {name: "archlinux", tag: "latest", variant: "-zen"}
           - {name: "centos", tag: "stream10", url: "quay.io/centos/"}
           - {name: "centos", tag: "stream9", url: "quay.io/centos/"}
-          - {name: "debian", tag: "testing"}
           - {name: "debian", tag: "13"}
           - {name: "debian", tag: "12"}
           - {name: "fedora", tag: "rawhide", url: "registry.fedoraproject.org/"}
@@ -76,6 +75,7 @@ jobs:
     - name: Install Debian dependencies
       if: matrix.distro.name == 'debian'
       run: |
+        export DEBIAN_FRONTEND=noninteractive
         apt-get update -q
         apt-get install -qy make linux-headers-amd64 linux-image-amd64 openssl xz-utils patch
         make install-debian
@@ -97,6 +97,7 @@ jobs:
     - name: Install Ubuntu dependencies
       if: matrix.distro.name == 'ubuntu'
       run: |
+        export DEBIAN_FRONTEND=noninteractive
         apt-get update -q
         apt-get install -qy gcc make linux-headers-generic linux-image-generic openssl shim-signed patch
         make install-debian
