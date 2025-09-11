@@ -105,7 +105,7 @@ ARCH=$4
 UPGRADE=$5
 
 if [ -z "$NAME" ] || [ -z "$VERSION" ]; then
-    echo "Need NAME, and VERSION defined"
+    echo "Need NAME and VERSION defined"
     echo "ARCH is optional"
     exit 1
 fi
@@ -114,6 +114,8 @@ if [ -f /etc/dkms/no-autoinstall ]; then
     echo "autoinstall for dkms modules has been disabled."
     exit 0
 fi
+
+continue_on_error="true"
 
 # read framework configuration options
 for fwcf in /etc/dkms/framework.conf /etc/dkms/framework.conf.d/*.conf ; do
@@ -128,13 +130,13 @@ done
 KERNELS=$(ls -dv "$MODDIR"/*/build 2>/dev/null | sed 's|'"$MODDIR"'/\(.*\)/build|\1|' || true)
 CURRENT_KERNEL=$(uname -r)
 
-#We never want to keep an older version side by side to prevent conflicts
+# We never want to keep an older version side by side to prevent conflicts
 if [ -e "/var/lib/dkms/$NAME/$VERSION" ]; then
     echo "Removing old $NAME/$VERSION DKMS files..."
     dkms remove -m "$NAME" -v "$VERSION" --all
 fi
 
-#Load new files, by source package and by tarball
+# Load new files, by source package and by tarball
 if [ -f "$TARBALL_ROOT/$NAME-$VERSION.dkms.tar.gz" ]; then
     if ! dkms ldtarball --archive "$TARBALL_ROOT/$NAME-$VERSION.dkms.tar.gz"; then
         echo ""
@@ -216,16 +218,18 @@ if [ -n "$ARCH" ]; then
     echo "Building for architecture $ARCH"
 fi
 
+exit_code=0
+failed_kernels=""
 for KERNEL in $KERNELS; do
     echo ""
-    dkms_status=$(dkms status -m "$NAME" -v "$VERSION" -k "$KERNEL" ${ARCH:+-a "$ARCH"})
     if [ "$(echo "$KERNEL" | grep -c "BOOT")" -gt 0 ]; then
         echo "Module build and install for $KERNEL was skipped as "
         echo "it is a BOOT variant"
         continue
     fi
 
-    #if the module isn't yet built, try to build it
+    # if the module isn't yet built, try to build it
+    dkms_status=$(dkms status -m "$NAME" -v "$VERSION" -k "$KERNEL" ${ARCH:+-a "$ARCH"})
     if [ "$(echo "$dkms_status" | grep -c ": built")" -eq 0 ]; then
         if [ ! -L "/var/lib/dkms/$NAME/$VERSION/source" ]; then
             echo "This package appears to be a binaries-only package"
@@ -245,21 +249,28 @@ for KERNEL in $KERNELS; do
             0)
                 ;;
             *)
-                exit $res
+                exit_code=$res
+                [ "$continue_on_error" != "true" ] && break
+                failed_kernels+=" $KERNEL"
+                continue
                 ;;
             esac
-            dkms_status=$(dkms status -m "$NAME" -v "$VERSION" -k "$KERNEL" ${ARCH:+-a "$ARCH"})
         else
             echo "Module build for kernel $KERNEL was skipped since the"
             echo "kernel headers for this kernel do not seem to be installed."
+            continue
         fi
+        dkms_status=$(dkms status -m "$NAME" -v "$VERSION" -k "$KERNEL" ${ARCH:+-a "$ARCH"})
     fi
 
-    #if the module is built (either pre-built or just now), install it
-    if [ "$(echo "$dkms_status" | grep -c ": built")" -eq 1 ] &&
-       [ "$(echo "$dkms_status" | grep -c ": installed")" -eq 0 ]; then
+    # if the module is built (either pre-built or just now), install it
+    if [ "$(echo "$dkms_status" | grep -c ": built")" -ne 0 ]; then
         dkms install -m "$NAME" -v "$VERSION" -k "$KERNEL" ${ARCH:+-a "$ARCH"}
     fi
 done
+
+[ -n "$failed_kernels" ] && echo "Builds for the following kernel(s) failed:$failed_kernels"
+
+exit $exit_code
 
 # vim: et:ts=4:sw=4
