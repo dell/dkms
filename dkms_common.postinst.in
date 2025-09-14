@@ -208,6 +208,13 @@ if [ -z "$autoinstall_all_kernels" ]; then
     fi
 fi
 
+if [ -z "$KERNELS" ]; then
+    echo "WARNING: No kernel headers were found, skipping module build."
+    echo "         The get the headers for the running kernel ($CURRENT_KERNEL)"
+    echo "         please install the linux-headers-$CURRENT_KERNEL package."
+    exit 0
+fi
+
 # Take care of displaying newline separated list
 echo "Building for $KERNELS" | tr '\n' ',' \
     | sed -e 's/,/, /g; s/, $/\n/; s/, \([^,]\+\)$/ and \1/'
