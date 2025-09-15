@@ -91,6 +91,30 @@ install-doc:
 	install -d -m 0755 $(DESTDIR)/usr/share/doc/dkms
 	install -m 0644 COPYING README.md $(DESTDIR)/usr/share/doc/dkms
 
+uninstall:
+	$(if $(strip $(VAR)),$(error Setting VAR is not supported))
+	$(if $(strip $(ETC)),$(error Setting ETC is not supported))
+	$(if $(strip $(BASHDIR)),$(error Setting BASHDIR is not supported))
+	$(if $(strip $(SHAREDIR)),$(error Setting SHAREDIR is not supported))
+	$(if $(strip $(DOC)),$(error Setting DOCDIR is not supported))
+	$(RM) $(DESTDIR)$(SBIN)/dkms
+	$(RM) $(DESTDIR)/etc/dkms/framework.conf
+	$(RM) -r $(DESTDIR)/etc/dkms/framework.conf.d
+	$(RM) $(DESTDIR)/usr/share/bash-completion/completions/dkms
+	$(RM) $(DESTDIR)/usr/share/zsh/site-functions/_dkms
+	$(RM) $(DESTDIR)/usr/share/man/man8/dkms.8
+	$(RM) $(DESTDIR)$(SYSTEMD)/dkms.service
+	$(RM) $(DESTDIR)$(KINSTALL)/40-dkms.install
+	$(RM) $(DESTDIR)$(LIBDIR)/common.postinst
+	$(RM) $(DESTDIR)$(LIBDIR)/dkms_autoinstaller
+	$(RM) $(DESTDIR)/usr/share/apport/package-hooks/dkms_packages.py
+	$(RM) $(DESTDIR)$(KCONF)/postinst.d/dkms
+	$(RM) $(DESTDIR)$(KCONF)/header_postinst.d/dkms
+	$(RM) $(DESTDIR)$(KCONF)/preinst.d/dkms
+	$(RM) $(DESTDIR)$(KCONF)/prerm.d/dkms
+	$(RM) -r $(DESTDIR)/usr/share/doc/dkms
+	$(RM) -r $(DESTDIR)/var/lib/dkms
+
 .PHONY = tarball
 
 TARBALL=$(BUILDDIR)/dist/$(RELEASE_STRING).tar.gz
