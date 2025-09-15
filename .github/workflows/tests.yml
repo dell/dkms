@@ -133,3 +133,5 @@ jobs:
 
         # Run all tests
         ./run_test.sh
+
+        make uninstall
