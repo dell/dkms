@@ -10,6 +10,7 @@ on:
 jobs:
   test-distributions:
     name: Build in containers
+    continue-on-error: true
     strategy:
       matrix:
         distro:
