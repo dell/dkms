@@ -987,6 +987,8 @@ if [[ ! $only || $only = autoinstall ]]; then
 echo '*** Testing dkms autoinstall/kernel_{postinst/prerm}, dkms_autoinstaller'
 ############################################################################
 
+set_signing_message "dkms_test" "1.0"
+
 echo 'Testing without modules and without headers'
 
 echo ' Running dkms autoinstall'
