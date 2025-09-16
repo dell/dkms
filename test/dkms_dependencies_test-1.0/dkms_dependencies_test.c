@@ -7,9 +7,12 @@
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("A Simple dkms test module");
 
+extern void dkms_test_exported_function(void);
+
 static int __init dkms_dependencies_test_init(void)
 {
     printk(KERN_INFO "DKMS Test Module -%s Loaded\n",DKMS_TEST_VER);
+    dkms_test_exported_function();
     return 0;
 }
 
