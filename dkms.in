@@ -810,20 +810,81 @@ read_conf() {
     fi
     done
 
-    # Set build_exclude
-    [[ $obsolete_by && ! $BUILD_EXCLUSIVE_KERNEL_MAX ]] && BUILD_EXCLUSIVE_KERNEL_MAX=$obsolete_by
-    [[ $BUILD_EXCLUSIVE_KERNEL && ! $1 =~ $BUILD_EXCLUSIVE_KERNEL ]] && build_exclude="yes"
-    [[ $BUILD_EXCLUSIVE_KERNEL_MIN && "$(VER "$1")" < "$(VER "$BUILD_EXCLUSIVE_KERNEL_MIN")" ]] && build_exclude="yes"
-    [[ $BUILD_EXCLUSIVE_KERNEL_MAX && "$(VER "$1")" > "$(VER "$BUILD_EXCLUSIVE_KERNEL_MAX")" ]] && build_exclude="yes"
-    [[ $BUILD_EXCLUSIVE_ARCH && ! $2 =~ $BUILD_EXCLUSIVE_ARCH ]] && build_exclude="yes"
-    if [[ $BUILD_EXCLUSIVE_CONFIG && -e "${kernel_config}" ]]; then
-        local kconf
-        for kconf in $BUILD_EXCLUSIVE_CONFIG ; do
-            case "$kconf" in
-                !*) grep -q "^${kconf#!}=[ym]" "${kernel_config}" && build_exclude="yes" ;;
-                *)  grep -q "^${kconf}=[ym]" "${kernel_config}" || build_exclude="yes" ;;
-            esac
+    # Set build_exclude (preserve backward compatibility for OBSOLETE_BY)
+    # Only set global BUILD_EXCLUSIVE_KERNEL_MAX if obsolete_by is set and no global or per-module restrictions exist
+    if [[ $obsolete_by && ! $BUILD_EXCLUSIVE_KERNEL_MAX ]]; then
+        # Check if we have any per-module KERNEL_MAX restrictions
+        local has_per_module_max=false
+        for ((i=0; i < num_modules; i++)); do
+            [[ ${BUILD_EXCLUSIVE_KERNEL_MAX[i]} ]] && has_per_module_max=true && break
         done
+        # Only set global if no per-module restrictions exist (backward compatibility)
+        [[ $has_per_module_max == false ]] && BUILD_EXCLUSIVE_KERNEL_MAX=$obsolete_by
+    fi
+
+    # Function to check BUILD_EXCLUSIVE conditions for a specific module
+    check_build_exclusive_for_module() {
+        local module_index="$1"
+        local kernel_version="$2"
+        local arch="$3"
+
+        # Set has_build_exclusive_directives if any BUILD_EXCLUSIVE directives are defined
+        if [[ $BUILD_EXCLUSIVE_KERNEL || $BUILD_EXCLUSIVE_KERNEL_MIN || $BUILD_EXCLUSIVE_KERNEL_MAX || $BUILD_EXCLUSIVE_ARCH || $BUILD_EXCLUSIVE_CONFIG ]]; then
+            has_build_exclusive_directives=true
+        elif [[ ${BUILD_EXCLUSIVE_KERNEL[$module_index]} || ${BUILD_EXCLUSIVE_KERNEL_MIN[$module_index]} || ${BUILD_EXCLUSIVE_KERNEL_MAX[$module_index]} || ${BUILD_EXCLUSIVE_ARCH[$module_index]} || ${BUILD_EXCLUSIVE_CONFIG[$module_index]} ]]; then
+            has_build_exclusive_directives=true
+        fi
+
+        # Check global BUILD_EXCLUSIVE directives (backward compatibility)
+        [[ $BUILD_EXCLUSIVE_KERNEL && ! $kernel_version =~ $BUILD_EXCLUSIVE_KERNEL ]] && return 1
+        [[ $BUILD_EXCLUSIVE_KERNEL_MIN && "$(VER "$kernel_version")" < "$(VER "$BUILD_EXCLUSIVE_KERNEL_MIN")" ]] && return 1
+        [[ $BUILD_EXCLUSIVE_KERNEL_MAX && "$(VER "$kernel_version")" > "$(VER "$BUILD_EXCLUSIVE_KERNEL_MAX")" ]] && return 1
+        [[ $BUILD_EXCLUSIVE_ARCH && ! $arch =~ $BUILD_EXCLUSIVE_ARCH ]] && return 1
+
+        # Check per-module BUILD_EXCLUSIVE directives
+        [[ ${BUILD_EXCLUSIVE_KERNEL[$module_index]} && ! $kernel_version =~ ${BUILD_EXCLUSIVE_KERNEL[$module_index]} ]] && return 1
+        [[ ${BUILD_EXCLUSIVE_KERNEL_MIN[$module_index]} && "$(VER "$kernel_version")" < "$(VER "${BUILD_EXCLUSIVE_KERNEL_MIN[$module_index]}")" ]] && return 1
+        [[ ${BUILD_EXCLUSIVE_KERNEL_MAX[$module_index]} && "$(VER "$kernel_version")" > "$(VER "${BUILD_EXCLUSIVE_KERNEL_MAX[$module_index]}")" ]] && return 1
+        [[ ${BUILD_EXCLUSIVE_ARCH[$module_index]} && ! $arch =~ ${BUILD_EXCLUSIVE_ARCH[$module_index]} ]] && return 1
+
+        # Check BUILD_EXCLUSIVE_CONFIG (both global and per-module)
+        if [[ $BUILD_EXCLUSIVE_CONFIG && -e "${kernel_config}" ]]; then
+            local kconf
+            for kconf in $BUILD_EXCLUSIVE_CONFIG ; do
+                case "$kconf" in
+                    !*) grep -q "^${kconf#!}=[ym]" "${kernel_config}" && return 1 ;;
+                    *)  grep -q "^${kconf}=[ym]" "${kernel_config}" || return 1 ;;
+                esac
+            done
+        fi
+
+        if [[ ${BUILD_EXCLUSIVE_CONFIG[$module_index]} && -e "${kernel_config}" ]]; then
+            local kconf
+            for kconf in ${BUILD_EXCLUSIVE_CONFIG[$module_index]} ; do
+                case "$kconf" in
+                    !*) grep -q "^${kconf#!}=[ym]" "${kernel_config}" && return 1 ;;
+                    *)  grep -q "^${kconf}=[ym]" "${kernel_config}" || return 1 ;;
+                esac
+            done
+        fi
+
+        return 0
+    }
+
+    # Check if any module should be excluded from build
+    build_exclude=""
+    buildable_modules=0
+    has_build_exclusive_directives=false
+
+    for ((index=0; index < num_modules; index++)); do
+        if check_build_exclusive_for_module "$index" "$1" "$2"; then
+            ((buildable_modules++))
+        fi
+    done
+
+    # If no modules can be built and BUILD_EXCLUSIVE directives are defined, set build_exclude to fail the entire build
+    if [[ $buildable_modules -eq 0 && $has_build_exclusive_directives = true ]]; then
+        build_exclude="yes"
     fi
 
     # Helper function to check yes/no values
@@ -1350,8 +1411,8 @@ do_build()
     # Error out if build_exclude is set
     [[ $build_exclude ]] && diewarn 77 \
         "The $base_dir/dkms.conf"\
-        "for module $module/$module_version includes a BUILD_EXCLUSIVE directive"\
-        "which does not match this kernel/arch/config."\
+        "for module $module/$module_version includes BUILD_EXCLUSIVE directives"\
+        "which do not match this kernel/arch/config for any modules."\
         "This indicates that it should not be built."
 
     # Error out if source_tree is basically empty (binary-only dkms tarball w/ --force check)
@@ -1465,8 +1526,13 @@ do_build()
         report_build_problem 10 "Bad return status for module build on kernel: $kernelver ($arch)" \
         "Consult $build_log for more information."
 
-    # Make sure all the modules built successfully
+    # Make sure all the modules built successfully (skip excluded modules)
     for ((count=0; count < num_modules; count++)); do
+        # Skip modules that are excluded due to BUILD_EXCLUSIVE restrictions
+        if ! check_build_exclusive_for_module "$count" "$kernelver" "$arch"; then
+            continue
+        fi
+
         [[ -e ${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix ]] && continue
         report_build_problem 7 \
             "Build of ${built_module_location[$count]}${built_module_name[$count]}$module_uncompressed_suffix failed for: $kernelver ($arch)" \
@@ -1485,6 +1551,11 @@ do_build()
         CP -f "$build_dir/Module.symvers" "$tmp_base_dir/module/Module.symvers"
     fi
     for ((count=0; count < num_modules; count++)); do
+        # Skip modules that are excluded due to BUILD_EXCLUSIVE restrictions
+        if ! check_build_exclusive_for_module "$count" "$kernelver" "$arch"; then
+            continue
+        fi
+
         local the_module
         local built_module
         local compressed_module
@@ -1530,8 +1601,13 @@ do_build()
         fi
     done
 
-    # Validate build completeness
+    # Validate build completeness (skip excluded modules)
     for ((index=0; index < num_modules; index++)); do
+        # Skip modules that are excluded due to BUILD_EXCLUSIVE restrictions
+        if ! check_build_exclusive_for_module "$index" "$kernelver" "$arch"; then
+            continue
+        fi
+
         local m
         local f
         m=${dest_module_name[index]}
@@ -1648,8 +1724,13 @@ do_install()
     set_module_suffix "$kernelver"
     read_conf_strict_or_die "$kernelver" "$arch"
 
-    # Validate build completeness
+    # Validate build completeness (skip excluded modules)
     for ((index=0; index < num_modules; index++)); do
+        # Skip modules that are excluded due to BUILD_EXCLUSIVE restrictions
+        if ! check_build_exclusive_for_module "$index" "$kernelver" "$arch"; then
+            continue
+        fi
+
         local m
         local f
         m=${dest_module_name[index]}
@@ -1676,6 +1757,11 @@ do_install()
     fi
 
     for ((count=0; count < num_modules; count++)); do
+        # Skip modules that are excluded due to BUILD_EXCLUSIVE restrictions
+        if ! check_build_exclusive_for_module "$count" "$kernelver" "$arch"; then
+            continue
+        fi
+
         # Check this version against what is already in the kernel
         check_version_sanity "$kernelver" "$arch" "$obsolete_by" "${dest_module_name[$count]}" || continue
 
@@ -2072,8 +2158,45 @@ maybe_unbuild_module()
 maybe_uninstall_module()
 {
     is_module_installed "$module" "$module_version" "$1" "$2" || {
-        echo "Module $module/$module_version is not installed for kernel $1 ($2)."\
-            "Skipping..."
+        # Check if this module might have been excluded due to BUILD_EXCLUSIVE restrictions
+        # If so, don't show the "not installed" message since it's expected
+        local was_excluded=false
+
+        # Try to read the dkms.conf to check BUILD_EXCLUSIVE settings
+        if [[ -f "$dkms_tree/$module/$module_version/source/dkms.conf" ]]; then
+            # Temporarily read the conf to check BUILD_EXCLUSIVE settings
+            local saved_last_mvka="$last_mvka"
+            local saved_last_mvka_conf="$last_mvka_conf"
+            local saved_num_modules="$num_modules"
+
+            # Read conf without modifying global state permanently
+            read_conf "$1" "$2" "$dkms_tree/$module/$module_version/source/dkms.conf" 2>/dev/null || true
+
+            # If this package has any BUILD_EXCLUSIVE restrictions, suppress the message
+            # because it can be confusing to users (modules might be built but not installed)
+            local has_build_exclusive=false
+            for ((index=0; index < num_modules; index++)); do
+                if [[ ${BUILD_EXCLUSIVE_KERNEL[index]} || ${BUILD_EXCLUSIVE_KERNEL_MIN[index]} || ${BUILD_EXCLUSIVE_KERNEL_MAX[index]} || ${BUILD_EXCLUSIVE_ARCH[index]} || ${BUILD_EXCLUSIVE_CONFIG[index]} ]]; then
+                    has_build_exclusive=true
+                    break
+                fi
+            done
+
+            if [[ $has_build_exclusive == true ]]; then
+                was_excluded=true
+            fi
+
+            # Restore global state
+            last_mvka="$saved_last_mvka"
+            last_mvka_conf="$saved_last_mvka_conf"
+            num_modules="$saved_num_modules"
+        fi
+
+        # Only show the "not installed" message if it wasn't excluded due to BUILD_EXCLUSIVE
+        if [[ $was_excluded == false ]]; then
+            echo "Module $module/$module_version is not installed for kernel $1 ($2)."\
+                "Skipping..."
+        fi
         return 0
     }
     do_uninstall "$1" "$2"
@@ -2252,6 +2375,11 @@ module_status_built_extra() (
     read_conf "$3" "$4" "$dkms_tree/$1/$2/source/dkms.conf"
     [[ -d $dkms_tree/$1/original_module/$3/$4 ]] && echo -n " (Original modules exist)"
     for ((count=0; count < num_modules; count++)); do
+        # Skip modules that are excluded due to BUILD_EXCLUSIVE restrictions
+        if ! check_build_exclusive_for_module "$count" "$3" "$4"; then
+            continue
+        fi
+
         tree_mod=$(compressed_or_uncompressed "$dkms_tree/$1/$2/$3/$4/module" "${dest_module_name[$count]}")
         if [[ ! $tree_mod ]]; then
             echo -n " (Built modules are missing in the kernel modules folder)"
